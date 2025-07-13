@@ -4,7 +4,10 @@ Implements official tax slabs as per Federal Budget 2024-25
 """
 
 from typing import List, Tuple
-from backend.app.models.tax_models import TaxSlabBreakdown, TaxpayerType, FilerStatus
+try:
+    from backend.app.models.tax_models import TaxSlabBreakdown, TaxpayerType, FilerStatus
+except ImportError:
+    from app.models.tax_models import TaxSlabBreakdown, TaxpayerType, FilerStatus
 
 class PakistaniTaxCalculator:
     """

@@ -7,13 +7,22 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 from typing import List, Dict
 
-from backend.app.models.tax_models import (
-    TaxCalculationRequest,
-    TaxCalculationResponse,
-    TaxpayerType,
-    ErrorResponse
-)
-from backend.app.core.tax_calculator import tax_calculator
+try:
+    from backend.app.models.tax_models import (
+        TaxCalculationRequest,
+        TaxCalculationResponse,
+        TaxpayerType,
+        ErrorResponse
+    )
+    from backend.app.core.tax_calculator import tax_calculator
+except ImportError:
+    from app.models.tax_models import (
+        TaxCalculationRequest,
+        TaxCalculationResponse,
+        TaxpayerType,
+        ErrorResponse
+    )
+    from app.core.tax_calculator import tax_calculator
 
 router = APIRouter(prefix="/api/v1/tax", tags=["Tax Calculator"])
 

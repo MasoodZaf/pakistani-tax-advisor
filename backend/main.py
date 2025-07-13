@@ -12,7 +12,10 @@ import uvicorn
 import os
 from contextlib import asynccontextmanager
 
-from backend.app.api.tax_routes import router as tax_router
+try:
+    from backend.app.api.tax_routes import router as tax_router
+except ImportError:
+    from app.api.tax_routes import router as tax_router
 
 # Application metadata
 APP_TITLE = "Pakistani Tax Advisor API"
