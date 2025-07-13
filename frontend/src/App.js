@@ -1,4 +1,5 @@
 import React from 'react';
+import TaxInputForm from './components/TaxInputForm';
 import './App.css';
 
 function App() {
@@ -9,10 +10,7 @@ function App() {
         <p>Calculate your income tax for Pakistan 2024-25</p>
       </header>
       <main>
-        <div className="tax-calculator">
-          <h2>Tax Calculator</h2>
-          <p>Coming soon...</p>
-        </div>
+        <TaxInputForm />
       </main>
     </div>
   );
