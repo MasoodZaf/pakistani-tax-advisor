@@ -1,0 +1,49 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Frontend/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Frontend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16.x'
+        cache: 'npm'
+        cache-dependency-path: Frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd Frontend
+        npm ci
+
+    - name: Run linter
+      run: |
+        cd Frontend
+        npm run lint
+
+    - name: Run tests
+      run: |
+        cd Frontend
+        npm test -- --coverage --watchAll=false
+      env:
+        CI: true
+
+    - name: Build
+      run: |
+        cd Frontend
+        npm run build
+      env:
+        CI: true 
