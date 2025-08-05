@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:14
+    container_name: tax_advisor_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tax_advisor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrate-2025-26.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tax_advisor_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: tax_advisor
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      NODE_ENV: production
+      JWT_SECRET: your-super-secret-jwt-key-for-production-docker
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:3001
+    container_name: tax_advisor_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: tax_advisor_network

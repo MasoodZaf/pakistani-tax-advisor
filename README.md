@@ -1,26 +1,50 @@
-# Pakistani Tax Advisor
+# 🇵🇰 Pakistani Tax Advisor - Production Ready
 
-A comprehensive tax calculation and management system for Pakistani taxpayers. This application helps users manage their tax returns across multiple years, with features for income declaration, tax calculation, and wealth statement management.
+A comprehensive tax calculation and filing system for Pakistani taxpayers, designed for tax consultants and individuals.
 
-## Features
+## 🚀 Quick Start for Tax Consultants
 
-- Multi-year tax return management
-- Comprehensive tax forms:
-  - Income declaration
-  - Adjustable tax
-  - Tax reductions
-  - Tax credits
-  - Deductions
-  - Final tax
-  - Capital gains
-  - Expenses tracking
-  - Wealth statement
-- Automatic tax calculation based on latest tax slabs
-- Real-time tax calculation and updates
-- Professional UI with Pakistani theme colors
-- Role-based access control (Admin/User)
-- Secure authentication and session management
-- Audit logging for all changes
+### Option 1: One-Click Setup (Recommended)
+```bash
+# Clone the repository
+git clone https://github.com/MasoodZaf/pakistani-tax-advisor.git
+cd pakistani-tax-advisor
+
+# Run the automated setup
+chmod +x setup.sh
+./setup.sh
+```
+
+**Access URLs:**
+- **Main Application**: http://localhost:3000
+- **Admin Panel**: http://localhost:3000/admin
+- **API**: http://localhost:3001
+
+### 👥 Ready-to-Use Admin Accounts
+
+**Super Admin** (Full Access + User Impersonation):
+- **Email**: `superadmin@paktaxadvisor.com`
+- **Password**: `admin123`
+
+**Regular Admin**:
+- **Email**: `admin@test.com`
+- **Password**: `admin123`
+
+## ✨ Key Features for Tax Consultants
+
+### 🔐 Admin Panel Features
+- **👤 User Impersonation**: Auto-logout and login as any user to assist with tax filing
+- **📊 User Management**: Complete user account management and monitoring
+- **🧮 Tax Calculator**: Built-in Pakistani tax calculator (2025-26 tax slabs)
+- **📈 Reports & Analytics**: Comprehensive tax reports and user statistics
+- **⚙️ System Management**: Database management and health monitoring
+
+### 💼 Tax Filing System
+- **📋 Complete Tax Forms**: All Pakistani tax form components
+- **💰 Auto Tax Calculation**: Real-time calculation based on Pakistani tax laws
+- **✅ Form Validation**: Real-time validation and error checking
+- **📊 Progress Tracking**: Visual progress tracking for tax form completion
+- **📤 Data Export**: Export tax data and generate reports
 
 ## Tech Stack
 
