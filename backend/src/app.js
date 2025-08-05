@@ -4,6 +4,8 @@ const cors = require('cors');
 const { pool } = require('./config/database');
 const authRoutes = require('./routes/auth');
 const taxFormsRoutes = require('./routes/taxForms');
+const adminRoutes = require('./routes/admin');
+const logger = require('./utils/logger');
 
 // Initialize Express app
 const app = express();
@@ -16,7 +18,8 @@ app.use(express.json());
 
 // Mount routes
 app.use('/api', authRoutes);
-app.use('/api', taxFormsRoutes); // Changed from /api/forms to /api to match frontend
+app.use('/api/tax-forms', taxFormsRoutes); // Mount tax forms routes at /api/tax-forms
+app.use('/api/admin', adminRoutes);
 
 // Basic health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -25,16 +28,19 @@ app.get('/api/health', async (req, res) => {
     const result = await client.query('SELECT NOW()');
     client.release();
 
-    res.json({
+    const response = {
       status: 'success',
       message: 'Server is healthy',
       database: {
         connected: true,
         timestamp: result.rows[0].now
       }
-    });
+    };
+
+    logger.info('Health check successful', response);
+    res.json(response);
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error('Health check failed:', error);
     res.status(500).json({
       status: 'error',
       message: 'Server error',
@@ -45,7 +51,7 @@ app.get('/api/health', async (req, res) => {
 
 // Add a root endpoint for easy testing
 app.get('/', (req, res) => {
-  res.json({
+  const response = {
     message: 'Welcome to Pakistani Tax Advisor API',
     endpoints: {
       health: '/api/health',
@@ -56,19 +62,23 @@ app.get('/', (req, res) => {
       forms: {
         taxYears: '/api/tax-years',
         employers: '/api/employers',
+        taxData: '/api/tax-data/:taxYear',
         income: '/api/forms/income/:taxYear',
         completionStatus: '/api/forms/completion-status/:taxYearId'
       }
     }
-  });
+  };
+  
+  logger.info('Root endpoint accessed');
+  res.json(response);
 });
 
 const PORT = 3001;  // Using 3001 since 3000 is used by system ControlCenter
 const HOST = 'localhost';
 
 app.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
-  console.log(`Try accessing:`);
-  console.log(`1. http://${HOST}:${PORT}`);
-  console.log(`2. http://${HOST}:${PORT}/api/health`);
+  logger.info(`Server running on http://${HOST}:${PORT}`);
+  logger.info('Try accessing:');
+  logger.info(`1. http://${HOST}:${PORT}`);
+  logger.info(`2. http://${HOST}:${PORT}/api/health`);
 });
