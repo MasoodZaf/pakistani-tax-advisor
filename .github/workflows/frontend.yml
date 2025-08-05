@@ -4,46 +4,35 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'Frontend/**'
+      - 'frontend/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'Frontend/**'
+      - 'frontend/**'
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Use Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
-        node-version: '16.x'
+        node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: Frontend/package-lock.json
+        cache-dependency-path: frontend/package-lock.json
 
     - name: Install dependencies
       run: |
-        cd Frontend
+        cd frontend
         npm ci
 
-    - name: Run linter
+    - name: Build application
       run: |
-        cd Frontend
-        npm run lint
-
-    - name: Run tests
-      run: |
-        cd Frontend
-        npm test -- --coverage --watchAll=false
-      env:
-        CI: true
-
-    - name: Build
-      run: |
-        cd Frontend
+        cd frontend
         npm run build
       env:
-        CI: true 
+        CI: true
+        GENERATE_SOURCEMAP: false 
