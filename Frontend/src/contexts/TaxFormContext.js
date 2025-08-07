@@ -17,10 +17,17 @@ export const useTaxForm = () => {
 const FORM_STEPS = [
   {
     id: 'income',
-    title: 'Income Information',
-    description: 'Salary, bonuses, and other income sources',
+    title: 'Normal Income',
+    description: 'Primary income subject to normal taxation',
     icon: '💰',
     formType: 'income_forms'
+  },
+  {
+    id: 'final_min_income',
+    title: 'Final/Min Tax Income',
+    description: 'Income subject to final/fixed/minimum tax',
+    icon: '🏛️',
+    formType: 'final_min_income_forms'
   },
   {
     id: 'adjustable_tax',
@@ -77,6 +84,20 @@ const FORM_STEPS = [
     description: 'Assets, liabilities, and wealth reconciliation',
     icon: '💎',
     formType: 'wealth_forms'
+  },
+  {
+    id: 'wealth_reconciliation',
+    title: 'Wealth Reconciliation',
+    description: 'Critical FBR compliance - unreconciled difference must be zero',
+    icon: '⚖️',
+    formType: 'wealth_reconciliation_forms'
+  },
+  {
+    id: 'tax_computation',
+    title: 'Tax Computation Summary',
+    description: 'Complete tax calculation and final summary',
+    icon: '🧮',
+    formType: 'tax_computation_forms'
   }
 ];
 

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const DeductionsForm = () => {
+const DeductionsFormComprehensive = () => {
   const navigate = useNavigate();
   const { 
     saveFormStep, 
@@ -285,4 +285,4 @@ const DeductionsForm = () => {
   );
 };
 
-export default DeductionsForm;
+export default DeductionsFormComprehensive;

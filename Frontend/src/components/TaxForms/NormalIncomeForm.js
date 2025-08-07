@@ -20,127 +20,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Section component defined outside to prevent re-creation and focus loss
-const SectionComponent = ({ groupKey, group, register, errors, expandedSections, toggleSection, getColorClasses, totals, formatCurrency }) => {
-  const colors = getColorClasses(group.color);
-  const IconComponent = group.icon;
-  const isExpanded = expandedSections[groupKey];
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
-
-  return (
-    <div className={`${colors.bg} ${colors.border} border rounded-lg mb-4`}>
-      <div 
-        className="p-4 cursor-pointer"
-        onClick={() => toggleSection(groupKey)}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className={`text-lg font-semibold ${colors.text} flex items-center`}>
-            <IconComponent className={`w-5 h-5 mr-2 ${colors.icon}`} />
-            {group.title}
-            {group.subtitle && <span className="ml-2 text-sm font-normal opacity-75">({group.subtitle})</span>}
-          </h3>
-          {isExpanded ? 
-            <ChevronDown className={`w-4 h-4 ${colors.icon}`} /> :
-            <ChevronRight className={`w-4 h-4 ${colors.icon}`} />
-          }
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="px-4 pb-4">
-          <div className="space-y-3">
-            {group.fields && group.fields.map((field) => (
-              <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                <div className="col-span-8">
-                  <label className="text-sm font-medium text-gray-700">
-                    {field.label}
-                  </label>
-                  {field.helpText && (
-                    <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>
-                  )}
-                </div>
-                <div className="col-span-4">
-                  {field.type === 'select' ? (
-                    <select
-                      {...register(field.field)}
-                      className="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                    >
-                      {field.options.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  ) : field.calculated ? (
-                    <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-right text-sm font-semibold">
-                      {formatCurrency(field.key === 'total_taxable_salary_per_salary_certificate' ? totals.totalTaxableSalary : totals.totalExemptPayments)}
-                    </div>
-                  ) : (
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register(field.field, {
-                        min: { value: 0, message: 'Amount cannot be negative' },
-                        valueAsNumber: true
-                      })}
-                      className={inputClasses}
-                      placeholder="0"
-                    />
-                  )}
-                  {errors[field.field] && (
-                    <p className="mt-1 text-xs text-red-600">{errors[field.field].message}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Tax Exempt Payments Subsection */}
-            {group.exemptFields && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h4 className="text-md font-medium text-gray-800 mb-3">Tax Exempt Payments:</h4>
-                <div className="space-y-3">
-                  {group.exemptFields.map((field) => (
-                    <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                      <div className="col-span-8">
-                        <label className="text-sm font-medium text-gray-700">
-                          {field.label}
-                        </label>
-                        {field.helpText && (
-                          <p className="text-xs text-green-600 mt-1">{field.helpText}</p>
-                        )}
-                      </div>
-                      <div className="col-span-4">
-                        {field.calculated ? (
-                          <div className="px-3 py-2 bg-green-100 border border-green-300 rounded-md text-right text-sm font-semibold">
-                            {formatCurrency(totals.totalExemptPayments)}
-                          </div>
-                        ) : (
-                          <input
-                            type="number"
-                            step="0.01"
-                            {...register(field.field, {
-                              min: { value: 0, message: 'Amount cannot be negative' },
-                              valueAsNumber: true
-                            })}
-                            className={inputClasses}
-                            placeholder="0"
-                          />
-                        )}
-                        {errors[field.field] && (
-                          <p className="mt-1 text-xs text-red-600">{errors[field.field].message}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const IncomeForm = () => {
+const NormalIncomeForm = () => {
   const navigate = useNavigate();
   const { 
     saveFormStep, 
@@ -161,7 +41,7 @@ const IncomeForm = () => {
     setValue,
     formState: { errors } 
   } = useForm({
-    defaultValues: getStepData('income')
+    defaultValues: getStepData('normal_income')
   });
 
   // Watch all values for auto-calculation
@@ -328,10 +208,10 @@ const IncomeForm = () => {
       isComplete: true
     };
 
-    const success = await saveFormStep('income', structuredData, true);
+    const success = await saveFormStep('normal_income', structuredData, true);
     if (success) {
-      toast.success('Income information saved successfully');
-      navigate('/tax-forms/final-min-income'); // Navigate to Final/Min Income form
+      toast.success('Normal income information saved successfully');
+      navigate('/tax-forms/final-min-income'); // Navigate to Final/Min Tax Income form
     }
   };
 
@@ -347,7 +227,7 @@ const IncomeForm = () => {
       isComplete: false
     };
 
-    const success = await saveFormStep('income', structuredData, false);
+    const success = await saveFormStep('normal_income', structuredData, false);
     if (success) {
       toast.success('Progress saved');
       navigate('/tax-forms/final-min-income');
@@ -381,6 +261,124 @@ const IncomeForm = () => {
   };
 
   const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
+
+  const SectionComponent = ({ groupKey, group }) => {
+    const colors = getColorClasses(group.color);
+    const IconComponent = group.icon;
+    const isExpanded = expandedSections[groupKey];
+
+    return (
+      <div className={`${colors.bg} ${colors.border} border rounded-lg mb-4`}>
+        <div 
+          className="p-4 cursor-pointer"
+          onClick={() => toggleSection(groupKey)}
+        >
+          <div className="flex items-center justify-between">
+            <h3 className={`text-lg font-semibold ${colors.text} flex items-center`}>
+              <IconComponent className={`w-5 h-5 mr-2 ${colors.icon}`} />
+              {group.title}
+              {group.subtitle && <span className="ml-2 text-sm font-normal opacity-75">({group.subtitle})</span>}
+            </h3>
+            {isExpanded ? 
+              <ChevronDown className={`w-4 h-4 ${colors.icon}`} /> :
+              <ChevronRight className={`w-4 h-4 ${colors.icon}`} />
+            }
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className="px-4 pb-4">
+            <div className="space-y-3">
+              {group.fields && group.fields.map((field) => (
+                <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-8">
+                    <label className="text-sm font-medium text-gray-700">
+                      {field.label}
+                    </label>
+                    {field.helpText && (
+                      <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>
+                    )}
+                  </div>
+                  <div className="col-span-4">
+                    {field.type === 'select' ? (
+                      <select
+                        {...register(field.field)}
+                        className="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                      >
+                        {field.options.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    ) : field.calculated ? (
+                      <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-right text-sm font-semibold">
+                        {formatCurrency(field.key === 'total_taxable_salary_per_salary_certificate' ? totals.totalTaxableSalary : totals.totalExemptPayments)}
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.01"
+                        {...register(field.field, {
+                          min: { value: 0, message: 'Amount cannot be negative' },
+                          valueAsNumber: true
+                        })}
+                        className={inputClasses}
+                        placeholder="0"
+                      />
+                    )}
+                    {errors[field.field] && (
+                      <p className="mt-1 text-xs text-red-600">{errors[field.field].message}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Tax Exempt Payments Subsection */}
+              {group.exemptFields && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h4 className="text-md font-medium text-gray-800 mb-3">Tax Exempt Payments:</h4>
+                  <div className="space-y-3">
+                    {group.exemptFields.map((field) => (
+                      <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
+                        <div className="col-span-8">
+                          <label className="text-sm font-medium text-gray-700">
+                            {field.label}
+                          </label>
+                          {field.helpText && (
+                            <p className="text-xs text-green-600 mt-1">{field.helpText}</p>
+                          )}
+                        </div>
+                        <div className="col-span-4">
+                          {field.calculated ? (
+                            <div className="px-3 py-2 bg-green-100 border border-green-300 rounded-md text-right text-sm font-semibold">
+                              {formatCurrency(totals.totalExemptPayments)}
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.01"
+                              {...register(field.field, {
+                                min: { value: 0, message: 'Amount cannot be negative' },
+                                valueAsNumber: true
+                              })}
+                              className={inputClasses}
+                              placeholder="0"
+                            />
+                          )}
+                          {errors[field.field] && (
+                            <p className="mt-1 text-xs text-red-600">{errors[field.field].message}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-sm">
@@ -434,18 +432,7 @@ const IncomeForm = () => {
 
         {/* Dynamic Sections - All categories from Excel */}
         {Object.entries(fieldGroups).map(([key, group]) => (
-          <SectionComponent 
-            key={key} 
-            groupKey={key} 
-            group={group} 
-            register={register}
-            errors={errors}
-            expandedSections={expandedSections}
-            toggleSection={toggleSection}
-            getColorClasses={getColorClasses}
-            totals={totals}
-            formatCurrency={formatCurrency}
-          />
+          <SectionComponent key={key} groupKey={key} group={group} />
         ))}
 
         {/* Summary Section */}
@@ -518,4 +505,4 @@ const IncomeForm = () => {
   );
 };
 
-export default IncomeForm;
+export default NormalIncomeForm;

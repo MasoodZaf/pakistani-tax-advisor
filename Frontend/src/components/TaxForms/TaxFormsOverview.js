@@ -48,8 +48,18 @@ const TaxFormsOverview = () => {
   const completionPercentage = getCompletionPercentage();
   const allStepsCompleted = completionPercentage === 100;
 
+  // Map step ID to route path for special cases
+  const getRoutePath = (stepId) => {
+    const routeMap = {
+      'final_min_income': 'final-min-income',
+      'wealth_reconciliation': 'wealth-reconciliation',
+      'tax_computation': 'tax-computation'
+    };
+    return routeMap[stepId] || stepId;
+  };
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between">
@@ -101,8 +111,8 @@ const TaxFormsOverview = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
               <Play className="w-6 h-6 text-green-600" />
@@ -116,16 +126,18 @@ const TaxFormsOverview = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={nextStep ? () => navigate(`/tax-forms/${nextStep.id}`) : handleStartForm}
-            className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
-            disabled={!nextStep && completionPercentage === 0}
-          >
-            {nextStep ? 'Continue' : completionPercentage === 0 ? 'Start Now' : 'Review Forms'}
-          </button>
+          <div className="mt-auto">
+            <button
+              onClick={nextStep ? () => navigate(`/tax-forms/${getRoutePath(nextStep.id)}`) : handleStartForm}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+              disabled={!nextStep && completionPercentage === 0}
+            >
+              {nextStep ? 'Continue' : completionPercentage === 0 ? 'Start Now' : 'Review Forms'}
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-blue-600" />
@@ -135,16 +147,39 @@ const TaxFormsOverview = () => {
               <p className="text-sm text-gray-600">Calculate your tax liability</p>
             </div>
           </div>
-          <button
-            onClick={handleCalculateTax}
-            disabled={completionPercentage < 50 || loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-          >
-            {loading ? 'Calculating...' : 'Calculate Tax'}
-          </button>
+          <div className="mt-auto">
+            <button
+              onClick={handleCalculateTax}
+              disabled={completionPercentage < 50 || loading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              {loading ? 'Calculating...' : 'Calculate Tax'}
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Tax Summary</h3>
+              <p className="text-sm text-gray-600">View tax computation summary</p>
+            </div>
+          </div>
+          <div className="mt-auto">
+            <button
+              onClick={() => navigate('/tax-forms/tax-computation')}
+              disabled={completionPercentage < 25}
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
+            >
+              View Summary
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-primary-600" />
@@ -154,39 +189,42 @@ const TaxFormsOverview = () => {
               <p className="text-sm text-gray-600">File your tax return</p>
             </div>
           </div>
-          <button
-            onClick={handleSubmitReturn}
-            disabled={!allStepsCompleted || loading}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
-          >
-            {loading ? 'Submitting...' : 'Submit Return'}
-          </button>
+          <div className="mt-auto">
+            <button
+              onClick={handleSubmitReturn}
+              disabled={!allStepsCompleted || loading}
+              className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
+            >
+              {loading ? 'Submitting...' : 'Submit Return'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Form Steps Grid */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Tax Return Sections</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {FORM_STEPS.map((step, index) => {
             const isCompleted = completedSteps.has(step.id);
             const isCurrent = nextStep?.id === step.id;
             
+            
             return (
               <Link
                 key={step.id}
-                to={`/tax-forms/${step.id}`}
+                to={`/tax-forms/${getRoutePath(step.id)}`}
                 className={`
-                  block p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md
+                  flex flex-col p-5 rounded-lg border-2 transition-all duration-200 hover:shadow-md h-full
                   ${isCompleted 
-                    ? 'border-green-200 bg-green-50 hover:border-green-300' 
+                    ? 'border-green-200 bg-green-50 hover:border-green-300 hover:bg-green-100' 
                     : isCurrent 
-                    ? 'border-primary-200 bg-primary-50 hover:border-primary-300'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    ? 'border-primary-200 bg-primary-50 hover:border-primary-300 hover:bg-primary-100'
+                    : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
                   }
                 `}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className={`
                       w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
@@ -199,7 +237,7 @@ const TaxFormsOverview = () => {
                     `}>
                       {index + 1}
                     </div>
-                    <span className="text-2xl">{step.icon}</span>
+                    <span className="text-2xl" role="img" aria-label={step.title}>{step.icon}</span>
                   </div>
                   <div className="flex-shrink-0">
                     {isCompleted ? (
@@ -210,45 +248,51 @@ const TaxFormsOverview = () => {
                   </div>
                 </div>
                 
-                <h3 className={`
-                  font-semibold mb-1
-                  ${isCompleted 
-                    ? 'text-green-900' 
-                    : isCurrent 
-                    ? 'text-primary-900'
-                    : 'text-gray-900'
-                  }
-                `}>
-                  {step.title}
-                </h3>
-                
-                <p className={`
-                  text-sm
-                  ${isCompleted 
-                    ? 'text-green-700' 
-                    : isCurrent 
-                    ? 'text-primary-700'
-                    : 'text-gray-600'
-                  }
-                `}>
-                  {step.description}
-                </p>
+                <div className="flex-grow">
+                  <h3 className={`
+                    font-semibold mb-2 text-base leading-tight
+                    ${isCompleted 
+                      ? 'text-green-900' 
+                      : isCurrent 
+                      ? 'text-primary-900'
+                      : 'text-gray-900'
+                    }
+                  `}>
+                    {step.title}
+                  </h3>
+                  
+                  <p className={`
+                    text-sm leading-relaxed mb-3
+                    ${isCompleted 
+                      ? 'text-green-700' 
+                      : isCurrent 
+                      ? 'text-primary-700'
+                      : 'text-gray-600'
+                    }
+                  `}>
+                    {step.description}
+                  </p>
+                </div>
 
-                {isCompleted && (
-                  <div className="mt-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Completed
+                <div className="mt-auto pt-2">
+                  {isCompleted && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      ✓ Completed
                     </span>
-                  </div>
-                )}
+                  )}
 
-                {isCurrent && !isCompleted && (
-                  <div className="mt-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                      In Progress
+                  {isCurrent && !isCompleted && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                      ⏳ In Progress
                     </span>
-                  </div>
-                )}
+                  )}
+
+                  {!isCompleted && !isCurrent && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      ○ Pending
+                    </span>
+                  )}
+                </div>
               </Link>
             );
           })}

@@ -9,8 +9,9 @@ import {
   TrendingDown,
   GraduationCap,
   Building,
-  Truck,
-  Info
+  Info,
+  Users,
+  DollarSign
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -36,23 +37,55 @@ const ReductionsForm = () => {
   // Watch all values for auto-calculation
   const watchedValues = watch();
 
-  // Auto-calculate total reductions
-  const calculateTotal = (values) => {
-    return [
-      'teacher_reduction',
-      'behbood_reduction',
-      'export_income_reduction',
-      'industrial_undertaking_reduction',
-      'other_reductions'
-    ].reduce((sum, field) => sum + (parseFloat(values[field]) || 0), 0);
+  // Define comprehensive tax reduction structure matching Excel
+  const reductionItems = [
+    {
+      id: 'teacher_researcher_reduction',
+      description: 'Tax Reduction for Full Time Teacher / Researcher (Except teachers of medical professionals who derive income from private medical practice)',
+      yesNo: 'Y',
+      amount: 'teacher_researcher_amount',
+      taxReduction: 'teacher_researcher_tax_reduction',
+      limits: '25% of tax payable on his income from salary'
+    },
+    {
+      id: 'behbood_certificates_reduction',
+      description: 'Tax Reduction on Charged on Behbood Certificates / Pensioner\'s Benefit Account in excess of applicable rate',
+      yesNo: 'Y',
+      amount: 'behbood_certificates_amount',
+      taxReduction: 'behbood_certificates_tax_reduction',
+      limits: 'Tax shall not exceed 5% of such profit'
+    },
+    {
+      id: 'capital_gain_immovable_reduction',
+      description: 'Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part II, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @50%',
+      yesNo: 'Y',
+      amount: 'capital_gain_immovable_amount',
+      taxReduction: 'capital_gain_immovable_tax_reduction',
+      limits: '50% of the normal tax on capital gain'
+    },
+    {
+      id: 'capital_gain_clause9a_reduction',
+      description: 'Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @75%',
+      yesNo: 'Y',
+      amount: 'capital_gain_clause9a_amount',
+      taxReduction: 'capital_gain_clause9a_tax_reduction',
+      limits: '75% of the normal tax on capital gain'
+    }
+  ];
+
+  // Calculate total tax reduction
+  const calculateTotalReduction = () => {
+    return reductionItems.reduce((total, item) => {
+      return total + (parseFloat(watchedValues[item.taxReduction]) || 0);
+    }, 0);
   };
 
-  const totalReductions = calculateTotal(watchedValues);
+  const totalReduction = calculateTotalReduction();
 
   const onSubmit = async (data) => {
     const formData = {
       ...data,
-      total_reductions: totalReductions
+      total_tax_reduction: totalReduction
     };
 
     const success = await saveFormStep('reductions', formData, true);
@@ -66,7 +99,7 @@ const ReductionsForm = () => {
     const data = watchedValues;
     const formData = {
       ...data,
-      total_reductions: totalReductions
+      total_tax_reduction: totalReduction
     };
 
     const success = await saveFormStep('reductions', formData, false);
@@ -85,11 +118,10 @@ const ReductionsForm = () => {
     }).format(value || 0);
   };
 
-  const inputClasses = "form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right";
-  const labelClasses = "block text-sm font-medium text-gray-700 mb-2";
+  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm">
+    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -98,8 +130,8 @@ const ReductionsForm = () => {
               <TrendingDown className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tax Reductions</h1>
-              <p className="text-gray-600">Enter eligible tax reductions to reduce your taxable income</p>
+              <h1 className="text-2xl font-bold text-gray-900">Tax Reduction, Credit and Deductible Allowances</h1>
+              <p className="text-gray-600">Enter eligible tax reductions to reduce your tax liability</p>
             </div>
           </div>
           <button
@@ -116,176 +148,97 @@ const ReductionsForm = () => {
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-medium text-blue-900 mb-2">Tax Reductions Help</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Teacher allowance: Special reduction for registered teachers</li>
-              <li>• Behbood schemes: Contributions to approved Behbood funds</li>
-              <li>• Export income: Special reductions for export-oriented businesses</li>
-              <li>• Industrial undertaking: Reductions for qualified industrial projects</li>
-              <li>• These reductions directly reduce your taxable income</li>
+              <li>• <strong>Special straight deduction</strong> is available for Zakat paid under the Zakat and Usher Ordinance</li>
+              <li>• <strong>Rebate at average rate</strong> of tax is allowed on donations made to approved non-profit organisations</li>
+              <li>• <strong>Donation limit</strong>: Lower of donation value and 30% of taxable income</li>
+              <li>• <strong>Associate donations</strong>: Restricted to 15% of taxable income</li>
+              <li>• <strong>Tax reductions</strong> directly reduce your calculated tax liability</li>
             </ul>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Teacher Reduction Section */}
-        <div className="bg-blue-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <GraduationCap className="w-5 h-5 mr-2 text-blue-600" />
-            Teacher Allowance & Reduction
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={labelClasses}>
-                Teacher Allowance Amount (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('teacher_amount', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-blue-600">For registered teachers with NTN</p>
-              {errors.teacher_amount && (
-                <p className="mt-1 text-sm text-red-600">{errors.teacher_amount.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className={labelClasses}>
-                Teacher Reduction (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('teacher_reduction', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              {errors.teacher_reduction && (
-                <p className="mt-1 text-sm text-red-600">{errors.teacher_reduction.message}</p>
-              )}
-            </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Column Headers */}
+        <div className="bg-blue-600 text-white rounded-lg">
+          <div className="grid grid-cols-12 gap-3 items-center py-3 px-4 font-semibold">
+            <div className="col-span-5">Description</div>
+            <div className="col-span-1 text-center">Y/N</div>
+            <div className="col-span-2 text-center">Amount</div>
+            <div className="col-span-2 text-center">Tax Reduction</div>
+            <div className="col-span-2 text-center">Limits/Remarks</div>
           </div>
         </div>
 
-        {/* Behbood Reduction Section */}
-        <div className="bg-purple-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <Building className="w-5 h-5 mr-2 text-purple-600" />
-            Behbood Scheme Reduction
+        {/* Tax Reduction Section */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+            <TrendingDown className="w-5 h-5 mr-2" />
+            Tax Reduction
           </h2>
-          
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className={labelClasses}>
-                Behbood Reduction (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('behbood_reduction', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-purple-600">Contributions to approved Behbood funds</p>
-              {errors.behbood_reduction && (
-                <p className="mt-1 text-sm text-red-600">{errors.behbood_reduction.message}</p>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Export & Industrial Reduction Section */}
-        <div className="bg-yellow-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <Truck className="w-5 h-5 mr-2 text-yellow-600" />
-            Export & Industrial Reductions
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className={labelClasses}>
-                Export Income Reduction (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('export_income_reduction', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-yellow-600">Special reductions for export income</p>
-              {errors.export_income_reduction && (
-                <p className="mt-1 text-sm text-red-600">{errors.export_income_reduction.message}</p>
-              )}
+          {reductionItems.map((item, index) => (
+            <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-green-200 last:border-b-0">
+              <div className="col-span-5">
+                <p className="text-sm font-medium text-gray-700">{item.description}</p>
+              </div>
+              <div className="col-span-1 text-center">
+                <select
+                  {...register(`${item.id}_yn`)}
+                  className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                >
+                  <option value="">-</option>
+                  <option value="Y">Y</option>
+                  <option value="N">N</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register(item.amount, {
+                    min: { value: 0, message: 'Amount cannot be negative' },
+                    valueAsNumber: true
+                  })}
+                  className={inputClasses}
+                  placeholder="0"
+                />
+                {errors[item.amount] && (
+                  <p className="mt-1 text-xs text-red-600">{errors[item.amount].message}</p>
+                )}
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register(item.taxReduction, {
+                    min: { value: 0, message: 'Amount cannot be negative' },
+                    valueAsNumber: true
+                  })}
+                  className={inputClasses}
+                  placeholder="0"
+                />
+                {errors[item.taxReduction] && (
+                  <p className="mt-1 text-xs text-red-600">{errors[item.taxReduction].message}</p>
+                )}
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-gray-600 p-2 bg-gray-50 rounded border">{item.limits}</p>
+              </div>
             </div>
+          ))}
 
-            <div>
-              <label className={labelClasses}>
-                Industrial Undertaking Reduction (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('industrial_undertaking_reduction', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-yellow-600">Reductions for qualified industrial projects</p>
-              {errors.industrial_undertaking_reduction && (
-                <p className="mt-1 text-sm text-red-600">{errors.industrial_undertaking_reduction.message}</p>
-              )}
+          {/* Total Tax Reduction */}
+          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-green-100 rounded-lg px-4 font-semibold">
+            <div className="col-span-5">
+              <p className="text-green-800">Total Tax Reduction</p>
             </div>
-          </div>
-        </div>
-
-        {/* Other Reductions Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Other Reductions
-          </h2>
-          
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className={labelClasses}>
-                Other Reductions (PKR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('other_reductions', {
-                  min: { value: 0, message: 'Amount cannot be negative' }
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <p className="mt-1 text-xs text-gray-600">Any other eligible tax reductions</p>
-              {errors.other_reductions && (
-                <p className="mt-1 text-sm text-red-600">{errors.other_reductions.message}</p>
-              )}
+            <div className="col-span-1"></div>
+            <div className="col-span-2"></div>
+            <div className="col-span-2 text-right">
+              <p className="text-xl font-bold text-green-800">{formatCurrency(totalReduction)}</p>
             </div>
-          </div>
-        </div>
-
-        {/* Summary Section */}
-        <div className="bg-primary-50 p-6 rounded-lg border border-primary-200">
-          <h2 className="text-lg font-semibold text-primary-900 mb-4">Tax Reductions Summary</h2>
-          <div className="text-center">
-            <p className="text-sm text-primary-700 mb-2">Total Tax Reductions</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReductions)}</p>
-            <p className="text-xs text-primary-600 mt-1">This amount reduces your taxable income</p>
+            <div className="col-span-2"></div>
           </div>
         </div>
 

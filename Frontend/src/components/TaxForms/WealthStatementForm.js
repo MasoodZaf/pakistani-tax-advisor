@@ -108,7 +108,7 @@ const WealthStatementForm = () => {
     const success = await saveFormStep('wealth', formData, true);
     if (success) {
       toast.success('Wealth statement completed successfully');
-      navigate('/tax-forms');
+      navigate('/tax-forms/wealth-reconciliation');
     }
   };
 
@@ -125,7 +125,7 @@ const WealthStatementForm = () => {
     const success = await saveFormStep('wealth', formData, false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms');
+      navigate('/tax-forms/wealth-reconciliation');
     }
   };
 
@@ -429,8 +429,8 @@ const WealthStatementForm = () => {
               disabled={saving}
               className="flex items-center px-6 py-3 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {saving ? 'Completing...' : 'Complete Tax Return'}
+              <ArrowRight className="w-4 h-4 mr-2" />
+              {saving ? 'Saving...' : 'Next: Wealth Reconciliation'}
             </button>
           </div>
         </div>

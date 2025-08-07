@@ -6,16 +6,16 @@ import {
   Save, 
   ArrowRight, 
   ArrowLeft, 
-  Gift,
-  Heart,
-  Building2,
+  TrendingDown,
+  GraduationCap,
+  Building,
   Info,
   Users,
   DollarSign
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const CreditsForm = () => {
+const ReductionsFormComprehensive = () => {
   const navigate = useNavigate();
   const { 
     saveFormStep, 
@@ -31,67 +31,67 @@ const CreditsForm = () => {
     watch, 
     formState: { errors } 
   } = useForm({
-    defaultValues: getStepData('credits')
+    defaultValues: getStepData('reductions')
   });
 
   // Watch all values for auto-calculation
   const watchedValues = watch();
 
-  // Define comprehensive tax credits structure matching Excel
-  const creditItems = [
+  // Define comprehensive tax reduction structure matching Excel
+  const reductionItems = [
     {
-      id: 'charitable_donations_u61',
-      description: 'Tax Credit for Charitable Donations u/s 61',
+      id: 'teacher_researcher_reduction',
+      description: 'Tax Reduction for Full Time Teacher / Researcher (Except teachers of medical professionals who derive income from private medical practice)',
       yesNo: 'Y',
-      amount: 'charitable_donations_amount',
-      taxReduction: 'charitable_donations_tax_credit',
-      limits: '30% of the taxable income'
+      amount: 'teacher_researcher_amount',
+      taxReduction: 'teacher_researcher_tax_reduction',
+      limits: '25% of tax payable on his income from salary'
     },
     {
-      id: 'charitable_donations_associate',
-      description: 'Tax Credit for Charitable Donations where donation is made to associate',
+      id: 'behbood_certificates_reduction',
+      description: 'Tax Reduction on Charged on Behbood Certificates / Pensioner\'s Benefit Account in excess of applicable rate',
       yesNo: 'Y',
-      amount: 'charitable_donations_associate_amount',
-      taxReduction: 'charitable_donations_associate_tax_credit',
-      limits: '15% of the taxable income'
+      amount: 'behbood_certificates_amount',
+      taxReduction: 'behbood_certificates_tax_reduction',
+      limits: 'Tax shall not exceed 5% of such profit'
     },
     {
-      id: 'pension_fund_u63',
-      description: 'Tax Credit for Contribution to Approved Pension Fund u/s 63',
+      id: 'capital_gain_immovable_reduction',
+      description: 'Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part II, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @50%',
       yesNo: 'Y',
-      amount: 'pension_fund_amount',
-      taxReduction: 'pension_fund_tax_credit',
-      limits: '20% of the taxable income (2% per year for above 40 years if he joined at or above 41 years of age)'
+      amount: 'capital_gain_immovable_amount',
+      taxReduction: 'capital_gain_immovable_tax_reduction',
+      limits: '50% of the normal tax on capital gain'
     },
     {
-      id: 'surrender_tax_credit_investments',
-      description: 'Surrender of Tax Credit on Investments in Shares disposed off before time limit',
-      yesNo: '-',
-      amount: 'surrender_tax_credit_amount',
-      taxReduction: 'surrender_tax_credit_reduction',
-      limits: '-'
+      id: 'capital_gain_clause9a_reduction',
+      description: 'Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @75%',
+      yesNo: 'Y',
+      amount: 'capital_gain_clause9a_amount',
+      taxReduction: 'capital_gain_clause9a_tax_reduction',
+      limits: '75% of the normal tax on capital gain'
     }
   ];
 
-  // Calculate total tax credit
-  const calculateTotalCredit = () => {
-    return creditItems.reduce((total, item) => {
+  // Calculate total tax reduction
+  const calculateTotalReduction = () => {
+    return reductionItems.reduce((total, item) => {
       return total + (parseFloat(watchedValues[item.taxReduction]) || 0);
     }, 0);
   };
 
-  const totalCredit = calculateTotalCredit();
+  const totalReduction = calculateTotalReduction();
 
   const onSubmit = async (data) => {
     const formData = {
       ...data,
-      total_tax_credits: totalCredit
+      total_tax_reduction: totalReduction
     };
 
-    const success = await saveFormStep('credits', formData, true);
+    const success = await saveFormStep('reductions', formData, true);
     if (success) {
-      toast.success('Tax credits information saved successfully');
-      navigate('/tax-forms/deductions');
+      toast.success('Tax reductions information saved successfully');
+      navigate('/tax-forms/credits');
     }
   };
 
@@ -99,13 +99,13 @@ const CreditsForm = () => {
     const data = watchedValues;
     const formData = {
       ...data,
-      total_tax_credits: totalCredit
+      total_tax_reduction: totalReduction
     };
 
-    const success = await saveFormStep('credits', formData, false);
+    const success = await saveFormStep('reductions', formData, false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms/deductions');
+      navigate('/tax-forms/credits');
     }
   };
 
@@ -126,12 +126,12 @@ const CreditsForm = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Gift className="w-6 h-6 text-blue-600" />
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <TrendingDown className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tax Credits</h1>
-              <p className="text-gray-600">Enter eligible tax credits for charitable donations and investments</p>
+              <h1 className="text-2xl font-bold text-gray-900">Tax Reduction, Credit and Deductible Allowances</h1>
+              <p className="text-gray-600">Enter eligible tax reductions to reduce your tax liability</p>
             </div>
           </div>
           <button
@@ -146,13 +146,13 @@ const CreditsForm = () => {
         {/* Help Panel */}
         {showHelp && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Tax Credits Help</h3>
+            <h3 className="font-medium text-blue-900 mb-2">Tax Reductions Help</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Rebate at average rate</strong> is allowed on donations to approved non-profit organisations</li>
-              <li>• <strong>General donations</strong>: Lower of donation value and 30% of taxable income</li>
+              <li>• <strong>Special straight deduction</strong> is available for Zakat paid under the Zakat and Usher Ordinance</li>
+              <li>• <strong>Rebate at average rate</strong> of tax is allowed on donations made to approved non-profit organisations</li>
+              <li>• <strong>Donation limit</strong>: Lower of donation value and 30% of taxable income</li>
               <li>• <strong>Associate donations</strong>: Restricted to 15% of taxable income</li>
-              <li>• <strong>Pension contributions</strong>: 20% of taxable income (2% per year for late joiners above 40)</li>
-              <li>• <strong>Tax credits</strong> reduce your final tax liability after calculation</li>
+              <li>• <strong>Tax reductions</strong> directly reduce your calculated tax liability</li>
             </ul>
           </div>
         )}
@@ -165,36 +165,32 @@ const CreditsForm = () => {
             <div className="col-span-5">Description</div>
             <div className="col-span-1 text-center">Y/N</div>
             <div className="col-span-2 text-center">Amount</div>
-            <div className="col-span-2 text-center">Tax Credit</div>
+            <div className="col-span-2 text-center">Tax Reduction</div>
             <div className="col-span-2 text-center">Limits/Remarks</div>
           </div>
         </div>
 
-        {/* Tax Credits Section */}
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
-            <Gift className="w-5 h-5 mr-2" />
-            Tax Credits
+        {/* Tax Reduction Section */}
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+            <TrendingDown className="w-5 h-5 mr-2" />
+            Tax Reduction
           </h2>
 
-          {creditItems.map((item, index) => (
-            <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-purple-200 last:border-b-0">
+          {reductionItems.map((item, index) => (
+            <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-green-200 last:border-b-0">
               <div className="col-span-5">
                 <p className="text-sm font-medium text-gray-700">{item.description}</p>
               </div>
               <div className="col-span-1 text-center">
-                {item.yesNo === '-' ? (
-                  <span className="text-gray-400">-</span>
-                ) : (
-                  <select
-                    {...register(`${item.id}_yn`)}
-                    className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                  >
-                    <option value="">-</option>
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
-                )}
+                <select
+                  {...register(`${item.id}_yn`)}
+                  className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                >
+                  <option value="">-</option>
+                  <option value="Y">Y</option>
+                  <option value="N">N</option>
+                </select>
               </div>
               <div className="col-span-2">
                 <input
@@ -232,15 +228,15 @@ const CreditsForm = () => {
             </div>
           ))}
 
-          {/* Total Tax Credits */}
-          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-purple-100 rounded-lg px-4 font-semibold">
+          {/* Total Tax Reduction */}
+          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-green-100 rounded-lg px-4 font-semibold">
             <div className="col-span-5">
-              <p className="text-purple-800">Total Tax Credit</p>
+              <p className="text-green-800">Total Tax Reduction</p>
             </div>
             <div className="col-span-1"></div>
             <div className="col-span-2"></div>
             <div className="col-span-2 text-right">
-              <p className="text-xl font-bold text-purple-800">{formatCurrency(totalCredit)}</p>
+              <p className="text-xl font-bold text-green-800">{formatCurrency(totalReduction)}</p>
             </div>
             <div className="col-span-2"></div>
           </div>
@@ -250,11 +246,11 @@ const CreditsForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/reductions')}
+            onClick={() => navigate('/tax-forms/adjustable_tax')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Tax Reductions
+            Previous: Adjustable Tax
           </button>
 
           <div className="flex space-x-3">
@@ -283,4 +279,4 @@ const CreditsForm = () => {
   );
 };
 
-export default CreditsForm;
+export default ReductionsFormComprehensive;

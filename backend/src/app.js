@@ -4,6 +4,8 @@ const cors = require('cors');
 const { pool } = require('./config/database');
 const authRoutes = require('./routes/auth');
 const taxFormsRoutes = require('./routes/taxForms');
+const adjustableTaxFormsRoutes = require('./routes/adjustableTaxForms');
+const comprehensiveIncomeFormsRoutes = require('./routes/comprehensiveIncomeForms');
 const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
 
@@ -19,6 +21,8 @@ app.use(express.json());
 // Mount routes
 app.use('/api', authRoutes);
 app.use('/api/tax-forms', taxFormsRoutes); // Mount tax forms routes at /api/tax-forms
+app.use('/api/tax-forms/adjustable-tax', adjustableTaxFormsRoutes); // Enhanced adjustable tax routes
+app.use('/api/tax-forms/comprehensive-income', comprehensiveIncomeFormsRoutes); // Comprehensive income routes
 app.use('/api/admin', adminRoutes);
 
 // Basic health check endpoint

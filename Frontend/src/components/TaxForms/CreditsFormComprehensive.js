@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const CreditsForm = () => {
+const CreditsFormComprehensive = () => {
   const navigate = useNavigate();
   const { 
     saveFormStep, 
@@ -283,4 +283,4 @@ const CreditsForm = () => {
   );
 };
 
-export default CreditsForm;
+export default CreditsFormComprehensive;

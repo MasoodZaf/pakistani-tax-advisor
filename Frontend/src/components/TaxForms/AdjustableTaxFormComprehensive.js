@@ -21,81 +21,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Section component defined outside to prevent re-creation and focus loss
-const SectionComponent = ({ groupKey, group, register, errors, expandedSections, toggleSection, getColorClasses }) => {
-  const colors = getColorClasses(group.color);
-  const IconComponent = group.icon;
-  const isExpanded = expandedSections[groupKey];
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
-
-  return (
-    <div className={`${colors.bg} ${colors.border} border rounded-lg mb-4`}>
-      <div 
-        className="p-4 cursor-pointer"
-        onClick={() => toggleSection(groupKey)}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className={`text-lg font-semibold ${colors.text} flex items-center`}>
-            <IconComponent className={`w-5 h-5 mr-2 ${colors.icon}`} />
-            {group.title}
-          </h3>
-          {isExpanded ? 
-            <ChevronDown className={`w-4 h-4 ${colors.icon}`} /> :
-            <ChevronRight className={`w-4 h-4 ${colors.icon}`} />
-          }
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="px-4 pb-4">
-          <div className="space-y-3">
-            {group.fields.map((field) => (
-              <div key={field.key} className="grid grid-cols-12 gap-3 items-center">
-                <div className="col-span-6">
-                  <label className="text-sm font-medium text-gray-700">
-                    {field.label}
-                  </label>
-                </div>
-                <div className="col-span-3">
-                  <input
-                    type="number"
-                    step="0.01"
-                    {...register(field.grossField, {
-                      min: { value: 0, message: 'Amount cannot be negative' },
-                      valueAsNumber: true
-                    })}
-                    className={inputClasses}
-                    placeholder="0"
-                  />
-                  {errors[field.grossField] && (
-                    <p className="mt-1 text-xs text-red-600">{errors[field.grossField].message}</p>
-                  )}
-                </div>
-                <div className="col-span-3">
-                  <input
-                    type="number"
-                    step="0.01"
-                    {...register(field.taxField, {
-                      min: { value: 0, message: 'Amount cannot be negative' },
-                      valueAsNumber: true
-                    })}
-                    className={inputClasses}
-                    placeholder="0"
-                  />
-                  {errors[field.taxField] && (
-                    <p className="mt-1 text-xs text-red-600">{errors[field.taxField].message}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const AdjustableTaxForm = () => {
+const AdjustableTaxFormComprehensive = () => {
   const navigate = useNavigate();
   const { 
     saveFormStep, 
@@ -361,142 +287,13 @@ const AdjustableTaxForm = () => {
   const { totalGrossReceipt, totalTaxCollected } = calculateTotals();
 
   const onSubmit = async (data) => {
-    // Structure the data to match backend API expectations
-    const structuredData = {
-      // Employment and Salary
-      salaryEmployees149: {
-        grossReceipt: parseFloat(data.salary_employees_149_gross_receipt || 0),
-        taxCollected: parseFloat(data.salary_employees_149_tax_collected || 0)
-      },
-      directorshipFee149_3: {
-        grossReceipt: parseFloat(data.directorship_fee_149_3_gross_receipt || 0),
-        taxCollected: parseFloat(data.directorship_fee_149_3_tax_collected || 0)
-      },
-      
-      // Profit on Debt
-      profitDebt151_15: {
-        grossReceipt: parseFloat(data.profit_debt_151_15_gross_receipt || 0),
-        taxCollected: parseFloat(data.profit_debt_151_15_tax_collected || 0)
-      },
-      profitDebtNonResident152_2: {
-        grossReceipt: parseFloat(data.profit_debt_non_resident_152_2_gross_receipt || 0),
-        taxCollected: parseFloat(data.profit_debt_non_resident_152_2_tax_collected || 0)
-      },
-      
-      // Banking
-      advanceTaxCashWithdrawal231AB: {
-        grossReceipt: parseFloat(data.advance_tax_cash_withdrawal_231ab_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_cash_withdrawal_231ab_tax_collected || 0)
-      },
-      
-      // Motor Vehicle Related
-      motorVehicleRegistrationFee231B1: {
-        grossReceipt: parseFloat(data.motor_vehicle_registration_fee_231b1_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_registration_fee_231b1_tax_collected || 0)
-      },
-      motorVehicleTransferFee231B2: {
-        grossReceipt: parseFloat(data.motor_vehicle_transfer_fee_231b2_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_transfer_fee_231b2_tax_collected || 0)
-      },
-      motorVehicleSale231B3: {
-        grossReceipt: parseFloat(data.motor_vehicle_sale_231b3_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_sale_231b3_tax_collected || 0)
-      },
-      motorVehicleLeasing231B1A: {
-        grossReceipt: parseFloat(data.motor_vehicle_leasing_231b1a_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_leasing_231b1a_tax_collected || 0)
-      },
-      advanceTaxMotorVehicle231B2A: {
-        grossReceipt: parseFloat(data.advance_tax_motor_vehicle_231b2a_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_motor_vehicle_231b2a_tax_collected || 0)
-      },
-      
-      // Utility Bills
-      electricityBillDomestic235: {
-        grossReceipt: parseFloat(data.electricity_bill_domestic_235_gross_receipt || 0),
-        taxCollected: parseFloat(data.electricity_bill_domestic_235_tax_collected || 0)
-      },
-      telephoneBill236_1E: {
-        grossReceipt: parseFloat(data.telephone_bill_236_1e_gross_receipt || 0),
-        taxCollected: parseFloat(data.telephone_bill_236_1e_tax_collected || 0)
-      },
-      cellphoneBill236_1F: {
-        grossReceipt: parseFloat(data.cellphone_bill_236_1f_gross_receipt || 0),
-        taxCollected: parseFloat(data.cellphone_bill_236_1f_tax_collected || 0)
-      },
-      prepaidTelephoneCard236_1B: {
-        grossReceipt: parseFloat(data.prepaid_telephone_card_236_1b_gross_receipt || 0),
-        taxCollected: parseFloat(data.prepaid_telephone_card_236_1b_tax_collected || 0)
-      },
-      phoneUnit236_1C: {
-        grossReceipt: parseFloat(data.phone_unit_236_1c_gross_receipt || 0),
-        taxCollected: parseFloat(data.phone_unit_236_1c_tax_collected || 0)
-      },
-      internetBill236_1D: {
-        grossReceipt: parseFloat(data.internet_bill_236_1d_gross_receipt || 0),
-        taxCollected: parseFloat(data.internet_bill_236_1d_tax_collected || 0)
-      },
-      prepaidInternetCard236_1E: {
-        grossReceipt: parseFloat(data.prepaid_internet_card_236_1e_gross_receipt || 0),
-        taxCollected: parseFloat(data.prepaid_internet_card_236_1e_tax_collected || 0)
-      },
-      
-      // Property Related
-      saleTransferImmoveableProperty236C: {
-        grossReceipt: parseFloat(data.sale_transfer_immoveable_property_236c_gross_receipt || 0),
-        taxCollected: parseFloat(data.sale_transfer_immoveable_property_236c_tax_collected || 0)
-      },
-      taxDeducted236CPropertyPurchasedSoldSameYear: {
-        grossReceipt: parseFloat(data.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt || 0),
-        taxCollected: parseFloat(data.tax_deducted_236c_property_purchased_sold_same_year_tax_collected || 0)
-      },
-      taxDeducted236CPropertyPurchasedPriorYear: {
-        grossReceipt: parseFloat(data.tax_deducted_236c_property_purchased_prior_year_gross_receipt || 0),
-        taxCollected: parseFloat(data.tax_deducted_236c_property_purchased_prior_year_tax_collected || 0)
-      },
-      purchaseTransferImmoveableProperty236K: {
-        grossReceipt: parseFloat(data.purchase_transfer_immoveable_property_236k_gross_receipt || 0),
-        taxCollected: parseFloat(data.purchase_transfer_immoveable_property_236k_tax_collected || 0)
-      },
-      
-      // Events and Services
-      functionsGatheringsCharges236CB: {
-        grossReceipt: parseFloat(data.functions_gatherings_charges_236cb_gross_receipt || 0),
-        taxCollected: parseFloat(data.functions_gatherings_charges_236cb_tax_collected || 0)
-      },
-      withholdingTaxSaleConsiderations37E: {
-        grossReceipt: parseFloat(data.withholding_tax_sale_considerations_37e_gross_receipt || 0),
-        taxCollected: parseFloat(data.withholding_tax_sale_considerations_37e_tax_collected || 0)
-      },
-      
-      // Financial and International
-      advanceFund23APartISecondSchedule: {
-        grossReceipt: parseFloat(data.advance_fund_23a_part_i_second_schedule_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_fund_23a_part_i_second_schedule_tax_collected || 0)
-      },
-      advanceTaxWithdrawalPensionFund23A: {
-        grossReceipt: parseFloat(data.advance_tax_withdrawal_pension_fund_23a_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_withdrawal_pension_fund_23a_tax_collected || 0)
-      },
-      personsRemittingAmountAbroad236V: {
-        grossReceipt: parseFloat(data.persons_remitting_amount_abroad_236v_gross_receipt || 0),
-        taxCollected: parseFloat(data.persons_remitting_amount_abroad_236v_tax_collected || 0)
-      },
-      advanceTaxForeignDomesticWorkers231C: {
-        grossReceipt: parseFloat(data.advance_tax_foreign_domestic_workers_231c_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_foreign_domestic_workers_231c_tax_collected || 0)
-      },
-      
-      // Totals
-      totals: {
-        totalGrossReceipt: totalGrossReceipt,
-        totalAdjustableTax: totalTaxCollected
-      },
-      
-      isComplete: true
+    const formData = {
+      ...data,
+      total_gross_receipt: totalGrossReceipt,
+      total_adjustable_tax: totalTaxCollected
     };
 
-    const success = await saveFormStep('adjustable_tax', structuredData, true);
+    const success = await saveFormStep('adjustable_tax', formData, true);
     if (success) {
       toast.success('Adjustable tax information saved successfully');
       navigate('/tax-forms/reductions');
@@ -505,142 +302,13 @@ const AdjustableTaxForm = () => {
 
   const onSaveAndContinue = async () => {
     const data = watchedValues;
-    // Structure the data to match backend API expectations
-    const structuredData = {
-      // Employment and Salary
-      salaryEmployees149: {
-        grossReceipt: parseFloat(data.salary_employees_149_gross_receipt || 0),
-        taxCollected: parseFloat(data.salary_employees_149_tax_collected || 0)
-      },
-      directorshipFee149_3: {
-        grossReceipt: parseFloat(data.directorship_fee_149_3_gross_receipt || 0),
-        taxCollected: parseFloat(data.directorship_fee_149_3_tax_collected || 0)
-      },
-      
-      // Profit on Debt
-      profitDebt151_15: {
-        grossReceipt: parseFloat(data.profit_debt_151_15_gross_receipt || 0),
-        taxCollected: parseFloat(data.profit_debt_151_15_tax_collected || 0)
-      },
-      profitDebtNonResident152_2: {
-        grossReceipt: parseFloat(data.profit_debt_non_resident_152_2_gross_receipt || 0),
-        taxCollected: parseFloat(data.profit_debt_non_resident_152_2_tax_collected || 0)
-      },
-      
-      // Banking
-      advanceTaxCashWithdrawal231AB: {
-        grossReceipt: parseFloat(data.advance_tax_cash_withdrawal_231ab_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_cash_withdrawal_231ab_tax_collected || 0)
-      },
-      
-      // Motor Vehicle Related
-      motorVehicleRegistrationFee231B1: {
-        grossReceipt: parseFloat(data.motor_vehicle_registration_fee_231b1_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_registration_fee_231b1_tax_collected || 0)
-      },
-      motorVehicleTransferFee231B2: {
-        grossReceipt: parseFloat(data.motor_vehicle_transfer_fee_231b2_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_transfer_fee_231b2_tax_collected || 0)
-      },
-      motorVehicleSale231B3: {
-        grossReceipt: parseFloat(data.motor_vehicle_sale_231b3_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_sale_231b3_tax_collected || 0)
-      },
-      motorVehicleLeasing231B1A: {
-        grossReceipt: parseFloat(data.motor_vehicle_leasing_231b1a_gross_receipt || 0),
-        taxCollected: parseFloat(data.motor_vehicle_leasing_231b1a_tax_collected || 0)
-      },
-      advanceTaxMotorVehicle231B2A: {
-        grossReceipt: parseFloat(data.advance_tax_motor_vehicle_231b2a_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_motor_vehicle_231b2a_tax_collected || 0)
-      },
-      
-      // Utility Bills
-      electricityBillDomestic235: {
-        grossReceipt: parseFloat(data.electricity_bill_domestic_235_gross_receipt || 0),
-        taxCollected: parseFloat(data.electricity_bill_domestic_235_tax_collected || 0)
-      },
-      telephoneBill236_1E: {
-        grossReceipt: parseFloat(data.telephone_bill_236_1e_gross_receipt || 0),
-        taxCollected: parseFloat(data.telephone_bill_236_1e_tax_collected || 0)
-      },
-      cellphoneBill236_1F: {
-        grossReceipt: parseFloat(data.cellphone_bill_236_1f_gross_receipt || 0),
-        taxCollected: parseFloat(data.cellphone_bill_236_1f_tax_collected || 0)
-      },
-      prepaidTelephoneCard236_1B: {
-        grossReceipt: parseFloat(data.prepaid_telephone_card_236_1b_gross_receipt || 0),
-        taxCollected: parseFloat(data.prepaid_telephone_card_236_1b_tax_collected || 0)
-      },
-      phoneUnit236_1C: {
-        grossReceipt: parseFloat(data.phone_unit_236_1c_gross_receipt || 0),
-        taxCollected: parseFloat(data.phone_unit_236_1c_tax_collected || 0)
-      },
-      internetBill236_1D: {
-        grossReceipt: parseFloat(data.internet_bill_236_1d_gross_receipt || 0),
-        taxCollected: parseFloat(data.internet_bill_236_1d_tax_collected || 0)
-      },
-      prepaidInternetCard236_1E: {
-        grossReceipt: parseFloat(data.prepaid_internet_card_236_1e_gross_receipt || 0),
-        taxCollected: parseFloat(data.prepaid_internet_card_236_1e_tax_collected || 0)
-      },
-      
-      // Property Related
-      saleTransferImmoveableProperty236C: {
-        grossReceipt: parseFloat(data.sale_transfer_immoveable_property_236c_gross_receipt || 0),
-        taxCollected: parseFloat(data.sale_transfer_immoveable_property_236c_tax_collected || 0)
-      },
-      taxDeducted236CPropertyPurchasedSoldSameYear: {
-        grossReceipt: parseFloat(data.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt || 0),
-        taxCollected: parseFloat(data.tax_deducted_236c_property_purchased_sold_same_year_tax_collected || 0)
-      },
-      taxDeducted236CPropertyPurchasedPriorYear: {
-        grossReceipt: parseFloat(data.tax_deducted_236c_property_purchased_prior_year_gross_receipt || 0),
-        taxCollected: parseFloat(data.tax_deducted_236c_property_purchased_prior_year_tax_collected || 0)
-      },
-      purchaseTransferImmoveableProperty236K: {
-        grossReceipt: parseFloat(data.purchase_transfer_immoveable_property_236k_gross_receipt || 0),
-        taxCollected: parseFloat(data.purchase_transfer_immoveable_property_236k_tax_collected || 0)
-      },
-      
-      // Events and Services
-      functionsGatheringsCharges236CB: {
-        grossReceipt: parseFloat(data.functions_gatherings_charges_236cb_gross_receipt || 0),
-        taxCollected: parseFloat(data.functions_gatherings_charges_236cb_tax_collected || 0)
-      },
-      withholdingTaxSaleConsiderations37E: {
-        grossReceipt: parseFloat(data.withholding_tax_sale_considerations_37e_gross_receipt || 0),
-        taxCollected: parseFloat(data.withholding_tax_sale_considerations_37e_tax_collected || 0)
-      },
-      
-      // Financial and International
-      advanceFund23APartISecondSchedule: {
-        grossReceipt: parseFloat(data.advance_fund_23a_part_i_second_schedule_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_fund_23a_part_i_second_schedule_tax_collected || 0)
-      },
-      advanceTaxWithdrawalPensionFund23A: {
-        grossReceipt: parseFloat(data.advance_tax_withdrawal_pension_fund_23a_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_withdrawal_pension_fund_23a_tax_collected || 0)
-      },
-      personsRemittingAmountAbroad236V: {
-        grossReceipt: parseFloat(data.persons_remitting_amount_abroad_236v_gross_receipt || 0),
-        taxCollected: parseFloat(data.persons_remitting_amount_abroad_236v_tax_collected || 0)
-      },
-      advanceTaxForeignDomesticWorkers231C: {
-        grossReceipt: parseFloat(data.advance_tax_foreign_domestic_workers_231c_gross_receipt || 0),
-        taxCollected: parseFloat(data.advance_tax_foreign_domestic_workers_231c_tax_collected || 0)
-      },
-      
-      // Totals
-      totals: {
-        totalGrossReceipt: totalGrossReceipt,
-        totalAdjustableTax: totalTaxCollected
-      },
-      
-      isComplete: false
+    const formData = {
+      ...data,
+      total_gross_receipt: totalGrossReceipt,
+      total_adjustable_tax: totalTaxCollected
     };
 
-    const success = await saveFormStep('adjustable_tax', structuredData, false);
+    const success = await saveFormStep('adjustable_tax', formData, false);
     if (success) {
       toast.success('Progress saved');
       navigate('/tax-forms/reductions');
@@ -809,16 +477,7 @@ const AdjustableTaxForm = () => {
 
         {/* Dynamic Sections - All 27 fields from Excel */}
         {Object.entries(fieldGroups).map(([key, group]) => (
-          <SectionComponent 
-            key={key} 
-            groupKey={key} 
-            group={group}
-            register={register}
-            errors={errors}
-            expandedSections={expandedSections}
-            toggleSection={toggleSection}
-            getColorClasses={getColorClasses}
-          />
+          <SectionComponent key={key} groupKey={key} group={group} />
         ))}
 
         {/* Totals Section */}
@@ -880,4 +539,4 @@ const AdjustableTaxForm = () => {
   );
 };
 
-export default AdjustableTaxForm;
+export default AdjustableTaxFormComprehensive;

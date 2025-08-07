@@ -64,6 +64,7 @@ async function getTaxDataForUser(userId, userEmail, taxYearId, taxYear) {
     // Define all form tables
     const formTables = {
       income: 'income_forms',
+      finalMinIncome: 'final_min_income_forms',
       adjustableTax: 'adjustable_tax_forms',
       reductions: 'reductions_forms',
       credits: 'credits_forms',
@@ -71,7 +72,8 @@ async function getTaxDataForUser(userId, userEmail, taxYearId, taxYear) {
       finalTax: 'final_tax_forms',
       capitalGain: 'capital_gain_forms',
       expenses: 'expenses_forms',
-      wealth: 'wealth_forms'
+      wealth: 'wealth_forms',
+      wealthReconciliation: 'wealth_reconciliation_forms'
     };
     
     // Get data from each form table
@@ -384,21 +386,35 @@ router.put('/forms/income/:taxYear', requireAuth, async (req, res) => {
     
     const { tax_return_id: taxReturnId, tax_year_id: taxYearId } = taxReturnQuery.rows[0];
     
-    // Calculate derived values
+    // Calculate derived values - Enhanced for Normal Income structure
     const monthlySalary = parseFloat(formData.monthly_salary || 0);
     const bonus = parseFloat(formData.bonus || 0);
-    const carAllowance = parseFloat(formData.car_allowance || 0);
-    const otherTaxable = parseFloat(formData.other_taxable || 0);
+    const carAllowance = parseFloat(formData.car_allowance || 0); // legacy field
+    const otherTaxable = parseFloat(formData.other_taxable || 0); // legacy field
     const medicalAllowance = parseFloat(formData.medical_allowance || 0);
-    const employerContribution = parseFloat(formData.employer_contribution || 0);
-    const otherExempt = parseFloat(formData.other_exempt || 0);
-    const otherSources = parseFloat(formData.other_sources || 0);
+    const employerContribution = parseFloat(formData.employer_contribution || 0); // legacy field
+    const otherExempt = parseFloat(formData.other_exempt || 0); // legacy field
+    const otherSources = parseFloat(formData.other_sources || 0); // legacy field
     
-    const totalGrossIncome = (monthlySalary * 12) + bonus + carAllowance + otherTaxable + medicalAllowance + employerContribution + otherExempt + otherSources;
-    const totalExemptIncome = medicalAllowance + employerContribution + otherExempt;
-    const totalTaxableIncome = totalGrossIncome - totalExemptIncome;
+    // New Normal Income fields
+    const taxableValueCar = parseFloat(formData.taxable_value_car_provided_by_employer || 0);
+    const otherTaxablePayments = parseFloat(formData.other_taxable_payments_by_employer || 0);
+    const employerContributionFunds = parseFloat(formData.employer_contribution_approved_funds || 0);
+    const otherTaxExemptPayments = parseFloat(formData.other_tax_exempt_payments_by_employer || 0);
+    const incomeOtherSources = parseFloat(formData.income_from_other_sources || 0);
     
-    // Update income form
+    // Calculate totals using new structure (if new fields are provided) or legacy structure
+    const totalTaxableSalary = monthlySalary + bonus + 
+      (taxableValueCar || carAllowance) + (otherTaxablePayments || otherTaxable);
+    const totalExemptPayments = medicalAllowance + 
+      (employerContributionFunds || employerContribution) + (otherTaxExemptPayments || otherExempt);
+    const totalOtherIncome = incomeOtherSources || otherSources;
+    
+    const totalGrossIncome = totalTaxableSalary + totalExemptPayments + totalOtherIncome;
+    const totalExemptIncome = totalExemptPayments;
+    const totalTaxableIncome = totalTaxableSalary + totalOtherIncome; // Net taxable income
+    
+    // Update income form with enhanced Normal Income fields
     const updateResult = await client.query(`
       UPDATE income_forms SET
         monthly_salary = $4,
@@ -412,21 +428,46 @@ router.put('/forms/income/:taxYear', requireAuth, async (req, res) => {
         employer_contribution = $12,
         other_exempt = $13,
         other_sources = $14,
-        total_gross_income = $15,
-        total_exempt_income = $16,
-        total_taxable_income = $17,
-        is_complete = $18,
+        -- New Normal Income fields
+        multiple_employers_during_tax_year = $15,
+        taxable_value_car_provided_by_employer = $16,
+        other_taxable_payments_by_employer = $17,
+        total_taxable_salary_per_salary_certificate = $18,
+        employer_contribution_approved_funds = $19,
+        other_tax_exempt_payments_by_employer = $20,
+        total_exempt_payments = $21,
+        income_from_other_sources = $22,
+        total_gross_income_normal = $23,
+        net_taxable_income_normal = $24,
+        -- Legacy calculated fields for backward compatibility
+        total_gross_income = $25,
+        total_exempt_income = $26,
+        total_taxable_income = $27,
+        is_complete = $28,
         last_updated_by = $2,
         updated_at = NOW()
       WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
       RETURNING *
     `, [
       taxReturnId, userId, userEmail,
+      // Legacy fields
       monthlySalary, bonus, carAllowance, otherTaxable,
       parseFloat(formData.salary_tax_deducted || 0),
-      formData.multiple_employer || null,
+      formData.multiple_employer || formData.multiple_employers_during_tax_year || null,
       parseFloat(formData.additional_tax_deducted || 0),
       medicalAllowance, employerContribution, otherExempt, otherSources,
+      // New Normal Income fields
+      formData.multiple_employers_during_tax_year || null,
+      taxableValueCar,
+      otherTaxablePayments,
+      parseFloat(formData.total_taxable_salary_per_salary_certificate || 0) || totalTaxableSalary,
+      employerContributionFunds,
+      otherTaxExemptPayments,
+      parseFloat(formData.total_exempt_payments || 0) || totalExemptPayments,
+      incomeOtherSources,
+      parseFloat(formData.total_gross_income || 0) || totalGrossIncome,
+      parseFloat(formData.net_taxable_income || 0) || totalTaxableIncome,
+      // Legacy calculated totals for backward compatibility
       totalGrossIncome, totalExemptIncome, totalTaxableIncome,
       formData.is_complete || false
     ]);
@@ -856,6 +897,410 @@ router.post('/submit', requireAuth, async (req, res) => {
       message: error.message
     });
   }
+});
+
+// Save/Update Final Min Income Forms
+router.post('/final_min_income_forms', requireAuth, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { userId, userEmail } = req;
+    const { taxReturnId, isComplete, ...formData } = req.body;
+    
+    // Get tax return details
+    const taxReturnQuery = await client.query(`
+      SELECT tr.id, ty.id as tax_year_id, ty.tax_year
+      FROM tax_returns tr
+      JOIN tax_years ty ON tr.tax_year_id = ty.id
+      WHERE tr.id = $1 AND tr.user_id = $2 AND tr.user_email = $3
+    `, [taxReturnId, userId, userEmail]);
+    
+    if (taxReturnQuery.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        error: 'Tax return not found',
+        message: 'Tax return not found or access denied'
+      });
+    }
+    
+    const { tax_year_id: taxYearId, tax_year: taxYear } = taxReturnQuery.rows[0];
+    
+    // Map frontend field names to database column names (handling PostgreSQL truncation)
+    const fieldMapping = {
+      'return_on_investment_exceeding_1_million_sukuk_u_s_saa_12_5pc_u_s_151_1a': 'return_on_investment_exceeding_1_million_sukuk_u_s_saa_12_5pc_u',
+      'return_on_investment_not_exceeding_1_million_sukuk_u_s_saa_10pc_u_s_151_1a': 'return_on_investment_not_exceeding_1_million_sukuk_u_s_saa_10pc',
+      'profit_on_debt_u_s_151a_saa_sab_part_ii_second_schedule_atl_10pc_non_atl_20pc': 'profit_on_debt_u_s_151a_saa_sab_part_ii_second_schedule_atl_10p',
+      'profit_on_debt_national_savings_certificates_including_defence_saving_pertaining_to_services_u_s_39_14a': 'profit_on_debt_national_savings_certificates_including_defence_',
+      'employment_termination_benefits_u_s_12_6_chargeable_to_tax_at_average_rate': 'employment_termination_benefits_u_s_12_6_chargeable_to_tax_at_a',
+      'bonus_shares_issued_by_companies_u/s_236f': 'bonus_shares_issued_by_companies_u_s_236f'
+    };
+    
+    // Map form data to database column names, excluding generated columns
+    const generatedColumns = ['subtotal', 'grand_total']; // These are auto-calculated by database
+    const mappedData = {};
+    Object.entries(formData).forEach(([key, value]) => {
+      const dbField = fieldMapping[key] || key;
+      // Skip generated columns - they're auto-calculated by PostgreSQL
+      if (!generatedColumns.includes(dbField)) {
+        mappedData[dbField] = value;
+      }
+    });
+    
+    // Check if record exists
+    const existingRecord = await client.query(`
+      SELECT id FROM final_min_income_forms 
+      WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+    `, [taxReturnId, userId, userEmail]);
+    
+    let result;
+    if (existingRecord.rows.length > 0) {
+      // Update existing record
+      const updateFields = Object.keys(mappedData).map((field, index) => `${field} = $${index + 5}`).join(', ');
+      const updateValues = Object.values(mappedData);
+      
+      result = await client.query(`
+        UPDATE final_min_income_forms SET
+          ${updateFields},
+          is_complete = $4,
+          last_updated_by = $2,
+          updated_at = NOW()
+        WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+        RETURNING *
+      `, [taxReturnId, userId, userEmail, isComplete, ...updateValues]);
+    } else {
+      // Insert new record
+      const fieldNames = ['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year', 'is_complete', 'last_updated_by', ...Object.keys(mappedData)];
+      const fieldValues = [taxReturnId, userId, userEmail, taxYearId, taxYear, isComplete, userId, ...Object.values(mappedData)];
+      const placeholders = fieldValues.map((_, index) => `$${index + 1}`).join(', ');
+      
+      result = await client.query(`
+        INSERT INTO final_min_income_forms (${fieldNames.join(', ')})
+        VALUES (${placeholders})
+        RETURNING *
+      `, fieldValues);
+    }
+    
+    // Log audit trail
+    await client.query(`
+      INSERT INTO audit_log (
+        user_id, user_email, action, table_name, record_id, 
+        field_name, new_value, ip_address, user_agent, category
+      ) VALUES ($1, $2, $3, 'final_min_income_forms', $4, $5, $6, $7, $8, $9)
+    `, [
+      userId, userEmail, existingRecord.rows.length > 0 ? 'update' : 'insert',
+      result.rows[0].id, `final_min_income_form_${taxYear}`, 
+      JSON.stringify(formData), req.ip, req.headers['user-agent'], 
+      `form_${existingRecord.rows.length > 0 ? 'update' : 'create'}_${taxYear}`
+    ]);
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: `Final/Min income form ${existingRecord.rows.length > 0 ? 'updated' : 'created'} successfully`
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Final min income form save error:', error);
+    res.status(500).json({ 
+      error: 'Failed to save form',
+      message: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Specific POST endpoint for income_forms with field mapping
+router.post('/income_forms', requireAuth, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { userId, userEmail } = req;
+    const { taxReturnId, isComplete, ...formData } = req.body;
+    
+    // Get tax return details
+    const taxReturnQuery = await client.query(`
+      SELECT tr.id, ty.id as tax_year_id, ty.tax_year
+      FROM tax_returns tr
+      JOIN tax_years ty ON tr.tax_year_id = ty.id
+      WHERE tr.id = $1 AND tr.user_id = $2 AND tr.user_email = $3
+    `, [taxReturnId, userId, userEmail]);
+    
+    if (taxReturnQuery.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        error: 'Tax return not found',
+        message: 'Tax return not found or access denied'
+      });
+    }
+    
+    const { tax_year_id: taxYearId, tax_year: taxYear } = taxReturnQuery.rows[0];
+    
+    // Map comprehensive field names to legacy database columns
+    const fieldMapping = {
+      // New comprehensive fields → Existing database columns
+      'taxable_value_car_provided_by_employer': 'car_allowance',
+      'other_taxable_payments_by_employer': 'other_taxable', 
+      'employer_contribution_approved_funds': 'employer_contribution',
+      'other_tax_exempt_payments_by_employer': 'other_exempt',
+      'income_from_other_sources': 'other_sources',
+      'multiple_employers_during_tax_year': 'multiple_employer',
+      // Keep existing field names as-is
+      'monthly_salary': 'monthly_salary',
+      'bonus': 'bonus',
+      'medical_allowance': 'medical_allowance',
+      'salary_tax_deducted': 'salary_tax_deducted',
+      'additional_tax_deducted': 'additional_tax_deducted'
+    };
+    
+    // Map form data to database column names
+    const mappedData = {};
+    Object.entries(formData).forEach(([key, value]) => {
+      const dbField = fieldMapping[key] || key;
+      // Only include fields that exist in the mapping or are known database columns
+      if (fieldMapping.hasOwnProperty(key) || ['monthly_salary', 'bonus', 'medical_allowance', 'salary_tax_deducted', 'additional_tax_deducted'].includes(key)) {
+        mappedData[dbField] = value;
+      }
+    });
+    
+    // Check if record exists
+    const existingRecord = await client.query(`
+      SELECT id FROM income_forms 
+      WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+    `, [taxReturnId, userId, userEmail]);
+    
+    let result;
+    if (existingRecord.rows.length > 0) {
+      // Update existing record
+      const updateFields = Object.keys(mappedData)
+        .map((field, index) => `${field} = $${index + 5}`)
+        .join(', ');
+      const updateValues = Object.values(mappedData);
+      
+      if (updateFields) {
+        result = await client.query(`
+          UPDATE income_forms SET
+            ${updateFields},
+            is_complete = $4,
+            last_updated_by = $2,
+            updated_at = NOW()
+          WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+          RETURNING *
+        `, [taxReturnId, userId, userEmail, isComplete, ...updateValues]);
+      } else {
+        result = await client.query(`
+          UPDATE income_forms SET
+            is_complete = $4,
+            last_updated_by = $2,
+            updated_at = NOW()
+          WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+          RETURNING *
+        `, [taxReturnId, userId, userEmail, isComplete]);
+      }
+    } else {
+      // Insert new record
+      const fieldNames = ['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year', 'is_complete', 'last_updated_by', ...Object.keys(mappedData)];
+      const fieldValues = [taxReturnId, userId, userEmail, taxYearId, taxYear, isComplete, userId, ...Object.values(mappedData)];
+      const placeholders = fieldValues.map((_, index) => `$${index + 1}`).join(', ');
+      
+      result = await client.query(`
+        INSERT INTO income_forms (${fieldNames.join(', ')})
+        VALUES (${placeholders})
+        RETURNING *
+      `, fieldValues);
+    }
+    
+    // Log audit trail
+    await client.query(`
+      INSERT INTO audit_log (
+        user_id, user_email, action, table_name, record_id, 
+        field_name, new_value, ip_address, user_agent, category
+      ) VALUES ($1, $2, $3, 'income_forms', $4, $5, $6, $7, $8, $9)
+    `, [
+      userId, userEmail, existingRecord.rows.length > 0 ? 'update' : 'insert',
+      result.rows[0].id, `income_form_${taxYear}`, 
+      JSON.stringify(formData), req.ip, req.headers['user-agent'], 
+      `form_${existingRecord.rows.length > 0 ? 'update' : 'create'}_${taxYear}`
+    ]);
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: `Income form ${existingRecord.rows.length > 0 ? 'updated' : 'created'} successfully`
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('income_forms save error:', error);
+    res.status(500).json({ 
+      error: 'Failed to save form',
+      message: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Generic POST endpoint for all form types to match frontend expectations
+const formTypeMapping = {
+  'income_forms': 'income_forms',
+  'adjustable_tax_forms': 'adjustable_tax_forms', 
+  'reductions_forms': 'reductions_forms',
+  'credits_forms': 'credits_forms',
+  'deductions_forms': 'deductions_forms',
+  'final_tax_forms': 'final_tax_forms',
+  'capital_gain_forms': 'capital_gain_forms',
+  'expenses_forms': 'expenses_forms',
+  'wealth_forms': 'wealth_forms',
+  'wealth_reconciliation_forms': 'wealth_reconciliation_forms'
+};
+
+Object.keys(formTypeMapping).forEach(formType => {
+  // Skip final_min_income_forms as it already has a custom endpoint
+  if (formType === 'final_min_income_forms') return;
+  
+  // Skip income_forms as it has a specific legacy endpoint
+  if (formType === 'income_forms') return;
+  
+  router.post(`/${formType}`, requireAuth, async (req, res) => {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const { userId, userEmail } = req;
+      const { taxReturnId, isComplete, ...formData } = req.body;
+      const tableName = formTypeMapping[formType];
+      
+      // Define generated columns that should be excluded from INSERT/UPDATE
+      const generatedColumnsByTable = {
+        'income_forms': ['total_gross_income', 'total_exempt_income', 'total_taxable_income'],
+        'reductions_forms': ['total_reductions'],
+        'credits_forms': ['total_credits'],
+        'deductions_forms': ['total_deductions'],
+        'final_tax_forms': ['sukuk_tax_amount', 'debt_tax_amount', 'total_final_tax'],
+        'capital_gain_forms': ['property_1_year_tax_due', 'property_2_3_years_tax_due', 'securities_tax_due', 'total_capital_gains', 'total_capital_gains_tax'],
+        'expenses_forms': ['total_expenses'],
+        'wealth_forms': ['total_assets_previous_year', 'total_assets_current_year', 'total_liabilities_previous_year', 'total_liabilities_current_year', 'net_worth_previous_year', 'net_worth_current_year', 'wealth_increase'],
+        'adjustable_tax_forms': ['total_gross_receipt', 'total_adjustable_tax']
+      };
+      
+      const generatedColumns = generatedColumnsByTable[tableName] || [];
+      
+      // Get tax return details
+      const taxReturnQuery = await client.query(`
+        SELECT tr.id, ty.id as tax_year_id, ty.tax_year
+        FROM tax_returns tr
+        JOIN tax_years ty ON tr.tax_year_id = ty.id
+        WHERE tr.id = $1 AND tr.user_id = $2 AND tr.user_email = $3
+      `, [taxReturnId, userId, userEmail]);
+      
+      if (taxReturnQuery.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ 
+          error: 'Tax return not found',
+          message: 'Tax return not found or access denied'
+        });
+      }
+      
+      const { tax_year_id: taxYearId, tax_year: taxYear } = taxReturnQuery.rows[0];
+      
+      // Filter out generated columns from form data
+      const filteredFormData = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (!generatedColumns.includes(key)) {
+          filteredFormData[key] = value;
+        }
+      });
+      
+      // Check if record exists
+      const existingRecord = await client.query(`
+        SELECT id FROM ${tableName} 
+        WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+      `, [taxReturnId, userId, userEmail]);
+      
+      let result;
+      if (existingRecord.rows.length > 0) {
+        // Update existing record - build dynamic query
+        const updateFields = Object.keys(filteredFormData)
+          .map((field, index) => `${field} = $${index + 5}`)
+          .join(', ');
+        const updateValues = Object.values(filteredFormData);
+        
+        if (updateFields) {
+          result = await client.query(`
+            UPDATE ${tableName} SET
+              ${updateFields},
+              is_complete = $4,
+              last_updated_by = $2,
+              updated_at = NOW()
+            WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+            RETURNING *
+          `, [taxReturnId, userId, userEmail, isComplete, ...updateValues]);
+        } else {
+          result = await client.query(`
+            UPDATE ${tableName} SET
+              is_complete = $4,
+              last_updated_by = $2,
+              updated_at = NOW()
+            WHERE tax_return_id = $1 AND user_id = $2 AND user_email = $3
+            RETURNING *
+          `, [taxReturnId, userId, userEmail, isComplete]);
+        }
+      } else {
+        // Insert new record - build dynamic query
+        const fieldNames = ['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year', 'is_complete', 'last_updated_by', ...Object.keys(filteredFormData)];
+        const fieldValues = [taxReturnId, userId, userEmail, taxYearId, taxYear, isComplete, userId, ...Object.values(filteredFormData)];
+        const placeholders = fieldValues.map((_, index) => `$${index + 1}`).join(', ');
+        
+        result = await client.query(`
+          INSERT INTO ${tableName} (${fieldNames.join(', ')})
+          VALUES (${placeholders})
+          RETURNING *
+        `, fieldValues);
+      }
+      
+      // Log audit trail
+      await client.query(`
+        INSERT INTO audit_log (
+          user_id, user_email, action, table_name, record_id, 
+          field_name, new_value, ip_address, user_agent, category
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        userId, userEmail, existingRecord.rows.length > 0 ? 'update' : 'insert',
+        tableName, result.rows[0].id, `${formType}_${taxYear}`, 
+        JSON.stringify(formData), req.ip, req.headers['user-agent'], 
+        `form_${existingRecord.rows.length > 0 ? 'update' : 'create'}_${taxYear}`
+      ]);
+      
+      await client.query('COMMIT');
+      
+      res.json({
+        success: true,
+        data: result.rows[0],
+        message: `${formType} ${existingRecord.rows.length > 0 ? 'updated' : 'created'} successfully`
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error(`${formType} save error:`, error);
+      res.status(500).json({ 
+        error: 'Failed to save form',
+        message: error.message
+      });
+    } finally {
+      client.release();
+    }
+  });
 });
 
 module.exports = router;
