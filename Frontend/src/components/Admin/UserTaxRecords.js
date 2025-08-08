@@ -20,10 +20,13 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
       const response = await axios.get(`/api/admin/users/${userId}/tax-records`);
       if (response.data.success) {
         setUserTaxData(response.data.data);
+      } else {
+        toast.error(response.data.message || 'Failed to load user tax records');
       }
     } catch (error) {
       console.error('Error fetching user tax records:', error);
-      toast.error('Failed to load user tax records');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to load user tax records';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -112,9 +115,11 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
 
   // Parse form data for easier access
   const formsData = {};
-  if (current_year_forms) {
+  if (current_year_forms && Array.isArray(current_year_forms)) {
     current_year_forms.forEach(form => {
-      formsData[form.form_type] = form;
+      if (form && form.form_type) {
+        formsData[form.form_type] = form;
+      }
     });
   }
 

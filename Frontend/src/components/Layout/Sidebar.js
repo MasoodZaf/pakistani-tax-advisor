@@ -12,7 +12,8 @@ import {
   Calculator,
   TrendingUp,
   CheckCircle,
-  Circle
+  Circle,
+  FileSpreadsheet
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -35,6 +36,11 @@ const Sidebar = () => {
       name: 'Reports',
       href: '/reports',
       icon: BarChart3,
+    },
+    {
+      name: 'Excel Import/Export',
+      href: '/excel',
+      icon: FileSpreadsheet,
     },
     {
       name: 'Settings',

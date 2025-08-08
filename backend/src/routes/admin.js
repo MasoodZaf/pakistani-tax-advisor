@@ -990,7 +990,7 @@ router.get('/users/:id/tax-records', requireAdmin, async (req, res) => {
           'income' as form_type,
           COALESCE(monthly_salary * 12, 0) as salary_income,
           COALESCE(other_sources, 0) as other_income,
-          COALESCE(total_gross_income, 0) as total_income,
+          COALESCE(grand_total, 0) as total_income,
           'N/A' as employer_name
         FROM income_forms inf
         WHERE tax_return_id = $1

@@ -13,6 +13,7 @@ import TaxFormsFlow from './components/TaxForms/TaxFormsFlow';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import UserManagement from './components/Admin/UserManagement';
 import Reports from './components/Reports/Reports';
+import ExcelManager from './components/Excel/ExcelManager';
 import Settings from './components/Settings/Settings';
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
@@ -118,6 +119,17 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <Reports />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/excel" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <ExcelManager />
                     </Layout>
                   </ProtectedRoute>
                 } 

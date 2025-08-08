@@ -6,6 +6,8 @@ const authRoutes = require('./routes/auth');
 const taxFormsRoutes = require('./routes/taxForms');
 const adjustableTaxFormsRoutes = require('./routes/adjustableTaxForms');
 const comprehensiveIncomeFormsRoutes = require('./routes/comprehensiveIncomeForms');
+const reportsRoutes = require('./routes/reports');
+const excelRoutes = require('./routes/excel');
 const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
 
@@ -23,6 +25,8 @@ app.use('/api', authRoutes);
 app.use('/api/tax-forms', taxFormsRoutes); // Mount tax forms routes at /api/tax-forms
 app.use('/api/tax-forms/adjustable-tax', adjustableTaxFormsRoutes); // Enhanced adjustable tax routes
 app.use('/api/tax-forms/comprehensive-income', comprehensiveIncomeFormsRoutes); // Comprehensive income routes
+app.use('/api/reports', reportsRoutes); // Reports API routes
+app.use('/api/excel', excelRoutes); // Excel import/export routes
 app.use('/api/admin', adminRoutes);
 
 // Basic health check endpoint
@@ -69,6 +73,19 @@ app.get('/', (req, res) => {
         taxData: '/api/tax-data/:taxYear',
         income: '/api/forms/income/:taxYear',
         completionStatus: '/api/forms/completion-status/:taxYearId'
+      },
+      reports: {
+        taxCalculationSummary: '/api/reports/tax-calculation-summary/:taxYear',
+        incomeAnalysis: '/api/reports/income-analysis/:taxYear',
+        adjustableTaxReport: '/api/reports/adjustable-tax-report/:taxYear',
+        wealthReconciliation: '/api/reports/wealth-reconciliation/:taxYear',
+        availableYears: '/api/reports/available-years'
+      },
+      excel: {
+        export: '/api/excel/export/:taxYear',
+        import: '/api/excel/import/:taxYear',
+        validate: '/api/excel/validate/:taxYear',
+        history: '/api/excel/history'
       }
     }
   };
