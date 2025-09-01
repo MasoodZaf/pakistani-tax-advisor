@@ -7,11 +7,11 @@ import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
-import LoginDebug from './components/Auth/LoginDebug';
 import Dashboard from './components/Dashboard/Dashboard';
 import TaxFormsFlow from './components/TaxForms/TaxFormsFlow';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import UserManagement from './components/Admin/UserManagement';
+import SystemSettings from './components/Admin/SystemSettings';
 import Reports from './components/Reports/Reports';
 import ExcelManager from './components/Excel/ExcelManager';
 import Settings from './components/Settings/Settings';
@@ -42,7 +42,6 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
 // Layout Component
 const Layout = ({ children }) => {
-  const { user } = useAuth();
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,7 +87,6 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/debug" element={<LoginDebug />} />
               
               {/* Protected Routes */}
               <Route 
@@ -164,6 +162,17 @@ function App() {
                   <ProtectedRoute adminOnly={true}>
                     <Layout>
                       <UserManagement />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              
+              <Route 
+                path="/admin/system-settings" 
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <Layout>
+                      <SystemSettings />
                     </Layout>
                   </ProtectedRoute>
                 } 

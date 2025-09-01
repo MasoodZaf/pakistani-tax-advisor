@@ -1,0 +1,42 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: pakistani-tax-advisor-db
+    env: node
+    plan: free
+    databases:
+      - name: pakistani_tax_advisor
+        user: db_user
+
+  # Backend API
+  - type: web
+    name: pakistani-tax-advisor-api
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pakistani-tax-advisor-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+
+  # Frontend React App
+  - type: web
+    name: pakistani-tax-advisor-web
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://pakistani-tax-advisor-api.onrender.com

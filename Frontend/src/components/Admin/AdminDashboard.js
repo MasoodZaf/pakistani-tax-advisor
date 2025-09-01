@@ -7,12 +7,9 @@ import {
   BarChart3, 
   Shield, 
   Settings,
-  TrendingUp,
   AlertTriangle,
   Calculator,
-  DollarSign,
-  UserCog,
-  LogIn
+  UserCog
 } from 'lucide-react';
 import TaxCalculator from './TaxCalculator';
 import UserImpersonation from './UserImpersonation';
@@ -167,7 +164,10 @@ const AdminDashboard = () => {
               </button>
             )}
             
-            <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={() => navigate('/admin/system-settings')}
+              className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <div className="flex items-center space-x-3">
                 <Settings className="w-5 h-5 text-purple-600" />
                 <div>

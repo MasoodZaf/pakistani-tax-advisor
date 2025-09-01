@@ -9,6 +9,7 @@ const comprehensiveIncomeFormsRoutes = require('./routes/comprehensiveIncomeForm
 const reportsRoutes = require('./routes/reports');
 const excelRoutes = require('./routes/excel');
 const adminRoutes = require('./routes/admin');
+const systemSettingsRoutes = require('./routes/systemSettings');
 const logger = require('./utils/logger');
 
 // Initialize Express app
@@ -28,6 +29,7 @@ app.use('/api/tax-forms/comprehensive-income', comprehensiveIncomeFormsRoutes); 
 app.use('/api/reports', reportsRoutes); // Reports API routes
 app.use('/api/excel', excelRoutes); // Excel import/export routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/system-settings', systemSettingsRoutes); // System settings routes
 
 // Basic health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -94,8 +96,8 @@ app.get('/', (req, res) => {
   res.json(response);
 });
 
-const PORT = 3001;  // Using 3001 since 3000 is used by system ControlCenter
-const HOST = 'localhost';
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
 app.listen(PORT, HOST, () => {
   logger.info(`Server running on http://${HOST}:${PORT}`);

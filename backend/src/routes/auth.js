@@ -424,4 +424,107 @@ router.get('/debug-admin/:email', async (req, res) => {
   }
 });
 
+// Change Password endpoint
+router.post('/change-password', async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Current password and new password are required' 
+      });
+    }
+    
+    if (newPassword.length < 8) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'New password must be at least 8 characters long' 
+      });
+    }
+    
+    // Get user from session token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required' 
+      });
+    }
+    
+    const sessionToken = authHeader.substring(7);
+    
+    // Verify session and get user
+    const sessionResult = await pool.query(`
+      SELECT us.user_id, us.user_email, u.password_hash, u.name
+      FROM user_sessions us
+      JOIN users u ON us.user_id = u.id
+      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
+    `, [sessionToken]);
+    
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid or expired session' 
+      });
+    }
+    
+    const user = sessionResult.rows[0];
+    
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+    
+    if (!isCurrentPasswordValid) {
+      logger.info(`Failed password change attempt for ${user.user_email} - incorrect current password`);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Current password is incorrect' 
+      });
+    }
+    
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update password in database
+    await pool.query(`
+      UPDATE users 
+      SET password_hash = $1, updated_at = NOW()
+      WHERE id = $2
+    `, [hashedNewPassword, user.user_id]);
+    
+    // Log audit trail
+    try {
+      await pool.query(`
+        INSERT INTO audit_log (
+          user_id, user_email, action,
+          table_name, field_name, new_value,
+          ip_address, user_agent
+        )
+        VALUES ($1, $2, 'password_change', 'users', 'password_hash', 'Password changed', $3, $4)
+      `, [
+        user.user_id,
+        user.user_email,
+        req.ip,
+        req.headers['user-agent']
+      ]);
+    } catch (auditError) {
+      logger.warn('Audit log failed for password change:', auditError.message);
+    }
+    
+    logger.info(`Password changed successfully for user: ${user.user_email}`);
+    
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+    
+  } catch (error) {
+    logger.error('Change password error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'An error occurred while changing password'
+    });
+  }
+});
+
 module.exports = router;
