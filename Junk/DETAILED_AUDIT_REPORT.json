@@ -1,0 +1,310 @@
+{
+  "timestamp": "2025-09-28T06:26:40.274Z",
+  "results": {
+    "codeQuality": {
+      "score": 0,
+      "issues": [
+        {
+          "file": "/backup_legacy_routes/incomeForm.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/backup_legacy_routes/taxForms.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/modules/Admin/routes/admin.js",
+          "issue": "Using console.log instead of logger",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/routes/admin.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/modules/IncomeTax/routes/incomeForm.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/modules/IncomeTax/routes/taxForms.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/admin.js",
+          "issue": "Using console.log instead of logger",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/routes/admin.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/auth.js",
+          "issue": "Using console.log instead of logger",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/routes/auth.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/excel.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/incomeForm.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/reports.js",
+          "issue": "Using console.log instead of logger",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/routes/reports.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/routes/systemSettings.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/scripts/createSystemSettingsTable.js",
+          "issue": "Using console.log instead of logger",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/services/excelService.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/services/taxRateService.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/utils/taxCalculator.js",
+          "issue": "Potential SQL injection vulnerability - string interpolation in query",
+          "severity": "CRITICAL"
+        },
+        {
+          "file": "/components/Auth/Login.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Auth/LoginDebug.js",
+          "issue": "Excessive inline styles - should use CSS classes",
+          "severity": "LOW"
+        },
+        {
+          "file": "/components/Auth/LoginDebug.js",
+          "issue": "Input elements missing accessibility labels",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Auth/Register.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Excel/ExcelManager.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Excel/ExcelManager.js",
+          "issue": "Input elements missing accessibility labels",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Reports/Reports.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Settings/Settings.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/components/Settings/Settings.js",
+          "issue": "Input elements missing accessibility labels",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/contexts/TaxFormContext.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/components/SystemSettings.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/components/UserImpersonation.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/components/UserManagement.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/components/UserTaxRecords.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/Admin/components/UserTaxRecords.js",
+          "issue": "Input elements missing accessibility labels",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/IncomeTax/components/IncomeForm.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        },
+        {
+          "file": "/modules/WealthStatement/components/WealthReconciliationForm.js",
+          "issue": "Too many useState hooks - consider useReducer or context",
+          "severity": "MEDIUM"
+        }
+      ],
+      "recommendations": []
+    },
+    "security": {
+      "score": 80,
+      "vulnerabilities": [
+        {
+          "severity": "MEDIUM",
+          "type": "CORS Misconfiguration",
+          "description": "Overly permissive CORS policy allows all origins"
+        },
+        {
+          "severity": "MEDIUM",
+          "type": "Rate Limiting",
+          "description": "No rate limiting detected on login endpoint"
+        }
+      ],
+      "warnings": []
+    },
+    "performance": {
+      "score": 100,
+      "metrics": {
+        "healthResponseTime": 2,
+        "dbResponseTime": 74,
+        "formResponseTime": 4,
+        "concurrentRequestTime": 2
+      },
+      "issues": []
+    },
+    "architecture": {
+      "score": 0,
+      "analysis": [],
+      "concerns": []
+    },
+    "database": {
+      "score": 100,
+      "schema": {
+        "connected": true,
+        "connectionTime": "2025-09-28T06:26:40.271Z",
+        "dataIntegrity": "PASS"
+      },
+      "issues": []
+    },
+    "business": {
+      "score": 100,
+      "calculations": [
+        {
+          "input": {
+            "monthly": 100000,
+            "expectedAnnual": 1200000,
+            "allowances": 10000,
+            "expectedAllowancesAnnual": 120000
+          },
+          "output": {
+            "actualAnnual": 1200000,
+            "actualAllowances": 120000
+          },
+          "correct": true
+        },
+        {
+          "input": {
+            "monthly": 500000,
+            "expectedAnnual": 6000000,
+            "allowances": 25000,
+            "expectedAllowancesAnnual": 300000
+          },
+          "output": {
+            "actualAnnual": 6000000,
+            "actualAllowances": 300000
+          },
+          "correct": true
+        },
+        {
+          "input": {
+            "monthly": 1000000,
+            "expectedAnnual": 12000000,
+            "allowances": 50000,
+            "expectedAllowancesAnnual": 600000
+          },
+          "output": {
+            "actualAnnual": 12000000,
+            "actualAllowances": 600000
+          },
+          "correct": true
+        }
+      ],
+      "errors": []
+    },
+    "overall": {
+      "score": 75,
+      "status": "FAIR"
+    }
+  },
+  "summary": {
+    "overallScore": 75,
+    "status": "FAIR",
+    "categories": [
+      {
+        "name": "codeQuality",
+        "score": 0
+      },
+      {
+        "name": "security",
+        "score": 80
+      },
+      {
+        "name": "performance",
+        "score": 100
+      },
+      {
+        "name": "architecture",
+        "score": 0
+      },
+      {
+        "name": "database",
+        "score": 100
+      },
+      {
+        "name": "business",
+        "score": 100
+      }
+    ]
+  }
+}

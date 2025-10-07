@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "serve": "^14.2.1",
     "@headlessui/react": "^1.7.15",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
@@ -17,6 +16,7 @@
     "react-hook-form": "^7.45.1",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.3.0",
+    "serve": "^14.2.1",
     "tailwindcss": "^3.3.0",
     "web-vitals": "^2.1.4"
   },

@@ -20,7 +20,7 @@ const FORM_STEPS = [
     title: 'Normal Income',
     description: 'Primary income subject to normal taxation',
     icon: '💰',
-    formType: 'income_forms'
+    formType: 'income-form'
   },
   {
     id: 'final_min_income',
@@ -34,7 +34,7 @@ const FORM_STEPS = [
     title: 'Adjustable Tax',
     description: 'Withholding taxes and advance payments',
     icon: '📊',
-    formType: 'adjustable_tax_forms'
+    formType: 'adjustable-tax'
   },
   {
     id: 'reductions',
@@ -128,19 +128,22 @@ export const TaxFormProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await axios.get('/api/tax-forms/current-return');
-      
+
       if (response.data.taxReturn) {
         setTaxReturn(response.data.taxReturn);
         setFormData(response.data.formData || {});
         setCompletedSteps(new Set(response.data.completedSteps || []));
       } else {
-        // Create new tax return
+        // Create new tax return silently
         await createNewTaxReturn();
       }
     } catch (error) {
-      console.error('Error loading tax return:', error);
-      // Create new tax return if none exists
-      await createNewTaxReturn();
+      console.warn('Tax return not available yet:', error.message);
+      // Don't create new tax return automatically to avoid errors
+      // The income form can work without it
+      setTaxReturn(null);
+      setFormData({});
+      setCompletedSteps(new Set());
     } finally {
       setLoading(false);
     }
@@ -152,10 +155,11 @@ export const TaxFormProvider = ({ children }) => {
       setTaxReturn(response.data.taxReturn);
       setFormData({});
       setCompletedSteps(new Set());
-      toast.success('New tax return created');
+      console.log('New tax return created successfully');
+      return true;
     } catch (error) {
-      console.error('Error creating tax return:', error);
-      toast.error('Failed to create tax return');
+      console.warn('Could not create tax return:', error.message);
+      return false;
     }
   };
 
@@ -170,9 +174,19 @@ export const TaxFormProvider = ({ children }) => {
   };
 
   const saveFormStep = async (stepId, data, markComplete = false) => {
-    if (!taxReturn) {
-      toast.error('No tax return found. Please refresh the page.');
-      return false;
+    // For income form, we don't need a tax return - it has its own API
+    const step = FORM_STEPS.find(s => s.id === stepId);
+    if (step && step.formType === 'income-form') {
+      // Income form doesn't need tax return validation
+    } else if (!taxReturn) {
+      // Only show error for non-income forms
+      console.warn('No tax return found for step:', stepId);
+      // Try to create a tax return instead of showing error
+      const created = await createNewTaxReturn();
+      if (!created) {
+        toast.error('Unable to create tax return. Please try again.');
+        return false;
+      }
     }
 
     try {
@@ -183,11 +197,18 @@ export const TaxFormProvider = ({ children }) => {
         throw new Error('Invalid step ID');
       }
 
-      const response = await axios.post(`/api/tax-forms/${step.formType}`, {
-        taxReturnId: taxReturn.id,
-        ...data,
-        isComplete: markComplete
-      });
+      let response;
+
+      // Handle income form with the working income-form API
+      if (step.formType === 'income-form') {
+        response = await axios.post('/api/income-form/2025-26', data);
+      } else {
+        response = await axios.post(`/api/tax-forms/${step.formType}`, {
+          taxReturnId: taxReturn.id,
+          ...data,
+          isComplete: markComplete
+        });
+      }
 
       // Update local form data
       updateFormData(stepId, data);
@@ -196,7 +217,10 @@ export const TaxFormProvider = ({ children }) => {
         setCompletedSteps(prev => new Set([...prev, stepId]));
       }
 
-      toast.success('Form saved successfully');
+      // Only show generic toast for non-income forms
+      if (step.formType !== 'income-form') {
+        toast.success('Form saved successfully');
+      }
       return true;
     } catch (error) {
       console.error('Error saving form:', error);

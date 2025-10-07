@@ -68,14 +68,12 @@ async function createSystemSettingsTable() {
     }
     
     await client.query('COMMIT');
-    
+
     logger.info('System settings table created successfully with default values');
-    console.log('✅ System settings table created successfully with default values');
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     logger.error('Error creating system settings table:', error);
-    console.error('❌ Error creating system settings table:', error.message);
     throw error;
   } finally {
     client.release();
@@ -86,11 +84,11 @@ async function createSystemSettingsTable() {
 if (require.main === module) {
   createSystemSettingsTable()
     .then(() => {
-      console.log('Script completed successfully');
+      logger.info('Script completed successfully');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Script failed:', error.message);
+      logger.error('Script failed', { error: error.message, stack: error.stack });
       process.exit(1);
     });
 }

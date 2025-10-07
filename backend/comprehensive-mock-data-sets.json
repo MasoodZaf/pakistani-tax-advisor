@@ -1,0 +1,355 @@
+{
+  "testUsers": {
+    "basicSalaried": {
+      "email": "basic.salaried@test.com",
+      "name": "Muhammad Ahmed",
+      "password": "TestPassword123",
+      "user_type": "individual",
+      "role": "user"
+    },
+    "midProfessional": {
+      "email": "mid.professional@test.com",
+      "name": "Fatima Khan",
+      "password": "TestPassword123",
+      "user_type": "individual",
+      "role": "user"
+    },
+    "highExecutive": {
+      "email": "high.executive@test.com",
+      "name": "Ali Hassan",
+      "password": "TestPassword123",
+      "user_type": "individual",
+      "role": "user"
+    }
+  },
+  "incomeFormData": {
+    "basicSalaried": {
+      "monthly_basic_salary": 50000,
+      "monthly_allowances": 8000,
+      "monthly_house_rent_allowance": 15000,
+      "monthly_conveyance_allowance": 2000,
+      "monthly_medical_allowance": 3000,
+      "bonus": 50000,
+      "directorship_fee": 0,
+      "pension_from_ex_employer": 0,
+      "employment_termination_payment": 0,
+      "retirement_from_approved_funds": 0,
+      "other_cash_benefits": 0,
+      "expected": {
+        "annual_basic_salary": 600000,
+        "annual_allowances": 96000,
+        "annual_medical_allowance": 36000,
+        "income_exempt_from_tax": -36000,
+        "annual_salary_wages_total": 756000,
+        "total_employment_income": 756000
+      }
+    },
+    "midProfessional": {
+      "monthly_basic_salary": 150000,
+      "monthly_allowances": 25000,
+      "monthly_house_rent_allowance": 40000,
+      "monthly_conveyance_allowance": 5000,
+      "monthly_medical_allowance": 10000,
+      "bonus": 500000,
+      "directorship_fee": 1000000,
+      "pension_from_ex_employer": 0,
+      "employment_termination_payment": 0,
+      "retirement_from_approved_funds": 0,
+      "other_cash_benefits": 100000,
+      "expected": {
+        "annual_basic_salary": 1800000,
+        "annual_allowances": 300000,
+        "annual_medical_allowance": 120000,
+        "income_exempt_from_tax": -120000,
+        "annual_salary_wages_total": 3140000,
+        "total_employment_income": 3140000
+      }
+    },
+    "highExecutive": {
+      "monthly_basic_salary": 600000,
+      "monthly_allowances": 50000,
+      "monthly_house_rent_allowance": 100000,
+      "monthly_conveyance_allowance": 10000,
+      "monthly_medical_allowance": 15000,
+      "bonus": 1500000,
+      "directorship_fee": 3000000,
+      "pension_from_ex_employer": 200000,
+      "employment_termination_payment": 0,
+      "retirement_from_approved_funds": 0,
+      "other_cash_benefits": 500000,
+      "expected": {
+        "annual_basic_salary": 7200000,
+        "annual_allowances": 600000,
+        "annual_medical_allowance": 120000,
+        "income_exempt_from_tax": -320000,
+        "annual_salary_wages_total": 10620000,
+        "total_employment_income": 10620000
+      }
+    }
+  },
+  "adjustableTaxFormData": {
+    "basicSalaried": {
+      "directorship_fee_149_3_gross_receipt": 0,
+      "directorship_fee_149_3_tax_collected": 0,
+      "profit_debt_15_percent_gross_receipt": 25000,
+      "profit_debt_15_percent_tax_collected": 3750,
+      "sukook_12_5_percent_gross_receipt": 0,
+      "sukook_12_5_percent_tax_collected": 0,
+      "rent_section_155_gross_receipt": 0,
+      "rent_section_155_tax_collected": 0,
+      "motor_vehicle_transfer_gross_receipt": 0,
+      "motor_vehicle_transfer_tax_collected": 0,
+      "electricity_domestic_gross_receipt": 15000,
+      "electricity_domestic_tax_collected": 1125,
+      "cellphone_bill_gross_receipt": 10000,
+      "cellphone_bill_tax_collected": 1500,
+      "expected": {
+        "total_gross_receipt": 50000,
+        "total_tax_collected": 6375
+      }
+    },
+    "midProfessional": {
+      "directorship_fee_149_3_gross_receipt": 1000000,
+      "directorship_fee_149_3_tax_collected": 200000,
+      "profit_debt_15_percent_gross_receipt": 100000,
+      "profit_debt_15_percent_tax_collected": 15000,
+      "sukook_12_5_percent_gross_receipt": 50000,
+      "sukook_12_5_percent_tax_collected": 6250,
+      "rent_section_155_gross_receipt": 200000,
+      "rent_section_155_tax_collected": 20000,
+      "motor_vehicle_transfer_gross_receipt": 500000,
+      "motor_vehicle_transfer_tax_collected": 15000,
+      "electricity_domestic_gross_receipt": 50000,
+      "electricity_domestic_tax_collected": 3750,
+      "cellphone_bill_gross_receipt": 25000,
+      "cellphone_bill_tax_collected": 3750,
+      "expected": {
+        "total_gross_receipt": 1925000,
+        "total_tax_collected": 263750
+      }
+    },
+    "highExecutive": {
+      "directorship_fee_149_3_gross_receipt": 3000000,
+      "directorship_fee_149_3_tax_collected": 600000,
+      "profit_debt_15_percent_gross_receipt": 500000,
+      "profit_debt_15_percent_tax_collected": 75000,
+      "sukook_12_5_percent_gross_receipt": 200000,
+      "sukook_12_5_percent_tax_collected": 25000,
+      "rent_section_155_gross_receipt": 1000000,
+      "rent_section_155_tax_collected": 100000,
+      "motor_vehicle_transfer_gross_receipt": 2000000,
+      "motor_vehicle_transfer_tax_collected": 60000,
+      "electricity_domestic_gross_receipt": 200000,
+      "electricity_domestic_tax_collected": 15000,
+      "cellphone_bill_gross_receipt": 100000,
+      "cellphone_bill_tax_collected": 15000,
+      "expected": {
+        "total_gross_receipt": 7000000,
+        "total_tax_collected": 890000
+      }
+    }
+  },
+  "capitalGainsFormData": {
+    "basicSalaried": {
+      "property_sale_proceeds": 0,
+      "property_cost": 0,
+      "property_holding_period_months": 0,
+      "securities_sale_proceeds": 25000,
+      "securities_cost": 20000,
+      "securities_gain": 5000,
+      "expected": {
+        "total_capital_gains": 5000,
+        "capital_gains_tax": 375
+      }
+    },
+    "midProfessional": {
+      "property_sale_proceeds": 5000000,
+      "property_cost": 4500000,
+      "property_holding_period_months": 30,
+      "property_gain": 500000,
+      "securities_sale_proceeds": 200000,
+      "securities_cost": 150000,
+      "securities_gain": 50000,
+      "expected": {
+        "total_capital_gains": 550000,
+        "property_tax": 125000,
+        "securities_tax": 3750,
+        "total_capital_gains_tax": 128750
+      }
+    },
+    "highExecutive": {
+      "property_sale_proceeds": 15000000,
+      "property_cost": 12000000,
+      "property_holding_period_months": 48,
+      "property_gain": 3000000,
+      "securities_sale_proceeds": 1000000,
+      "securities_cost": 800000,
+      "securities_gain": 200000,
+      "expected": {
+        "total_capital_gains": 3200000,
+        "property_tax": 450000,
+        "securities_tax": 15000,
+        "total_capital_gains_tax": 465000
+      }
+    }
+  },
+  "taxComputationExpected": {
+    "basicSalaried": {
+      "total_income": 761000,
+      "taxable_income": 725000,
+      "normal_income_tax": 12500,
+      "surcharge": 0,
+      "capital_gains_tax": 375,
+      "total_tax_before_adjustments": 12875,
+      "withholding_tax": 6375,
+      "net_tax_payable": 6500,
+      "balance_payable": 125
+    },
+    "midProfessional": {
+      "total_income": 3690000,
+      "taxable_income": 3570000,
+      "normal_income_tax": 909500,
+      "surcharge": 0,
+      "capital_gains_tax": 128750,
+      "total_tax_before_adjustments": 1038250,
+      "withholding_tax": 263750,
+      "net_tax_payable": 774500,
+      "balance_payable": 510750
+    },
+    "highExecutive": {
+      "total_income": 13820000,
+      "taxable_income": 13500000,
+      "normal_income_tax": 4284000,
+      "surcharge": 385560,
+      "capital_gains_tax": 465000,
+      "total_tax_before_adjustments": 5134560,
+      "withholding_tax": 890000,
+      "net_tax_payable": 4244560,
+      "balance_payable": 3354560
+    }
+  },
+  "validationRules": {
+    "income": {
+      "monthly_basic_salary": {
+        "min": 0,
+        "max": 10000000
+      },
+      "bonus": {
+        "min": 0,
+        "max": 50000000
+      },
+      "medical_allowance_cap": 120000,
+      "directorship_fee": {
+        "min": 0,
+        "max": 100000000
+      }
+    },
+    "adjustableTax": {
+      "directorship_fee_rate": 0.2,
+      "profit_debt_15_rate": 0.15,
+      "sukook_rate": 0.125,
+      "rent_rate": 0.1,
+      "motor_vehicle_rate": 0.03,
+      "electricity_rate": 0.075,
+      "cellphone_rate": 0.15
+    },
+    "capitalGains": {
+      "property_atl_rate_4plus_years": 0.15,
+      "property_non_atl_rate": 0.25,
+      "securities_rate": 0.075
+    },
+    "progressive_tax_slabs": [
+      {
+        "min": 0,
+        "max": 600000,
+        "rate": 0,
+        "fixed": 0
+      },
+      {
+        "min": 600001,
+        "max": 1200000,
+        "rate": 0.01,
+        "fixed": 0
+      },
+      {
+        "min": 1200001,
+        "max": 2400000,
+        "rate": 0.11,
+        "fixed": 6000
+      },
+      {
+        "min": 2400001,
+        "max": 3600000,
+        "rate": 0.23,
+        "fixed": 138000
+      },
+      {
+        "min": 3600001,
+        "max": 6000000,
+        "rate": 0.3,
+        "fixed": 414000
+      },
+      {
+        "min": 6000001,
+        "max": null,
+        "rate": 0.35,
+        "fixed": 1134000
+      }
+    ],
+    "surcharge_threshold": 10000000,
+    "surcharge_rate": 0.09
+  },
+  "crossFormLinking": {
+    "incomeToAdjustableTax": {
+      "directorship_fee": "directorship_fee_149_3_gross_receipt",
+      "profit_on_debt_15_percent": "profit_debt_15_percent_gross_receipt",
+      "profit_on_debt_12_5_percent": "sukook_12_5_percent_gross_receipt",
+      "other_taxable_income_rent": "rent_section_155_gross_receipt"
+    },
+    "incomeToTaxComputation": {
+      "total_employment_income": "income_from_salary",
+      "annual_salary_wages_total": "salary_income_component"
+    },
+    "adjustableTaxToTaxComputation": {
+      "total_tax_collected": "withholding_tax"
+    },
+    "capitalGainsToTaxComputation": {
+      "total_capital_gains_tax": "capital_gains_tax"
+    }
+  },
+  "edgeCases": {
+    "zeroIncome": {
+      "description": "All zero values test",
+      "incomeForm": {
+        "monthly_basic_salary": 0,
+        "monthly_allowances": 0,
+        "monthly_house_rent_allowance": 0,
+        "monthly_conveyance_allowance": 0,
+        "monthly_medical_allowance": 0,
+        "bonus": 0,
+        "directorship_fee": 0,
+        "pension_from_ex_employer": 0,
+        "employment_termination_payment": 0,
+        "retirement_from_approved_funds": 0,
+        "other_cash_benefits": 0,
+        "expected": 0
+      }
+    },
+    "maxValues": {
+      "description": "Maximum allowable values test",
+      "incomeForm": {
+        "monthly_basic_salary": 1000000,
+        "monthly_medical_allowance": 15000,
+        "bonus": 10000000,
+        "directorship_fee": 50000000
+      }
+    },
+    "medicalAllowanceCap": {
+      "description": "Medical allowance capping test",
+      "incomeForm": {
+        "monthly_basic_salary": 100000,
+        "monthly_medical_allowance": 20000
+      }
+    }
+  }
+}

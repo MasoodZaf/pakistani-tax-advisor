@@ -65,11 +65,41 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await axios.post('/api/verify-session', {
-        sessionToken: token
+      // Simple JWT format validation
+      const jwtParts = token.split('.');
+      if (jwtParts.length !== 3) {
+        console.log('AuthContext: Invalid JWT format detected, clearing token');
+        localStorage.removeItem('token');
+        setLoading(false);
+        return;
+      }
+
+      // Try to use the JWT token with a protected endpoint
+      const response = await axios.get('/api/tax-forms/current-return', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      setUser(response.data.user);
+
+      // If we get here, the token is valid
+      if (response.data && response.data.taxReturn) {
+        // We need to get user info - let's extract it from the JWT
+        try {
+          const payload = JSON.parse(atob(jwtParts[1]));
+          setUser({
+            id: payload.userId,
+            email: payload.email,
+            name: payload.name,
+            role: payload.role
+          });
+        } catch (parseError) {
+          console.error('AuthContext: Error parsing JWT payload:', parseError);
+          localStorage.removeItem('token');
+        }
+      }
     } catch (error) {
+      console.log('AuthContext: JWT validation failed, clearing token');
       localStorage.removeItem('token');
       console.error('Auth check failed:', error);
     } finally {
@@ -81,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('AuthContext: Attempting login for', email);
       console.log('AuthContext: Password length:', password?.length);
-      
+
       const loginPayload = {
         email,
         password,
@@ -92,33 +122,44 @@ export const AuthProvider = ({ children }) => {
         loginPayload.adminBypassToken = adminBypassToken;
         console.log('AuthContext: Using admin bypass token');
       }
-      
+
       console.log('AuthContext: Making request to /api/login with payload:', {
         ...loginPayload,
         password: '[REDACTED]'
       });
-      
+
       // Debug: Log password details for super admin accounts
       if (email.includes('admin')) {
-        console.log('AuthContext: SUPER ADMIN DEBUG - Password char codes:', 
+        console.log('AuthContext: SUPER ADMIN DEBUG - Password char codes:',
           Array.from(password).map(char => char.charCodeAt(0)));
         console.log('AuthContext: SUPER ADMIN DEBUG - Password exact string:', JSON.stringify(password));
         console.log('AuthContext: SUPER ADMIN DEBUG - Password length and trimmed:', password.length, JSON.stringify(password.trim()));
       }
-      
+
       const response = await axios.post('/api/login', loginPayload);
 
       console.log('AuthContext: Login response received', response.status);
-      
+
       if (response.data && response.data.success) {
-        const { sessionToken, user: userData } = response.data;
-        
-        console.log('AuthContext: Login successful, storing token');
-        localStorage.setItem('token', sessionToken);
+        const { token, sessionToken, user: userData, hasPersonalInfo } = response.data;
+
+        console.log('AuthContext: Login successful, storing JWT token');
+        localStorage.setItem('token', token);  // Store JWT token, not sessionToken
         setUser(userData);
-        
+
         toast.success(`Welcome back, ${userData.name}!`);
-        return { success: true };
+
+        // Check if user needs to complete personal info
+        // Only for regular users (not admins)
+        if (!['admin', 'super_admin'].includes(userData.role)) {
+          return {
+            success: true,
+            needsPersonalInfo: !hasPersonalInfo,
+            userData
+          };
+        }
+
+        return { success: true, userData };
       } else {
         console.log('AuthContext: Login response indicates failure', response.data);
         const message = response.data?.error || 'Login failed';
@@ -130,7 +171,7 @@ export const AuthProvider = ({ children }) => {
       console.log('AuthContext: Error response status:', error.response?.status);
       console.log('AuthContext: Error response data:', error.response?.data);
       console.log('AuthContext: Error message:', error.message);
-      
+
       const message = error.response?.data?.error || error.message || 'Login failed';
       toast.error(message);
       return { success: false, error: message };

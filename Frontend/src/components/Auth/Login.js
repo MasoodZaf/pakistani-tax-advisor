@@ -113,7 +113,7 @@ const Login = () => {
       }
 
       const result = await login(loginData.email, loginData.password, loginData.adminBypassToken);
-      
+
       if (result.success) {
         // Clean up admin assisted login data
         if (adminAssistedLogin) {
@@ -123,7 +123,14 @@ const Login = () => {
             icon: '✅',
           });
         }
-        navigate('/dashboard');
+
+        // Check if user needs to complete personal info (for regular users)
+        if (result.needsPersonalInfo) {
+          toast.info('Please complete your personal information');
+          navigate('/personal-info');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -132,32 +139,34 @@ const Login = () => {
     }
   };
 
-  // Demo accounts for quick testing
-  const demoAccounts = [
+  // Available user accounts for quick login
+  const quickLoginAccounts = [
     {
-      name: 'Super Admin',
-      email: 'superadmin@paktaxadvisor.com',
-      password: 'admin123',
-      role: 'super_admin'
-    },
-    {
-      name: 'Super Admin Alt',
-      email: 'admin@test.com',
-      password: 'admin123',
-      role: 'super_admin'
+      name: 'Khurram Jamili',
+      email: 'khurramj@taxadvisor.pk',
+      password: 'Admin@123',
+      role: 'super_admin',
+      displayRole: 'Super Admin'
     },
     {
       name: 'Test User Demo',
       email: 'testuser@paktaxadvisor.com',
-      password: 'TestUser123',
-      role: 'user'
+      password: 'password123',
+      role: 'taxpayer',
+      displayRole: 'Taxpayer'
     }
   ];
 
-  const fillDemoAccount = (account) => {
+  const fillQuickLogin = (account) => {
     setFormData({
       email: account.email,
       password: account.password
+    });
+    // Clear any errors
+    setErrors({});
+    toast.success(`Credentials filled for ${account.name}`, {
+      duration: 2000,
+      icon: '🔑',
     });
   };
 
@@ -269,9 +278,13 @@ const Login = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+              <button
+                type="button"
+                className="font-medium text-primary-600 hover:text-primary-500 underline"
+                onClick={() => toast.info('Contact your administrator for password reset')}
+              >
                 Forgot your password?
-              </a>
+              </button>
             </div>
           </div>
 
@@ -291,49 +304,70 @@ const Login = () => {
           </div>
         </form>
 
-        {/* Demo Accounts */}
+        {/* Quick Login */}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">Demo Accounts</span>
+              <span className="px-2 bg-gray-50 text-gray-500">Quick Login</span>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2">
-            {demoAccounts.map((account, index) => (
+          <div className="mt-4 grid gap-3">
+            {quickLoginAccounts.map((account, index) => (
               <button
                 key={index}
                 type="button"
-                onClick={() => fillDemoAccount(account)}
-                className="w-full text-left px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                onClick={() => fillQuickLogin(account)}
+                className="w-full text-left px-4 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 hover:border-primary-300 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">{account.name}</span>
-                  <span className="text-xs text-gray-500 capitalize">{account.role.replace('_', ' ')}</span>
+                  <div>
+                    <div className="font-medium text-gray-900">{account.name}</div>
+                    <div className="text-xs text-gray-600 mt-1">{account.email}</div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      account.role === 'super_admin'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {account.displayRole}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">{account.email}</div>
               </button>
             ))}
           </div>
+
+          <div className="mt-3 text-center">
+            <p className="text-xs text-gray-500">
+              Click any user above to auto-fill login credentials
+            </p>
+          </div>
         </div>
 
-        {/* Registration Link */}
-        <div className="text-center">
+        {/* System Info */}
+        <div className="text-center border-t border-gray-200 pt-6">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            Need a new account?{' '}
             <Link
               to="/register"
               className="font-medium text-primary-600 hover:text-primary-500"
             >
-              Create a new account
+              Register here
             </Link>
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            For admin access, contact your system administrator
+            For admin access or user management, contact your super administrator
           </p>
+          <div className="mt-3 flex items-center justify-center space-x-1 text-xs text-gray-400">
+            <span>Pakistani Tax Advisor System</span>
+            <span>•</span>
+            <span>v2.0</span>
+          </div>
         </div>
       </div>
     </div>

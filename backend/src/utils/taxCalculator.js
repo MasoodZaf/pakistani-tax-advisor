@@ -119,90 +119,108 @@ class TaxCalculator {
       const deductions = taxData.deductions || {};
       const finalTax = taxData.finalTax || {};
       const capitalGain = taxData.capitalGain || {};
-      
-      // Calculate total gross and taxable income
+
+      // Calculate total gross income using new 2025 structure
       const grossIncome = (
-        (income.monthly_salary || 0) * 12 +
-        (income.bonus || 0) +
-        (income.car_allowance || 0) +
-        (income.other_taxable || 0) +
-        (income.other_sources || 0)
+        parseFloat(income.annual_basic_salary || 0) +
+        parseFloat(income.allowances_excluding_bonus_medical || 0) +
+        parseFloat(income.bonus || 0) +
+        parseFloat(income.medical_allowance || 0) +
+        parseFloat(income.pension_from_ex_employer || 0) +
+        parseFloat(income.employment_termination_payment || 0) +
+        parseFloat(income.retirement_from_approved_funds || 0) +
+        parseFloat(income.directorship_fee || 0) +
+        parseFloat(income.other_cash_benefits || 0) +
+        // Non-cash benefits
+        parseFloat(income.employer_contribution_provident || 0) +
+        parseFloat(income.taxable_car_value || 0) +
+        parseFloat(income.other_taxable_subsidies || 0) +
+        // Other income
+        parseFloat(income.profit_on_debt_15 || 0) +
+        parseFloat(income.profit_on_debt_12_5 || 0) +
+        parseFloat(income.rent_income || 0) +
+        parseFloat(income.other_taxable_income_others || 0)
       );
-      
+
       const exemptIncome = (
-        (income.medical_allowance || 0) +
-        (income.employer_contribution || 0) +
-        (income.other_exempt || 0)
+        parseFloat(income.income_exempt_from_tax || 0) +
+        parseFloat(income.non_cash_benefit_exempt || 0)
       );
       
-      const taxableIncome = grossIncome - exemptIncome;
+      // Apply allowable deductions from taxable income - ensure numeric conversion
+      // Medical allowance is now part of gross income, not a separate deduction
+      const allowableDeductions = (
+        parseFloat(deductions.professional_expenses_amount || 0) +
+        parseFloat(deductions.zakat_paid_amount || deductions.zakat || 0) + // Support both comprehensive and simple
+        parseFloat(deductions.total_deduction_from_income || 0) // Use comprehensive total if available
+      );
+
+      // Calculate base taxable income (excluding capital gains)
+      const baseTaxableIncome = Math.max(0, grossIncome - exemptIncome - allowableDeductions);
+
+      // Add capital gains to get total taxable income
+      const capitalGainsAmount = parseFloat(capitalGain.total_capital_gain || 0);
+      const taxableIncome = baseTaxableIncome + capitalGainsAmount;
       
-      // Calculate normal tax using progressive slabs
-      const normalTaxCalc = await this.calculateProgressiveTax(taxableIncome, taxYearId, slabType);
+      // Calculate normal tax using progressive slabs (excluding capital gains)
+      const normalTaxCalc = await this.calculateProgressiveTax(baseTaxableIncome, taxYearId, slabType);
       let normalTax = normalTaxCalc.totalTax;
-      
-      // Apply reductions
-      const totalReductions = (
-        (reductions.teacher_reduction || 0) +
-        (reductions.behbood_reduction || 0) +
-        (reductions.export_income_reduction || 0) +
-        (reductions.industrial_undertaking_reduction || 0) +
-        (reductions.other_reductions || 0)
-      );
-      
-      normalTax = Math.max(0, normalTax - totalReductions);
-      
-      // Apply tax credits
-      const totalCredits = (
-        (credits.charitable_donation || 0) +
-        (credits.pension_contribution || 0) +
-        (credits.life_insurance_premium || 0) +
-        (credits.investment_tax_credit || 0) +
-        (credits.other_credits || 0)
-      );
-      
-      const taxAfterCredits = Math.max(0, normalTax - totalCredits);
-      
-      // Calculate adjustable tax
+
+      // Apply surcharge (10% on income above Rs 10 million for individuals - Finance Act 2025)
+      const surchargeThreshold = 10000000;  // Rs 10 million
+      const surchargeRate = 0.10;  // 10%
+      let surcharge = 0;
+      if (baseTaxableIncome > surchargeThreshold) {
+        surcharge = normalTax * surchargeRate;
+      }
+
+      // Add surcharge to normal tax
+      const normalTaxWithSurcharge = normalTax + surcharge;
+
+      // Get reductions for later application - ensure numeric conversion
+      const totalReductions = parseFloat(reductions.total_reductions || 0);
+
+      // Apply tax credits - use the generated total_credits field
+      const totalCredits = parseFloat(credits.total_credits || 0);
+
+      // Apply reductions and credits to normal tax with surcharge
+      const taxAfterReductions = Math.max(0, normalTaxWithSurcharge - totalReductions);
+      const taxAfterCredits = Math.max(0, taxAfterReductions - totalCredits);
+
+      // Calculate adjustable tax - ensure numeric conversion
       const totalAdjustableTax = (
-        (adjustableTax.profit_on_debt_tax || 0) +
-        (adjustableTax.electricity_tax || 0) +
-        (adjustableTax.phone_tax || 0) +
-        (adjustableTax.vehicle_tax || 0) +
-        (adjustableTax.other_tax || 0)
+        parseFloat(adjustableTax.profit_on_debt_tax || 0) +
+        parseFloat(adjustableTax.electricity_tax || 0) +
+        parseFloat(adjustableTax.phone_tax || 0) +
+        parseFloat(adjustableTax.vehicle_tax || 0) +
+        parseFloat(adjustableTax.other_tax || 0)
       );
-      
-      // Calculate final tax
-      const totalFinalTax = (
-        (finalTax.sukuk_tax_amount || 0) +
-        (finalTax.debt_tax_amount || 0) +
-        (finalTax.prize_bonds_tax || 0) +
-        (finalTax.other_final_tax || 0)
+
+      // Calculate final tax - use the generated total_final_tax field or calculate manually
+      const totalFinalTax = parseFloat(finalTax.total_final_tax || 0) || (
+        parseFloat(finalTax.sukuk_bonds_gross_amount || 0) * (parseFloat(finalTax.sukuk_bonds_tax_rate || 0) / 100) +
+        parseFloat(finalTax.debt_securities_gross_amount || 0) * (parseFloat(finalTax.debt_securities_tax_rate || 0) / 100) +
+        parseFloat(finalTax.prize_bonds_tax_amount || 0) +
+        parseFloat(finalTax.other_final_tax_tax_amount || 0)
       );
-      
-      // Calculate capital gains tax
-      const totalCapitalGainsTax = (
-        (capitalGain.property_1_year_tax_due || 0) +
-        (capitalGain.property_2_3_years_tax_due || 0) +
-        (capitalGain.securities_tax_due || 0) +
-        (capitalGain.other_capital_gains_tax || 0)
-      );
+
+      // Calculate capital gains tax - ensure numeric conversion
+      const totalCapitalGainsTax = parseFloat(capitalGain.total_tax_deducted || 0);
       
       // Total tax liability
       const totalTaxLiability = taxAfterCredits + totalAdjustableTax + totalFinalTax + totalCapitalGainsTax;
       
-      // Calculate total tax paid
+      // Calculate total tax paid - ensure numeric conversion (excluding capital gains tax to avoid double counting)
+      // Updated for new 2025 structure - no monthly multiplier needed as annual amounts are used
       const totalTaxPaid = (
-        (income.salary_tax_deducted || 0) +
-        (income.additional_tax_deducted || 0) +
-        (adjustableTax.profit_on_debt_tax || 0) +
-        (adjustableTax.electricity_tax || 0) +
-        (adjustableTax.phone_tax || 0) +
-        (adjustableTax.vehicle_tax || 0) +
-        (deductions.advance_tax || 0) +
-        (capitalGain.property_1_year_tax_deducted || 0) +
-        (capitalGain.property_2_3_years_tax_deducted || 0) +
-        (capitalGain.securities_tax_deducted || 0)
+        parseFloat(income.salary_tax_deducted || 0) +  // Annual tax deducted (not monthly anymore)
+        parseFloat(income.additional_tax_deducted || 0) +
+        parseFloat(adjustableTax.profit_on_debt_tax || 0) +
+        parseFloat(adjustableTax.electricity_tax || 0) +
+        parseFloat(adjustableTax.phone_tax || 0) +
+        parseFloat(adjustableTax.vehicle_tax || 0) +
+        parseFloat(deductions.advance_tax || 0)
+        // Note: Capital gains tax is calculated separately and not part of withholding
       );
       
       // Calculate refund or additional tax due
@@ -213,17 +231,23 @@ class TaxCalculator {
         // Income summary
         grossIncome: Math.round(grossIncome * 100) / 100,
         exemptIncome: Math.round(exemptIncome * 100) / 100,
+        allowableDeductions: Math.round(allowableDeductions * 100) / 100,
         taxableIncome: Math.round(taxableIncome * 100) / 100,
+        capitalGain: Math.round(capitalGainsAmount * 100) / 100,
         
         // Tax calculations
-        normalTax: Math.round(normalTax * 100) / 100,
+        normalIncomeTax: Math.round(normalTax * 100) / 100,
+        surcharge: Math.round(surcharge * 100) / 100,
         taxReductions: Math.round(totalReductions * 100) / 100,
         taxCredits: Math.round(totalCredits * 100) / 100,
+        taxAfterReductions: Math.round(taxAfterReductions * 100) / 100,
         taxAfterCredits: Math.round(taxAfterCredits * 100) / 100,
         adjustableTax: Math.round(totalAdjustableTax * 100) / 100,
         finalTax: Math.round(totalFinalTax * 100) / 100,
-        capitalGainsTax: Math.round(totalCapitalGainsTax * 100) / 100,
-        totalTaxLiability: Math.round(totalTaxLiability * 100) / 100,
+        capitalGainTax: Math.round(totalCapitalGainsTax * 100) / 100,
+        taxChargeable: Math.round(totalTaxLiability * 100) / 100,
+        withholdingTax: Math.round(totalTaxPaid * 100) / 100,
+        taxDemanded: Math.round(additionalTaxDue * 100) / 100,
         
         // Tax payments
         totalTaxPaid: Math.round(totalTaxPaid * 100) / 100,
@@ -265,11 +289,11 @@ class TaxCalculator {
       const income = taxData.income;
       
       if ((income.monthly_salary || 0) < 0) {
-        errors.push('Monthly salary cannot be negative');
+        errors.push('Annual salary cannot be negative');
       }
-      
-      if ((income.monthly_salary || 0) > 10000000) {
-        warnings.push('Monthly salary seems unusually high');
+
+      if ((income.monthly_salary || 0) > 120000000) {
+        warnings.push('Annual salary seems unusually high');
       }
       
       if ((income.salary_tax_deducted || 0) < 0) {

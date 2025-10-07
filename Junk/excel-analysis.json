@@ -1,0 +1,4477 @@
+{
+  "sheetNames": [
+    "Taxpayer profile",
+    "Income",
+    "Adjustable Tax",
+    "Income with Final Min tax",
+    "Capital Gain",
+    "Tax Computation",
+    "Tax Reduction, Credit & deduct ",
+    "Detail of Expenses",
+    "Wealth Statement",
+    "Wealth Recon"
+  ],
+  "sheets": {
+    "Taxpayer profile": {
+      "range": "A2:C8",
+      "cells": {
+        "A2": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B2": {
+          "value": "Input 1",
+          "type": "s"
+        },
+        "C2": {
+          "value": "Input 2",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Name",
+          "type": "s"
+        },
+        "B3": {
+          "value": "Mr. X",
+          "type": "s"
+        },
+        "A4": {
+          "value": "NIC",
+          "type": "s"
+        },
+        "B4": {
+          "value": "422010000000",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Email",
+          "type": "s"
+        },
+        "B5": {
+          "value": "------@com",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Mobile Phone Number/Service provider",
+          "type": "s"
+        },
+        "B6": {
+          "value": "00923001234567",
+          "type": "s"
+        },
+        "C6": {
+          "value": "Jazz",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Major Source of Income",
+          "type": "s"
+        },
+        "B7": {
+          "value": "Salary",
+          "type": "s"
+        }
+      },
+      "formulas": [],
+      "structure": [
+        {
+          "row": 2,
+          "data": {
+            "A2": "Description",
+            "B2": "Input 1",
+            "C2": "Input 2"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Name",
+            "B3": "Mr. X"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "NIC",
+            "B4": "422010000000"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Email",
+            "B5": "------@com"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Mobile Phone Number/Service provider",
+            "B6": "00923001234567",
+            "C6": "Jazz"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Major Source of Income",
+            "B7": "Salary"
+          }
+        }
+      ]
+    },
+    "Income": {
+      "range": "A1:E33",
+      "cells": {
+        "A1": {
+          "value": "Detail of Income Subject to Normal Taxation",
+          "type": "s"
+        },
+        "A2": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B2": {
+          "value": "Annual Value in PKR",
+          "type": "s"
+        },
+        "C3": {
+          "value": "Remarks",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Payments By Employer",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Annual Salary and Wages",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Annual Basic Salary",
+          "type": "s"
+        },
+        "B6": {
+          "value": 7200000,
+          "formula": "600000*12",
+          "type": "n"
+        },
+        "C6": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Allowances (excluding bonus and medical allowance)",
+          "type": "s"
+        },
+        "B7": {
+          "value": 6000000,
+          "formula": "500000*12",
+          "type": "n"
+        },
+        "C7": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A8": {
+          "value": "Bonus",
+          "type": "s"
+        },
+        "B8": {
+          "value": 1500000,
+          "type": "n"
+        },
+        "C8": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A9": {
+          "value": "Medical allowance (Where medical facility not provided by employer)",
+          "type": "s"
+        },
+        "B9": {
+          "value": 720000,
+          "type": "n"
+        },
+        "C9": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A10": {
+          "value": "Pension received from ex-employer",
+          "type": "s"
+        },
+        "B10": {
+          "value": 400000,
+          "type": "n"
+        },
+        "C10": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A11": {
+          "value": "Employment Termination payment (Section 12 (2) e iii)",
+          "type": "s"
+        },
+        "B11": {
+          "value": 2000000,
+          "type": "n"
+        },
+        "C11": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A12": {
+          "value": "Amount received on retirement from approved funds (Provident, pension, gratuity)",
+          "type": "s"
+        },
+        "B12": {
+          "value": 5000000,
+          "type": "n"
+        },
+        "A13": {
+          "value": "Directorship Fee u/s 149(3)",
+          "type": "s"
+        },
+        "B13": {
+          "value": 40000,
+          "type": "n"
+        },
+        "A14": {
+          "value": "Other cash benefits (LFA, Children education, etc.)",
+          "type": "s"
+        },
+        "B14": {
+          "value": 1200000,
+          "type": "n"
+        },
+        "C14": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A15": {
+          "value": "Income Exempt from tax",
+          "type": "s"
+        },
+        "B15": {
+          "value": -7720000,
+          "formula": "-B12-B11-B9",
+          "type": "n"
+        },
+        "A16": {
+          "value": "Annual Salary and Wages",
+          "type": "s"
+        },
+        "B16": {
+          "value": 16340000,
+          "formula": "SUM(B6:B15)",
+          "type": "n"
+        },
+        "C16": {
+          "value": "sum of above",
+          "type": "s"
+        },
+        "A18": {
+          "value": "Non cash benefits",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Employer Contribution to Approved Provident Funds",
+          "type": "s"
+        },
+        "B19": {
+          "value": 720000,
+          "type": "n"
+        },
+        "C19": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A20": {
+          "value": "Taxable value of Car provided by employer",
+          "type": "s"
+        },
+        "B20": {
+          "value": 1500000,
+          "type": "n"
+        },
+        "C20": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A21": {
+          "value": "Other taxable subsidies and non cash benefits",
+          "type": "s"
+        },
+        "B21": {
+          "value": 200000,
+          "type": "n"
+        },
+        "C21": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A22": {
+          "value": "Non cash benefit exempt from tax",
+          "type": "s"
+        },
+        "B22": {
+          "value": -150000,
+          "formula": "-(MIN(B19,150000))",
+          "type": "n"
+        },
+        "A23": {
+          "value": "Total non cash benefits",
+          "type": "s"
+        },
+        "B23": {
+          "value": 2270000,
+          "formula": "SUM(B19:B22)",
+          "type": "n"
+        },
+        "C23": {
+          "value": "sum of above",
+          "type": "s"
+        },
+        "A25": {
+          "value": "Other Income (Subject to minimum tax)",
+          "type": "s"
+        },
+        "A26": {
+          "value": "Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)",
+          "type": "s"
+        },
+        "B26": {
+          "value": 700000,
+          "type": "n"
+        },
+        "A27": {
+          "value": "Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)",
+          "type": "s"
+        },
+        "B27": {
+          "value": 1500000,
+          "type": "n"
+        },
+        "B28": {
+          "value": 2200000,
+          "formula": "B26+B27",
+          "type": "n"
+        },
+        "A30": {
+          "value": "Other Income (Not Subject to minimum tax)",
+          "type": "s"
+        },
+        "A31": {
+          "value": "Other taxable income - Rent income",
+          "type": "s"
+        },
+        "B31": {
+          "value": 700000,
+          "type": "n"
+        },
+        "A32": {
+          "value": "Other taxable income - Others",
+          "type": "s"
+        },
+        "B32": {
+          "value": 50000,
+          "type": "n"
+        },
+        "A33": {
+          "value": "Other taxable income - Total",
+          "type": "s"
+        },
+        "B33": {
+          "value": 750000,
+          "formula": "B31+B32",
+          "type": "n"
+        }
+      },
+      "formulas": [
+        {
+          "address": "B6",
+          "formula": "600000*12",
+          "value": 7200000
+        },
+        {
+          "address": "B7",
+          "formula": "500000*12",
+          "value": 6000000
+        },
+        {
+          "address": "B15",
+          "formula": "-B12-B11-B9",
+          "value": -7720000
+        },
+        {
+          "address": "B16",
+          "formula": "SUM(B6:B15)",
+          "value": 16340000
+        },
+        {
+          "address": "B22",
+          "formula": "-(MIN(B19,150000))",
+          "value": -150000
+        },
+        {
+          "address": "B23",
+          "formula": "SUM(B19:B22)",
+          "value": 2270000
+        },
+        {
+          "address": "B28",
+          "formula": "B26+B27",
+          "value": 2200000
+        },
+        {
+          "address": "B33",
+          "formula": "B31+B32",
+          "value": 750000
+        }
+      ],
+      "structure": [
+        {
+          "row": 1,
+          "data": {
+            "A1": "Detail of Income Subject to Normal Taxation"
+          }
+        },
+        {
+          "row": 2,
+          "data": {
+            "A2": "Description",
+            "B2": "Annual Value in PKR"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "C3": "Remarks"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Payments By Employer"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Annual Salary and Wages"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Annual Basic Salary",
+            "B6": 7200000,
+            "C6": "Input cell"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Allowances (excluding bonus and medical allowance)",
+            "B7": 6000000,
+            "C7": "Input cell"
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Bonus",
+            "B8": 1500000,
+            "C8": "Input cell"
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Medical allowance (Where medical facility not provided by employer)",
+            "B9": 720000,
+            "C9": "Input cell"
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Pension received from ex-employer",
+            "B10": 400000,
+            "C10": "Input cell"
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Employment Termination payment (Section 12 (2) e iii)",
+            "B11": 2000000,
+            "C11": "Input cell"
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Amount received on retirement from approved funds (Provident, pension, gratuity)",
+            "B12": 5000000
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Directorship Fee u/s 149(3)",
+            "B13": 40000
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Other cash benefits (LFA, Children education, etc.)",
+            "B14": 1200000,
+            "C14": "Input cell"
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Income Exempt from tax",
+            "B15": -7720000
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Annual Salary and Wages",
+            "B16": 16340000,
+            "C16": "sum of above"
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Non cash benefits"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Employer Contribution to Approved Provident Funds",
+            "B19": 720000,
+            "C19": "Input cell"
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Taxable value of Car provided by employer",
+            "B20": 1500000,
+            "C20": "Input cell"
+          }
+        }
+      ]
+    },
+    "Adjustable Tax": {
+      "range": "A2:D32",
+      "cells": {
+        "A2": {
+          "value": "Adjustable Tax",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B3": {
+          "value": "Value as per Withholding Certificate",
+          "type": "s"
+        },
+        "B4": {
+          "value": "Gross Receipt ",
+          "type": "s"
+        },
+        "C4": {
+          "value": "Tax Collected",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Salary of Employees u/s 149",
+          "type": "s"
+        },
+        "B5": {
+          "value": 16340000,
+          "formula": "Income!B16",
+          "type": "n"
+        },
+        "C5": {
+          "value": 3365000,
+          "type": "n"
+        },
+        "D5": {
+          "value": "Gross receipt linked with Income sheet and tax collected is Input cell",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Directorship Fee u/s 149(3)",
+          "type": "s"
+        },
+        "B6": {
+          "value": 40000,
+          "formula": "Income!B13",
+          "type": "n"
+        },
+        "C6": {
+          "value": 8000,
+          "formula": "B6*20%",
+          "type": "n"
+        },
+        "D6": {
+          "value": "Gross receipt linked with Income sheet and tax collected is Input cell",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)",
+          "type": "s"
+        },
+        "B7": {
+          "value": 700000,
+          "formula": "Income!B26",
+          "type": "n"
+        },
+        "C7": {
+          "value": 105000,
+          "formula": "B7*15%",
+          "type": "n"
+        },
+        "D7": {
+          "value": "Gross receipt linked with Income sheet and tax collected is Input cell",
+          "type": "s"
+        },
+        "A8": {
+          "value": "Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)",
+          "type": "s"
+        },
+        "B8": {
+          "value": 1500000,
+          "formula": "Income!B27",
+          "type": "n"
+        },
+        "C8": {
+          "value": 187500,
+          "formula": "B8*12.5%",
+          "type": "n"
+        },
+        "D8": {
+          "value": "Gross receipt linked with Income sheet and tax collected is Input cell",
+          "type": "s"
+        },
+        "A9": {
+          "value": "Tax deducted on Rent received (Section 155)",
+          "type": "s"
+        },
+        "B9": {
+          "value": 700000,
+          "formula": "Income!B31",
+          "type": "n"
+        },
+        "D9": {
+          "value": "Gross receipt linked with Income sheet and tax collected is Input cell",
+          "type": "s"
+        },
+        "A10": {
+          "value": "Advance tax on cash withdrawal u/s 231AB",
+          "type": "s"
+        },
+        "D10": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A11": {
+          "value": "Motor Vehicle Registration Fee u/s 231B(1)",
+          "type": "s"
+        },
+        "C11": {
+          "value": 10000,
+          "type": "n"
+        },
+        "D11": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A12": {
+          "value": "Motor Vehicle Transfer Fee u/s 231B(2)",
+          "type": "s"
+        },
+        "B12": {
+          "value": 6000000,
+          "type": "n"
+        },
+        "C12": {
+          "value": 180000,
+          "formula": "B12*3%",
+          "type": "n"
+        },
+        "D12": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A13": {
+          "value": "Motor Vehicle Sale u/s 231B(3)",
+          "type": "s"
+        },
+        "D13": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A14": {
+          "value": "Motor Vehicle Leasing u/s 231B(1A) (Non-ATL) @4%",
+          "type": "s"
+        },
+        "D14": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A15": {
+          "value": "Electricity Bill of Domestic Consumer u/s 235",
+          "type": "s"
+        },
+        "B15": {
+          "value": 1800000,
+          "type": "n"
+        },
+        "C15": {
+          "value": 135000,
+          "formula": "B15*7.5%",
+          "type": "n"
+        },
+        "D15": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A16": {
+          "value": "Telephone Bill u/s 236(1)(a)",
+          "type": "s"
+        },
+        "D16": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A17": {
+          "value": "Cellphone Bill u/s 236(1)(a)",
+          "type": "s"
+        },
+        "B17": {
+          "value": 200000,
+          "type": "n"
+        },
+        "C17": {
+          "value": 30000,
+          "formula": "B17*15%",
+          "type": "n"
+        },
+        "D17": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A18": {
+          "value": "Prepaid Telephone Card u/s 236(1)(b)",
+          "type": "s"
+        },
+        "B18": {
+          "value": 25000,
+          "type": "n"
+        },
+        "C18": {
+          "value": 3750,
+          "formula": "B18*15%",
+          "type": "n"
+        },
+        "D18": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Phone Unit u/s 236(1)(c)",
+          "type": "s"
+        },
+        "D19": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A20": {
+          "value": "Internet Bill u/s 236(1)(d)",
+          "type": "s"
+        },
+        "D20": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A21": {
+          "value": "Prepaid Internet Card u/s 236(1)(e)",
+          "type": "s"
+        },
+        "D21": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A22": {
+          "value": "Sale / Transfer of Immovable Property u/s 236C",
+          "type": "s"
+        },
+        "D22": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A23": {
+          "value": "Tax Deducted u/s 236C where Property Purchased & Sold within Tax Year",
+          "type": "s"
+        },
+        "D23": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A24": {
+          "value": "Tax Deducted u/s 236C where Property Purchased Prior to current Tax Year",
+          "type": "s"
+        },
+        "D24": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A25": {
+          "value": "Functions / Gatherings Charges u/s 236CB (ATL @ 10% / Non-ATL @ 20%)",
+          "type": "s"
+        },
+        "D25": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A26": {
+          "value": "Withholding tax on Sale Considerations u/s 37(6) @ 10% of the value of shares",
+          "type": "s"
+        },
+        "D26": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A27": {
+          "value": "Purchase / Transfer of Immovable Property u/s 236K",
+          "type": "s"
+        },
+        "D27": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A28": {
+          "value": "Advance Tax on Withdrawal of Balance under Pension Fund u/c 23A of Part I of Second Schedule",
+          "type": "s"
+        },
+        "D28": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A29": {
+          "value": "Advance tax on Motor Vehicle u/s 231B(2A)",
+          "type": "s"
+        },
+        "C29": {
+          "value": 1750,
+          "type": "n"
+        },
+        "D29": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A30": {
+          "value": "Persons remitting amount abroad through credit / debits / prepaid cards u/s 236Y",
+          "type": "s"
+        },
+        "D30": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A31": {
+          "value": "Advance tax on foreign domestic workers u/s 231C",
+          "type": "s"
+        },
+        "D31": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A32": {
+          "value": "Total",
+          "type": "s"
+        },
+        "B32": {
+          "value": 27305000,
+          "formula": "SUM(B5:B31)",
+          "type": "n"
+        },
+        "C32": {
+          "value": 4026000,
+          "formula": "SUM(C5:C31)",
+          "type": "n"
+        },
+        "D32": {
+          "value": "Sum of all above",
+          "type": "s"
+        }
+      },
+      "formulas": [
+        {
+          "address": "B5",
+          "formula": "Income!B16",
+          "value": 16340000
+        },
+        {
+          "address": "B6",
+          "formula": "Income!B13",
+          "value": 40000
+        },
+        {
+          "address": "C6",
+          "formula": "B6*20%",
+          "value": 8000
+        },
+        {
+          "address": "B7",
+          "formula": "Income!B26",
+          "value": 700000
+        },
+        {
+          "address": "C7",
+          "formula": "B7*15%",
+          "value": 105000
+        },
+        {
+          "address": "B8",
+          "formula": "Income!B27",
+          "value": 1500000
+        },
+        {
+          "address": "C8",
+          "formula": "B8*12.5%",
+          "value": 187500
+        },
+        {
+          "address": "B9",
+          "formula": "Income!B31",
+          "value": 700000
+        },
+        {
+          "address": "C12",
+          "formula": "B12*3%",
+          "value": 180000
+        },
+        {
+          "address": "C15",
+          "formula": "B15*7.5%",
+          "value": 135000
+        },
+        {
+          "address": "C17",
+          "formula": "B17*15%",
+          "value": 30000
+        },
+        {
+          "address": "C18",
+          "formula": "B18*15%",
+          "value": 3750
+        },
+        {
+          "address": "B32",
+          "formula": "SUM(B5:B31)",
+          "value": 27305000
+        },
+        {
+          "address": "C32",
+          "formula": "SUM(C5:C31)",
+          "value": 4026000
+        }
+      ],
+      "structure": [
+        {
+          "row": 2,
+          "data": {
+            "A2": "Adjustable Tax"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Description",
+            "B3": "Value as per Withholding Certificate"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "B4": "Gross Receipt ",
+            "C4": "Tax Collected"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Salary of Employees u/s 149",
+            "B5": 16340000,
+            "C5": 3365000,
+            "D5": "Gross receipt linked with Income sheet and tax collected is Input cell"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Directorship Fee u/s 149(3)",
+            "B6": 40000,
+            "C6": 8000,
+            "D6": "Gross receipt linked with Income sheet and tax collected is Input cell"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)",
+            "B7": 700000,
+            "C7": 105000,
+            "D7": "Gross receipt linked with Income sheet and tax collected is Input cell"
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)",
+            "B8": 1500000,
+            "C8": 187500,
+            "D8": "Gross receipt linked with Income sheet and tax collected is Input cell"
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Tax deducted on Rent received (Section 155)",
+            "B9": 700000,
+            "D9": "Gross receipt linked with Income sheet and tax collected is Input cell"
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Advance tax on cash withdrawal u/s 231AB",
+            "D10": "Input cell"
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Motor Vehicle Registration Fee u/s 231B(1)",
+            "C11": 10000,
+            "D11": "Input cell"
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Motor Vehicle Transfer Fee u/s 231B(2)",
+            "B12": 6000000,
+            "C12": 180000,
+            "D12": "Input cell"
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Motor Vehicle Sale u/s 231B(3)",
+            "D13": "Input cell"
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Motor Vehicle Leasing u/s 231B(1A) (Non-ATL) @4%",
+            "D14": "Input cell"
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Electricity Bill of Domestic Consumer u/s 235",
+            "B15": 1800000,
+            "C15": 135000,
+            "D15": "Input cell"
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Telephone Bill u/s 236(1)(a)",
+            "D16": "Input cell"
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Cellphone Bill u/s 236(1)(a)",
+            "B17": 200000,
+            "C17": 30000,
+            "D17": "Input cell"
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Prepaid Telephone Card u/s 236(1)(b)",
+            "B18": 25000,
+            "C18": 3750,
+            "D18": "Input cell"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Phone Unit u/s 236(1)(c)",
+            "D19": "Input cell"
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Internet Bill u/s 236(1)(d)",
+            "D20": "Input cell"
+          }
+        },
+        {
+          "row": 21,
+          "data": {
+            "A21": "Prepaid Internet Card u/s 236(1)(e)",
+            "D21": "Input cell"
+          }
+        }
+      ]
+    },
+    "Income with Final Min tax": {
+      "range": "A1:G27",
+      "cells": {
+        "A1": {
+          "value": "Income Subject to Final / Fixed / Minimum / Average / Relevant / Reduced Tax",
+          "type": "s"
+        },
+        "A2": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B2": {
+          "value": "Amount/Receipt",
+          "type": "s"
+        },
+        "C2": {
+          "value": "Tax Deducted",
+          "type": "s"
+        },
+        "D2": {
+          "value": "Tax Cargeable",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Dividend u/s 150 @0% share of profit from REIT SPV",
+          "type": "s"
+        },
+        "B3": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C3": {
+          "value": 0,
+          "type": "n"
+        },
+        "D3": {
+          "value": 0,
+          "formula": "B3*0%",
+          "type": "n"
+        },
+        "E3": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Dividend u/s 150 @35% share of profit from other SPV",
+          "type": "s"
+        },
+        "B4": {
+          "value": 800000,
+          "type": "n"
+        },
+        "C4": {
+          "value": 280000,
+          "type": "n"
+        },
+        "D4": {
+          "value": 280000,
+          "formula": "B4*35%",
+          "type": "n"
+        },
+        "E4": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Dividend u/s 150 @7.5% IPP Shares",
+          "type": "s"
+        },
+        "B5": {
+          "value": 50000,
+          "type": "n"
+        },
+        "C5": {
+          "value": 3750,
+          "type": "n"
+        },
+        "D5": {
+          "value": 3750,
+          "formula": "B5*7.5%",
+          "type": "n"
+        },
+        "E5": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Dividend u/s 150 @15% (Dividend in kind or Mutual funds with less than 50% profit on debt)",
+          "type": "s"
+        },
+        "B6": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C6": {
+          "value": 150000,
+          "type": "n"
+        },
+        "D6": {
+          "value": 150000,
+          "formula": "B6*15%",
+          "type": "n"
+        },
+        "E6": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Dividend u/s 150 @25% (From Companies not paying tax due to BF losses or Mutual funds with 50% and above profit on debt)",
+          "type": "s"
+        },
+        "B7": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C7": {
+          "value": 125000,
+          "type": "n"
+        },
+        "D7": {
+          "value": 125000,
+          "formula": "B7*25%",
+          "type": "n"
+        },
+        "A8": {
+          "value": "Return on Investment in Sukuks u/s 151(1A) @ 25%",
+          "type": "s"
+        },
+        "D8": {
+          "value": 0,
+          "formula": "B8*25%",
+          "type": "n"
+        },
+        "E8": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A9": {
+          "value": "Return on Investment in Sukuks u/s 151(1A) @ 12.5% From Rs 1m to Rs 5m",
+          "type": "s"
+        },
+        "B9": {
+          "value": 4000000,
+          "type": "n"
+        },
+        "C9": {
+          "value": 500000,
+          "formula": "B9*12.5%",
+          "type": "n"
+        },
+        "D9": {
+          "value": 500000,
+          "formula": "B9*12.5%",
+          "type": "n"
+        },
+        "E9": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A10": {
+          "value": "Return on Investment in Sukuks u/s 151(1A) @ 10% Up to Rs 1m",
+          "type": "s"
+        },
+        "B10": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C10": {
+          "value": 100000,
+          "type": "n"
+        },
+        "D10": {
+          "value": 100000,
+          "formula": "B10*10%",
+          "type": "n"
+        },
+        "E10": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A11": {
+          "value": "Profit on Debt u/c 5(A)/5AA/5AB of Part II, Second Schedule (@10%) - Debt instrument via FCVA/SCRA for non resident or resident Pakistani with foreign bank accounts declared under SBP Scheme",
+          "type": "s"
+        },
+        "B11": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C11": {
+          "value": 100000,
+          "type": "n"
+        },
+        "D11": {
+          "value": 100000,
+          "formula": "B11*0.1",
+          "type": "n"
+        },
+        "E11": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A12": {
+          "value": "Profit on Debt on National Savings Certificates including Defence Saving pertaining to pervious years u/s 39(4A)",
+          "type": "s"
+        },
+        "B12": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C12": {
+          "value": 40000,
+          "type": "n"
+        },
+        "D12": {
+          "value": 40000,
+          "formula": "B12*F12",
+          "type": "n"
+        },
+        "E12": {
+          "value": "Chargeable to tax at rate prevailing in the relevant year",
+          "type": "s"
+        },
+        "F12": {
+          "value": 0.08,
+          "type": "n"
+        },
+        "G12": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A13": {
+          "value": "Interest Income - Profit on debt u/s 7B (Profit up to 5m taxable at 15%) ",
+          "type": "s"
+        },
+        "B13": {
+          "value": 5000000,
+          "type": "n"
+        },
+        "C13": {
+          "value": 750000,
+          "type": "n"
+        },
+        "D13": {
+          "value": 750000,
+          "formula": "B13*15%",
+          "type": "n"
+        },
+        "E13": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A14": {
+          "value": "Prize on Prize Bond/Cross workd puzzle u/s 156",
+          "type": "s"
+        },
+        "B14": {
+          "value": 550000,
+          "type": "n"
+        },
+        "C14": {
+          "value": 82500,
+          "type": "n"
+        },
+        "D14": {
+          "value": 82500,
+          "formula": "B14*15%",
+          "type": "n"
+        },
+        "E14": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A15": {
+          "value": "Prize on Raffle/Lottery/Quiz/Sale promotion u/s 156",
+          "type": "s"
+        },
+        "B15": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C15": {
+          "value": 100000,
+          "type": "n"
+        },
+        "D15": {
+          "value": 100000,
+          "formula": "B15*20%",
+          "type": "n"
+        },
+        "E15": {
+          "value": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)",
+          "type": "s"
+        },
+        "A16": {
+          "value": "Bonus shares issued by companies u/s 236Z",
+          "type": "s"
+        },
+        "B16": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C16": {
+          "value": 50000,
+          "type": "n"
+        },
+        "D16": {
+          "value": 50000,
+          "formula": "B16*10%",
+          "type": "n"
+        },
+        "E16": {
+          "value": "Value received is the day-end price on the first day of closure of\r\nbooks in the case of listed company and the value as prescribed in case of other\r\ncompanies",
+          "type": "s"
+        },
+        "A17": {
+          "value": "Salary Arrears u/s 12(7) Chargeable to Tax at Relevant Rate",
+          "type": "s"
+        },
+        "B17": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C17": {
+          "value": 290000,
+          "type": "n"
+        },
+        "D17": {
+          "value": 290000,
+          "formula": "B17*F17",
+          "type": "n"
+        },
+        "E17": {
+          "value": "Average Rate of tax for Calculation of salary arrears (0% To 100%)",
+          "type": "s"
+        },
+        "F17": {
+          "value": 0.29,
+          "type": "n"
+        },
+        "G17": {
+          "value": "Input cell",
+          "type": "s"
+        },
+        "A18": {
+          "value": "Subtotal",
+          "type": "s"
+        },
+        "B18": {
+          "value": 17400000,
+          "formula": "SUM(B3:B17)",
+          "type": "n"
+        },
+        "C18": {
+          "value": 2571250,
+          "formula": "SUM(C3:C17)",
+          "type": "n"
+        },
+        "D18": {
+          "value": 2571250,
+          "formula": "SUM(D3:D17)",
+          "type": "n"
+        },
+        "E18": {
+          "value": "sum of above",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Capital Gain",
+          "type": "s"
+        },
+        "B19": {
+          "value": 1500000,
+          "formula": "'Capital Gain'!E19",
+          "type": "n"
+        },
+        "C19": {
+          "value": 175000,
+          "formula": "'Capital Gain'!F19",
+          "type": "n"
+        },
+        "D19": {
+          "value": 175000,
+          "formula": "'Capital Gain'!G19",
+          "type": "n"
+        },
+        "E19": {
+          "value": "Linked with Capital gain sheet",
+          "type": "s"
+        },
+        "A20": {
+          "value": "Grand Total",
+          "type": "s"
+        },
+        "B20": {
+          "value": 18900000,
+          "formula": "B18+B19",
+          "type": "n"
+        },
+        "C20": {
+          "value": 2746250,
+          "formula": "C18+C19",
+          "type": "n"
+        },
+        "D20": {
+          "value": 2746250,
+          "formula": "D18+D19",
+          "type": "n"
+        },
+        "E20": {
+          "value": "sum of above",
+          "type": "s"
+        }
+      },
+      "formulas": [
+        {
+          "address": "D3",
+          "formula": "B3*0%",
+          "value": 0
+        },
+        {
+          "address": "D4",
+          "formula": "B4*35%",
+          "value": 280000
+        },
+        {
+          "address": "D5",
+          "formula": "B5*7.5%",
+          "value": 3750
+        },
+        {
+          "address": "D6",
+          "formula": "B6*15%",
+          "value": 150000
+        },
+        {
+          "address": "D7",
+          "formula": "B7*25%",
+          "value": 125000
+        },
+        {
+          "address": "D8",
+          "formula": "B8*25%",
+          "value": 0
+        },
+        {
+          "address": "C9",
+          "formula": "B9*12.5%",
+          "value": 500000
+        },
+        {
+          "address": "D9",
+          "formula": "B9*12.5%",
+          "value": 500000
+        },
+        {
+          "address": "D10",
+          "formula": "B10*10%",
+          "value": 100000
+        },
+        {
+          "address": "D11",
+          "formula": "B11*0.1",
+          "value": 100000
+        },
+        {
+          "address": "D12",
+          "formula": "B12*F12",
+          "value": 40000
+        },
+        {
+          "address": "D13",
+          "formula": "B13*15%",
+          "value": 750000
+        },
+        {
+          "address": "D14",
+          "formula": "B14*15%",
+          "value": 82500
+        },
+        {
+          "address": "D15",
+          "formula": "B15*20%",
+          "value": 100000
+        },
+        {
+          "address": "D16",
+          "formula": "B16*10%",
+          "value": 50000
+        },
+        {
+          "address": "D17",
+          "formula": "B17*F17",
+          "value": 290000
+        },
+        {
+          "address": "B18",
+          "formula": "SUM(B3:B17)",
+          "value": 17400000
+        },
+        {
+          "address": "C18",
+          "formula": "SUM(C3:C17)",
+          "value": 2571250
+        },
+        {
+          "address": "D18",
+          "formula": "SUM(D3:D17)",
+          "value": 2571250
+        },
+        {
+          "address": "B19",
+          "formula": "'Capital Gain'!E19",
+          "value": 1500000
+        },
+        {
+          "address": "C19",
+          "formula": "'Capital Gain'!F19",
+          "value": 175000
+        },
+        {
+          "address": "D19",
+          "formula": "'Capital Gain'!G19",
+          "value": 175000
+        },
+        {
+          "address": "B20",
+          "formula": "B18+B19",
+          "value": 18900000
+        },
+        {
+          "address": "C20",
+          "formula": "C18+C19",
+          "value": 2746250
+        },
+        {
+          "address": "D20",
+          "formula": "D18+D19",
+          "value": 2746250
+        }
+      ],
+      "structure": [
+        {
+          "row": 1,
+          "data": {
+            "A1": "Income Subject to Final / Fixed / Minimum / Average / Relevant / Reduced Tax"
+          }
+        },
+        {
+          "row": 2,
+          "data": {
+            "A2": "Description",
+            "B2": "Amount/Receipt",
+            "C2": "Tax Deducted",
+            "D2": "Tax Cargeable"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Dividend u/s 150 @0% share of profit from REIT SPV",
+            "B3": 1000000,
+            "C3": 0,
+            "D3": 0,
+            "E3": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Dividend u/s 150 @35% share of profit from other SPV",
+            "B4": 800000,
+            "C4": 280000,
+            "D4": 280000,
+            "E4": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Dividend u/s 150 @7.5% IPP Shares",
+            "B5": 50000,
+            "C5": 3750,
+            "D5": 3750,
+            "E5": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Dividend u/s 150 @15% (Dividend in kind or Mutual funds with less than 50% profit on debt)",
+            "B6": 1000000,
+            "C6": 150000,
+            "D6": 150000,
+            "E6": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Dividend u/s 150 @25% (From Companies not paying tax due to BF losses or Mutual funds with 50% and above profit on debt)",
+            "B7": 500000,
+            "C7": 125000,
+            "D7": 125000
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Return on Investment in Sukuks u/s 151(1A) @ 25%",
+            "D8": 0,
+            "E8": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Return on Investment in Sukuks u/s 151(1A) @ 12.5% From Rs 1m to Rs 5m",
+            "B9": 4000000,
+            "C9": 500000,
+            "D9": 500000,
+            "E9": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Return on Investment in Sukuks u/s 151(1A) @ 10% Up to Rs 1m",
+            "B10": 1000000,
+            "C10": 100000,
+            "D10": 100000,
+            "E10": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Profit on Debt u/c 5(A)/5AA/5AB of Part II, Second Schedule (@10%) - Debt instrument via FCVA/SCRA for non resident or resident Pakistani with foreign bank accounts declared under SBP Scheme",
+            "B11": 1000000,
+            "C11": 100000,
+            "D11": 100000,
+            "E11": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Profit on Debt on National Savings Certificates including Defence Saving pertaining to pervious years u/s 39(4A)",
+            "B12": 500000,
+            "C12": 40000,
+            "D12": 40000,
+            "E12": "Chargeable to tax at rate prevailing in the relevant year",
+            "F12": 0.08,
+            "G12": "Input cell"
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Interest Income - Profit on debt u/s 7B (Profit up to 5m taxable at 15%) ",
+            "B13": 5000000,
+            "C13": 750000,
+            "D13": 750000,
+            "E13": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Prize on Prize Bond/Cross workd puzzle u/s 156",
+            "B14": 550000,
+            "C14": 82500,
+            "D14": 82500,
+            "E14": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Prize on Raffle/Lottery/Quiz/Sale promotion u/s 156",
+            "B15": 500000,
+            "C15": 100000,
+            "D15": 100000,
+            "E15": "Green cells are input cells (Tax chargeable is computed based on TY2025 rates)"
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Bonus shares issued by companies u/s 236Z",
+            "B16": 500000,
+            "C16": 50000,
+            "D16": 50000,
+            "E16": "Value received is the day-end price on the first day of closure of\r\nbooks in the case of listed company and the value as prescribed in case of other\r\ncompanies"
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Salary Arrears u/s 12(7) Chargeable to Tax at Relevant Rate",
+            "B17": 1000000,
+            "C17": 290000,
+            "D17": 290000,
+            "E17": "Average Rate of tax for Calculation of salary arrears (0% To 100%)",
+            "F17": 0.29,
+            "G17": "Input cell"
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Subtotal",
+            "B18": 17400000,
+            "C18": 2571250,
+            "D18": 2571250,
+            "E18": "sum of above"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Capital Gain",
+            "B19": 1500000,
+            "C19": 175000,
+            "D19": 175000,
+            "E19": "Linked with Capital gain sheet"
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Grand Total",
+            "B20": 18900000,
+            "C20": 2746250,
+            "D20": 2746250,
+            "E20": "sum of above"
+          }
+        }
+      ]
+    },
+    "Capital Gain": {
+      "range": "A1:K20",
+      "cells": {
+        "A1": {
+          "value": "Capital Gain",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B3": {
+          "value": "Plot",
+          "type": "s"
+        },
+        "C3": {
+          "value": "Constructed proporty",
+          "type": "s"
+        },
+        "D3": {
+          "value": "Flat",
+          "type": "s"
+        },
+        "E3": {
+          "value": "Taxable Amount/Receipt",
+          "type": "s"
+        },
+        "F3": {
+          "value": "Tax Deducted",
+          "type": "s"
+        },
+        "G3": {
+          "value": "Tax Cargeable",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period does not exceed 1 year",
+          "type": "s"
+        },
+        "B4": {
+          "value": 0,
+          "type": "n"
+        },
+        "E4": {
+          "value": 0,
+          "formula": "SUM(B4:D4)",
+          "type": "n"
+        },
+        "G4": {
+          "value": 0,
+          "formula": "(B4+C4+D4)*15%",
+          "type": "n"
+        },
+        "I4": {
+          "value": "Green cells are input cells. Tax chargeable computed based on TY2025 rates",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 1 year but does not exceed 2 years",
+          "type": "s"
+        },
+        "E5": {
+          "value": 0,
+          "formula": "SUM(B5:D5)",
+          "type": "n"
+        },
+        "G5": {
+          "value": 0,
+          "formula": "(B5*12.5%)+(C5*10%)+(D5*7.5%)",
+          "type": "n"
+        },
+        "A6": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 2 years but does not exceed 3 years",
+          "type": "s"
+        },
+        "B6": {
+          "value": 500000,
+          "type": "n"
+        },
+        "E6": {
+          "value": 500000,
+          "formula": "SUM(B6:D6)",
+          "type": "n"
+        },
+        "F6": {
+          "value": 50000,
+          "type": "n"
+        },
+        "G6": {
+          "value": 50000,
+          "formula": "(B6*10%)+(C6*7.5%)+(D6*0%)",
+          "type": "n"
+        },
+        "A7": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 3 years but does not exceed 4 years",
+          "type": "s"
+        },
+        "E7": {
+          "value": 0,
+          "formula": "SUM(B7:D7)",
+          "type": "n"
+        },
+        "G7": {
+          "value": 0,
+          "formula": "(B7*7.5%)+(C7*5%)+(D7*0%)",
+          "type": "n"
+        },
+        "A8": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 4 years but does not exceed 5 years",
+          "type": "s"
+        },
+        "E8": {
+          "value": 0,
+          "formula": "SUM(B8:D8)",
+          "type": "n"
+        },
+        "G8": {
+          "value": 0,
+          "formula": "(B8*5%)+(C8*0%)+(D8*0%)",
+          "type": "n"
+        },
+        "A9": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 5 years but does not exceed 6 years",
+          "type": "s"
+        },
+        "E9": {
+          "value": 0,
+          "formula": "SUM(B9:D9)",
+          "type": "n"
+        },
+        "G9": {
+          "value": 0,
+          "formula": "(B9*2.5%)+(C9*0%)+(D9*0%)",
+          "type": "n"
+        },
+        "A10": {
+          "value": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 6 years",
+          "type": "s"
+        },
+        "G10": {
+          "value": 0,
+          "formula": "E10*0%",
+          "type": "n"
+        },
+        "A11": {
+          "value": "Capital Gains on Securities u/s 37A @0% acquired before 1-Jul-2013",
+          "type": "s"
+        },
+        "G11": {
+          "value": 0,
+          "formula": "E11*0%",
+          "type": "n"
+        },
+        "A12": {
+          "value": "Capital Gains on Securities u/s 37A @5% (PMEX/Cash Settled Securities)",
+          "type": "s"
+        },
+        "G12": {
+          "value": 0,
+          "formula": "E12*5%",
+          "type": "n"
+        },
+        "A13": {
+          "value": "Capital Gains on Securities u/s 37A @7.5%",
+          "type": "s"
+        },
+        "G13": {
+          "value": 0,
+          "formula": "E13*7.5%",
+          "type": "n"
+        },
+        "A14": {
+          "value": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT u/s 37A @10%",
+          "type": "s"
+        },
+        "G14": {
+          "value": 0,
+          "formula": "E14*10%",
+          "type": "n"
+        },
+        "A15": {
+          "value": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT (For stock funds) u/s 37A @12.5%",
+          "type": "s"
+        },
+        "G15": {
+          "value": 0,
+          "formula": "E15*12.5%",
+          "type": "n"
+        },
+        "A16": {
+          "value": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT (Other than stock funds) u/s 37A @25%",
+          "type": "s"
+        },
+        "G16": {
+          "value": 0,
+          "formula": "E16*25%",
+          "type": "n"
+        },
+        "A17": {
+          "value": "Capital Gains on Securities u/s 37A @12.5% (securities acquired before July 01, 2022 regardless of holding period)",
+          "type": "s"
+        },
+        "E17": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "F17": {
+          "value": 125000,
+          "type": "n"
+        },
+        "G17": {
+          "value": 125000,
+          "formula": "E17*12.5%",
+          "type": "n"
+        },
+        "A18": {
+          "value": "Capital Gains on Securities u/s 37A @15%",
+          "type": "s"
+        },
+        "G18": {
+          "value": 0,
+          "formula": "E18*15%",
+          "type": "n"
+        },
+        "A19": {
+          "value": "Total Gapital Gain",
+          "type": "s"
+        },
+        "E19": {
+          "value": 1500000,
+          "formula": "SUM(E4:E18)",
+          "type": "n"
+        },
+        "F19": {
+          "value": 175000,
+          "formula": "SUM(F4:F18)",
+          "type": "n"
+        },
+        "G19": {
+          "value": 175000,
+          "formula": "SUM(G4:G18)",
+          "type": "n"
+        }
+      },
+      "formulas": [
+        {
+          "address": "E4",
+          "formula": "SUM(B4:D4)",
+          "value": 0
+        },
+        {
+          "address": "G4",
+          "formula": "(B4+C4+D4)*15%",
+          "value": 0
+        },
+        {
+          "address": "E5",
+          "formula": "SUM(B5:D5)",
+          "value": 0
+        },
+        {
+          "address": "G5",
+          "formula": "(B5*12.5%)+(C5*10%)+(D5*7.5%)",
+          "value": 0
+        },
+        {
+          "address": "E6",
+          "formula": "SUM(B6:D6)",
+          "value": 500000
+        },
+        {
+          "address": "G6",
+          "formula": "(B6*10%)+(C6*7.5%)+(D6*0%)",
+          "value": 50000
+        },
+        {
+          "address": "E7",
+          "formula": "SUM(B7:D7)",
+          "value": 0
+        },
+        {
+          "address": "G7",
+          "formula": "(B7*7.5%)+(C7*5%)+(D7*0%)",
+          "value": 0
+        },
+        {
+          "address": "E8",
+          "formula": "SUM(B8:D8)",
+          "value": 0
+        },
+        {
+          "address": "G8",
+          "formula": "(B8*5%)+(C8*0%)+(D8*0%)",
+          "value": 0
+        },
+        {
+          "address": "E9",
+          "formula": "SUM(B9:D9)",
+          "value": 0
+        },
+        {
+          "address": "G9",
+          "formula": "(B9*2.5%)+(C9*0%)+(D9*0%)",
+          "value": 0
+        },
+        {
+          "address": "G10",
+          "formula": "E10*0%",
+          "value": 0
+        },
+        {
+          "address": "G11",
+          "formula": "E11*0%",
+          "value": 0
+        },
+        {
+          "address": "G12",
+          "formula": "E12*5%",
+          "value": 0
+        },
+        {
+          "address": "G13",
+          "formula": "E13*7.5%",
+          "value": 0
+        },
+        {
+          "address": "G14",
+          "formula": "E14*10%",
+          "value": 0
+        },
+        {
+          "address": "G15",
+          "formula": "E15*12.5%",
+          "value": 0
+        },
+        {
+          "address": "G16",
+          "formula": "E16*25%",
+          "value": 0
+        },
+        {
+          "address": "G17",
+          "formula": "E17*12.5%",
+          "value": 125000
+        },
+        {
+          "address": "G18",
+          "formula": "E18*15%",
+          "value": 0
+        },
+        {
+          "address": "E19",
+          "formula": "SUM(E4:E18)",
+          "value": 1500000
+        },
+        {
+          "address": "F19",
+          "formula": "SUM(F4:F18)",
+          "value": 175000
+        },
+        {
+          "address": "G19",
+          "formula": "SUM(G4:G18)",
+          "value": 175000
+        }
+      ],
+      "structure": [
+        {
+          "row": 1,
+          "data": {
+            "A1": "Capital Gain"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Description",
+            "B3": "Plot",
+            "C3": "Constructed proporty",
+            "D3": "Flat",
+            "E3": "Taxable Amount/Receipt",
+            "F3": "Tax Deducted",
+            "G3": "Tax Cargeable"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Capital Gains on Immovable Property u/s 37(1A) where holding period does not exceed 1 year",
+            "B4": 0,
+            "E4": 0,
+            "G4": 0,
+            "I4": "Green cells are input cells. Tax chargeable computed based on TY2025 rates"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 1 year but does not exceed 2 years",
+            "E5": 0,
+            "G5": 0
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 2 years but does not exceed 3 years",
+            "B6": 500000,
+            "E6": 500000,
+            "F6": 50000,
+            "G6": 50000
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 3 years but does not exceed 4 years",
+            "E7": 0,
+            "G7": 0
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 4 years but does not exceed 5 years",
+            "E8": 0,
+            "G8": 0
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 5 years but does not exceed 6 years",
+            "E9": 0,
+            "G9": 0
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 6 years",
+            "G10": 0
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Capital Gains on Securities u/s 37A @0% acquired before 1-Jul-2013",
+            "G11": 0
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Capital Gains on Securities u/s 37A @5% (PMEX/Cash Settled Securities)",
+            "G12": 0
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Capital Gains on Securities u/s 37A @7.5%",
+            "G13": 0
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT u/s 37A @10%",
+            "G14": 0
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT (For stock funds) u/s 37A @12.5%",
+            "G15": 0
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Capital Gains on Securities / Mutual Funds / Collective Schemes / REIT (Other than stock funds) u/s 37A @25%",
+            "G16": 0
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Capital Gains on Securities u/s 37A @12.5% (securities acquired before July 01, 2022 regardless of holding period)",
+            "E17": 1000000,
+            "F17": 125000,
+            "G17": 125000
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Capital Gains on Securities u/s 37A @15%",
+            "G18": 0
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Total Gapital Gain",
+            "E19": 1500000,
+            "F19": 175000,
+            "G19": 175000
+          }
+        }
+      ]
+    },
+    "Tax Computation": {
+      "range": "A2:F34",
+      "cells": {
+        "A2": {
+          "value": "Tax Computation",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Total Amount",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B4": {
+          "value": "Amount PKR",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Income",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Income from Salary",
+          "type": "s"
+        },
+        "B6": {
+          "value": 18610000,
+          "formula": "Income!B16+Income!B23",
+          "type": "n"
+        },
+        "A7": {
+          "value": "Other Income subject to minimum tax",
+          "type": "s"
+        },
+        "B7": {
+          "value": 2200000,
+          "formula": "Income!B28",
+          "type": "n"
+        },
+        "A8": {
+          "value": "Income / (Loss) from Other Sources",
+          "type": "s"
+        },
+        "B8": {
+          "value": 750000,
+          "formula": "Income!B33",
+          "type": "n"
+        },
+        "A9": {
+          "value": "Total Income",
+          "type": "s"
+        },
+        "B9": {
+          "value": 21560000,
+          "formula": "SUM(B6:B8)",
+          "type": "n"
+        },
+        "A10": {
+          "value": "Deductible Allowances",
+          "type": "s"
+        },
+        "B10": {
+          "value": 75000,
+          "formula": "'Tax Reduction, Credit & deduct '!C22",
+          "type": "n"
+        },
+        "A11": {
+          "value": "Taxable Income excluding capital gains/(loss)",
+          "type": "s"
+        },
+        "B11": {
+          "value": 21485000,
+          "formula": "B9-B10",
+          "type": "n"
+        },
+        "A12": {
+          "value": "Gains / (Loss) from Capital Assets",
+          "type": "s"
+        },
+        "B12": {
+          "value": 1500000,
+          "formula": "'Capital Gain'!E19",
+          "type": "n"
+        },
+        "A13": {
+          "value": "Taxable Income including capital gains/(loss)",
+          "type": "s"
+        },
+        "B13": {
+          "value": 22985000,
+          "formula": "B11+B12",
+          "type": "n"
+        },
+        "A15": {
+          "value": "Tax Chargeable",
+          "type": "s"
+        },
+        "A16": {
+          "value": "Normal Income Tax",
+          "type": "s"
+        },
+        "B16": {
+          "value": 6784750,
+          "formula": "(IF((AND(B11>600000,B11<1200001)),((B11-600000))*5%,0))+(IF((AND(B11>1200000,B11<2200001)),((B11-1200000)*15%)+30000,0))+(IF((AND(B11>2200000,B11<3200001)),((B11-2200000)*25%)+180000,0))+(IF((AND(B11>3200000,B11<4100001)),((B11-3200000)*30%)+430000,0))+(IF(B11>4100000,((B11-4100000)*35%)+700000,0))",
+          "type": "n"
+        },
+        "A17": {
+          "value": "Surcharge (10% of Income Tax where income exceed Rs 10m)",
+          "type": "s"
+        },
+        "B17": {
+          "value": 678475,
+          "formula": "IF(B11>10000000,B16*10%,0)",
+          "type": "n"
+        },
+        "A18": {
+          "value": "Capital Gain Tax (CGT)",
+          "type": "s"
+        },
+        "B18": {
+          "value": 175000,
+          "formula": "'Capital Gain'!G19",
+          "type": "n"
+        },
+        "A19": {
+          "value": "Normal Income Tax including Surcharge and CGT",
+          "type": "s"
+        },
+        "B19": {
+          "value": 7638225,
+          "formula": "SUM(B16:B18)",
+          "type": "n"
+        },
+        "A20": {
+          "value": "Tax Reductions",
+          "type": "s"
+        },
+        "B20": {
+          "value": 1650512.7232142857,
+          "formula": "'Tax Reduction, Credit & deduct '!D9",
+          "type": "n"
+        },
+        "A21": {
+          "value": "Tax Credits",
+          "type": "s"
+        },
+        "B21": {
+          "value": 1727033.079182075,
+          "formula": "'Tax Reduction, Credit & deduct '!D16",
+          "type": "n"
+        },
+        "A22": {
+          "value": "Normal Income Tax after Tax Reduction/Credit",
+          "type": "s"
+        },
+        "B22": {
+          "value": 4260679.197603639,
+          "formula": "B19-B20-B21",
+          "type": "n"
+        },
+        "A23": {
+          "value": "Final / Fixed / Minimum / Average / Relevant / Reduced Income Tax",
+          "type": "s"
+        },
+        "B23": {
+          "value": 2746250,
+          "formula": "'Income with Final Min tax'!D20",
+          "type": "n"
+        },
+        "A24": {
+          "value": "Other income subject to minimum tax",
+          "type": "s"
+        },
+        "B24": {
+          "value": 0,
+          "formula": "IF(('Adjustable Tax'!C7+'Adjustable Tax'!C8)-(B7*B22/B13)>0,('Adjustable Tax'!C7+'Adjustable Tax'!C8)-(B7*B22/B13),0)",
+          "type": "n"
+        },
+        "A25": {
+          "value": "Totlal Tax Chargeable",
+          "type": "s"
+        },
+        "B25": {
+          "value": 7006929.197603639,
+          "formula": "B22+B23",
+          "type": "n"
+        },
+        "A27": {
+          "value": "Taxes Paid/Adjusted",
+          "type": "s"
+        },
+        "A28": {
+          "value": "Withholding Income Tax",
+          "type": "s"
+        },
+        "B28": {
+          "value": 6772250,
+          "formula": "'Adjustable Tax'!C32+'Income with Final Min tax'!C20",
+          "type": "n"
+        },
+        "A29": {
+          "value": "Refund Adjustment of Other Year(s) against Demand of this Year",
+          "type": "s"
+        },
+        "B29": {
+          "value": 75000,
+          "type": "n"
+        },
+        "A30": {
+          "value": "Total Taxes Paid/Adjusted",
+          "type": "s"
+        },
+        "B30": {
+          "value": 6847250,
+          "formula": "B28+B29",
+          "type": "n"
+        },
+        "A32": {
+          "value": "Income Tax Demanded /(Refundable)",
+          "type": "s"
+        },
+        "B32": {
+          "value": 159679.19760363922,
+          "formula": "B25-B30",
+          "type": "n"
+        }
+      },
+      "formulas": [
+        {
+          "address": "B6",
+          "formula": "Income!B16+Income!B23",
+          "value": 18610000
+        },
+        {
+          "address": "B7",
+          "formula": "Income!B28",
+          "value": 2200000
+        },
+        {
+          "address": "B8",
+          "formula": "Income!B33",
+          "value": 750000
+        },
+        {
+          "address": "B9",
+          "formula": "SUM(B6:B8)",
+          "value": 21560000
+        },
+        {
+          "address": "B10",
+          "formula": "'Tax Reduction, Credit & deduct '!C22",
+          "value": 75000
+        },
+        {
+          "address": "B11",
+          "formula": "B9-B10",
+          "value": 21485000
+        },
+        {
+          "address": "B12",
+          "formula": "'Capital Gain'!E19",
+          "value": 1500000
+        },
+        {
+          "address": "B13",
+          "formula": "B11+B12",
+          "value": 22985000
+        },
+        {
+          "address": "B16",
+          "formula": "(IF((AND(B11>600000,B11<1200001)),((B11-600000))*5%,0))+(IF((AND(B11>1200000,B11<2200001)),((B11-1200000)*15%)+30000,0))+(IF((AND(B11>2200000,B11<3200001)),((B11-2200000)*25%)+180000,0))+(IF((AND(B11>3200000,B11<4100001)),((B11-3200000)*30%)+430000,0))+(IF(B11>4100000,((B11-4100000)*35%)+700000,0))",
+          "value": 6784750
+        },
+        {
+          "address": "B17",
+          "formula": "IF(B11>10000000,B16*10%,0)",
+          "value": 678475
+        },
+        {
+          "address": "B18",
+          "formula": "'Capital Gain'!G19",
+          "value": 175000
+        },
+        {
+          "address": "B19",
+          "formula": "SUM(B16:B18)",
+          "value": 7638225
+        },
+        {
+          "address": "B20",
+          "formula": "'Tax Reduction, Credit & deduct '!D9",
+          "value": 1650512.7232142857
+        },
+        {
+          "address": "B21",
+          "formula": "'Tax Reduction, Credit & deduct '!D16",
+          "value": 1727033.079182075
+        },
+        {
+          "address": "B22",
+          "formula": "B19-B20-B21",
+          "value": 4260679.197603639
+        },
+        {
+          "address": "B23",
+          "formula": "'Income with Final Min tax'!D20",
+          "value": 2746250
+        },
+        {
+          "address": "B24",
+          "formula": "IF(('Adjustable Tax'!C7+'Adjustable Tax'!C8)-(B7*B22/B13)>0,('Adjustable Tax'!C7+'Adjustable Tax'!C8)-(B7*B22/B13),0)",
+          "value": 0
+        },
+        {
+          "address": "B25",
+          "formula": "B22+B23",
+          "value": 7006929.197603639
+        },
+        {
+          "address": "B28",
+          "formula": "'Adjustable Tax'!C32+'Income with Final Min tax'!C20",
+          "value": 6772250
+        },
+        {
+          "address": "B30",
+          "formula": "B28+B29",
+          "value": 6847250
+        },
+        {
+          "address": "B32",
+          "formula": "B25-B30",
+          "value": 159679.19760363922
+        }
+      ],
+      "structure": [
+        {
+          "row": 2,
+          "data": {
+            "A2": "Tax Computation"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Total Amount"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Description",
+            "B4": "Amount PKR"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Income"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Income from Salary",
+            "B6": 18610000
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Other Income subject to minimum tax",
+            "B7": 2200000
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Income / (Loss) from Other Sources",
+            "B8": 750000
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Total Income",
+            "B9": 21560000
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Deductible Allowances",
+            "B10": 75000
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Taxable Income excluding capital gains/(loss)",
+            "B11": 21485000
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Gains / (Loss) from Capital Assets",
+            "B12": 1500000
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Taxable Income including capital gains/(loss)",
+            "B13": 22985000
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Tax Chargeable"
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Normal Income Tax",
+            "B16": 6784750
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Surcharge (10% of Income Tax where income exceed Rs 10m)",
+            "B17": 678475
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Capital Gain Tax (CGT)",
+            "B18": 175000
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Normal Income Tax including Surcharge and CGT",
+            "B19": 7638225
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Tax Reductions",
+            "B20": 1650512.7232142857
+          }
+        },
+        {
+          "row": 21,
+          "data": {
+            "A21": "Tax Credits",
+            "B21": 1727033.079182075
+          }
+        }
+      ]
+    },
+    "Tax Reduction, Credit & deduct ": {
+      "range": "A1:H28",
+      "cells": {
+        "A1": {
+          "value": "Tax Reduction, Credit and Deductible Allowances",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B3": {
+          "value": "Y/N",
+          "type": "s"
+        },
+        "C3": {
+          "value": "Amount",
+          "type": "s"
+        },
+        "D3": {
+          "value": "Tax Reduction",
+          "type": "s"
+        },
+        "E3": {
+          "value": "Limits/Remarks",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Tax Reductions",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Tax Reduction for Full Time Teacher / Researcher (Except teachers of medical professions who derive income from private medical practice)",
+          "type": "s"
+        },
+        "B5": {
+          "value": "Y",
+          "type": "s"
+        },
+        "D5": {
+          "value": 1610512.7232142857,
+          "formula": "IF((ISERROR(IF(B5=\"Y\",(('Tax Computation'!B6*('Tax Computation'!B16+'Tax Computation'!B17)/'Tax Computation'!B9)*25%),0))),0,IF(B5=\"Y\",(('Tax Computation'!B6*('Tax Computation'!B16+'Tax Computation'!B17)/'Tax Computation'!B9)*25%),0))",
+          "type": "n"
+        },
+        "E5": {
+          "value": "25% of tax payable on his income from salary",
+          "type": "s"
+        },
+        "H5": {
+          "value": "Reduction as per second schedule",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Tax Reduction on Tax Charged on Behbood Certificates / Pensioner's Benefit Account in excess of applicable rate",
+          "type": "s"
+        },
+        "B6": {
+          "value": "Y",
+          "type": "s"
+        },
+        "C6": {
+          "value": 400000,
+          "type": "n"
+        },
+        "D6": {
+          "value": 40000,
+          "formula": "(G6-5%)*C6",
+          "type": "n"
+        },
+        "E6": {
+          "value": "Tax shall not exceed 5% of such profit",
+          "type": "s"
+        },
+        "F6": {
+          "value": "Applicable rate",
+          "type": "s"
+        },
+        "G6": {
+          "value": 0.15,
+          "type": "n"
+        },
+        "H6": {
+          "value": "Certificate amount and applicable tax to be input in green cells",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @50%",
+          "type": "s"
+        },
+        "E7": {
+          "value": "50% of the normal tax on capital gain",
+          "type": "s"
+        },
+        "H7": {
+          "value": "Green cells are to be filled in",
+          "type": "s"
+        },
+        "A8": {
+          "value": "Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @75%",
+          "type": "s"
+        },
+        "E8": {
+          "value": "75% of the normal tax on capital gain",
+          "type": "s"
+        },
+        "H8": {
+          "value": "Green cells are to be filled in",
+          "type": "s"
+        },
+        "A9": {
+          "value": "Total Tax Reduction",
+          "type": "s"
+        },
+        "D9": {
+          "value": 1650512.7232142857,
+          "formula": "SUM(D5:D8)",
+          "type": "n"
+        },
+        "A11": {
+          "value": "Tax Credits",
+          "type": "s"
+        },
+        "A12": {
+          "value": "Tax Credit for Charitable Donations u/s 61",
+          "type": "s"
+        },
+        "B12": {
+          "value": "Y",
+          "type": "s"
+        },
+        "C12": {
+          "value": 700000,
+          "type": "n"
+        },
+        "D12": {
+          "value": 232619.42571242116,
+          "formula": "IF(ISERROR((MIN(C12,'Tax Computation'!B13*30%))*'Tax Computation'!B19/'Tax Computation'!B13),0,(MIN(C12,'Tax Computation'!B13*30%))*'Tax Computation'!B19/'Tax Computation'!B13)",
+          "type": "n"
+        },
+        "E12": {
+          "value": "30% of the taxable income",
+          "type": "s"
+        },
+        "H12": {
+          "value": "Green cells are to be filled in and tax credit is computed as per TY2025 rates",
+          "type": "s"
+        },
+        "A13": {
+          "value": "Tax Credit for Charitable Donations u/s 61 where donation is made to associate",
+          "type": "s"
+        },
+        "C13": {
+          "value": 0,
+          "type": "n"
+        },
+        "D13": {
+          "value": 0,
+          "formula": "IF(ISERROR((MIN(C13,'Tax Computation'!B13*15%))*'Tax Computation'!B19/'Tax Computation'!B13),0,(MIN(C13,'Tax Computation'!B13*15%))*'Tax Computation'!B19/'Tax Computation'!B13)",
+          "type": "n"
+        },
+        "E13": {
+          "value": "15% of the taxable income",
+          "type": "s"
+        },
+        "A14": {
+          "value": "Tax Credit for Contribution to Approved Pension Fund u/s 63",
+          "type": "s"
+        },
+        "B14": {
+          "value": "Y",
+          "type": "s"
+        },
+        "C14": {
+          "value": 5000000,
+          "type": "n"
+        },
+        "D14": {
+          "value": 1527645,
+          "formula": "IF(ISERROR((MIN(C14,'Tax Computation'!B13*G14))*'Tax Computation'!B19/'Tax Computation'!B13),0,((MIN(C14,'Tax Computation'!B13*G14))*'Tax Computation'!B19/'Tax Computation'!B13))",
+          "type": "n"
+        },
+        "E14": {
+          "value": "20% of the taxable income (2% per year for above 40 years if he joined at or above 41 years of age)",
+          "type": "s"
+        },
+        "F14": {
+          "value": "Applicable tax credit rate based on age",
+          "type": "s"
+        },
+        "G14": {
+          "value": 0.2,
+          "type": "n"
+        },
+        "A15": {
+          "value": "Surrender of Tax Credit on Investments in Shares disposed off before time limit",
+          "type": "s"
+        },
+        "C15": {
+          "value": 100000,
+          "type": "n"
+        },
+        "D15": {
+          "value": -33231.34653034588,
+          "formula": "(IF(ISERROR((C15*'Tax Computation'!B19/'Tax Computation'!B13)),0,((C15*'Tax Computation'!B19/'Tax Computation'!B13))))*-1",
+          "type": "n"
+        },
+        "A16": {
+          "value": "Total Tax Credit",
+          "type": "s"
+        },
+        "D16": {
+          "value": 1727033.079182075,
+          "formula": "SUM(D12:D15)",
+          "type": "n"
+        },
+        "A18": {
+          "value": "Deductible Allowance",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Educational expense of children (U/S 60D) available to taxpayer with taxable income not exceeding Rs 1.5m per year (5% of the amount paid OR 25% of taxable income OR Rs 60k per child whichever is lower)",
+          "type": "s"
+        },
+        "C19": {
+          "value": 0,
+          "formula": "IF(ISERROR(MIN((F19*5%),('Tax Computation'!B9*25%),( 60000*'Tax Reduction, Credit & deduct '!F20))),0,(MIN((F19*5%),('Tax Computation'!B9*25%),( 60000*'Tax Reduction, Credit & deduct '!F20))))",
+          "type": "n"
+        },
+        "E19": {
+          "value": "Total education Expense",
+          "type": "s"
+        },
+        "F19": {
+          "value": 0,
+          "type": "n"
+        },
+        "E20": {
+          "value": "No. of Children for whom tuition fee is paid",
+          "type": "s"
+        },
+        "F20": {
+          "value": 1,
+          "type": "n"
+        },
+        "A21": {
+          "value": "Zakat paid under Zakat and Usher Ordinance",
+          "type": "s"
+        },
+        "B21": {
+          "value": "Y",
+          "type": "s"
+        },
+        "C21": {
+          "value": 75000,
+          "type": "n"
+        },
+        "G21": {
+          "value": "Input cell (the value used in computation of taxable income",
+          "type": "s"
+        },
+        "A22": {
+          "value": "Total Deduction from Income",
+          "type": "s"
+        },
+        "C22": {
+          "value": 75000,
+          "formula": "SUM(C19:C21)",
+          "type": "n"
+        },
+        "A25": {
+          "value": "Notes:",
+          "type": "s"
+        },
+        "A26": {
+          "value": "Special straight deduction is available for Zakat paid under the Zakat and Usher Ordinance.",
+          "type": "s"
+        },
+        "A27": {
+          "value": "A rebate at the average rate of tax is allowed on donations made to any approved non-profit organisation on the lower of donation value and 30% of the individual’s taxable income. In case of donations made by an individual to an associate, the amount of donations qualifying for tax credit would be restricted to 15% of the individual’s taxable income.",
+          "type": "s"
+        },
+        "A28": {
+          "value": "Donations to certain approved institutes that were earlier eligible for direct deduction from income have now been transposed into the tax credit regime. As a result, the overall upper limit for tax break for the donors, in respect of charitable donations, has been reduced.",
+          "type": "s"
+        }
+      },
+      "formulas": [
+        {
+          "address": "D5",
+          "formula": "IF((ISERROR(IF(B5=\"Y\",(('Tax Computation'!B6*('Tax Computation'!B16+'Tax Computation'!B17)/'Tax Computation'!B9)*25%),0))),0,IF(B5=\"Y\",(('Tax Computation'!B6*('Tax Computation'!B16+'Tax Computation'!B17)/'Tax Computation'!B9)*25%),0))",
+          "value": 1610512.7232142857
+        },
+        {
+          "address": "D6",
+          "formula": "(G6-5%)*C6",
+          "value": 40000
+        },
+        {
+          "address": "D9",
+          "formula": "SUM(D5:D8)",
+          "value": 1650512.7232142857
+        },
+        {
+          "address": "D12",
+          "formula": "IF(ISERROR((MIN(C12,'Tax Computation'!B13*30%))*'Tax Computation'!B19/'Tax Computation'!B13),0,(MIN(C12,'Tax Computation'!B13*30%))*'Tax Computation'!B19/'Tax Computation'!B13)",
+          "value": 232619.42571242116
+        },
+        {
+          "address": "D13",
+          "formula": "IF(ISERROR((MIN(C13,'Tax Computation'!B13*15%))*'Tax Computation'!B19/'Tax Computation'!B13),0,(MIN(C13,'Tax Computation'!B13*15%))*'Tax Computation'!B19/'Tax Computation'!B13)",
+          "value": 0
+        },
+        {
+          "address": "D14",
+          "formula": "IF(ISERROR((MIN(C14,'Tax Computation'!B13*G14))*'Tax Computation'!B19/'Tax Computation'!B13),0,((MIN(C14,'Tax Computation'!B13*G14))*'Tax Computation'!B19/'Tax Computation'!B13))",
+          "value": 1527645
+        },
+        {
+          "address": "D15",
+          "formula": "(IF(ISERROR((C15*'Tax Computation'!B19/'Tax Computation'!B13)),0,((C15*'Tax Computation'!B19/'Tax Computation'!B13))))*-1",
+          "value": -33231.34653034588
+        },
+        {
+          "address": "D16",
+          "formula": "SUM(D12:D15)",
+          "value": 1727033.079182075
+        },
+        {
+          "address": "C19",
+          "formula": "IF(ISERROR(MIN((F19*5%),('Tax Computation'!B9*25%),( 60000*'Tax Reduction, Credit & deduct '!F20))),0,(MIN((F19*5%),('Tax Computation'!B9*25%),( 60000*'Tax Reduction, Credit & deduct '!F20))))",
+          "value": 0
+        },
+        {
+          "address": "C22",
+          "formula": "SUM(C19:C21)",
+          "value": 75000
+        }
+      ],
+      "structure": [
+        {
+          "row": 1,
+          "data": {
+            "A1": "Tax Reduction, Credit and Deductible Allowances"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Description",
+            "B3": "Y/N",
+            "C3": "Amount",
+            "D3": "Tax Reduction",
+            "E3": "Limits/Remarks"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Tax Reductions"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Tax Reduction for Full Time Teacher / Researcher (Except teachers of medical professions who derive income from private medical practice)",
+            "B5": "Y",
+            "D5": 1610512.7232142857,
+            "E5": "25% of tax payable on his income from salary",
+            "H5": "Reduction as per second schedule"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Tax Reduction on Tax Charged on Behbood Certificates / Pensioner's Benefit Account in excess of applicable rate",
+            "B6": "Y",
+            "C6": 400000,
+            "D6": 40000,
+            "E6": "Tax shall not exceed 5% of such profit",
+            "F6": "Applicable rate",
+            "G6": 0.15,
+            "H6": "Certificate amount and applicable tax to be input in green cells"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @50%",
+            "E7": "50% of the normal tax on capital gain",
+            "H7": "Green cells are to be filled in"
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Tax Reduction on Capital Gain on Immovable Property under clause (9A), Part III, Second Schedule for Ex-Servicemen and serving personnel of Armed Forces and ex-employees and serving personnel of Federal & Provincial Government @75%",
+            "E8": "75% of the normal tax on capital gain",
+            "H8": "Green cells are to be filled in"
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Total Tax Reduction",
+            "D9": 1650512.7232142857
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Tax Credits"
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Tax Credit for Charitable Donations u/s 61",
+            "B12": "Y",
+            "C12": 700000,
+            "D12": 232619.42571242116,
+            "E12": "30% of the taxable income",
+            "H12": "Green cells are to be filled in and tax credit is computed as per TY2025 rates"
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Tax Credit for Charitable Donations u/s 61 where donation is made to associate",
+            "C13": 0,
+            "D13": 0,
+            "E13": "15% of the taxable income"
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Tax Credit for Contribution to Approved Pension Fund u/s 63",
+            "B14": "Y",
+            "C14": 5000000,
+            "D14": 1527645,
+            "E14": "20% of the taxable income (2% per year for above 40 years if he joined at or above 41 years of age)",
+            "F14": "Applicable tax credit rate based on age",
+            "G14": 0.2
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Surrender of Tax Credit on Investments in Shares disposed off before time limit",
+            "C15": 100000,
+            "D15": -33231.34653034588
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Total Tax Credit",
+            "D16": 1727033.079182075
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Deductible Allowance"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Educational expense of children (U/S 60D) available to taxpayer with taxable income not exceeding Rs 1.5m per year (5% of the amount paid OR 25% of taxable income OR Rs 60k per child whichever is lower)",
+            "C19": 0,
+            "E19": "Total education Expense",
+            "F19": 0
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "E20": "No. of Children for whom tuition fee is paid",
+            "F20": 1
+          }
+        }
+      ]
+    },
+    "Detail of Expenses": {
+      "range": "A3:C35",
+      "cells": {
+        "A3": {
+          "value": "Personal Expenses",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B5": {
+          "value": "Amount in PKR",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Rent",
+          "type": "s"
+        },
+        "A8": {
+          "value": "Rates / Taxes / Charge / Cess",
+          "type": "s"
+        },
+        "B8": {
+          "value": 20000,
+          "type": "n"
+        },
+        "A9": {
+          "value": "Income Tax Paid",
+          "type": "s"
+        },
+        "B9": {
+          "value": 6772250,
+          "formula": "'Tax Computation'!B28",
+          "type": "n"
+        },
+        "A10": {
+          "value": "Vehicle Running / Maintenence",
+          "type": "s"
+        },
+        "B10": {
+          "value": 600000,
+          "type": "n"
+        },
+        "A11": {
+          "value": "Travelling",
+          "type": "s"
+        },
+        "B11": {
+          "value": 2500000,
+          "type": "n"
+        },
+        "A12": {
+          "value": "Electricity",
+          "type": "s"
+        },
+        "B12": {
+          "value": 750000,
+          "type": "n"
+        },
+        "A13": {
+          "value": "Water",
+          "type": "s"
+        },
+        "B13": {
+          "value": 220000,
+          "type": "n"
+        },
+        "A14": {
+          "value": "Gas",
+          "type": "s"
+        },
+        "B14": {
+          "value": 80000,
+          "type": "n"
+        },
+        "A15": {
+          "value": "Telephone",
+          "type": "s"
+        },
+        "B15": {
+          "value": 250000,
+          "type": "n"
+        },
+        "A16": {
+          "value": "Asset Insurance / Security",
+          "type": "s"
+        },
+        "B16": {
+          "value": 5000,
+          "type": "n"
+        },
+        "A17": {
+          "value": "Medical",
+          "type": "s"
+        },
+        "B17": {
+          "value": 2000000,
+          "type": "n"
+        },
+        "A18": {
+          "value": "Educational",
+          "type": "s"
+        },
+        "B18": {
+          "value": 3000000,
+          "type": "n"
+        },
+        "A19": {
+          "value": "Club",
+          "type": "s"
+        },
+        "B19": {
+          "value": 500000,
+          "type": "n"
+        },
+        "A20": {
+          "value": "Functions / Gatherings",
+          "type": "s"
+        },
+        "B20": {
+          "value": 300000,
+          "type": "n"
+        },
+        "A21": {
+          "value": "Donation, Zakat, Annuity, Profit on Debt, Life Insurance Premium, etc.",
+          "type": "s"
+        },
+        "B21": {
+          "value": 2000000,
+          "type": "n"
+        },
+        "A22": {
+          "value": "Other Personal / Household Expenses",
+          "type": "s"
+        },
+        "B22": {
+          "value": 20552750,
+          "formula": "-(SUM(B7:B21)-'Wealth Recon'!B21+'Wealth Recon'!B7)",
+          "type": "n"
+        },
+        "C22": {
+          "value": "Balancing figure",
+          "type": "s"
+        },
+        "B23": {
+          "value": 39550000,
+          "formula": "SUM(B7:B22)",
+          "type": "n"
+        },
+        "A24": {
+          "value": "Contribution in Expenses by Family Members",
+          "type": "s"
+        },
+        "A25": {
+          "value": "Total Expensespaid by taxpayer",
+          "type": "s"
+        },
+        "B25": {
+          "value": 39550000,
+          "formula": "B23-B24",
+          "type": "n"
+        }
+      },
+      "formulas": [
+        {
+          "address": "B9",
+          "formula": "'Tax Computation'!B28",
+          "value": 6772250
+        },
+        {
+          "address": "B22",
+          "formula": "-(SUM(B7:B21)-'Wealth Recon'!B21+'Wealth Recon'!B7)",
+          "value": 20552750
+        },
+        {
+          "address": "B23",
+          "formula": "SUM(B7:B22)",
+          "value": 39550000
+        },
+        {
+          "address": "B25",
+          "formula": "B23-B24",
+          "value": 39550000
+        }
+      ],
+      "structure": [
+        {
+          "row": 3,
+          "data": {
+            "A3": "Personal Expenses"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Description",
+            "B5": "Amount in PKR"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Rent"
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Rates / Taxes / Charge / Cess",
+            "B8": 20000
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Income Tax Paid",
+            "B9": 6772250
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Vehicle Running / Maintenence",
+            "B10": 600000
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Travelling",
+            "B11": 2500000
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Electricity",
+            "B12": 750000
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Water",
+            "B13": 220000
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Gas",
+            "B14": 80000
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Telephone",
+            "B15": 250000
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Asset Insurance / Security",
+            "B16": 5000
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Medical",
+            "B17": 2000000
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Educational",
+            "B18": 3000000
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Club",
+            "B19": 500000
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Functions / Gatherings",
+            "B20": 300000
+          }
+        },
+        {
+          "row": 21,
+          "data": {
+            "A21": "Donation, Zakat, Annuity, Profit on Debt, Life Insurance Premium, etc.",
+            "B21": 2000000
+          }
+        },
+        {
+          "row": 22,
+          "data": {
+            "A22": "Other Personal / Household Expenses",
+            "B22": 20552750,
+            "C22": "Balancing figure"
+          }
+        }
+      ]
+    },
+    "Wealth Statement": {
+      "range": "A1:C48",
+      "cells": {
+        "A1": {
+          "value": "Wealth Statement",
+          "type": "s"
+        },
+        "C2": {
+          "value": "Amount in PKR",
+          "type": "s"
+        },
+        "A3": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B3": {
+          "value": "Closing Balance Last year 30 Jun 2024",
+          "type": "s"
+        },
+        "C3": {
+          "value": "Closing Balance Current year 30 Jun 2025",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Agricultural Property",
+          "type": "s"
+        },
+        "A6": {
+          "value": "Commercial, Industrial, Residential Property (Non-Business)",
+          "type": "s"
+        },
+        "A7": {
+          "value": "Commercial, Industrial, Residential Property (Non-Business) Defense/Bahria,",
+          "type": "s"
+        },
+        "B7": {
+          "value": 5000000,
+          "type": "n"
+        },
+        "C7": {
+          "value": 5000000,
+          "formula": "B7",
+          "type": "n"
+        },
+        "A8": {
+          "value": "Equipment (Non-Business)",
+          "type": "s"
+        },
+        "A9": {
+          "value": "Animal (Non-Business)",
+          "type": "s"
+        },
+        "A10": {
+          "value": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.)",
+          "type": "s"
+        },
+        "A11": {
+          "value": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.) - Act Number 20610--------Habib Metropolitan Bank Limited Gulshan E Iqbal Karachi",
+          "type": "s"
+        },
+        "B11": {
+          "value": 1000000,
+          "type": "n"
+        },
+        "C11": {
+          "value": 500000,
+          "type": "n"
+        },
+        "A12": {
+          "value": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.) - Investment in Bahbood",
+          "type": "s"
+        },
+        "B12": {
+          "value": 12500000,
+          "type": "n"
+        },
+        "C12": {
+          "value": 20000000,
+          "type": "n"
+        },
+        "A13": {
+          "value": "Any Other Asset - -LISTED COMPANIES SHARES",
+          "type": "s"
+        },
+        "A14": {
+          "value": "Debt (Non-Business) (Advance / Debt / Deposit / Prepayment / Receivable / Security)",
+          "type": "s"
+        },
+        "A15": {
+          "value": "Motor Vehicle (Non-Business)",
+          "type": "s"
+        },
+        "B15": {
+          "value": 2500000,
+          "type": "n"
+        },
+        "C15": {
+          "value": 6000000,
+          "type": "n"
+        },
+        "A16": {
+          "value": "Precious Possession (Jewelry etc.)",
+          "type": "s"
+        },
+        "B16": {
+          "value": 1200000,
+          "type": "n"
+        },
+        "C16": {
+          "value": 1400000,
+          "type": "n"
+        },
+        "A17": {
+          "value": "Household Effect",
+          "type": "s"
+        },
+        "A18": {
+          "value": "Personal Item",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Cash (Non-Business)",
+          "type": "s"
+        },
+        "B19": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C19": {
+          "value": 240000,
+          "type": "n"
+        },
+        "A20": {
+          "value": "Any Other Asset",
+          "type": "s"
+        },
+        "A21": {
+          "value": "Any Other Asset - -Accumulated P.F balance",
+          "type": "s"
+        },
+        "B21": {
+          "value": 2500000,
+          "type": "n"
+        },
+        "C21": {
+          "value": 3940000,
+          "formula": "B21+(Income!B19*2)",
+          "type": "n"
+        },
+        "A22": {
+          "value": "Assets in Others' Name",
+          "type": "s"
+        },
+        "A23": {
+          "value": "Total Assets inside Pakistan",
+          "type": "s"
+        },
+        "B23": {
+          "value": 25200000,
+          "formula": "SUM(B5:B22)",
+          "type": "n"
+        },
+        "C23": {
+          "value": 37080000,
+          "formula": "SUM(C5:C22)",
+          "type": "n"
+        },
+        "A24": {
+          "value": "Assets held outside Pakistan",
+          "type": "s"
+        },
+        "A25": {
+          "value": "Capital or voting rights in foreign company",
+          "type": "s"
+        },
+        "A26": {
+          "value": "Total Assets held outside Pakistan",
+          "type": "s"
+        },
+        "B26": {
+          "value": 0,
+          "formula": "B24+B25",
+          "type": "n"
+        },
+        "C26": {
+          "value": 0,
+          "formula": "C24+C25",
+          "type": "n"
+        },
+        "A27": {
+          "value": "Total Assets",
+          "type": "s"
+        },
+        "B27": {
+          "value": 25200000,
+          "formula": "B23+B26",
+          "type": "n"
+        },
+        "C27": {
+          "value": 37080000,
+          "formula": "C23+C26",
+          "type": "n"
+        },
+        "A28": {
+          "value": "Credit (Non-Business) (Advance / Borrowing / Credit / Deposit / Loan / Mortgage / Overdraft / Payable) Bank Loan",
+          "type": "s"
+        },
+        "B28": {
+          "value": 500000,
+          "type": "n"
+        },
+        "C28": {
+          "value": 300000,
+          "type": "n"
+        },
+        "A29": {
+          "value": "Total Liabilities",
+          "type": "s"
+        },
+        "B29": {
+          "value": 500000,
+          "formula": "B28",
+          "type": "n"
+        },
+        "C29": {
+          "value": 300000,
+          "formula": "C28",
+          "type": "n"
+        },
+        "A30": {
+          "value": "Net Assets at end of Tax Year",
+          "type": "s"
+        },
+        "B30": {
+          "value": 24700000,
+          "formula": "B27-B29",
+          "type": "n"
+        },
+        "C30": {
+          "value": 36780000,
+          "formula": "C27-C29",
+          "type": "n"
+        },
+        "A32": {
+          "value": "Note:",
+          "type": "s"
+        },
+        "A33": {
+          "value": "All assets shall be reported at acquisition/historical costs",
+          "type": "s"
+        }
+      },
+      "formulas": [
+        {
+          "address": "C7",
+          "formula": "B7",
+          "value": 5000000
+        },
+        {
+          "address": "C21",
+          "formula": "B21+(Income!B19*2)",
+          "value": 3940000
+        },
+        {
+          "address": "B23",
+          "formula": "SUM(B5:B22)",
+          "value": 25200000
+        },
+        {
+          "address": "C23",
+          "formula": "SUM(C5:C22)",
+          "value": 37080000
+        },
+        {
+          "address": "B26",
+          "formula": "B24+B25",
+          "value": 0
+        },
+        {
+          "address": "C26",
+          "formula": "C24+C25",
+          "value": 0
+        },
+        {
+          "address": "B27",
+          "formula": "B23+B26",
+          "value": 25200000
+        },
+        {
+          "address": "C27",
+          "formula": "C23+C26",
+          "value": 37080000
+        },
+        {
+          "address": "B29",
+          "formula": "B28",
+          "value": 500000
+        },
+        {
+          "address": "C29",
+          "formula": "C28",
+          "value": 300000
+        },
+        {
+          "address": "B30",
+          "formula": "B27-B29",
+          "value": 24700000
+        },
+        {
+          "address": "C30",
+          "formula": "C27-C29",
+          "value": 36780000
+        }
+      ],
+      "structure": [
+        {
+          "row": 1,
+          "data": {
+            "A1": "Wealth Statement"
+          }
+        },
+        {
+          "row": 2,
+          "data": {
+            "C2": "Amount in PKR"
+          }
+        },
+        {
+          "row": 3,
+          "data": {
+            "A3": "Description",
+            "B3": "Closing Balance Last year 30 Jun 2024",
+            "C3": "Closing Balance Current year 30 Jun 2025"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Agricultural Property"
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Commercial, Industrial, Residential Property (Non-Business)"
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Commercial, Industrial, Residential Property (Non-Business) Defense/Bahria,",
+            "B7": 5000000,
+            "C7": 5000000
+          }
+        },
+        {
+          "row": 8,
+          "data": {
+            "A8": "Equipment (Non-Business)"
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Animal (Non-Business)"
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.)"
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.) - Act Number 20610--------Habib Metropolitan Bank Limited Gulshan E Iqbal Karachi",
+            "B11": 1000000,
+            "C11": 500000
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.) - Investment in Bahbood",
+            "B12": 12500000,
+            "C12": 20000000
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Any Other Asset - -LISTED COMPANIES SHARES"
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Debt (Non-Business) (Advance / Debt / Deposit / Prepayment / Receivable / Security)"
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Motor Vehicle (Non-Business)",
+            "B15": 2500000,
+            "C15": 6000000
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Precious Possession (Jewelry etc.)",
+            "B16": 1200000,
+            "C16": 1400000
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Household Effect"
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Personal Item"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Cash (Non-Business)",
+            "B19": 500000,
+            "C19": 240000
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Any Other Asset"
+          }
+        }
+      ]
+    },
+    "Wealth Recon": {
+      "range": "A2:B32",
+      "cells": {
+        "A2": {
+          "value": "Wealth Reconciliation",
+          "type": "s"
+        },
+        "A4": {
+          "value": "Description",
+          "type": "s"
+        },
+        "B4": {
+          "value": "Amount in PKR",
+          "type": "s"
+        },
+        "A5": {
+          "value": "Net Assets Current Year",
+          "type": "s"
+        },
+        "B5": {
+          "value": 36780000,
+          "formula": "'Wealth Statement'!C30",
+          "type": "n"
+        },
+        "A6": {
+          "value": "Net Assets Previous Year",
+          "type": "s"
+        },
+        "B6": {
+          "value": 24700000,
+          "formula": "'Wealth Statement'!B30",
+          "type": "n"
+        },
+        "A7": {
+          "value": "Increase / (Decrease) in Assets",
+          "type": "s"
+        },
+        "B7": {
+          "value": 12080000,
+          "formula": "B5-B6",
+          "type": "n"
+        },
+        "A9": {
+          "value": "Inflows",
+          "type": "s"
+        },
+        "A10": {
+          "value": "Income Declared as per Return for the year subject to Normal Tax",
+          "type": "s"
+        },
+        "B10": {
+          "value": 24060000,
+          "formula": "Income!B16-Income!B15",
+          "type": "n"
+        },
+        "A11": {
+          "value": "Income Declared as per Return for the year Exempt from Tax",
+          "type": "s"
+        },
+        "B11": {
+          "value": 2420000,
+          "formula": "Income!B23-Income!B22",
+          "type": "n"
+        },
+        "A12": {
+          "value": "Other Income",
+          "type": "s"
+        },
+        "B12": {
+          "value": 2950000,
+          "formula": "Income!B28+Income!B33",
+          "type": "n"
+        },
+        "A13": {
+          "value": "Income Attributable to Receipts, etc. Declared as per Return for the year subject to Final / Fixed Tax and CGT",
+          "type": "s"
+        },
+        "B13": {
+          "value": 18900000,
+          "formula": "'Income with Final Min tax'!B20",
+          "type": "n"
+        },
+        "A14": {
+          "value": "Non cash expenses",
+          "type": "s"
+        },
+        "B14": {
+          "value": -1700000,
+          "formula": "-Income!B20-Income!B21",
+          "type": "n"
+        },
+        "A15": {
+          "value": "Adjustments in Inflows",
+          "type": "s"
+        },
+        "A16": {
+          "value": "Foreign Remittance",
+          "type": "s"
+        },
+        "B16": {
+          "value": 5000000,
+          "type": "n"
+        },
+        "A17": {
+          "value": "Inheritance",
+          "type": "s"
+        },
+        "A18": {
+          "value": "Gift (Value declard in gift deed)",
+          "type": "s"
+        },
+        "A19": {
+          "value": "Gain/(Loss) on Disposal of Assets (Excluding capital gain)",
+          "type": "s"
+        },
+        "A20": {
+          "value": "Others",
+          "type": "s"
+        },
+        "B21": {
+          "value": 51630000,
+          "formula": "SUM(B10:B20)",
+          "type": "n"
+        },
+        "A22": {
+          "value": "Outflows",
+          "type": "s"
+        },
+        "A23": {
+          "value": "Personal Expenses",
+          "type": "s"
+        },
+        "B23": {
+          "value": 39550000,
+          "formula": "'Detail of Expenses'!B25",
+          "type": "n"
+        },
+        "A24": {
+          "value": "Adjustments in Outflows",
+          "type": "s"
+        },
+        "A25": {
+          "value": "Gift",
+          "type": "s"
+        },
+        "A26": {
+          "value": "Loss on Disposal of Assets",
+          "type": "s"
+        },
+        "B27": {
+          "value": 39550000,
+          "formula": "SUM(B23:B26)",
+          "type": "n"
+        },
+        "A29": {
+          "value": "Net Increase/(Decrease) in in Assets",
+          "type": "s"
+        },
+        "B29": {
+          "value": 12080000,
+          "formula": "B21-B27",
+          "type": "n"
+        },
+        "A31": {
+          "value": "Unreconciled difference",
+          "type": "s"
+        },
+        "B31": {
+          "value": 0,
+          "formula": "B7-B29",
+          "type": "n"
+        }
+      },
+      "formulas": [
+        {
+          "address": "B5",
+          "formula": "'Wealth Statement'!C30",
+          "value": 36780000
+        },
+        {
+          "address": "B6",
+          "formula": "'Wealth Statement'!B30",
+          "value": 24700000
+        },
+        {
+          "address": "B7",
+          "formula": "B5-B6",
+          "value": 12080000
+        },
+        {
+          "address": "B10",
+          "formula": "Income!B16-Income!B15",
+          "value": 24060000
+        },
+        {
+          "address": "B11",
+          "formula": "Income!B23-Income!B22",
+          "value": 2420000
+        },
+        {
+          "address": "B12",
+          "formula": "Income!B28+Income!B33",
+          "value": 2950000
+        },
+        {
+          "address": "B13",
+          "formula": "'Income with Final Min tax'!B20",
+          "value": 18900000
+        },
+        {
+          "address": "B14",
+          "formula": "-Income!B20-Income!B21",
+          "value": -1700000
+        },
+        {
+          "address": "B21",
+          "formula": "SUM(B10:B20)",
+          "value": 51630000
+        },
+        {
+          "address": "B23",
+          "formula": "'Detail of Expenses'!B25",
+          "value": 39550000
+        },
+        {
+          "address": "B27",
+          "formula": "SUM(B23:B26)",
+          "value": 39550000
+        },
+        {
+          "address": "B29",
+          "formula": "B21-B27",
+          "value": 12080000
+        },
+        {
+          "address": "B31",
+          "formula": "B7-B29",
+          "value": 0
+        }
+      ],
+      "structure": [
+        {
+          "row": 2,
+          "data": {
+            "A2": "Wealth Reconciliation"
+          }
+        },
+        {
+          "row": 4,
+          "data": {
+            "A4": "Description",
+            "B4": "Amount in PKR"
+          }
+        },
+        {
+          "row": 5,
+          "data": {
+            "A5": "Net Assets Current Year",
+            "B5": 36780000
+          }
+        },
+        {
+          "row": 6,
+          "data": {
+            "A6": "Net Assets Previous Year",
+            "B6": 24700000
+          }
+        },
+        {
+          "row": 7,
+          "data": {
+            "A7": "Increase / (Decrease) in Assets",
+            "B7": 12080000
+          }
+        },
+        {
+          "row": 9,
+          "data": {
+            "A9": "Inflows"
+          }
+        },
+        {
+          "row": 10,
+          "data": {
+            "A10": "Income Declared as per Return for the year subject to Normal Tax",
+            "B10": 24060000
+          }
+        },
+        {
+          "row": 11,
+          "data": {
+            "A11": "Income Declared as per Return for the year Exempt from Tax",
+            "B11": 2420000
+          }
+        },
+        {
+          "row": 12,
+          "data": {
+            "A12": "Other Income",
+            "B12": 2950000
+          }
+        },
+        {
+          "row": 13,
+          "data": {
+            "A13": "Income Attributable to Receipts, etc. Declared as per Return for the year subject to Final / Fixed Tax and CGT",
+            "B13": 18900000
+          }
+        },
+        {
+          "row": 14,
+          "data": {
+            "A14": "Non cash expenses",
+            "B14": -1700000
+          }
+        },
+        {
+          "row": 15,
+          "data": {
+            "A15": "Adjustments in Inflows"
+          }
+        },
+        {
+          "row": 16,
+          "data": {
+            "A16": "Foreign Remittance",
+            "B16": 5000000
+          }
+        },
+        {
+          "row": 17,
+          "data": {
+            "A17": "Inheritance"
+          }
+        },
+        {
+          "row": 18,
+          "data": {
+            "A18": "Gift (Value declard in gift deed)"
+          }
+        },
+        {
+          "row": 19,
+          "data": {
+            "A19": "Gain/(Loss) on Disposal of Assets (Excluding capital gain)"
+          }
+        },
+        {
+          "row": 20,
+          "data": {
+            "A20": "Others"
+          }
+        },
+        {
+          "row": 21,
+          "data": {
+            "B21": 51630000
+          }
+        }
+      ]
+    }
+  }
+}

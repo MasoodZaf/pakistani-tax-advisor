@@ -258,18 +258,18 @@ router.post('/validate/:taxYear', requireAuth, upload.single('excelFile'), async
       }
     };
 
-    // Expected sheets
+    // Expected sheets (matching "Salaried Individuals 2025.xlsx" exactly)
     const expectedSheets = [
-      'User Details',
-      'Income Details',
+      'Taxpayer profile',
+      'Income',
       'Adjustable Tax',
-      'Capital Gains',
+      'Income with Final Min tax',
+      'Capital Gain',
+      'Tax Computation',
+      'Tax Reduction, Credit & deduct ',
+      'Detail of Expenses',
       'Wealth Statement',
-      'Expenses',
-      'Tax Credits',
-      'Tax Deductions',
-      'Tax Reductions',
-      'Final Tax'
+      'Wealth Recon'
     ];
 
     // Validate each expected sheet

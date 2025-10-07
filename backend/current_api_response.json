@@ -1,0 +1,103 @@
+{
+  "user": {
+    "name": "Muhammad Hassan (Super Admin)",
+    "email": "superadmin@paktaxadvisor.com",
+    "phone": "+92-300-SUPER01",
+    "address": "N/A",
+    "registrationNo": "N/A",
+    "fatherName": "N/A",
+    "cnic": "N/A",
+    "ntn": "N/A",
+    "profession": "N/A",
+    "employerName": "N/A",
+    "city": "N/A",
+    "province": "N/A",
+    "taxCircle": "N/A",
+    "zone": "N/A"
+  },
+  "returnNumber": "TR-1758264202121",
+  "taxYear": "2024-25",
+  "filingStatus": "draft",
+  "grossIncome": 21440004,
+  "exemptIncome": 1270000,
+  "taxableIncome": 21595004,
+  "capitalGain": 1500000,
+  "normalIncomeTax": 6298250.3,
+  "surcharge": 629825.03,
+  "taxReductions": 1772019,
+  "taxCredits": 1295707,
+  "adjustableTaxAmount": 0,
+  "finalTaxAmount": 3100000,
+  "capitalGainTax": 175000,
+  "taxChargeable": 7135349.33,
+  "withholdingTax": 6972000,
+  "taxDemanded": 163349.33,
+  "refundDue": 0,
+  "additionalTaxDue": 163349.33,
+  "netAssets": 0,
+  "refundableIncomeTax": 0,
+  "totalIncome": 21440004,
+  "incomeFromSalary": 21440004,
+  "withholdingIncomeTax": 6972000,
+  "adjustableTax": {
+    "receipts": 0,
+    "taxCollected": 0,
+    "taxChargeable": 0
+  },
+  "salaryTax": {
+    "receipts": 21440004,
+    "taxCollected": 0
+  },
+  "personalExpenses": {
+    "total": 0,
+    "ratesTaxes": 0,
+    "vehicle": 0,
+    "travelling": 0,
+    "electricity": 0,
+    "water": 0,
+    "gas": 0,
+    "telephone": 0,
+    "medical": 0,
+    "educational": 0,
+    "other": 0
+  },
+  "personalAssets": [
+    {
+      "description": "Commercial, Industrial, Residential Property (Non-Business)",
+      "code": "7002",
+      "amount": 0
+    },
+    {
+      "description": "Investment (Non-Business) (Account / Annuity / Bond / Certificate / Debenture / Deposit / Fund / Instrument / Policy / Share / Stock / Unit, etc.)",
+      "code": "7006",
+      "amount": 0
+    },
+    {
+      "description": "Motor Vehicle (Non-Business)",
+      "code": "7008",
+      "amount": 0
+    },
+    {
+      "description": "Precious Possession - Gold",
+      "code": "7009",
+      "amount": 0
+    },
+    {
+      "description": "Cash (Non-Business)",
+      "code": "7012",
+      "amount": 0
+    },
+    {
+      "description": "Any Other Asset",
+      "code": "7013",
+      "amount": 0
+    }
+  ],
+  "totalAssets": 0,
+  "netAssetsPrevious": 0,
+  "assetsChange": 0,
+  "inflows": 21440004,
+  "declaredIncome": 21440004,
+  "outflows": 0,
+  "unreconciledAmount": 0
+}

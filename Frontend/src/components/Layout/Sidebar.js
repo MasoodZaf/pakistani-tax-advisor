@@ -28,9 +28,19 @@ const Sidebar = () => {
       icon: Home,
     },
     {
-      name: 'Tax Forms',
+      name: 'Forms Overview',
       href: '/tax-forms',
       icon: FileText,
+    },
+    {
+      name: 'Income Tax',
+      href: '/income-tax',
+      icon: Calculator,
+    },
+    {
+      name: 'Wealth Statement',
+      href: '/wealth-statement',
+      icon: TrendingUp,
     },
     {
       name: 'Reports',
@@ -69,6 +79,15 @@ const Sidebar = () => {
   const isActive = (href) => {
     if (href === '/tax-forms') {
       return location.pathname.startsWith('/tax-forms');
+    }
+    if (href === '/income-tax') {
+      return location.pathname.startsWith('/income-tax');
+    }
+    if (href === '/wealth-statement') {
+      return location.pathname.startsWith('/wealth-statement');
+    }
+    if (href === '/admin') {
+      return location.pathname.startsWith('/admin');
     }
     return location.pathname === href;
   };

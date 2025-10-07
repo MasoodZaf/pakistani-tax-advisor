@@ -1,0 +1,143 @@
+{
+  "metadata": {
+    "timestamp": "2025-09-28T10:03:53.693Z",
+    "duration": "85ms",
+    "target": "http://localhost:3001",
+    "assessmentVersion": "1.0.0"
+  },
+  "summary": {
+    "securityScore": 70,
+    "totalVulnerabilities": 2,
+    "totalWarnings": 3,
+    "totalTests": 14,
+    "passedTests": 12,
+    "failedTests": 2
+  },
+  "vulnerabilities": [
+    {
+      "severity": "MEDIUM",
+      "type": "Session Fixation",
+      "description": "Application may be vulnerable to session fixation attacks",
+      "recommendation": "Implement proper session regeneration on login",
+      "timestamp": "2025-09-28T10:03:53.686Z"
+    },
+    {
+      "severity": "HIGH",
+      "type": "JWT Secret",
+      "description": "Weak JWT secret detected: secret",
+      "recommendation": "Use a strong, randomly generated JWT secret",
+      "timestamp": "2025-09-28T10:03:53.688Z"
+    }
+  ],
+  "warnings": [
+    {
+      "type": "File Upload Security",
+      "description": "File upload endpoint detected: /api/excel/import - Ensure proper validation",
+      "timestamp": "2025-09-28T10:03:53.689Z"
+    },
+    {
+      "type": "File Upload Security",
+      "description": "File upload endpoint detected: /api/upload - Ensure proper validation",
+      "timestamp": "2025-09-28T10:03:53.689Z"
+    },
+    {
+      "type": "File Upload Security",
+      "description": "File upload endpoint detected: /api/files/upload - Ensure proper validation",
+      "timestamp": "2025-09-28T10:03:53.690Z"
+    }
+  ],
+  "testResults": [
+    {
+      "test": "No token access protection",
+      "passed": true,
+      "details": "Returns 401 as expected",
+      "timestamp": "2025-09-28T10:03:53.624Z"
+    },
+    {
+      "test": "Invalid token rejection",
+      "passed": true,
+      "details": "Invalid tokens properly rejected",
+      "timestamp": "2025-09-28T10:03:53.627Z"
+    },
+    {
+      "test": "Expired token rejection",
+      "passed": true,
+      "details": "Expired tokens properly rejected",
+      "timestamp": "2025-09-28T10:03:53.631Z"
+    },
+    {
+      "test": "SQL Injection resistance",
+      "passed": true,
+      "details": "All payloads properly rejected",
+      "timestamp": "2025-09-28T10:03:53.675Z"
+    },
+    {
+      "test": "Rate limiting implementation",
+      "passed": true,
+      "details": "Rate limiting triggered after 1 attempts",
+      "timestamp": "2025-09-28T10:03:53.679Z"
+    },
+    {
+      "test": "CORS policy security",
+      "passed": true,
+      "details": "Properly configured origins",
+      "timestamp": "2025-09-28T10:03:53.680Z"
+    },
+    {
+      "test": "Input validation security",
+      "passed": true,
+      "details": "Malicious inputs properly rejected",
+      "timestamp": "2025-09-28T10:03:53.685Z"
+    },
+    {
+      "test": "Session fixation protection",
+      "passed": false,
+      "details": "Fixed session tokens accepted",
+      "timestamp": "2025-09-28T10:03:53.686Z"
+    },
+    {
+      "test": "Session timeout mechanism",
+      "passed": true,
+      "details": "Session expiration implemented in database",
+      "timestamp": "2025-09-28T10:03:53.686Z"
+    },
+    {
+      "test": "Password strength enforcement",
+      "passed": true,
+      "details": "Weak passwords properly rejected",
+      "timestamp": "2025-09-28T10:03:53.687Z"
+    },
+    {
+      "test": "Password hashing security",
+      "passed": true,
+      "details": "Using bcrypt with salt rounds",
+      "timestamp": "2025-09-28T10:03:53.687Z"
+    },
+    {
+      "test": "JWT secret strength",
+      "passed": false,
+      "details": "Weak JWT secret detected",
+      "timestamp": "2025-09-28T10:03:53.688Z"
+    },
+    {
+      "test": "File upload security assessment",
+      "passed": true,
+      "details": "Upload endpoints identified for review",
+      "timestamp": "2025-09-28T10:03:53.690Z"
+    },
+    {
+      "test": "Environment security",
+      "passed": true,
+      "details": "No sensitive information exposure",
+      "timestamp": "2025-09-28T10:03:53.693Z"
+    }
+  ],
+  "recommendations": [
+    "Use strong JWT secrets and implement proper token validation",
+    "Regular security audits and penetration testing",
+    "Implement comprehensive logging and monitoring",
+    "Keep all dependencies updated to latest secure versions",
+    "Implement proper error handling to prevent information disclosure",
+    "Use HTTPS in production with proper SSL/TLS configuration"
+  ]
+}

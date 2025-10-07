@@ -25,7 +25,7 @@ const TaxFormsOverview = () => {
   } = useTaxForm();
 
   const handleStartForm = () => {
-    navigate('/tax-forms/income');
+    navigate('/income-tax/income');
   };
 
   const handleCalculateTax = async () => {
@@ -48,14 +48,41 @@ const TaxFormsOverview = () => {
   const completionPercentage = getCompletionPercentage();
   const allStepsCompleted = completionPercentage === 100;
 
-  // Map step ID to route path for special cases
+  // Map step ID to route path with modular structure
   const getRoutePath = (stepId) => {
+    // Income Tax Module routes
+    const incomeTaxSteps = [
+      'income', 'adjustable_tax', 'final_min_income', 'capital_gains',
+      'reductions', 'credits', 'deductions', 'final_tax', 'expenses', 'tax_computation'
+    ];
+
+    // Wealth Statement Module routes
+    const wealthSteps = ['wealth', 'wealth_reconciliation'];
+
+    // Admin Module routes
+    const adminSteps = ['admin'];
+
+    // Route mapping for special cases
     const routeMap = {
       'final_min_income': 'final-min-income',
-      'wealth_reconciliation': 'wealth-reconciliation',
-      'tax_computation': 'tax-computation'
+      'adjustable_tax': 'adjustable-tax',
+      'capital_gains': 'capital-gains',
+      'tax_computation': 'tax-computation',
+      'wealth_reconciliation': 'wealth-reconciliation'
     };
-    return routeMap[stepId] || stepId;
+
+    const mappedStep = routeMap[stepId] || stepId;
+
+    if (incomeTaxSteps.includes(stepId)) {
+      return `/income-tax/${mappedStep}`;
+    } else if (wealthSteps.includes(stepId)) {
+      return `/wealth-statement/${mappedStep}`;
+    } else if (adminSteps.includes(stepId)) {
+      return `/admin/${mappedStep}`;
+    }
+
+    // Fallback to income tax module for unknown steps
+    return `/income-tax/${mappedStep}`;
   };
 
   return (
@@ -128,7 +155,7 @@ const TaxFormsOverview = () => {
           </div>
           <div className="mt-auto">
             <button
-              onClick={nextStep ? () => navigate(`/tax-forms/${getRoutePath(nextStep.id)}`) : handleStartForm}
+              onClick={nextStep ? () => navigate(getRoutePath(nextStep.id)) : handleStartForm}
               className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
               disabled={!nextStep && completionPercentage === 0}
             >
@@ -170,7 +197,7 @@ const TaxFormsOverview = () => {
           </div>
           <div className="mt-auto">
             <button
-              onClick={() => navigate('/tax-forms/tax-computation')}
+              onClick={() => navigate('/income-tax/tax-computation')}
               disabled={completionPercentage < 25}
               className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
             >
@@ -213,7 +240,7 @@ const TaxFormsOverview = () => {
             return (
               <Link
                 key={step.id}
-                to={`/tax-forms/${getRoutePath(step.id)}`}
+                to={getRoutePath(step.id)}
                 className={`
                   flex flex-col p-5 rounded-lg border-2 transition-all duration-200 hover:shadow-md h-full
                   ${isCompleted 

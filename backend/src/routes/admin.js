@@ -93,7 +93,14 @@ router.get('/users', requireAdmin, async (req, res) => {
     `, queryParams);
     
     const total = parseInt(countResult.rows[0].total);
-    
+
+    // Set no-cache headers to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
     res.json({
       success: true,
       data: result.rows,
@@ -487,12 +494,26 @@ router.post('/users', requireAdmin, async (req, res) => {
       });
     }
     
-    // Check if user already exists
+    // Check if user already exists by email
     const existingUser = await client.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'User already exists',
         message: 'A user with this email already exists'
+      });
+    }
+
+    // Check if user with same name already exists
+    const existingName = await client.query(
+      'SELECT id, email FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
+      [name]
+    );
+
+    if (existingName.rows.length > 0) {
+      return res.status(409).json({
+        error: 'A user with this name already exists',
+        message: `A user named "${name}" already exists with email: ${existingName.rows[0].email}`,
+        suggestion: 'Please use a different name or contact support if this is the same person'
       });
     }
     
@@ -709,60 +730,60 @@ router.put('/users/:id', requireAdmin, async (req, res) => {
 // Delete user (Super Admin only)
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Check if requester is super admin
     if (req.admin.role !== 'super_admin') {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Access denied',
         message: 'Super admin privileges required'
       });
     }
-    
+
     const { id } = req.params;
-    
+
     // Check if user exists
     const userResult = await client.query('SELECT * FROM users WHERE id = $1', [id]);
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'User not found',
         message: 'The specified user does not exist'
       });
     }
-    
+
     const targetUser = userResult.rows[0];
-    
+
     // Cannot delete super admin users
     if (targetUser.role === 'super_admin') {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Access denied',
         message: 'Cannot delete super admin users'
       });
     }
-    
+
     // Cannot delete self
     if (targetUser.id === req.admin.user_id) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Access denied',
         message: 'Cannot delete your own account'
       });
     }
-    
-    // Soft delete - just deactivate the user
-    await client.query(`
-      UPDATE users 
-      SET is_active = false, updated_at = NOW()
-      WHERE id = $1
-    `, [id]);
-    
-    // Deactivate user sessions
-    await client.query(`
-      DELETE FROM user_sessions WHERE user_id = $1
-    `, [id]);
-    
-    // Log audit trail
+
+    // SIMPLE CASCADE DELETE - Database constraints handle all related data
+    logger.info(`Deleting user with CASCADE constraints: ${targetUser.email}`);
+
+    // Single DELETE operation - CASCADE constraints handle all related data automatically
+    const userDeleteResult = await client.query(`DELETE FROM users WHERE id = $1`, [id]);
+
+    if (userDeleteResult.rowCount === 0) {
+      throw new Error('User deletion failed - no rows affected');
+    }
+
+    logger.info(`User deleted successfully: ${targetUser.email}`);
+
+    // Log audit trail (this will work since the user is deleted but audit can still log to NULL user_id)
     try {
       await client.query(`
         INSERT INTO audit_log (
@@ -780,20 +801,25 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     } catch (auditError) {
       logger.warn('Audit log failed:', auditError.message);
     }
-    
+
     await client.query('COMMIT');
-    
-    logger.info(`User deactivated by admin: ${targetUser.email}`);
-    
+
+    logger.info(`User completely deleted by admin: ${targetUser.email} (CASCADE constraints handled all related data)`);
+
     res.json({
       success: true,
-      message: 'User deactivated successfully'
+      message: `User "${targetUser.name}" and all related data deleted successfully`,
+      deletedUser: {
+        id: targetUser.id,
+        name: targetUser.name,
+        email: targetUser.email
+      }
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     logger.error('Delete user error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to delete user',
       message: error.message
     });
@@ -988,7 +1014,7 @@ router.get('/users/:id/tax-records', requireAdmin, async (req, res) => {
       const incomeData = await pool.query(`
         SELECT 
           'income' as form_type,
-          COALESCE(monthly_salary * 12, 0) as salary_income,
+          COALESCE(monthly_salary, 0) as salary_income,
           COALESCE(other_sources, 0) as other_income,
           COALESCE(grand_total, 0) as total_income,
           'N/A' as employer_name

@@ -7,11 +7,12 @@ import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
+import PersonalInfoForm from './components/PersonalInfo/PersonalInfoForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import TaxFormsFlow from './components/TaxForms/TaxFormsFlow';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import UserManagement from './components/Admin/UserManagement';
-import SystemSettings from './components/Admin/SystemSettings';
+import IncomeTaxModule from './modules/IncomeTax';
+import WealthStatementModule from './modules/WealthStatement';
+import AdminModule from './modules/Admin';
 import Reports from './components/Reports/Reports';
 import ExcelManager from './components/Excel/ExcelManager';
 import Settings from './components/Settings/Settings';
@@ -46,7 +47,7 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="flex">
+      <div className="flex pt-16">
         <Sidebar />
         <main className="flex-1 p-6 ml-64">
           {children}
@@ -87,28 +88,62 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              
+
+              {/* Personal Info Route (Protected, no Layout) */}
+              <Route
+                path="/personal-info"
+                element={
+                  <ProtectedRoute>
+                    <PersonalInfoForm />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Protected Routes */}
-              <Route 
-                path="/dashboard" 
+              <Route
+                path="/dashboard"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <Dashboard />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
               
-              <Route 
-                path="/tax-forms/*" 
+              <Route
+                path="/tax-forms/*"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <TaxFormsFlow />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
+              />
+
+              {/* Income Tax Module */}
+              <Route
+                path="/income-tax/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <IncomeTaxModule />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Wealth Statement Module */}
+              <Route
+                path="/wealth-statement/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <WealthStatementModule />
+                    </Layout>
+                  </ProtectedRoute>
+                }
               />
               
               <Route 
@@ -144,38 +179,16 @@ function App() {
                 } 
               />
               
-              {/* Admin Routes */}
-              <Route 
-                path="/admin" 
+              {/* Admin Module Routes */}
+              <Route
+                path="/admin/*"
                 element={
                   <ProtectedRoute adminOnly={true}>
                     <Layout>
-                      <AdminDashboard />
+                      <AdminModule />
                     </Layout>
                   </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/admin/users" 
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Layout>
-                      <UserManagement />
-                    </Layout>
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/admin/system-settings" 
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Layout>
-                      <SystemSettings />
-                    </Layout>
-                  </ProtectedRoute>
-                } 
+                }
               />
               
               {/* Default Route */}

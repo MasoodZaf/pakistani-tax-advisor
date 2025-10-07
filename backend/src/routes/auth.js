@@ -19,14 +19,28 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, name, and password are required' });
     }
     
-    // Check if user already exists
+    // Check if user already exists by email
     const existingUser = await client.query(
       'SELECT id FROM users WHERE email = $1',
       [email]
     );
-    
+
     if (existingUser.rows.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    // Check if user with same name already exists
+    const existingName = await client.query(
+      'SELECT id, email FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
+      [name]
+    );
+
+    if (existingName.rows.length > 0) {
+      return res.status(409).json({
+        error: 'A user with this name already exists',
+        message: `A user named "${name}" already exists with email: ${existingName.rows[0].email}`,
+        suggestion: 'Please use a different name or contact support if this is you'
+      });
     }
     
     const passwordHash = await bcrypt.hash(password, 10);
@@ -188,6 +202,19 @@ router.post('/login', async (req, res) => {
     
     // Create session token
     const sessionToken = uuidv4();
+
+    // Create JWT token for API authentication
+    const jwt = require('jsonwebtoken');
+    const jwtToken = jwt.sign(
+      {
+        userId: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
     
     // Store session for ALL users (both admin and regular)
     await pool.query(`
@@ -233,10 +260,11 @@ router.post('/login', async (req, res) => {
     // Get tax years summary for regular users
     let taxYearsSummary = [];
     let currentYearData = null;
-    
+    let hasPersonalInfo = false;
+
     if (!isAdmin) {
       taxYearsSummary = await pool.query(`
-        SELECT 
+        SELECT
           ty.tax_year,
           ty.is_current,
           tr.id as tax_return_id,
@@ -253,9 +281,9 @@ router.post('/login', async (req, res) => {
         WHERE ty.is_active = true
         ORDER BY ty.tax_year DESC
       `, [userData.id]);
-      
+
       const currentYearResult = await pool.query(`
-        SELECT 
+        SELECT
           tr.id as tax_return_id,
           tr.tax_year,
           tr.filing_status,
@@ -270,8 +298,18 @@ router.post('/login', async (req, res) => {
         LEFT JOIN tax_calculations tc ON tr.id = tc.tax_return_id AND tc.is_final = true
         WHERE tr.user_id = $1 AND ty.is_current = true
       `, [userData.id]);
-      
+
       currentYearData = currentYearResult.rows[0] || null;
+
+      // Check if user has completed personal information
+      const personalInfoCheck = await pool.query(`
+        SELECT id FROM personal_information
+        WHERE user_id = $1 AND tax_year = (
+          SELECT tax_year FROM tax_years WHERE is_current = true LIMIT 1
+        )
+      `, [userData.id]);
+
+      hasPersonalInfo = personalInfoCheck.rows.length > 0;
     }
     
     res.json({
@@ -286,7 +324,9 @@ router.post('/login', async (req, res) => {
       },
       taxYearsSummary: taxYearsSummary.rows || [],
       currentYearData: currentYearData,
+      hasPersonalInfo: hasPersonalInfo,
       sessionToken,
+      token: jwtToken,
       isAdmin
     });
     
@@ -323,24 +363,37 @@ router.post('/logout', async (req, res) => {
 router.post('/verify-session', async (req, res) => {
   try {
     const { sessionToken } = req.body;
-    
+
     if (!sessionToken) {
       return res.status(401).json({ error: 'Session token required' });
     }
-    
+
+    // Validate session token format (UUID v4)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sessionToken)) {
+      return res.status(401).json({ error: 'Invalid session token format' });
+    }
+
     const session = await pool.query(`
       SELECT us.*, u.email, u.name, u.role, u.user_type
       FROM user_sessions us
       JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW()
+      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
     `, [sessionToken]);
-    
+
     if (session.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid or expired session' });
     }
-    
+
     const sessionData = session.rows[0];
-    
+
+    // Update session last_accessed timestamp for security tracking
+    await pool.query(`
+      UPDATE user_sessions
+      SET last_accessed_at = NOW()
+      WHERE session_token = $1
+    `, [sessionToken]);
+
     res.json({
       success: true,
       user: {
@@ -351,7 +404,7 @@ router.post('/verify-session', async (req, res) => {
         user_type: sessionData.user_type
       }
     });
-    
+
   } catch (error) {
     logger.error('Session verification error:', error);
     res.status(500).json({ error: 'Session verification failed' });
@@ -362,44 +415,44 @@ router.post('/verify-session', async (req, res) => {
 router.get('/debug-admin/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    
-    console.log(`DEBUG: Testing admin query for ${email}`);
-    
+
+    logger.debug('Testing admin query', { email });
+
     // First check database name and connection info
     const dbInfo = await pool.query('SELECT current_database(), current_user, inet_server_addr(), inet_server_port()');
-    console.log('DEBUG: Database info:', dbInfo.rows[0]);
-    
+    logger.debug('Database info', dbInfo.rows[0]);
+
     // Check if admin_users table exists and has data
     const tableCheck = await pool.query(`
       SELECT COUNT(*) as count FROM admin_users
     `);
-    console.log(`DEBUG: Total admin_users count: ${tableCheck.rows[0].count}`);
-    
+    logger.debug('Total admin_users count', { count: tableCheck.rows[0].count });
+
     // Check specific admin user
     const directCheck = await pool.query(`
       SELECT id, email, username, is_active FROM admin_users WHERE email = $1
     `, [email]);
-    console.log(`DEBUG: Direct admin_users query returned ${directCheck.rows.length} rows`);
+    logger.debug('Direct admin_users query', { rowCount: directCheck.rows.length });
     if (directCheck.rows.length > 0) {
-      console.log('DEBUG: Direct admin data:', directCheck.rows[0]);
+      logger.debug('Direct admin data', directCheck.rows[0]);
     }
-    
+
     // Now try the join query
     const adminUser = await pool.query(`
-      SELECT 
-        au.id, 
-        au.email, 
-        au.username as name, 
-        au.password_hash, 
-        r.name as role, 
+      SELECT
+        au.id,
+        au.email,
+        au.username as name,
+        au.password_hash,
+        r.name as role,
         r.permissions,
         'admin' as user_type
       FROM admin_users au
       JOIN roles r ON au.role_id = r.id
       WHERE au.email = $1 AND au.is_active = true
     `, [email]);
-    
-    console.log(`DEBUG: Join query returned ${adminUser.rows.length} rows`);
+
+    logger.debug('Join query result', { rowCount: adminUser.rows.length });
     
     res.json({
       success: true,
@@ -419,7 +472,7 @@ router.get('/debug-admin/:email', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('DEBUG: Error in admin query:', error);
+    logger.error('Error in admin query', { error: error.message, stack: error.stack });
     res.status(500).json({ error: error.message });
   }
 });
