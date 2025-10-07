@@ -1,7 +1,0 @@
-# Frontend Environment Configuration
-
-# Backend API URL
-REACT_APP_API_URL=http://localhost:3001
-
-# For production, use your deployed API URL:
-# REACT_APP_API_URL=https://your-app-name-api.onrender.com

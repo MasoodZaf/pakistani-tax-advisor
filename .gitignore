@@ -53,4 +53,43 @@ yarn-error.log*
 # Temp files
 *.tmp
 *.temp
-.cache/ 
+.cache/
+
+# Test and debug files
+**/test-*.js
+**/test-*.html
+**/debug-*.js
+**/debug-*.pdf
+**/*-test.js
+**/*-debug.js
+**/quick-*.js
+**/simple-*.js
+
+# Analysis and report files
+**/comprehensive-*.json
+**/extracted-*.json
+**/excel-*.json
+**/*-analysis*.json
+**/*-output.json
+**/*_response.json
+**/*-results.json
+
+# Backup and junk
+**/Junk/
+**/backup*/
+**/legacy*/
+**/old*/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Excel temp files
+~$*.xlsx
+~$*.xls
+
+# Claude Code
+.claude/ 
