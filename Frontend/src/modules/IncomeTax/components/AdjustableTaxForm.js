@@ -32,12 +32,15 @@ const AdjustableTaxForm = () => {
   
   const [showHelp, setShowHelp] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
+  const [editingFields, setEditingFields] = useState({}); // Track raw values during editing
+  const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
   
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('adjustable_tax')
@@ -51,23 +54,149 @@ const AdjustableTaxForm = () => {
     // Get income form data for auto-fetch fields
     const incomeData = getStepData('income') || {};
 
+    console.log('=== ADJUSTABLE TAX AUTO-FETCH DEBUG ===');
+    console.log('Income data loaded:', incomeData);
+    console.log('annual_salary_wages_total:', incomeData.annual_salary_wages_total);
+    console.log('total_employment_income:', incomeData.total_employment_income);
+    console.log('directorship_fee:', incomeData.directorship_fee);
+
+    // Only proceed if we have income data
+    if (!incomeData || Object.keys(incomeData).length === 0) {
+      console.log('Auto-fetch: No income data available yet');
+      return;
+    }
+
     const autoFetchMappings = {
       // Map income form fields to adjustable tax fields
-      'salary_employees_149_gross_receipt': incomeData.annual_basic_salary || 0,
+      // Salary u/s 149 = Annual Salary and Wages Total (as shown in withholding certificate)
+      'salary_employees_149_gross_receipt': incomeData.annual_salary_wages_total || 0,
       'directorship_fee_149_3_gross_receipt': incomeData.directorship_fee || 0,
       'profit_debt_151_15_gross_receipt': incomeData.profit_on_debt_15_percent || 0,
       'profit_debt_sukook_151a_gross_receipt': incomeData.profit_on_debt_12_5_percent || 0,
       'tax_deducted_rent_section_155_gross_receipt': incomeData.other_taxable_income_rent || 0
     };
 
-    // Only auto-populate if the field is empty and income data exists
+    console.log('Mappings to apply:', autoFetchMappings);
+
+    // Auto-populate fields with values from income form
     Object.entries(autoFetchMappings).forEach(([fieldName, value]) => {
-      const currentValue = watchedValues[fieldName];
-      if ((!currentValue || currentValue === 0) && value && value > 0) {
+      if (value && value > 0) {
+        console.log(`Setting ${fieldName} = ${value}`);
         setValue(fieldName, value);
+      } else {
+        console.log(`Skipping ${fieldName} - value is ${value}`);
       }
     });
-  }, [getStepData, setValue, watchedValues]);
+    console.log('=== END AUTO-FETCH DEBUG ===');
+  }, [getStepData, setValue]);
+
+  // Auto-calculate tax for Directorship Fee at 20%
+  useEffect(() => {
+    const directorshipGross = watchedValues['directorship_fee_149_3_gross_receipt'];
+    if (directorshipGross && directorshipGross > 0) {
+      const calculatedTax = directorshipGross * 0.20;
+      const currentTaxValue = watchedValues['directorship_fee_149_3_tax_collected'];
+
+      // Only update if the value has changed to avoid infinite loops
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Directorship Fee tax: ${directorshipGross} × 20% = ${calculatedTax}`);
+        setValue('directorship_fee_149_3_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['directorship_fee_149_3_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Motor Vehicle Leasing at 4%
+  useEffect(() => {
+    const motorVehicleLeasingGross = watchedValues['motor_vehicle_leasing_231b1a_gross_receipt'];
+    if (motorVehicleLeasingGross && motorVehicleLeasingGross > 0) {
+      const calculatedTax = Math.round(motorVehicleLeasingGross * 0.04);
+      const currentTaxValue = watchedValues['motor_vehicle_leasing_231b1a_tax_collected'];
+
+      // Only update if the value has changed to avoid infinite loops
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Motor Vehicle Leasing tax: ${motorVehicleLeasingGross} × 4% = ${calculatedTax}`);
+        setValue('motor_vehicle_leasing_231b1a_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['motor_vehicle_leasing_231b1a_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Telephone Bill at 15%
+  useEffect(() => {
+    const gross = watchedValues['telephone_bill_236_1e_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['telephone_bill_236_1e_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Telephone Bill tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('telephone_bill_236_1e_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['telephone_bill_236_1e_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Cellphone Bill at 15%
+  useEffect(() => {
+    const gross = watchedValues['cellphone_bill_236_1f_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['cellphone_bill_236_1f_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Cellphone Bill tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('cellphone_bill_236_1f_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['cellphone_bill_236_1f_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Prepaid Telephone Card at 15%
+  useEffect(() => {
+    const gross = watchedValues['prepaid_telephone_card_236_1b_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['prepaid_telephone_card_236_1b_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Prepaid Telephone Card tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('prepaid_telephone_card_236_1b_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['prepaid_telephone_card_236_1b_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Phone Unit at 15%
+  useEffect(() => {
+    const gross = watchedValues['phone_unit_236_1c_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['phone_unit_236_1c_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Phone Unit tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('phone_unit_236_1c_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['phone_unit_236_1c_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Internet Bill at 15%
+  useEffect(() => {
+    const gross = watchedValues['internet_bill_236_1d_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['internet_bill_236_1d_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Internet Bill tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('internet_bill_236_1d_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['internet_bill_236_1d_gross_receipt'], setValue]);
+
+  // Auto-calculate tax for Prepaid Internet Card at 15%
+  useEffect(() => {
+    const gross = watchedValues['prepaid_internet_card_236_1e_gross_receipt'];
+    if (gross && gross > 0) {
+      const calculatedTax = Math.round(gross * 0.15);
+      const currentTaxValue = watchedValues['prepaid_internet_card_236_1e_tax_collected'];
+      if (Math.abs((currentTaxValue || 0) - calculatedTax) > 0.01) {
+        console.log(`Auto-calculating Prepaid Internet Card tax: ${gross} × 15% = ${calculatedTax}`);
+        setValue('prepaid_internet_card_236_1e_tax_collected', calculatedTax);
+      }
+    }
+  }, [watchedValues['prepaid_internet_card_236_1e_gross_receipt'], setValue]);
 
   // Define comprehensive field groups matching the Excel structure exactly
   const fieldGroups = {
@@ -90,7 +219,9 @@ const AdjustableTaxForm = () => {
           grossField: 'directorship_fee_149_3_gross_receipt',
           taxField: 'directorship_fee_149_3_tax_collected',
           autoFetch: true,
-          remark: 'Gross receipt linked with Income sheet and tax collected is Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.20,
+          remark: 'Gross receipt linked with Income sheet and tax collected is auto-calculated at 20%'
         }
       ]
     },
@@ -170,7 +301,9 @@ const AdjustableTaxForm = () => {
           label: 'Motor Vehicle Leasing u/s 231B(1A) (Non-ATL) @4%',
           grossField: 'motor_vehicle_leasing_231b1a_gross_receipt',
           taxField: 'motor_vehicle_leasing_231b1a_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.04,
+          remark: 'Tax collected is auto-calculated at 4% of gross receipt'
         },
         {
           key: 'advance_tax_motor_vehicle_231b2a',
@@ -202,45 +335,57 @@ const AdjustableTaxForm = () => {
       fields: [
         {
           key: 'telephone_bill_236_1e',
-          label: 'Telephone Bill u/s 236(1)(a)',
+          label: 'Telephone Bill u/s 236(1)(a) @15%',
           grossField: 'telephone_bill_236_1e_gross_receipt',
           taxField: 'telephone_bill_236_1e_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         },
         {
           key: 'cellphone_bill_236_1f',
-          label: 'Cellphone Bill u/s 236(1)(a)',
+          label: 'Cellphone Bill u/s 236(1)(a) @15%',
           grossField: 'cellphone_bill_236_1f_gross_receipt',
           taxField: 'cellphone_bill_236_1f_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         },
         {
           key: 'prepaid_telephone_card_236_1b',
-          label: 'Prepaid Telephone Card u/s 236(1)(b)',
+          label: 'Prepaid Telephone Card u/s 236(1)(b) @15%',
           grossField: 'prepaid_telephone_card_236_1b_gross_receipt',
           taxField: 'prepaid_telephone_card_236_1b_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         },
         {
           key: 'phone_unit_236_1c',
-          label: 'Phone Unit u/s 236(1)(c)',
+          label: 'Phone Unit u/s 236(1)(c) @15%',
           grossField: 'phone_unit_236_1c_gross_receipt',
           taxField: 'phone_unit_236_1c_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         },
         {
           key: 'internet_bill_236_1d',
-          label: 'Internet Bill u/s 236(1)(d)',
+          label: 'Internet Bill u/s 236(1)(d) @15%',
           grossField: 'internet_bill_236_1d_gross_receipt',
           taxField: 'internet_bill_236_1d_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         },
         {
           key: 'prepaid_internet_card_236_1e',
-          label: 'Prepaid Internet Card u/s 236(1)(e)',
+          label: 'Prepaid Internet Card u/s 236(1)(e) @15%',
           grossField: 'prepaid_internet_card_236_1e_gross_receipt',
           taxField: 'prepaid_internet_card_236_1e_tax_collected',
-          remark: 'Input cell'
+          autoCalculateTax: true,
+          taxRate: 0.15,
+          remark: 'Tax collected is auto-calculated at 15% of gross receipt'
         }
       ]
     },
@@ -496,8 +641,29 @@ const AdjustableTaxForm = () => {
     }
   };
 
+  // Helper to sync uncontrolled input values to React Hook Form before saving
+  const syncInputsToForm = async () => {
+    // Force blur on active input to sync its value
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+      document.activeElement.blur();
+    }
+    // Wait for blur handler to complete
+    await new Promise(resolve => setTimeout(resolve, 50));
+  };
+
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
+    // Sync any active input values before saving
+    await syncInputsToForm();
+
+    const data = getValues();
+
+    // DEBUG: Log what we're getting from the form
+    console.log('=== SAVE DEBUG ===');
+    console.log('Raw getValues():', data);
+    console.log('Salary Tax Collected:', data.salary_employees_149_tax_collected);
+    console.log('Directorship Tax Collected:', data.directorship_fee_149_3_tax_collected);
+    console.log('watchedValues:', watchedValues);
+
     // Structure the data to match backend API expectations
     const structuredData = {
       // Employment and Salary
@@ -639,8 +805,25 @@ const AdjustableTaxForm = () => {
 
     const success = await saveFormStep('adjustable_tax', structuredData, false);
     if (success) {
-      toast.success('Progress saved');
-      navigate('/tax-forms/reductions');
+      toast.success('Data saved successfully');
+
+      // Reload the data from backend to get updated calculations
+      const freshData = await getStepData('adjustable_tax');
+      if (freshData) {
+        console.log('Fresh data loaded from backend:', freshData);
+
+        // Update all form fields with the fresh data
+        Object.keys(freshData).forEach(key => {
+          if (freshData[key] !== undefined && freshData[key] !== null) {
+            setValue(key, freshData[key]);
+          }
+        });
+
+        // Force re-render to update input defaultValues
+        setRefreshKey(prev => prev + 1);
+
+        toast.success('Form refreshed with latest calculations');
+      }
     }
   };
 
@@ -651,6 +834,67 @@ const AdjustableTaxForm = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value || 0);
+  };
+
+  // Format number with comma delimiters (no currency symbol)
+  const formatNumber = (value) => {
+    if (!value && value !== 0) return '';
+    return new Intl.NumberFormat('en-PK', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Parse formatted number back to raw value
+  const parseFormattedNumber = (value) => {
+    if (!value) return 0;
+    // Remove commas and parse
+    const cleaned = String(value).replace(/,/g, '').replace(/[^\d.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Handle input focus - select all text for easy editing
+  const handleNumberFocus = (fieldName, event) => {
+    console.log(`Focus on ${fieldName}`);
+    // Select all text so user can immediately start typing to replace
+    event.target.select();
+  };
+
+  // Debug handler to check if keyboard events are captured
+  const handleKeyDown = (fieldName, event) => {
+    console.log(`KeyDown on ${fieldName}, key:`, event.key);
+  };
+
+  // Handle input change - just sanitize the value, don't update React Hook Form yet
+  const handleNumberInput = (fieldName, event) => {
+    const rawValue = event.target.value;
+    // Remove commas and allow only numbers and decimal point
+    const cleaned = rawValue.replace(/,/g, '');
+    const sanitized = cleaned.replace(/[^\d.-]/g, '');
+    console.log(`Input on ${fieldName}:`, rawValue, '→', sanitized);
+
+    // Update the input value if we sanitized it
+    if (sanitized !== rawValue) {
+      event.target.value = sanitized;
+    }
+
+    // DON'T call setValue here - wait for blur to avoid re-renders
+  };
+
+  // Handle input blur - parse value and update React Hook Form, then format for display
+  const handleNumberBlur = (fieldName, event) => {
+    const rawValue = event.target.value;
+    // Parse the raw value
+    const numericValue = parseFormattedNumber(rawValue);
+    console.log(`Blur on ${fieldName}, raw:`, rawValue, '→ numeric:', numericValue);
+
+    // Update React Hook Form
+    setValue(fieldName, numericValue);
+
+    // Format for display
+    const formatted = formatNumber(numericValue);
+    event.target.value = formatted;
   };
 
   const toggleSection = (sectionKey) => {
@@ -720,15 +964,17 @@ const AdjustableTaxForm = () => {
                   </div>
                   <div className="col-span-3">
                     <input
-                      type="number"
-                      step="0.01"
-                      {...register(field.grossField, {
-                        min: { value: 0, message: 'Amount cannot be negative' },
-                        valueAsNumber: true
-                      })}
+                      key={`${field.grossField}-${refreshKey}`}
+                      type="text"
+                      inputMode="numeric"
                       className={`${inputClasses} ${field.autoFetch && watchedValues[field.grossField] > 0 ? 'bg-blue-50 border-blue-300' : ''}`}
                       placeholder="0"
                       readOnly={field.autoFetch && watchedValues[field.grossField] > 0}
+                      defaultValue={formatNumber(watchedValues[field.grossField])}
+                      onFocus={(e) => handleNumberFocus(field.grossField, e)}
+                      onKeyDown={(e) => handleKeyDown(field.grossField, e)}
+                      onChange={(e) => handleNumberInput(field.grossField, e)}
+                      onBlur={(e) => handleNumberBlur(field.grossField, e)}
                     />
                     {field.autoFetch && watchedValues[field.grossField] > 0 && (
                       <p className="mt-1 text-xs text-blue-600">Auto-fetched from Income form</p>
@@ -739,15 +985,21 @@ const AdjustableTaxForm = () => {
                   </div>
                   <div className="col-span-3">
                     <input
-                      type="number"
-                      step="0.01"
-                      {...register(field.taxField, {
-                        min: { value: 0, message: 'Amount cannot be negative' },
-                        valueAsNumber: true
-                      })}
-                      className={inputClasses}
+                      key={`${field.taxField}-${refreshKey}`}
+                      type="text"
+                      inputMode="numeric"
+                      className={`${inputClasses} ${field.autoCalculateTax ? 'bg-purple-50 border-purple-300' : ''}`}
                       placeholder="0"
+                      readOnly={field.autoCalculateTax}
+                      defaultValue={formatNumber(watchedValues[field.taxField])}
+                      onFocus={(e) => handleNumberFocus(field.taxField, e)}
+                      onKeyDown={(e) => handleKeyDown(field.taxField, e)}
+                      onChange={(e) => handleNumberInput(field.taxField, e)}
+                      onBlur={(e) => handleNumberBlur(field.taxField, e)}
                     />
+                    {field.autoCalculateTax && watchedValues[field.taxField] > 0 && (
+                      <p className="mt-1 text-xs text-purple-600">Auto-calculated at {(field.taxRate * 100)}%</p>
+                    )}
                     {errors[field.taxField] && (
                       <p className="mt-1 text-xs text-red-600">{errors[field.taxField].message}</p>
                     )}
@@ -802,7 +1054,11 @@ const AdjustableTaxForm = () => {
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        await syncInputsToForm();
+        handleSubmit(onSubmit)(e);
+      }} className="space-y-6">
         {/* Column Headers */}
         <div className="grid grid-cols-12 gap-3 items-center py-3 mb-4 bg-gray-800 text-white rounded-lg px-4">
           <div className="col-span-6">
@@ -872,7 +1128,7 @@ const AdjustableTaxForm = () => {
               className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
+              {saving ? 'Saving...' : 'Save Data'}
             </button>
 
             <button
