@@ -26,37 +26,55 @@
 
 ## 🔄 In Progress
 
+### 8. Testing
+**Status**: Ready for testing
+
+## ✅ Completed Tasks (Continued)
+
 ### 4. Backend Route Updates
 **File**: `/Users/masoodzafar/Documents/IT Hustle/Tax Advisor/backend/src/modules/IncomeTax/routes/taxForms.js`
 
-**Required Changes**:
-1. Import the tax rate configuration
-2. When saving final_min_income data, auto-calculate tax_chargeable for each field
-3. Apply the correct tax rate based on income type
-4. Handle ATL (Active Tax List) status for variable rates
-5. Return calculated tax_chargeable values to frontend
-
-## 📋 Remaining Tasks
+**Changes Made**:
+1. ✅ Imported the tax rate configuration from `finalMinTaxRates.js`
+2. ✅ Created custom POST handler for `/api/tax-forms/final-min-income`
+3. ✅ Auto-calculate tax_chargeable for each field on save:
+   - REIT SPV @ 0%
+   - Other SPV @ 35% (ATL) / 70% (Non-ATL)
+   - IPP Shares @ 7.5% (ATL) / 15% (Non-ATL)
+   - Regular Dividend @ 15% (ATL) / 30% (Non-ATL)
+   - Sukuk @ 10%, 12.5%, 25%
+   - Profit on Debt @ 10% (ATL) / 20% (Non-ATL), 15%
+   - Prizes @ 15%, 20%
+   - Bonus Shares @ 0%
+   - Variable rates (Salary, Termination, Arrears) use tax_deducted as tax_chargeable
+4. ✅ Handle ATL status with default false (can be extended later)
+5. ✅ Return calculated tax_chargeable values to frontend
+6. ✅ Support both INSERT and UPDATE operations
 
 ### 5. Frontend Form Restructuring
 **File**: `/Users/masoodzafar/Documents/IT Hustle/Tax Advisor/Frontend/src/modules/IncomeTax/components/FinalMinIncomeForm.js`
 
-**Required Changes**:
-1. Change layout from single column to 3 columns per row
-2. Add column headers: "Amount/Receipt | Tax Deducted | Tax Chargeable"
-3. Make Amount and Tax Deducted editable (input fields)
-4. Make Tax Chargeable read-only with auto-calculation display
-5. Add proper field groupings matching Excel structure:
-   - Salary Income
-   - Dividend & Interest Income
-   - Investment Returns
-   - Prize/Winnings
-   - Employment-Related
-6. Use uncontrolled inputs with blur-based updates (same pattern as Adjustable Tax Form)
-7. Implement auto-calculation on blur for Tax Chargeable
-8. Color-code input cells (green background like Excel)
+**Changes Made**:
+1. ✅ Changed layout from single column to 3 columns per row (6:2:2:2 grid)
+2. ✅ Added column headers: "Description | Amount/Receipt | Tax Deducted | Tax Chargeable"
+3. ✅ Made Amount and Tax Deducted editable (green background input fields)
+4. ✅ Made Tax Chargeable read-only with auto-calculation display (gray background)
+5. ✅ Added proper field groupings matching Excel structure:
+   - Salary Income (blue)
+   - Dividend Income (green)
+   - Investment Returns - Sukuks (purple)
+   - Profit on Debt (yellow)
+   - Prize/Winnings (indigo)
+   - Employment-Related Income (red)
+6. ✅ Used uncontrolled inputs with defaultValue and refreshKey (same pattern as Adjustable Tax Form)
+7. ✅ Implemented auto-calculation with useEffect watching amount fields
+8. ✅ Color-coded input cells (green background for user input, gray for calculated)
+9. ✅ Added syncInputsToForm() helper to sync before save
+10. ✅ Implemented data refresh pattern (stay on page, reload from backend)
+11. ✅ Added collapsible sections with icons for better UX
+12. ✅ Added field descriptions for each income type
 
-### 6. Income Categories to Add
+### 6. Income Categories Implemented
 Based on Excel sheet, need to display:
 - ✅ Salary u/s 12(7)
 - ✅ Dividend u/s 150 @0% (REIT SPV)
@@ -80,35 +98,54 @@ Based on Excel sheet, need to display:
 - ✅ Capital Gain (linked from Capital Gain sheet)
 
 ### 7. Auto-Calculation Logic
-**Frontend Implementation Needed**:
+**Frontend Implementation**:
+✅ Implemented using useEffect:
 ```javascript
-// On blur of Amount field:
-1. Get the amount entered
-2. Identify the income type
-3. Look up the tax rate from configuration
-4. Calculate: tax_chargeable = amount × tax_rate
-5. Update the Tax Chargeable display field
-6. Update React Hook Form value
+// Auto-calculate tax chargeable when amount changes
+useEffect(() => {
+  fieldDefinitions.forEach(section => {
+    section.fields.forEach(field => {
+      const amount = watchedValues[field.amountField] || 0;
+      const taxRate = field.taxRate;
+
+      // Only auto-calculate if there's a fixed tax rate
+      if (taxRate !== null && amount > 0) {
+        const calculatedTax = Math.round(amount * taxRate);
+        setValue(field.taxChargeableField, calculatedTax);
+      }
+    });
+  });
+}, [watchedValues, setValue]);
 ```
 
-**Backend Implementation Needed**:
+**Backend Implementation**:
+✅ Implemented in POST handler:
 ```javascript
-// On save/update:
-1. Receive amount and tax_deducted from frontend
-2. Calculate tax_chargeable using tax rate config
-3. Save all three values to database
-4. Return calculated values to frontend for display refresh
+// Calculate tax chargeable for each income type
+const taxChargeableCalculations = {
+  // REIT SPV - 0%
+  dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable:
+    Math.round(cleanedData.dividend_u_s_150_0pc_share_profit_reit_spv_amount * 0),
+  // IPP Shares - 7.5%/15%
+  dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable:
+    Math.round(cleanedData.dividend_u_s_150_7_5pc_ipp_shares_amount * (isATL ? 0.075 : 0.15)),
+  // ... etc for all 19 fields
+};
 ```
 
 ### 8. Testing Checklist
 - [ ] Enter amount in each income category
-- [ ] Verify tax_chargeable auto-calculates correctly
-- [ ] Verify tax rates match FBR image
-- [ ] Test ATL vs non-ATL scenarios
+- [ ] Verify tax_chargeable auto-calculates correctly in frontend
+- [ ] Verify tax rates match FBR image (0%, 7.5%, 10%, 12.5%, 15%, 20%, 25%, 35%)
+- [ ] Test ATL vs non-ATL scenarios (currently defaults to non-ATL)
 - [ ] Test Save Data button (stay on page, refresh with calculations)
 - [ ] Test Complete & Next button (save and navigate)
-- [ ] Verify subtotal and grand total calculations
+- [ ] Verify subtotal tax chargeable calculation (excluding capital gain)
+- [ ] Verify grand total tax chargeable calculation (including capital gain)
 - [ ] Test with sample data from Excel sheet
+- [ ] Verify uncontrolled inputs accept multi-digit numbers without interruption
+- [ ] Test green background on input cells (Amount & Tax Deducted)
+- [ ] Test gray background on calculated cells (Tax Chargeable)
 
 ## 📊 Database Schema Summary
 
@@ -139,11 +176,36 @@ Based on Excel sheet, need to display:
 
 ## 🎯 Next Steps
 
-1. Update backend route in `taxForms.js` to calculate tax_chargeable
-2. Restructure frontend form to 3-column layout
-3. Implement auto-calculation in frontend
-4. Test with sample data
-5. Commit changes
+1. ✅ Update backend route in `taxForms.js` to calculate tax_chargeable
+2. ✅ Restructure frontend form to 3-column layout
+3. ✅ Implement auto-calculation in frontend
+4. 🔄 Test with sample data (ready for user testing)
+5. ⏳ Commit changes after user approval
+
+## 📦 Summary of Files Changed
+
+### Backend Files:
+1. `/backend/database/migrations/add-tax-chargeable-columns-final-min-income.sql`
+   - Added 19 tax_chargeable columns
+   - Added computed columns for subtotal and grand total
+
+2. `/backend/src/config/finalMinTaxRates.js` (NEW)
+   - Tax rate configuration for all income types
+   - Helper functions: calculateTaxChargeable(), getTaxRate()
+
+3. `/backend/src/modules/IncomeTax/routes/taxForms.js`
+   - Modified POST /api/tax-forms/final-min-income route
+   - Added tax calculation logic
+   - Returns calculated values to frontend
+
+### Frontend Files:
+1. `/Frontend/src/modules/IncomeTax/components/FinalMinIncomeForm.js`
+   - Complete restructure to 3-column layout
+   - Uncontrolled inputs with blur-based updates
+   - Auto-calculation with useEffect
+   - Color-coded input cells (green/gray)
+   - Collapsible sections with icons
+   - Data refresh pattern (stay on page after save)
 
 ## 📝 Notes
 
