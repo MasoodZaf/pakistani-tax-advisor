@@ -22,7 +22,6 @@ const FinalMinIncomeForm = () => {
   const {
     saveFormStep,
     getStepData,
-    loadTaxReturn,
     formData,
     saving
   } = useTaxForm();
@@ -422,36 +421,15 @@ const FinalMinIncomeForm = () => {
     setValue(fieldName, numericValue);
   };
 
-  const handleNumberBlur = async (fieldName, event) => {
+  const handleNumberBlur = (fieldName, event) => {
     const rawValue = event.target.value.replace(/,/g, '');
     const numericValue = parseFloat(rawValue) || 0;
 
-    // Update React Hook Form
+    // Update React Hook Form state
     setValue(fieldName, numericValue);
 
     // Format for display
     event.target.value = formatNumber(numericValue);
-
-    // Auto-save on blur - get all current form values and save
-    const currentFormData = getValues();
-
-    console.log(`[FinalMinIncomeForm] Auto-saving on blur for field: ${fieldName}`, {
-      fieldValue: numericValue,
-      totalFields: Object.keys(currentFormData).length
-    });
-
-    try {
-      await saveFormStep('final_min_income', currentFormData, false);
-      console.log('[FinalMinIncomeForm] Auto-save successful');
-
-      // Reload fresh data from backend after save to get calculated values
-      // The useEffect watching formData will automatically reset the form when context updates
-      await loadTaxReturn();
-      console.log('[FinalMinIncomeForm] loadTaxReturn completed - form will update via useEffect');
-    } catch (error) {
-      console.error('[FinalMinIncomeForm] Auto-save failed:', error);
-      toast.error('Auto-save failed', { id: 'auto-save-error' });
-    }
   };
 
   const inputClasses = "w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
