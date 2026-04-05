@@ -4,6 +4,7 @@ const auth = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
 const TaxRateService = require('../../../services/taxRateService');
 const CalculationService = require('../../../services/calculationService');
+const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 
 const router = express.Router();
 
@@ -766,37 +767,12 @@ router.post('/adjustable-tax', auth, async (req, res) => {
 
     logger.info(`Saving adjustable tax data for user ${userId}, tax year ${taxYear}`);
 
-    // Get tax year ID
-    const taxYearResult = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [
-      taxYear,
-    ]);
-
-    if (taxYearResult.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid tax year',
-      });
-    }
-
-    const taxYearId = taxYearResult.rows[0].id;
-
-    // Get or create tax return ID
+    // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
-    const taxReturnResult = await pool.query(
-      'SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year = $2',
-      [userId, taxYear]
-    );
-
-    if (taxReturnResult.rows.length === 0) {
-      // Create new tax return
-      const newTaxReturnResult = await pool.query(
-        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
-         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
-        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
-      );
-      taxReturnId = newTaxReturnResult.rows[0].id;
-    } else {
-      taxReturnId = taxReturnResult.rows[0].id;
+    try {
+      taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
     }
 
     // Check if adjustable tax form already exists
@@ -1343,37 +1319,17 @@ const saveFormData = async (tableName, formKey, req, res) => {
 
     logger.info(`Saving ${formKey} data for user ${userId}, tax year ${taxYear}`);
 
-    // Get tax year ID
-    const taxYearResult = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [
-      taxYear,
-    ]);
-
-    if (taxYearResult.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid tax year',
-      });
-    }
-
-    const taxYearId = taxYearResult.rows[0].id;
-
-    // Get or create tax return
-    let taxReturnResult = await pool.query(
-      'SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year = $2',
-      [userId, taxYear]
-    );
-
+    // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
-    if (taxReturnResult.rows.length === 0) {
-      const newReturn = await pool.query(
-        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
-         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
-        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
-      );
-      taxReturnId = newReturn.rows[0].id;
-    } else {
-      taxReturnId = taxReturnResult.rows[0].id;
+    try {
+      taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
     }
+
+    // Resolve tax_year_id for the data payload
+    const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
+    const taxYearId = taxYearRow.rows[0].id;
 
     // Check if form exists
     const existingResult = await pool.query(
@@ -1712,37 +1668,17 @@ router.post('/final-min-income', auth, async (req, res) => {
     // Import tax rate configuration
     const { calculateTaxChargeable, FINAL_MIN_TAX_RATES } = require('../../../config/finalMinTaxRates');
 
-    // Get tax year ID
-    const taxYearResult = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [
-      taxYear,
-    ]);
-
-    if (taxYearResult.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid tax year',
-      });
-    }
-
-    const taxYearId = taxYearResult.rows[0].id;
-
-    // Get or create tax return ID
+    // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
-    const taxReturnResult = await pool.query(
-      'SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year = $2',
-      [userId, taxYear]
-    );
-
-    if (taxReturnResult.rows.length === 0) {
-      const newTaxReturnResult = await pool.query(
-        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
-         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
-        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
-      );
-      taxReturnId = newTaxReturnResult.rows[0].id;
-    } else {
-      taxReturnId = taxReturnResult.rows[0].id;
+    try {
+      taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
     }
+
+    // Resolve tax_year_id for the data payload
+    const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
+    const taxYearId = taxYearRow.rows[0].id;
 
     // Helper function to get numeric value
     const getNumericValue = (value) => {

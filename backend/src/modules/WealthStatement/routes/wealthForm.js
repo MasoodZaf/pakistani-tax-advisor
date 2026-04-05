@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../../../config/database');
 const auth = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
+const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 
 const router = express.Router();
 
@@ -54,38 +55,17 @@ router.post('/:taxYear', auth, async (req, res) => {
 
     logger.info(`Saving wealth statement for user ${userId}, tax year ${taxYear}`);
 
-    // Get tax year ID
-    const taxYearResult = await pool.query(
-      `SELECT id FROM tax_years WHERE tax_year = $1`,
-      [taxYear]
-    );
-
-    if (taxYearResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tax year not found'
-      });
-    }
-
-    const taxYearId = taxYearResult.rows[0].id;
-
-    // Get or create tax return
-    let taxReturnResult = await pool.query(
-      `SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year_id = $2`,
-      [userId, taxYearId]
-    );
-
+    // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
-    if (taxReturnResult.rows.length === 0) {
-      const newReturn = await pool.query(
-        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
-         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
-        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
-      );
-      taxReturnId = newReturn.rows[0].id;
-    } else {
-      taxReturnId = taxReturnResult.rows[0].id;
+    try {
+      taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
     }
+
+    // Resolve tax_year_id for the data payload
+    const taxYearResult = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
+    const taxYearId = taxYearResult.rows[0].id;
 
     // Check if wealth statement exists
     const existingResult = await pool.query(

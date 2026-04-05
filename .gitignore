@@ -92,4 +92,7 @@ __pycache__/
 ~$*.xls
 
 # Claude Code
-.claude/ 
+.claude/
+
+# Prisma
+backend/prisma.config.ts 

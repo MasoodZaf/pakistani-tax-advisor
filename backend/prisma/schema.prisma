@@ -1,0 +1,1267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model adjustable_tax_forms {
+  id                                                              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                                   String      @db.Uuid
+  user_id                                                         String      @db.Uuid
+  user_email                                                      String      @db.VarChar(255)
+  tax_year_id                                                     String      @db.Uuid
+  tax_year                                                        String      @db.VarChar(10)
+  salary_employees_149_gross_receipt                              Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_employees_149_tax_collected                              Decimal?    @default(0) @db.Decimal(15, 2)
+  directorship_fee_149_3_gross_receipt                            Decimal?    @default(0) @db.Decimal(15, 2)
+  directorship_fee_149_3_tax_collected                            Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_151_15_gross_receipt                                Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_151_15_tax_collected                                Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_sukook_151a_gross_receipt                           Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_sukook_151a_tax_collected                           Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_rent_section_155_gross_receipt                     Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_rent_section_155_tax_collected                     Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_cash_withdrawal_231ab_gross_receipt                 Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_cash_withdrawal_231ab_tax_collected                 Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_registration_fee_231b1_gross_receipt              Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_registration_fee_231b1_tax_collected              Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_transfer_fee_231b2_gross_receipt                  Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_transfer_fee_231b2_tax_collected                  Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_sale_231b3_gross_receipt                          Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_sale_231b3_tax_collected                          Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_leasing_231b1a_gross_receipt                      Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicle_leasing_231b1a_tax_collected                      Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_motor_vehicle_231b2a_gross_receipt                  Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_motor_vehicle_231b2a_tax_collected                  Decimal?    @default(0) @db.Decimal(15, 2)
+  electricity_bill_domestic_235_gross_receipt                     Decimal?    @default(0) @db.Decimal(15, 2)
+  electricity_bill_domestic_235_tax_collected                     Decimal?    @default(0) @db.Decimal(15, 2)
+  telephone_bill_236_1e_gross_receipt                             Decimal?    @default(0) @db.Decimal(15, 2)
+  telephone_bill_236_1e_tax_collected                             Decimal?    @default(0) @db.Decimal(15, 2)
+  cellphone_bill_236_1f_gross_receipt                             Decimal?    @default(0) @db.Decimal(15, 2)
+  cellphone_bill_236_1f_tax_collected                             Decimal?    @default(0) @db.Decimal(15, 2)
+  prepaid_telephone_card_236_1b_gross_receipt                     Decimal?    @default(0) @db.Decimal(15, 2)
+  prepaid_telephone_card_236_1b_tax_collected                     Decimal?    @default(0) @db.Decimal(15, 2)
+  phone_unit_236_1c_gross_receipt                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  phone_unit_236_1c_tax_collected                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  internet_bill_236_1d_gross_receipt                              Decimal?    @default(0) @db.Decimal(15, 2)
+  internet_bill_236_1d_tax_collected                              Decimal?    @default(0) @db.Decimal(15, 2)
+  prepaid_internet_card_236_1e_gross_receipt                      Decimal?    @default(0) @db.Decimal(15, 2)
+  prepaid_internet_card_236_1e_tax_collected                      Decimal?    @default(0) @db.Decimal(15, 2)
+  sale_transfer_immoveable_property_236c_gross_receipt            Decimal?    @default(0) @db.Decimal(15, 2)
+  sale_transfer_immoveable_property_236c_tax_collected            Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_236c_property_purchased_sold_same_year_gross_recei Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_236c_property_purchased_sold_same_year_tax_collect Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_236c_property_purchased_prior_year_gross_receipt   Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_deducted_236c_property_purchased_prior_year_tax_collected   Decimal?    @default(0) @db.Decimal(15, 2)
+  purchase_transfer_immoveable_property_236k_gross_receipt        Decimal?    @default(0) @db.Decimal(15, 2)
+  purchase_transfer_immoveable_property_236k_tax_collected        Decimal?    @default(0) @db.Decimal(15, 2)
+  functions_gatherings_charges_236cb_gross_receipt                Decimal?    @default(0) @db.Decimal(15, 2)
+  functions_gatherings_charges_236cb_tax_collected                Decimal?    @default(0) @db.Decimal(15, 2)
+  withholding_tax_sale_considerations_37e_gross_receipt           Decimal?    @default(0) @db.Decimal(15, 2)
+  withholding_tax_sale_considerations_37e_tax_collected           Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_fund_23a_part_i_second_schedule_gross_receipt           Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_fund_23a_part_i_second_schedule_tax_collected           Decimal?    @default(0) @db.Decimal(15, 2)
+  persons_remitting_amount_abroad_236v_gross_receipt              Decimal?    @default(0) @db.Decimal(15, 2)
+  persons_remitting_amount_abroad_236v_tax_collected              Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_foreign_domestic_workers_231c_gross_receipt         Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax_foreign_domestic_workers_231c_tax_collected         Decimal?    @default(0) @db.Decimal(15, 2)
+  total_adjustable_tax                                            Decimal?    @default(dbgenerated("((((((((((((((((((((((((((COALESCE(salary_employees_149_tax_collected, (0)::numeric) + COALESCE(directorship_fee_149_3_tax_collected, (0)::numeric)) + COALESCE(profit_debt_151_15_tax_collected, (0)::numeric)) + COALESCE(profit_debt_sukook_151a_tax_collected, (0)::numeric)) + COALESCE(tax_deducted_rent_section_155_tax_collected, (0)::numeric)) + COALESCE(advance_tax_cash_withdrawal_231ab_tax_collected, (0)::numeric)) + COALESCE(motor_vehicle_registration_fee_231b1_tax_collected, (0)::numeric)) + COALESCE(motor_vehicle_transfer_fee_231b2_tax_collected, (0)::numeric)) + COALESCE(motor_vehicle_sale_231b3_tax_collected, (0)::numeric)) + COALESCE(motor_vehicle_leasing_231b1a_tax_collected, (0)::numeric)) + COALESCE(advance_tax_motor_vehicle_231b2a_tax_collected, (0)::numeric)) + COALESCE(electricity_bill_domestic_235_tax_collected, (0)::numeric)) + COALESCE(telephone_bill_236_1e_tax_collected, (0)::numeric)) + COALESCE(cellphone_bill_236_1f_tax_collected, (0)::numeric)) + COALESCE(prepaid_telephone_card_236_1b_tax_collected, (0)::numeric)) + COALESCE(phone_unit_236_1c_tax_collected, (0)::numeric)) + COALESCE(internet_bill_236_1d_tax_collected, (0)::numeric)) + COALESCE(prepaid_internet_card_236_1e_tax_collected, (0)::numeric)) + COALESCE(sale_transfer_immoveable_property_236c_tax_collected, (0)::numeric)) + COALESCE(tax_deducted_236c_property_purchased_sold_same_year_tax_collect, (0)::numeric)) + COALESCE(tax_deducted_236c_property_purchased_prior_year_tax_collected, (0)::numeric)) + COALESCE(purchase_transfer_immoveable_property_236k_tax_collected, (0)::numeric)) + COALESCE(functions_gatherings_charges_236cb_tax_collected, (0)::numeric)) + COALESCE(withholding_tax_sale_considerations_37e_tax_collected, (0)::numeric)) + COALESCE(advance_fund_23a_part_i_second_schedule_tax_collected, (0)::numeric)) + COALESCE(persons_remitting_amount_abroad_236v_tax_collected, (0)::numeric)) + COALESCE(advance_tax_foreign_domestic_workers_231c_tax_collected, (0)::numeric))")) @db.Decimal(15, 2)
+  is_complete                                                     Boolean?    @default(false)
+  last_updated_by                                                 String?     @db.Uuid
+  created_at                                                      DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                      DateTime?   @default(now()) @db.Timestamp(6)
+  users_adjustable_tax_forms_last_updated_byTousers               users?      @relation("adjustable_tax_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_last_updated_by")
+  tax_returns                                                     tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tax_return")
+  tax_years                                                       tax_years   @relation(fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_adjustable_tax_forms_user_idTousers                       users       @relation("adjustable_tax_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+  users_adjustable_tax_forms_user_id_user_emailTousers            users       @relation("adjustable_tax_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([tax_return_id], map: "idx_adjustable_tax_tax_return_id")
+  @@index([tax_year], map: "idx_adjustable_tax_tax_year")
+  @@index([user_id], map: "idx_adjustable_tax_user_id")
+}
+
+model admin_users {
+  id                      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  username                String    @unique @db.VarChar(50)
+  email                   String    @unique @db.VarChar(255)
+  password_hash           String
+  role_id                 String    @db.Uuid
+  is_active               Boolean?  @default(true)
+  last_login              DateTime? @db.Timestamp(6)
+  login_attempts          Int?      @default(0)
+  account_locked          Boolean?  @default(false)
+  account_locked_until    DateTime? @db.Timestamp(6)
+  password_changed_at     DateTime? @default(now()) @db.Timestamp(6)
+  require_password_change Boolean?  @default(false)
+  created_at              DateTime? @default(now()) @db.Timestamp(6)
+  updated_at              DateTime? @default(now()) @db.Timestamp(6)
+  roles                   roles     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model audit_log {
+  id                                        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                                   String    @db.Uuid
+  user_email                                String    @db.VarChar(255)
+  session_id                                String?   @db.Uuid
+  action                                    String    @db.VarChar(50)
+  table_name                                String    @db.VarChar(50)
+  record_id                                 String?   @db.Uuid
+  field_name                                String?   @db.VarChar(50)
+  old_value                                 String?
+  new_value                                 String?
+  change_summary                            String?
+  ip_address                                String?   @db.Inet
+  user_agent                                String?
+  request_id                                String?   @db.Uuid
+  severity                                  String?   @db.VarChar(20)
+  category                                  String?   @db.VarChar(50)
+  created_at                                DateTime? @default(now()) @db.Timestamp(6)
+  users_audit_log_user_idTousers            users     @relation("audit_log_user_idTousers", fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  users_audit_log_user_id_user_emailTousers users     @relation("audit_log_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: SetNull, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([action], map: "idx_audit_log_action")
+  @@index([created_at], map: "idx_audit_log_created")
+  @@index([table_name], map: "idx_audit_log_table")
+  @@index([user_id, user_email], map: "idx_audit_log_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model capital_gain_forms {
+  id                                                           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                                String      @db.Uuid
+  user_id                                                      String      @db.Uuid
+  user_email                                                   String      @db.VarChar(255)
+  tax_year_id                                                  String      @db.Uuid
+  tax_year                                                     String      @db.VarChar(10)
+  property_1_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_1_year_tax_rate                                     Decimal?    @default(0.15) @db.Decimal(5, 4)
+  property_1_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_1_year_tax_due                                      Decimal?    @default(dbgenerated("((COALESCE(property_1_year, (0)::numeric) * COALESCE(property_1_year_tax_rate, 0.15)) - COALESCE(property_1_year_tax_deducted, (0)::numeric))")) @db.Decimal(15, 2)
+  property_2_3_years                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  property_2_3_years_tax_rate                                  Decimal?    @default(0.10) @db.Decimal(5, 4)
+  property_2_3_years_tax_deducted                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_2_3_years_tax_due                                   Decimal?    @default(dbgenerated("((COALESCE(property_2_3_years, (0)::numeric) * COALESCE(property_2_3_years_tax_rate, 0.10)) - COALESCE(property_2_3_years_tax_deducted, (0)::numeric))")) @db.Decimal(15, 2)
+  property_4_plus_years                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  property_4_plus_years_tax_deducted                           Decimal?    @default(0) @db.Decimal(15, 2)
+  securities                                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_tax_rate                                          Decimal?    @default(0.125) @db.Decimal(5, 4)
+  securities_tax_deducted                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_tax_due                                           Decimal?    @default(dbgenerated("((COALESCE(securities, (0)::numeric) * COALESCE(securities_tax_rate, 0.125)) - COALESCE(securities_tax_deducted, (0)::numeric))")) @db.Decimal(15, 2)
+  other_capital_gains                                          Decimal?    @default(0) @db.Decimal(15, 2)
+  other_capital_gains_tax                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  is_complete                                                  Boolean?    @default(false)
+  last_updated_by                                              String?     @db.Uuid
+  created_at                                                   DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                   DateTime?   @default(now()) @db.Timestamp(6)
+  immovable_property_1_year_taxable                            Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_1_year_deducted                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_1_year_carryable                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_2_years_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_2_years_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_2_years_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_3_years_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_3_years_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_3_years_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_4_years_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_4_years_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_4_years_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_5_years_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_5_years_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_5_years_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_6_years_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_6_years_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_6_years_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_over_6_years_taxable                      Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_over_6_years_deducted                     Decimal?    @default(0) @db.Decimal(15, 2)
+  immovable_property_over_6_years_carryable                    Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_before_july_2013_taxable                          Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_before_july_2013_deducted                         Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_before_july_2013_carryable                        Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_pmex_settled_taxable                              Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_pmex_settled_deducted                             Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_pmex_settled_carryable                            Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_37a_7_5_percent_taxable                           Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_37a_7_5_percent_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_37a_7_5_percent_carryable                         Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_10_percent_taxable                   Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_10_percent_deducted                  Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_10_percent_carryable                 Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_12_5_percent_taxable                 Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_12_5_percent_deducted                Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_mutual_funds_12_5_percent_carryable               Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_other_25_percent_taxable                          Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_other_25_percent_deducted                         Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_other_25_percent_carryable                        Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_12_5_percent_before_july_2022_taxable             Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_12_5_percent_before_july_2022_deducted            Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_12_5_percent_before_july_2022_carryable           Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_15_percent_taxable                                Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_15_percent_deducted                               Decimal?    @default(0) @db.Decimal(15, 2)
+  securities_15_percent_carryable                              Decimal?    @default(0) @db.Decimal(15, 2)
+  total_capital_gain                                           Decimal?    @default(dbgenerated("(((((((((((((((((((COALESCE(immovable_property_1_year_taxable, (0)::numeric) + COALESCE(immovable_property_2_years_taxable, (0)::numeric)) + COALESCE(immovable_property_3_years_taxable, (0)::numeric)) + COALESCE(immovable_property_4_years_taxable, (0)::numeric)) + COALESCE(immovable_property_5_years_taxable, (0)::numeric)) + COALESCE(immovable_property_6_years_taxable, (0)::numeric)) + COALESCE(immovable_property_over_6_years_taxable, (0)::numeric)) + COALESCE(securities_before_july_2013_taxable, (0)::numeric)) + COALESCE(securities_pmex_settled_taxable, (0)::numeric)) + COALESCE(securities_37a_7_5_percent_taxable, (0)::numeric)) + COALESCE(securities_mutual_funds_10_percent_taxable, (0)::numeric)) + COALESCE(securities_mutual_funds_12_5_percent_taxable, (0)::numeric)) + COALESCE(securities_other_25_percent_taxable, (0)::numeric)) + COALESCE(securities_12_5_percent_before_july_2022_taxable, (0)::numeric)) + COALESCE(securities_15_percent_taxable, (0)::numeric)) + COALESCE(property_1_year, (0)::numeric)) + COALESCE(property_2_3_years, (0)::numeric)) + COALESCE(property_4_plus_years, (0)::numeric)) + COALESCE(securities, (0)::numeric)) + COALESCE(other_capital_gains, (0)::numeric))")) @db.Decimal(15, 2)
+  total_tax_deducted                                           Decimal?    @default(dbgenerated("(((((((((((((((((((COALESCE(immovable_property_1_year_deducted, (0)::numeric) + COALESCE(immovable_property_2_years_deducted, (0)::numeric)) + COALESCE(immovable_property_3_years_deducted, (0)::numeric)) + COALESCE(immovable_property_4_years_deducted, (0)::numeric)) + COALESCE(immovable_property_5_years_deducted, (0)::numeric)) + COALESCE(immovable_property_6_years_deducted, (0)::numeric)) + COALESCE(immovable_property_over_6_years_deducted, (0)::numeric)) + COALESCE(securities_before_july_2013_deducted, (0)::numeric)) + COALESCE(securities_pmex_settled_deducted, (0)::numeric)) + COALESCE(securities_37a_7_5_percent_deducted, (0)::numeric)) + COALESCE(securities_mutual_funds_10_percent_deducted, (0)::numeric)) + COALESCE(securities_mutual_funds_12_5_percent_deducted, (0)::numeric)) + COALESCE(securities_other_25_percent_deducted, (0)::numeric)) + COALESCE(securities_12_5_percent_before_july_2022_deducted, (0)::numeric)) + COALESCE(securities_15_percent_deducted, (0)::numeric)) + COALESCE(property_1_year_tax_deducted, (0)::numeric)) + COALESCE(property_2_3_years_tax_deducted, (0)::numeric)) + COALESCE(property_4_plus_years_tax_deducted, (0)::numeric)) + COALESCE(securities_tax_deducted, (0)::numeric)) + COALESCE(other_capital_gains_tax, (0)::numeric))")) @db.Decimal(15, 2)
+  total_tax_carryable                                          Decimal?    @default(dbgenerated("((((((((((((((COALESCE(immovable_property_1_year_carryable, (0)::numeric) + COALESCE(immovable_property_2_years_carryable, (0)::numeric)) + COALESCE(immovable_property_3_years_carryable, (0)::numeric)) + COALESCE(immovable_property_4_years_carryable, (0)::numeric)) + COALESCE(immovable_property_5_years_carryable, (0)::numeric)) + COALESCE(immovable_property_6_years_carryable, (0)::numeric)) + COALESCE(immovable_property_over_6_years_carryable, (0)::numeric)) + COALESCE(securities_before_july_2013_carryable, (0)::numeric)) + COALESCE(securities_pmex_settled_carryable, (0)::numeric)) + COALESCE(securities_37a_7_5_percent_carryable, (0)::numeric)) + COALESCE(securities_mutual_funds_10_percent_carryable, (0)::numeric)) + COALESCE(securities_mutual_funds_12_5_percent_carryable, (0)::numeric)) + COALESCE(securities_other_25_percent_carryable, (0)::numeric)) + COALESCE(securities_12_5_percent_before_july_2022_carryable, (0)::numeric)) + COALESCE(securities_15_percent_carryable, (0)::numeric))")) @db.Decimal(15, 2)
+  immovable_property_1_year_type                               String?     @default("Plot") @db.VarChar(20)
+  immovable_property_2_years_type                              String?     @default("Plot") @db.VarChar(20)
+  immovable_property_3_years_type                              String?     @default("Plot") @db.VarChar(20)
+  immovable_property_4_years_type                              String?     @default("Plot") @db.VarChar(20)
+  immovable_property_5_years_type                              String?     @default("Plot") @db.VarChar(20)
+  immovable_property_6_years_type                              String?     @default("Plot") @db.VarChar(20)
+  immovable_property_over_6_years_type                         String?     @default("Plot") @db.VarChar(20)
+  property_1_2_years                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  property_1_2_years_tax_rate                                  Decimal?    @default(0.125) @db.Decimal(5, 4)
+  property_3_4_years                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  property_3_4_years_tax_rate                                  Decimal?    @default(0.075) @db.Decimal(5, 4)
+  property_4_5_years                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  property_4_5_years_tax_rate                                  Decimal?    @default(0.05) @db.Decimal(5, 4)
+  property_5_6_years                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  property_5_6_years_tax_rate                                  Decimal?    @default(0.025) @db.Decimal(5, 4)
+  property_plot_1_year                                         Decimal?    @default(0) @db.Decimal(15, 2)
+  property_constructed_1_year                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  property_flat_1_year                                         Decimal?    @default(0) @db.Decimal(15, 2)
+  property_plot_2_3_years                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  property_constructed_2_3_years                               Decimal?    @default(0) @db.Decimal(15, 2)
+  property_flat_2_3_years                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  property_2_3_years_tax_calculated                            Decimal?    @default(dbgenerated("(((COALESCE(property_plot_2_3_years, (0)::numeric) * 0.10) + (COALESCE(property_constructed_2_3_years, (0)::numeric) * 0.075)) + (COALESCE(property_flat_2_3_years, (0)::numeric) * 0.00))")) @db.Decimal(15, 2)
+  total_capital_gains                                          Decimal?    @default(dbgenerated("((((COALESCE(property_1_year, (0)::numeric) + COALESCE(property_2_3_years, (0)::numeric)) + COALESCE(property_4_plus_years, (0)::numeric)) + COALESCE(securities, (0)::numeric)) + COALESCE(other_capital_gains, (0)::numeric))")) @db.Decimal(15, 2)
+  total_capital_gains_tax                                      Decimal?    @default(dbgenerated("((((COALESCE(property_1_year, (0)::numeric) * COALESCE(property_1_year_tax_rate, 0.15)) + (COALESCE(property_2_3_years, (0)::numeric) * COALESCE(property_2_3_years_tax_rate, 0.10))) + (COALESCE(securities, (0)::numeric) * COALESCE(securities_tax_rate, 0.125))) + COALESCE(other_capital_gains_tax, (0)::numeric))")) @db.Decimal(15, 2)
+  property_2_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_2_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_3_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_3_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_4_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_4_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_5_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_5_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_6_year                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  property_6_year_tax_deducted                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  property_over_6_year                                         Decimal?    @default(0) @db.Decimal(15, 2)
+  property_over_6_year_tax_deducted                            Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pre_2013                                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pre_2013_deducted                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pmex                                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pmex_deducted                                            Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_7_5_percent                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_7_5_percent_deducted                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_10_percent                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_10_percent_deducted                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_12_5_percent                                             Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_12_5_percent_deducted                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_25_percent                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_25_percent_deducted                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pre_2022                                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_pre_2022_deducted                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_15_percent                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  sec_15_percent_deducted                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gains_tax_chargeable                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  users_capital_gain_forms_last_updated_byTousers              users?      @relation("capital_gain_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                                  tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_capital_gain_forms_tax_year_idTotax_years          tax_years   @relation("capital_gain_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_capital_gain_forms_user_idTousers                      users       @relation("capital_gain_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years_capital_gain_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("capital_gain_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_capital_gain_forms_user_id_user_emailTousers           users       @relation("capital_gain_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([tax_return_id], map: "idx_capital_gain_forms_return")
+  @@index([total_capital_gains], map: "idx_capital_gain_forms_total_capital_gains")
+  @@index([user_id, user_email], map: "idx_capital_gain_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_capital_gain_forms_year")
+  @@index([immovable_property_1_year_taxable], map: "idx_capital_gains_immovable_1_year")
+  @@index([securities_12_5_percent_before_july_2022_taxable], map: "idx_capital_gains_securities_12_5_before_2022")
+  @@index([securities_before_july_2013_taxable], map: "idx_capital_gains_securities_before_2013")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model credits_forms {
+  id                                                      String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                           String      @db.Uuid
+  user_id                                                 String      @db.Uuid
+  user_email                                              String      @db.VarChar(255)
+  tax_year_id                                             String      @db.Uuid
+  tax_year                                                String      @db.VarChar(10)
+  charitable_donation                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  pension_contribution                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  life_insurance_premium                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_tax_credit                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  other_credits                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  is_complete                                             Boolean?    @default(false)
+  last_updated_by                                         String?     @db.Uuid
+  created_at                                              DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                              DateTime?   @default(now()) @db.Timestamp(6)
+  charitable_donations_u61_yn                             String?     @default("-") @db.VarChar(1)
+  charitable_donations_amount                             Decimal?    @default(0) @db.Decimal(15, 2)
+  charitable_donations_tax_credit                         Decimal?    @default(0) @db.Decimal(15, 2)
+  charitable_donations_associate_yn                       String?     @default("-") @db.VarChar(1)
+  charitable_donations_associate_amount                   Decimal?    @default(0) @db.Decimal(15, 2)
+  charitable_donations_associate_tax_credit               Decimal?    @default(0) @db.Decimal(15, 2)
+  pension_contribution_yn                                 String?     @default("-") @db.VarChar(1)
+  pension_contribution_amount                             Decimal?    @default(0) @db.Decimal(15, 2)
+  pension_contribution_tax_credit                         Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_shares_yn                                    String?     @default("-") @db.VarChar(1)
+  investment_shares_amount                                Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_shares_tax_credit                            Decimal?    @default(0) @db.Decimal(15, 2)
+  pension_fund_u63_yn                                     String?     @default("-") @db.VarChar(1)
+  pension_fund_amount                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  pension_fund_tax_credit                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  surrender_tax_credit_investments_yn                     String?     @default("-") @db.VarChar(1)
+  surrender_tax_credit_amount                             Decimal?    @default(0) @db.Decimal(15, 2)
+  surrender_tax_credit_reduction                          Decimal?    @default(0) @db.Decimal(15, 2)
+  total_tax_credits                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  life_insurance_premium_yn                               String?     @default("") @db.VarChar(1)
+  life_insurance_premium_amount                           Decimal?    @default(0) @db.Decimal(15, 2)
+  life_insurance_premium_tax_credit                       Decimal?    @default(0) @db.Decimal(15, 2)
+  provident_fund_yn                                       String?     @default("") @db.VarChar(1)
+  provident_fund_amount                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  provident_fund_tax_credit                               Decimal?    @default(0) @db.Decimal(15, 2)
+  voluntary_pension_scheme_yn                             String?     @default("") @db.VarChar(1)
+  voluntary_pension_scheme_amount                         Decimal?    @default(0) @db.Decimal(15, 2)
+  voluntary_pension_scheme_tax_credit                     Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_tax_credit_yn                                String?     @default("") @db.VarChar(1)
+  investment_tax_credit_amount                            Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_tax_credit_tax_credit                        Decimal?    @default(0) @db.Decimal(15, 2)
+  surrender_tax_credit_yn                                 String?     @default("") @db.VarChar(1)
+  total_credits                                           Decimal?    @default(dbgenerated("(((((COALESCE(charitable_donations_tax_credit, (0)::numeric) + COALESCE(charitable_donations_associate_tax_credit, (0)::numeric)) + COALESCE(pension_fund_tax_credit, (0)::numeric)) + COALESCE(surrender_tax_credit_reduction, (0)::numeric)) + COALESCE(investment_tax_credit, (0)::numeric)) + COALESCE(other_credits, (0)::numeric))")) @db.Decimal(15, 2)
+  users_credits_forms_last_updated_byTousers              users?      @relation("credits_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                             tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_credits_forms_tax_year_idTotax_years          tax_years   @relation("credits_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_credits_forms_user_idTousers                      users       @relation("credits_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years_credits_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("credits_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_credits_forms_user_id_user_emailTousers           users       @relation("credits_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([charitable_donations_amount], map: "idx_credits_charitable")
+  @@index([total_tax_credits], map: "idx_credits_forms_comprehensive")
+  @@index([tax_return_id], map: "idx_credits_forms_return")
+  @@index([user_id, user_email], map: "idx_credits_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_credits_forms_year")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model deductions_forms {
+  id                                                         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                              String      @db.Uuid
+  user_id                                                    String      @db.Uuid
+  user_email                                                 String      @db.VarChar(255)
+  tax_year_id                                                String      @db.Uuid
+  tax_year                                                   String      @db.VarChar(10)
+  zakat                                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  ushr                                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_paid_foreign_country                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  advance_tax                                                Decimal?    @default(0) @db.Decimal(15, 2)
+  other_deductions                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  is_complete                                                Boolean?    @default(false)
+  last_updated_by                                            String?     @db.Uuid
+  created_at                                                 DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                 DateTime?   @default(now()) @db.Timestamp(6)
+  professional_expenses_yn                                   String?     @default("-") @db.VarChar(1)
+  professional_expenses_amount                               Decimal?    @default(0) @db.Decimal(15, 2)
+  zakat_paid_ordinance_yn                                    String?     @default("-") @db.VarChar(1)
+  zakat_paid_amount                                          Decimal?    @default(0) @db.Decimal(15, 2)
+  total_deduction_from_income                                Decimal?    @default(0) @db.Decimal(15, 2)
+  educational_expenses_amount                                Decimal?    @default(0) @db.Decimal(15, 2)
+  educational_expenses_children_count                        Int?        @default(0)
+  educational_expenses_yn                                    String?     @default("") @db.VarChar(1)
+  total_deductions                                           Decimal?    @default(dbgenerated("(((((COALESCE(educational_expenses_amount, (0)::numeric) + COALESCE(zakat_paid_amount, (0)::numeric)) + COALESCE(ushr, (0)::numeric)) + COALESCE(tax_paid_foreign_country, (0)::numeric)) + COALESCE(advance_tax, (0)::numeric)) + COALESCE(other_deductions, (0)::numeric))")) @db.Decimal(15, 2)
+  education_expense_amount                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  education_expense_children                                 Int?        @default(0)
+  users_deductions_forms_last_updated_byTousers              users?      @relation("deductions_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                                tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_deductions_forms_tax_year_idTotax_years          tax_years   @relation("deductions_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_deductions_forms_user_idTousers                      users       @relation("deductions_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years_deductions_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("deductions_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_deductions_forms_user_id_user_emailTousers           users       @relation("deductions_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([educational_expenses_amount], map: "idx_deductions_educational")
+  @@index([total_deduction_from_income], map: "idx_deductions_forms_comprehensive")
+  @@index([tax_return_id], map: "idx_deductions_forms_return")
+  @@index([user_id, user_email], map: "idx_deductions_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_deductions_forms_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model document_vault {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id       String    @db.Uuid
+  file_name     String    @db.VarChar(255)
+  original_name String    @db.VarChar(500)
+  mime_type     String    @db.VarChar(127)
+  file_size     Int
+  category      String    @db.VarChar(50)
+  description   String?
+  tax_year      String?   @db.VarChar(10)
+  file_data     Bytes
+  uploaded_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, category], map: "idx_document_vault_user_category")
+  @@index([user_id], map: "idx_document_vault_user_id")
+  @@index([user_id, tax_year], map: "idx_document_vault_user_tax_year")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model expenses_forms {
+  id                                                       String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                            String      @db.Uuid
+  user_id                                                  String      @db.Uuid
+  user_email                                               String      @db.VarChar(255)
+  tax_year_id                                              String      @db.Uuid
+  tax_year                                                 String      @db.VarChar(10)
+  rent                                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  rates_taxes_charges                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  income_tax                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  vehicle_running_maintenance                              Decimal?    @default(0) @db.Decimal(15, 2)
+  travelling                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  electricity                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  water                                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  gas                                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  telephone                                                Decimal?    @default(0) @db.Decimal(15, 2)
+  medical                                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  educational                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  donations_zakat_annuity                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  other_expenses                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  entertainment                                            Decimal?    @default(0) @db.Decimal(15, 2)
+  maintenance                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  total_expenses                                           Decimal?    @default(dbgenerated("((((((((((((((COALESCE(rent, (0)::numeric) + COALESCE(rates_taxes_charges, (0)::numeric)) + COALESCE(income_tax, (0)::numeric)) + COALESCE(vehicle_running_maintenance, (0)::numeric)) + COALESCE(travelling, (0)::numeric)) + COALESCE(electricity, (0)::numeric)) + COALESCE(water, (0)::numeric)) + COALESCE(gas, (0)::numeric)) + COALESCE(telephone, (0)::numeric)) + COALESCE(medical, (0)::numeric)) + COALESCE(educational, (0)::numeric)) + COALESCE(donations_zakat_annuity, (0)::numeric)) + COALESCE(other_expenses, (0)::numeric)) + COALESCE(entertainment, (0)::numeric)) + COALESCE(maintenance, (0)::numeric))")) @db.Decimal(15, 2)
+  is_complete                                              Boolean?    @default(false)
+  last_updated_by                                          String?     @db.Uuid
+  created_at                                               DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                               DateTime?   @default(now()) @db.Timestamp(6)
+  asset_insurance_security                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  club                                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  functions_gatherings                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  family_contribution                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  net_expenses_by_taxpayer                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  users_expenses_forms_last_updated_byTousers              users?      @relation("expenses_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                              tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_expenses_forms_tax_year_idTotax_years          tax_years   @relation("expenses_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_expenses_forms_user_idTousers                      users       @relation("expenses_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years_expenses_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("expenses_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_expenses_forms_user_id_user_emailTousers           users       @relation("expenses_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([tax_return_id], map: "idx_expenses_forms_return")
+  @@index([user_id, user_email], map: "idx_expenses_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_expenses_forms_year")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model final_min_income_forms {
+  id                                                              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                                   String      @db.Uuid
+  user_id                                                         String      @db.Uuid
+  user_email                                                      String      @db.VarChar(255)
+  tax_year_id                                                     String      @db.Uuid
+  tax_year                                                        String      @db.VarChar(10)
+  salary_u_s_12_7                                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_exempt_profit_rate_mlt_30                      Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_31_atl_15pc                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_56_10_shares                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_10pc                      Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_12_5pc                    Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1b_15pc                      Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_exceeding_1_million_sukuk_u_s_saa_12_5pc_u Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_not_exceeding_1_million_sukuk_u_s_saa_10pc Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_on_debt_u_s_151a_saa_sab_part_ii_second_schedule_atl_10p Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_on_debt_national_savings_certificates_including_defence_ Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_on_debt_u_s_7b                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_on_raffle_lottery_quiz_as_promotional_offer_u_s_156       Decimal?    @default(0) @db.Decimal(15, 2)
+  bonus_shares_issued_by_companies_u_s_236f                       Decimal?    @default(0) @db.Decimal(15, 2)
+  employment_termination_benefits_u_s_12_6_chargeable_to_tax_at_a Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_arrears_u_s_12_7_chargeable_to_tax_at_relevant_rate      Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain                                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  is_complete                                                     Boolean?    @default(false)
+  last_updated_by                                                 String?     @db.Uuid
+  created_at                                                      DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                      DateTime?   @default(now()) @db.Timestamp(6)
+  dividend_u_s_150_0pc_share_profit_reit_spv                      Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_35pc_share_profit_other_spv                    Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_7_5pc_ipp_shares                               Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_31pc_atl                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_25pc                      Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_exceed_1m_sukuk_saa_12_5pc                        Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_not_exceed_1m_sukuk_saa_10pc                      Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc                  Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_national_savings_defence_39_14a                     Decimal?    @default(0) @db.Decimal(15, 2)
+  interest_income_profit_debt_7b_up_to_5m                         Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_raffle_lottery_quiz_promotional_156                       Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bond_cross_world_puzzle_156                               Decimal?    @default(0) @db.Decimal(15, 2)
+  bonus_shares_companies_236f                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  employment_termination_benefits_12_6_avg_rate                   Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_arrears_12_7_relevant_rate                               Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_u_s_12_7_tax_deducted                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_0pc_share_profit_reit_spv_tax_deducted         Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_35pc_share_profit_other_spv_tax_deducted       Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_7_5pc_ipp_shares_tax_deducted                  Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_31pc_atl_tax_deducted                          Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted         Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_deducted       Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_25pc_tax_deducted         Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted           Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_not_exceed_1m_sukuk_saa_10pc_tax_deducted         Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_deducted     Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_national_savings_defence_39_14a_tax_deducted        Decimal?    @default(0) @db.Decimal(15, 2)
+  interest_income_profit_debt_7b_up_to_5m_tax_deducted            Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_raffle_lottery_quiz_promotional_156_tax_deducted          Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bond_cross_world_puzzle_156_tax_deducted                  Decimal?    @default(0) @db.Decimal(15, 2)
+  bonus_shares_companies_236f_tax_deducted                        Decimal?    @default(0) @db.Decimal(15, 2)
+  employment_termination_benefits_12_6_avg_rate_tax_deducted      Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_arrears_12_7_relevant_rate_tax_deducted                  Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain_tax_deducted                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  subtotal                                                        Decimal?    @default(dbgenerated("((((((((((((((((((((((((((((((COALESCE(salary_u_s_12_7, (0)::numeric) + COALESCE(dividend_u_s_150_exempt_profit_rate_mlt_30, (0)::numeric)) + COALESCE(dividend_u_s_150_31_atl_15pc, (0)::numeric)) + COALESCE(dividend_u_s_150_56_10_shares, (0)::numeric)) + COALESCE(dividend_u_s_150_0pc_share_profit_reit_spv, (0)::numeric)) + COALESCE(dividend_u_s_150_35pc_share_profit_other_spv, (0)::numeric)) + COALESCE(dividend_u_s_150_7_5pc_ipp_shares, (0)::numeric)) + COALESCE(dividend_u_s_150_31pc_atl, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_10pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_12_5pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_25pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1b_15pc, (0)::numeric)) + COALESCE(return_on_investment_exceeding_1_million_sukuk_u_s_saa_12_5pc_u, (0)::numeric)) + COALESCE(return_on_investment_not_exceeding_1_million_sukuk_u_s_saa_10pc, (0)::numeric)) + COALESCE(return_invest_exceed_1m_sukuk_saa_12_5pc, (0)::numeric)) + COALESCE(return_invest_not_exceed_1m_sukuk_saa_10pc, (0)::numeric)) + COALESCE(profit_on_debt_u_s_151a_saa_sab_part_ii_second_schedule_atl_10p, (0)::numeric)) + COALESCE(profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc, (0)::numeric)) + COALESCE(profit_on_debt_national_savings_certificates_including_defence_, (0)::numeric)) + COALESCE(profit_debt_national_savings_defence_39_14a, (0)::numeric)) + COALESCE(profit_on_debt_u_s_7b, (0)::numeric)) + COALESCE(interest_income_profit_debt_7b_up_to_5m, (0)::numeric)) + COALESCE(prize_on_raffle_lottery_quiz_as_promotional_offer_u_s_156, (0)::numeric)) + COALESCE(prize_raffle_lottery_quiz_promotional_156, (0)::numeric)) + COALESCE(prize_bond_cross_world_puzzle_156, (0)::numeric)) + COALESCE(bonus_shares_issued_by_companies_u_s_236f, (0)::numeric)) + COALESCE(bonus_shares_companies_236f, (0)::numeric)) + COALESCE(employment_termination_benefits_u_s_12_6_chargeable_to_tax_at_a, (0)::numeric)) + COALESCE(employment_termination_benefits_12_6_avg_rate, (0)::numeric)) + COALESCE(salary_arrears_u_s_12_7_chargeable_to_tax_at_relevant_rate, (0)::numeric)) + COALESCE(salary_arrears_12_7_relevant_rate, (0)::numeric))")) @db.Decimal(15, 2)
+  grand_total                                                     Decimal?    @default(dbgenerated("(((((((((((((((((((((((((((((((COALESCE(salary_u_s_12_7, (0)::numeric) + COALESCE(dividend_u_s_150_exempt_profit_rate_mlt_30, (0)::numeric)) + COALESCE(dividend_u_s_150_31_atl_15pc, (0)::numeric)) + COALESCE(dividend_u_s_150_56_10_shares, (0)::numeric)) + COALESCE(dividend_u_s_150_0pc_share_profit_reit_spv, (0)::numeric)) + COALESCE(dividend_u_s_150_35pc_share_profit_other_spv, (0)::numeric)) + COALESCE(dividend_u_s_150_7_5pc_ipp_shares, (0)::numeric)) + COALESCE(dividend_u_s_150_31pc_atl, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_10pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_12_5pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_25pc, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1b_15pc, (0)::numeric)) + COALESCE(return_on_investment_exceeding_1_million_sukuk_u_s_saa_12_5pc_u, (0)::numeric)) + COALESCE(return_on_investment_not_exceeding_1_million_sukuk_u_s_saa_10pc, (0)::numeric)) + COALESCE(return_invest_exceed_1m_sukuk_saa_12_5pc, (0)::numeric)) + COALESCE(return_invest_not_exceed_1m_sukuk_saa_10pc, (0)::numeric)) + COALESCE(profit_on_debt_u_s_151a_saa_sab_part_ii_second_schedule_atl_10p, (0)::numeric)) + COALESCE(profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc, (0)::numeric)) + COALESCE(profit_on_debt_national_savings_certificates_including_defence_, (0)::numeric)) + COALESCE(profit_debt_national_savings_defence_39_14a, (0)::numeric)) + COALESCE(profit_on_debt_u_s_7b, (0)::numeric)) + COALESCE(interest_income_profit_debt_7b_up_to_5m, (0)::numeric)) + COALESCE(prize_on_raffle_lottery_quiz_as_promotional_offer_u_s_156, (0)::numeric)) + COALESCE(prize_raffle_lottery_quiz_promotional_156, (0)::numeric)) + COALESCE(prize_bond_cross_world_puzzle_156, (0)::numeric)) + COALESCE(bonus_shares_issued_by_companies_u_s_236f, (0)::numeric)) + COALESCE(bonus_shares_companies_236f, (0)::numeric)) + COALESCE(employment_termination_benefits_u_s_12_6_chargeable_to_tax_at_a, (0)::numeric)) + COALESCE(employment_termination_benefits_12_6_avg_rate, (0)::numeric)) + COALESCE(salary_arrears_u_s_12_7_chargeable_to_tax_at_relevant_rate, (0)::numeric)) + COALESCE(salary_arrears_12_7_relevant_rate, (0)::numeric)) + COALESCE(capital_gain, (0)::numeric))")) @db.Decimal(15, 2)
+  salary_u_s_12_7_tax_chargeable                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable       Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable     Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable                Decimal?    @default(0) @db.Decimal(15, 2)
+  dividend_u_s_150_31pc_atl_tax_chargeable                        Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable       Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable     Decimal?    @default(0) @db.Decimal(15, 2)
+  return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable       Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable         Decimal?    @default(0) @db.Decimal(15, 2)
+  return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable       Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable   Decimal?    @default(0) @db.Decimal(15, 2)
+  profit_debt_national_savings_defence_39_14a_tax_chargeable      Decimal?    @default(0) @db.Decimal(15, 2)
+  interest_income_profit_debt_7b_up_to_5m_tax_chargeable          Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_raffle_lottery_quiz_promotional_156_tax_chargeable        Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bond_cross_world_puzzle_156_tax_chargeable                Decimal?    @default(0) @db.Decimal(15, 2)
+  bonus_shares_companies_236f_tax_chargeable                      Decimal?    @default(0) @db.Decimal(15, 2)
+  employment_termination_benefits_12_6_avg_rate_tax_chargeable    Decimal?    @default(0) @db.Decimal(15, 2)
+  salary_arrears_12_7_relevant_rate_tax_chargeable                Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain_tax_chargeable                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  subtotal_tax_chargeable                                         Decimal?    @default(dbgenerated("(((((((((((((((((COALESCE(salary_u_s_12_7_tax_chargeable, (0)::numeric) + COALESCE(dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_31pc_atl_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable, (0)::numeric)) + COALESCE(return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable, (0)::numeric)) + COALESCE(return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable, (0)::numeric)) + COALESCE(profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable, (0)::numeric)) + COALESCE(profit_debt_national_savings_defence_39_14a_tax_chargeable, (0)::numeric)) + COALESCE(interest_income_profit_debt_7b_up_to_5m_tax_chargeable, (0)::numeric)) + COALESCE(prize_raffle_lottery_quiz_promotional_156_tax_chargeable, (0)::numeric)) + COALESCE(prize_bond_cross_world_puzzle_156_tax_chargeable, (0)::numeric)) + COALESCE(bonus_shares_companies_236f_tax_chargeable, (0)::numeric)) + COALESCE(employment_termination_benefits_12_6_avg_rate_tax_chargeable, (0)::numeric)) + COALESCE(salary_arrears_12_7_relevant_rate_tax_chargeable, (0)::numeric))")) @db.Decimal(15, 2)
+  grand_total_tax_chargeable                                      Decimal?    @default(dbgenerated("((((((((((((((((((COALESCE(salary_u_s_12_7_tax_chargeable, (0)::numeric) + COALESCE(dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable, (0)::numeric)) + COALESCE(dividend_u_s_150_31pc_atl_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable, (0)::numeric)) + COALESCE(return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable, (0)::numeric)) + COALESCE(return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable, (0)::numeric)) + COALESCE(return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable, (0)::numeric)) + COALESCE(profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable, (0)::numeric)) + COALESCE(profit_debt_national_savings_defence_39_14a_tax_chargeable, (0)::numeric)) + COALESCE(interest_income_profit_debt_7b_up_to_5m_tax_chargeable, (0)::numeric)) + COALESCE(prize_raffle_lottery_quiz_promotional_156_tax_chargeable, (0)::numeric)) + COALESCE(prize_bond_cross_world_puzzle_156_tax_chargeable, (0)::numeric)) + COALESCE(bonus_shares_companies_236f_tax_chargeable, (0)::numeric)) + COALESCE(employment_termination_benefits_12_6_avg_rate_tax_chargeable, (0)::numeric)) + COALESCE(salary_arrears_12_7_relevant_rate_tax_chargeable, (0)::numeric)) + COALESCE(capital_gain_tax_chargeable, (0)::numeric))")) @db.Decimal(15, 2)
+  users_final_min_income_forms_last_updated_byTousers             users?      @relation("final_min_income_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction, map: "fk_final_min_income_last_updated_by")
+  tax_returns                                                     tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_final_min_income_tax_return")
+  tax_years                                                       tax_years   @relation(fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_final_min_income_tax_year")
+  users_final_min_income_forms_user_idTousers                     users       @relation("final_min_income_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_final_min_income_user")
+  users_final_min_income_forms_user_id_user_emailTousers          users       @relation("final_min_income_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_final_min_income_user_email")
+
+  @@index([tax_return_id], map: "idx_final_min_income_forms_return")
+  @@index([user_id, user_email], map: "idx_final_min_income_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_final_min_income_forms_year")
+  @@index([user_id, tax_year_id], map: "idx_final_min_income_user_tax_year")
+}
+
+model final_tax_forms {
+  id                                                        String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                             String      @db.Uuid
+  user_id                                                   String      @db.Uuid
+  user_email                                                String      @db.VarChar(255)
+  tax_year_id                                               String      @db.Uuid
+  tax_year                                                  String      @db.VarChar(10)
+  sukuk_amount                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  sukuk_tax_rate                                            Decimal?    @default(0.10) @db.Decimal(5, 4)
+  sukuk_tax_amount                                          Decimal?    @default(dbgenerated("(COALESCE(sukuk_amount, (0)::numeric) * COALESCE(sukuk_tax_rate, 0.10))")) @db.Decimal(15, 2)
+  debt_amount                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  debt_tax_rate                                             Decimal?    @default(0.15) @db.Decimal(5, 4)
+  debt_tax_amount                                           Decimal?    @default(dbgenerated("(COALESCE(debt_amount, (0)::numeric) * COALESCE(debt_tax_rate, 0.15))")) @db.Decimal(15, 2)
+  prize_bonds                                               Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bonds_tax                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  other_final_tax_amount                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  other_final_tax                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  total_final_tax                                           Decimal?    @default(dbgenerated("((((COALESCE(sukuk_amount, (0)::numeric) * COALESCE(sukuk_tax_rate, 0.10)) + (COALESCE(debt_amount, (0)::numeric) * COALESCE(debt_tax_rate, 0.15))) + COALESCE(prize_bonds_tax, (0)::numeric)) + COALESCE(other_final_tax, (0)::numeric))")) @db.Decimal(15, 2)
+  is_complete                                               Boolean?    @default(false)
+  last_updated_by                                           String?     @db.Uuid
+  created_at                                                DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                DateTime?   @default(now()) @db.Timestamp(6)
+  sukuk_bonds_yn                                            String?     @default("") @db.VarChar(1)
+  sukuk_bonds_gross_amount                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  sukuk_bonds_tax_rate                                      Decimal?    @default(0) @db.Decimal(5, 2)
+  sukuk_bonds_tax_amount                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  debt_securities_yn                                        String?     @default("") @db.VarChar(1)
+  debt_securities_gross_amount                              Decimal?    @default(0) @db.Decimal(15, 2)
+  debt_securities_tax_rate                                  Decimal?    @default(0) @db.Decimal(5, 2)
+  debt_securities_tax_amount                                Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bonds_yn                                            String?     @default("") @db.VarChar(1)
+  prize_bonds_gross_amount                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  prize_bonds_tax_rate                                      Decimal?    @default(0) @db.Decimal(5, 2)
+  prize_bonds_tax_amount                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  other_final_tax_yn                                        String?     @default("") @db.VarChar(1)
+  other_final_tax_gross_amount                              Decimal?    @default(0) @db.Decimal(15, 2)
+  other_final_tax_tax_rate                                  Decimal?    @default(0) @db.Decimal(5, 2)
+  other_final_tax_tax_amount                                Decimal?    @default(0) @db.Decimal(15, 2)
+  users_final_tax_forms_last_updated_byTousers              users?      @relation("final_tax_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                               tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_final_tax_forms_tax_year_idTotax_years          tax_years   @relation("final_tax_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_final_tax_forms_user_idTousers                      users       @relation("final_tax_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years_final_tax_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("final_tax_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_final_tax_forms_user_id_user_emailTousers           users       @relation("final_tax_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([tax_return_id], map: "idx_final_tax_forms_return")
+  @@index([user_id, user_email], map: "idx_final_tax_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_final_tax_forms_year")
+}
+
+model form_completion_status {
+  id                                                               String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                                    String      @db.Uuid
+  user_id                                                          String      @db.Uuid
+  user_email                                                       String      @db.VarChar(255)
+  tax_year_id                                                      String      @db.Uuid
+  tax_year                                                         String      @db.VarChar(10)
+  income_form_complete                                             Boolean?    @default(false)
+  adjustable_tax_form_complete                                     Boolean?    @default(false)
+  reductions_form_complete                                         Boolean?    @default(false)
+  credits_form_complete                                            Boolean?    @default(false)
+  deductions_form_complete                                         Boolean?    @default(false)
+  final_tax_form_complete                                          Boolean?    @default(false)
+  capital_gain_form_complete                                       Boolean?    @default(false)
+  expenses_form_complete                                           Boolean?    @default(false)
+  wealth_form_complete                                             Boolean?    @default(false)
+  all_forms_complete                                               Boolean?    @default(dbgenerated("\nCASE\n    WHEN (income_form_complete AND adjustable_tax_form_complete AND reductions_form_complete AND credits_form_complete AND deductions_form_complete AND final_tax_form_complete AND capital_gain_form_complete AND expenses_form_complete AND wealth_form_complete) THEN true\n    ELSE false\nEND"))
+  completion_percentage                                            Int?        @default(dbgenerated("((((((((((\nCASE\n    WHEN income_form_complete THEN 1\n    ELSE 0\nEND +\nCASE\n    WHEN adjustable_tax_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN reductions_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN credits_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN deductions_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN final_tax_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN capital_gain_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN expenses_form_complete THEN 1\n    ELSE 0\nEND) +\nCASE\n    WHEN wealth_form_complete THEN 1\n    ELSE 0\nEND) * 100) / 9)"))
+  last_form_updated                                                String?     @db.VarChar(50)
+  last_updated_at                                                  DateTime?   @default(now()) @db.Timestamp(6)
+  created_at                                                       DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                       DateTime?   @default(now()) @db.Timestamp(6)
+  tax_years_form_completion_status_tax_year_id_tax_yearTotax_years tax_years   @relation("form_completion_status_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_form_completion_status_user_id_user_emailTousers           users       @relation("form_completion_status_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+  tax_returns                                                      tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_form_completion_status_tax_year_idTotax_years          tax_years   @relation("form_completion_status_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_form_completion_status_user_idTousers                      users       @relation("form_completion_status_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tax_return_id], map: "idx_completion_status_return")
+  @@index([user_id, user_email], map: "idx_completion_status_user")
+  @@index([tax_year_id, tax_year], map: "idx_completion_status_year")
+}
+
+model income_forms {
+  id                              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                   String?   @db.Uuid
+  user_id                         String    @db.Uuid
+  user_email                      String?   @db.VarChar(255)
+  tax_year_id                     String?   @db.Uuid
+  tax_year                        String    @db.VarChar(10)
+  annual_basic_salary             Decimal?  @default(0) @db.Decimal(15, 2)
+  allowances                      Decimal?  @default(0) @db.Decimal(15, 2)
+  bonus                           Decimal?  @default(0) @db.Decimal(15, 2)
+  medical_allowance               Decimal?  @default(0) @db.Decimal(15, 2)
+  pension_from_ex_employer        Decimal?  @default(0) @db.Decimal(15, 2)
+  employment_termination_payment  Decimal?  @default(0) @db.Decimal(15, 2)
+  retirement_from_approved_funds  Decimal?  @default(0) @db.Decimal(15, 2)
+  directorship_fee                Decimal?  @default(0) @db.Decimal(15, 2)
+  other_cash_benefits             Decimal?  @default(0) @db.Decimal(15, 2)
+  employer_contribution_provident Decimal?  @default(0) @db.Decimal(15, 2)
+  taxable_car_value               Decimal?  @default(0) @db.Decimal(15, 2)
+  other_taxable_subsidies         Decimal?  @default(0) @db.Decimal(15, 2)
+  profit_on_debt_15_percent       Decimal?  @default(0) @db.Decimal(15, 2)
+  profit_on_debt_12_5_percent     Decimal?  @default(0) @db.Decimal(15, 2)
+  other_taxable_income_rent       Decimal?  @default(0) @db.Decimal(15, 2)
+  other_taxable_income_others     Decimal?  @default(0) @db.Decimal(15, 2)
+  income_exempt_from_tax          Decimal?  @default(dbgenerated("(- ((COALESCE(retirement_from_approved_funds, (0)::numeric) + COALESCE(employment_termination_payment, (0)::numeric)) + COALESCE(medical_allowance, (0)::numeric)))")) @db.Decimal(15, 2)
+  annual_salary_wages_total       Decimal?  @default(dbgenerated("(((((((((COALESCE(annual_basic_salary, (0)::numeric) + COALESCE(allowances, (0)::numeric)) + COALESCE(bonus, (0)::numeric)) + COALESCE(medical_allowance, (0)::numeric)) + COALESCE(pension_from_ex_employer, (0)::numeric)) + COALESCE(employment_termination_payment, (0)::numeric)) + COALESCE(retirement_from_approved_funds, (0)::numeric)) + COALESCE(directorship_fee, (0)::numeric)) + COALESCE(other_cash_benefits, (0)::numeric)) + (- ((COALESCE(retirement_from_approved_funds, (0)::numeric) + COALESCE(employment_termination_payment, (0)::numeric)) + COALESCE(medical_allowance, (0)::numeric))))")) @db.Decimal(15, 2)
+  non_cash_benefit_exempt         Decimal?  @default(dbgenerated("(- LEAST(COALESCE(employer_contribution_provident, (0)::numeric), (150000)::numeric))")) @db.Decimal(15, 2)
+  total_non_cash_benefits         Decimal?  @default(dbgenerated("(((COALESCE(employer_contribution_provident, (0)::numeric) + COALESCE(taxable_car_value, (0)::numeric)) + COALESCE(other_taxable_subsidies, (0)::numeric)) + (- LEAST(COALESCE(employer_contribution_provident, (0)::numeric), (150000)::numeric)))")) @db.Decimal(15, 2)
+  other_income_min_tax_total      Decimal?  @default(dbgenerated("(COALESCE(profit_on_debt_15_percent, (0)::numeric) + COALESCE(profit_on_debt_12_5_percent, (0)::numeric))")) @db.Decimal(15, 2)
+  other_income_no_min_tax_total   Decimal?  @default(dbgenerated("(COALESCE(other_taxable_income_rent, (0)::numeric) + COALESCE(other_taxable_income_others, (0)::numeric))")) @db.Decimal(15, 2)
+  total_employment_income         Decimal?  @default(dbgenerated("((((((((((COALESCE(annual_basic_salary, (0)::numeric) + COALESCE(allowances, (0)::numeric)) + COALESCE(bonus, (0)::numeric)) + COALESCE(medical_allowance, (0)::numeric)) + COALESCE(pension_from_ex_employer, (0)::numeric)) + COALESCE(employment_termination_payment, (0)::numeric)) + COALESCE(retirement_from_approved_funds, (0)::numeric)) + COALESCE(directorship_fee, (0)::numeric)) + COALESCE(other_cash_benefits, (0)::numeric)) + (- ((COALESCE(retirement_from_approved_funds, (0)::numeric) + COALESCE(employment_termination_payment, (0)::numeric)) + COALESCE(medical_allowance, (0)::numeric)))) + (((COALESCE(employer_contribution_provident, (0)::numeric) + COALESCE(taxable_car_value, (0)::numeric)) + COALESCE(other_taxable_subsidies, (0)::numeric)) + (- LEAST(COALESCE(employer_contribution_provident, (0)::numeric), (150000)::numeric))))")) @db.Decimal(15, 2)
+  is_complete                     Boolean?  @default(false)
+  last_updated_by                 String?   @db.Uuid
+  created_at                      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, tax_year], map: "income_forms_user_tax_year_unique")
+}
+
+model organizations {
+  id                        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                      String    @db.VarChar(255)
+  registration_number       String?   @unique @db.VarChar(50)
+  tax_identification_number String?   @unique @db.VarChar(50)
+  organization_type         String    @db.VarChar(50)
+  address                   Json?
+  contact_info              Json?
+  subscription_plan         String?   @db.VarChar(50)
+  subscription_expires_at   DateTime? @db.Timestamp(6)
+  is_active                 Boolean?  @default(true)
+  created_at                DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                DateTime? @default(now()) @db.Timestamp(6)
+  created_by                String?   @db.Uuid
+  users                     users[]
+
+  @@index([name], map: "idx_organizations_name")
+  @@index([registration_number], map: "idx_organizations_registration")
+  @@index([tax_identification_number], map: "idx_organizations_tin")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model personal_information {
+  tax_year                String    @db.VarChar(10)
+  full_name               String?   @db.VarChar(255)
+  father_name             String?   @db.VarChar(255)
+  cnic                    String    @db.VarChar(20)
+  ntn                     String?   @db.VarChar(20)
+  passport_number         String?   @db.VarChar(20)
+  residential_address     String?
+  mailing_address         String?
+  city                    String?   @db.VarChar(100)
+  province                String?   @db.VarChar(100)
+  postal_code             String?   @db.VarChar(10)
+  country                 String?   @default("Pakistan") @db.VarChar(100)
+  mobile_number           String?   @db.VarChar(20)
+  landline_number         String?   @db.VarChar(20)
+  email_address           String?   @db.VarChar(255)
+  profession              String?   @db.VarChar(255)
+  employer_name           String?   @db.VarChar(255)
+  employer_address        String?
+  employer_ntn            String?   @db.VarChar(20)
+  fbr_registration_number String?   @db.VarChar(50)
+  tax_circle              String?   @db.VarChar(100)
+  zone                    String?   @db.VarChar(100)
+  created_at              DateTime? @default(now()) @db.Timestamp(6)
+  updated_at              DateTime? @default(now()) @db.Timestamp(6)
+  taxpayer_type           String?   @default("salaried") @db.VarChar(20)
+  id                      Int       @default(autoincrement())
+  user_id                 String?   @db.Uuid
+  users                   users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([cnic, tax_year])
+  @@index([cnic, tax_year], map: "idx_personal_info_cnic_tax_year")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model reductions_forms {
+  id                                                         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                              String      @db.Uuid
+  user_id                                                    String      @db.Uuid
+  user_email                                                 String      @db.VarChar(255)
+  tax_year_id                                                String      @db.Uuid
+  tax_year                                                   String      @db.VarChar(10)
+  teacher_amount                                             Decimal?    @default(0) @db.Decimal(15, 2)
+  teacher_reduction                                          Decimal?    @default(0) @db.Decimal(15, 2)
+  behbood_reduction                                          Decimal?    @default(0) @db.Decimal(15, 2)
+  export_income_reduction                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  industrial_undertaking_reduction                           Decimal?    @default(0) @db.Decimal(15, 2)
+  other_reductions                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  is_complete                                                Boolean?    @default(false)
+  last_updated_by                                            String?     @db.Uuid
+  created_at                                                 DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                                 DateTime?   @default(now()) @db.Timestamp(6)
+  teacher_researcher_amount                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  teacher_researcher_tax_reduction                           Decimal?    @default(0) @db.Decimal(15, 2)
+  behbood_certificates_amount                                Decimal?    @default(0) @db.Decimal(15, 2)
+  behbood_certificates_tax_reduction                         Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain_immovable_50_reduction                        Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain_immovable_75_reduction                        Decimal?    @default(0) @db.Decimal(15, 2)
+  teacher_researcher_reduction_yn                            String?     @default("") @db.VarChar(1)
+  behbood_certificates_reduction_yn                          String?     @default("") @db.VarChar(1)
+  total_tax_reductions                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  total_reductions                                           Decimal?    @default(dbgenerated("((((((COALESCE(teacher_researcher_tax_reduction, (0)::numeric) + COALESCE(behbood_certificates_tax_reduction, (0)::numeric)) + COALESCE(capital_gain_immovable_50_reduction, (0)::numeric)) + COALESCE(capital_gain_immovable_75_reduction, (0)::numeric)) + COALESCE(export_income_reduction, (0)::numeric)) + COALESCE(industrial_undertaking_reduction, (0)::numeric)) + COALESCE(other_reductions, (0)::numeric))")) @db.Decimal(15, 2)
+  tax_years_reductions_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("reductions_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_reductions_forms_user_id_user_emailTousers           users       @relation("reductions_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+  users_reductions_forms_last_updated_byTousers              users?      @relation("reductions_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                                tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_reductions_forms_tax_year_idTotax_years          tax_years   @relation("reductions_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_reductions_forms_user_idTousers                      users       @relation("reductions_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tax_return_id], map: "idx_reductions_forms_return")
+  @@index([user_id, user_email], map: "idx_reductions_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_reductions_forms_year")
+  @@index([teacher_researcher_amount], map: "idx_reductions_teacher_researcher")
+}
+
+model roles {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String        @unique @db.VarChar(50)
+  description String?
+  permissions Json
+  created_at  DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?     @default(now()) @db.Timestamp(6)
+  admin_users admin_users[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model system_settings {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  category         String    @db.VarChar(100)
+  setting_key      String    @unique @db.VarChar(255)
+  setting_value    String
+  data_type        String?   @default("string") @db.VarChar(50)
+  description      String?
+  is_public        Boolean?  @default(false)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  created_by_email String?   @db.VarChar(255)
+  updated_by_email String?   @db.VarChar(255)
+
+  @@index([category], map: "idx_system_settings_category")
+  @@index([setting_key], map: "idx_system_settings_key")
+  @@index([is_public], map: "idx_system_settings_public")
+}
+
+model tax_calculations {
+  id                                                         String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                              String             @db.Uuid
+  user_id                                                    String             @db.Uuid
+  user_email                                                 String             @db.VarChar(255)
+  tax_year_id                                                String             @db.Uuid
+  tax_year                                                   String             @db.VarChar(10)
+  calculation_type                                           String             @db.VarChar(50)
+  calculation_version                                        String             @db.VarChar(20)
+  engine_version                                             String?            @db.VarChar(20)
+  gross_income                                               Decimal            @db.Decimal(15, 2)
+  exempt_income                                              Decimal            @db.Decimal(15, 2)
+  taxable_income                                             Decimal            @db.Decimal(15, 2)
+  normal_tax                                                 Decimal            @db.Decimal(15, 2)
+  tax_reductions                                             Decimal            @db.Decimal(15, 2)
+  tax_credits                                                Decimal            @db.Decimal(15, 2)
+  final_tax                                                  Decimal            @db.Decimal(15, 2)
+  capital_gains_tax                                          Decimal            @db.Decimal(15, 2)
+  total_tax_liability                                        Decimal            @db.Decimal(15, 2)
+  advance_tax_paid                                           Decimal            @db.Decimal(15, 2)
+  adjustable_tax_paid                                        Decimal            @db.Decimal(15, 2)
+  total_tax_paid                                             Decimal            @db.Decimal(15, 2)
+  refund_due                                                 Decimal            @db.Decimal(15, 2)
+  additional_tax_due                                         Decimal            @db.Decimal(15, 2)
+  calculation_time_ms                                        Int?
+  ip_address                                                 String?            @db.Inet
+  user_agent                                                 String?
+  is_final                                                   Boolean?           @default(false)
+  superseded_by                                              String?            @db.Uuid
+  created_at                                                 DateTime?          @default(now()) @db.Timestamp(6)
+  tax_years_tax_calculations_tax_year_id_tax_yearTotax_years tax_years          @relation("tax_calculations_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_tax_calculations_user_id_user_emailTousers           users              @relation("tax_calculations_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+  tax_calculations                                           tax_calculations?  @relation("tax_calculationsTotax_calculations", fields: [superseded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_tax_calculations                                     tax_calculations[] @relation("tax_calculationsTotax_calculations")
+  tax_returns                                                tax_returns        @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_tax_calculations_tax_year_idTotax_years          tax_years          @relation("tax_calculations_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_tax_calculations_user_idTousers                      users              @relation("tax_calculations_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tax_return_id], map: "idx_tax_calculations_return")
+  @@index([user_id, user_email], map: "idx_tax_calculations_user")
+  @@index([tax_year_id, tax_year], map: "idx_tax_calculations_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_computation_forms {
+  id                                                    String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                         String      @db.Uuid
+  user_id                                               String      @db.Uuid
+  user_email                                            String      @db.VarChar(255)
+  tax_year_id                                           String      @db.Uuid
+  tax_year                                              String      @default("2025-26") @db.VarChar(10)
+  income_from_salary                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  other_income_subject_to_min_tax                       Decimal?    @default(0) @db.Decimal(15, 2)
+  income_loss_other_sources                             Decimal?    @default(0) @db.Decimal(15, 2)
+  total_income                                          Decimal?    @default(dbgenerated("((COALESCE(income_from_salary, (0)::numeric) + COALESCE(other_income_subject_to_min_tax, (0)::numeric)) + COALESCE(income_loss_other_sources, (0)::numeric))")) @db.Decimal(15, 2)
+  deductible_allowances                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  taxable_income_excluding_cg                           Decimal?    @default(dbgenerated("(((COALESCE(income_from_salary, (0)::numeric) + COALESCE(other_income_subject_to_min_tax, (0)::numeric)) + COALESCE(income_loss_other_sources, (0)::numeric)) - COALESCE(deductible_allowances, (0)::numeric))")) @db.Decimal(15, 2)
+  capital_gains_loss                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  taxable_income_including_cg                           Decimal?    @default(dbgenerated("((((COALESCE(income_from_salary, (0)::numeric) + COALESCE(other_income_subject_to_min_tax, (0)::numeric)) + COALESCE(income_loss_other_sources, (0)::numeric)) - COALESCE(deductible_allowances, (0)::numeric)) + COALESCE(capital_gains_loss, (0)::numeric))")) @db.Decimal(15, 2)
+  normal_income_tax                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  surcharge_amount                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gains_tax                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  normal_tax_including_surcharge_cgt                    Decimal?    @default(dbgenerated("((COALESCE(normal_income_tax, (0)::numeric) + COALESCE(surcharge_amount, (0)::numeric)) + COALESCE(capital_gains_tax, (0)::numeric))")) @db.Decimal(15, 2)
+  tax_reductions                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_credits                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  net_tax_payable                                       Decimal?    @default(dbgenerated("((((COALESCE(normal_income_tax, (0)::numeric) + COALESCE(surcharge_amount, (0)::numeric)) + COALESCE(capital_gains_tax, (0)::numeric)) - COALESCE(tax_reductions, (0)::numeric)) - COALESCE(tax_credits, (0)::numeric))")) @db.Decimal(15, 2)
+  final_fixed_tax                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  minimum_tax_on_other_income                           Decimal?    @default(0) @db.Decimal(15, 2)
+  total_tax_liability                                   Decimal?    @default(dbgenerated("(((((COALESCE(normal_income_tax, (0)::numeric) + COALESCE(surcharge_amount, (0)::numeric)) + COALESCE(capital_gains_tax, (0)::numeric)) - COALESCE(tax_reductions, (0)::numeric)) - COALESCE(tax_credits, (0)::numeric)) + COALESCE(final_fixed_tax, (0)::numeric))")) @db.Decimal(15, 2)
+  advance_tax_paid                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  balance_payable                                       Decimal?    @default(dbgenerated("((((((COALESCE(normal_income_tax, (0)::numeric) + COALESCE(surcharge_amount, (0)::numeric)) + COALESCE(capital_gains_tax, (0)::numeric)) - COALESCE(tax_reductions, (0)::numeric)) - COALESCE(tax_credits, (0)::numeric)) + COALESCE(final_fixed_tax, (0)::numeric)) - COALESCE(advance_tax_paid, (0)::numeric))")) @db.Decimal(15, 2)
+  is_complete                                           Boolean?    @default(false)
+  last_updated_by                                       String?     @db.Uuid
+  created_at                                            DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                            DateTime?   @default(now()) @db.Timestamp(6)
+  income_from_other_sources                             Decimal?    @default(0) @db.Decimal(15, 2)
+  gains_from_capital_assets                             Decimal?    @default(0) @db.Decimal(15, 2)
+  surcharge                                             Decimal?    @default(0) @db.Decimal(15, 2)
+  capital_gain_tax                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  total_tax                                             Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_after_adjustments                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  income_subject_to_final_tax                           Decimal?    @default(0) @db.Decimal(15, 2)
+  total_tax_paid                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  total_tax_paid_with_advance                           Decimal?    @default(0) @db.Decimal(15, 2)
+  tax_payable_refundable                                Decimal?    @default(0) @db.Decimal(15, 2)
+  users_tax_computation_forms_last_updated_byTousers    users?      @relation("tax_computation_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                           tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years                                             tax_years   @relation(fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction)
+  users_tax_computation_forms_user_email_user_idTousers users       @relation("tax_computation_forms_user_email_user_idTousers", fields: [user_email, user_id], references: [email, id], onDelete: Cascade, onUpdate: NoAction)
+  users_tax_computation_forms_user_idTousers            users       @relation("tax_computation_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tax_return_id], map: "idx_tax_computation_forms_return")
+  @@index([user_id, user_email], map: "idx_tax_computation_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_tax_computation_forms_year")
+  @@index([net_tax_payable], map: "idx_tax_computation_net_payable")
+  @@index([normal_income_tax], map: "idx_tax_computation_normal_tax")
+  @@index([taxable_income_including_cg], map: "idx_tax_computation_taxable_income")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_rates_config {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_year       String    @db.VarChar(10)
+  rate_type      String    @db.VarChar(50)
+  rate_category  String    @db.VarChar(100)
+  min_amount     Decimal?  @default(0) @db.Decimal(15, 2)
+  max_amount     Decimal?  @default(999999999999.99) @db.Decimal(15, 2)
+  tax_rate       Decimal   @db.Decimal(8, 6)
+  fixed_amount   Decimal?  @default(0) @db.Decimal(15, 2)
+  description    String?
+  fbr_reference  String?   @db.VarChar(100)
+  effective_date DateTime? @db.Date
+  end_date       DateTime? @db.Date
+  is_active      Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([tax_year, rate_type, rate_category])
+  @@index([is_active], map: "idx_tax_rates_active")
+  @@index([min_amount, max_amount], map: "idx_tax_rates_amount_range")
+  @@index([rate_category], map: "idx_tax_rates_category")
+  @@index([tax_year, rate_type], map: "idx_tax_rates_year_type")
+}
+
+model tax_returns {
+  id                                          String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                                     String                        @db.Uuid
+  user_email                                  String                        @db.VarChar(255)
+  tax_year_id                                 String                        @db.Uuid
+  tax_year                                    String                        @db.VarChar(10)
+  return_number                               String                        @unique @db.VarChar(50)
+  filing_status                               String                        @default("draft") @db.VarChar(50)
+  filing_type                                 String                        @default("normal") @db.VarChar(50)
+  submission_date                             DateTime?                     @db.Timestamp(6)
+  created_at                                  DateTime?                     @default(now()) @db.Timestamp(6)
+  updated_at                                  DateTime?                     @default(now()) @db.Timestamp(6)
+  adjustable_tax_forms                        adjustable_tax_forms[]
+  capital_gain_forms                          capital_gain_forms[]
+  credits_forms                               credits_forms[]
+  deductions_forms                            deductions_forms[]
+  expenses_forms                              expenses_forms[]
+  final_min_income_forms                      final_min_income_forms[]
+  final_tax_forms                             final_tax_forms[]
+  form_completion_status                      form_completion_status[]
+  reductions_forms                            reductions_forms[]
+  tax_calculations                            tax_calculations[]
+  tax_computation_forms                       tax_computation_forms[]
+  tax_years                                   tax_years                     @relation(fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_tax_returns_user_idTousers            users                         @relation("tax_returns_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+  users_tax_returns_user_id_user_emailTousers users                         @relation("tax_returns_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_email")
+  wealth_forms                                wealth_forms[]
+  wealth_reconciliation_forms                 wealth_reconciliation_forms[]
+  wealth_statement_forms                      wealth_statement_forms[]
+
+  @@unique([user_id, tax_year_id], map: "unique_user_tax_year")
+  @@index([return_number], map: "idx_tax_returns_number")
+  @@index([filing_status], map: "idx_tax_returns_status")
+  @@index([user_id, user_email], map: "idx_tax_returns_user")
+  @@index([tax_year_id], map: "idx_tax_returns_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_slabs {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_year_id    String    @db.Uuid
+  slab_name      String    @db.VarChar(100)
+  slab_order     Int
+  min_income     Decimal   @db.Decimal(15, 2)
+  max_income     Decimal?  @db.Decimal(15, 2)
+  tax_rate       Decimal   @db.Decimal(5, 4)
+  slab_type      String    @db.VarChar(50)
+  applicable_to  Json?
+  effective_from DateTime  @db.Date
+  effective_to   DateTime? @db.Date
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  fixed_amount   Decimal?  @default(0) @db.Decimal(15, 2)
+  tax_years      tax_years @relation(fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([min_income, max_income], map: "idx_tax_slabs_income")
+  @@index([tax_year_id, slab_order], map: "idx_tax_slabs_order")
+  @@index([tax_year_id], map: "idx_tax_slabs_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_years {
+  id                                                                            String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_year                                                                      String                        @unique(map: "unique_tax_year") @db.VarChar(10)
+  start_date                                                                    DateTime                      @db.Date
+  end_date                                                                      DateTime                      @db.Date
+  filing_deadline                                                               DateTime                      @db.Date
+  is_current                                                                    Boolean?                      @default(false)
+  is_active                                                                     Boolean?                      @default(true)
+  description                                                                   String?
+  created_at                                                                    DateTime?                     @default(now()) @db.Timestamp(6)
+  adjustable_tax_forms                                                          adjustable_tax_forms[]
+  capital_gain_forms_capital_gain_forms_tax_year_idTotax_years                  capital_gain_forms[]          @relation("capital_gain_forms_tax_year_idTotax_years")
+  capital_gain_forms_capital_gain_forms_tax_year_id_tax_yearTotax_years         capital_gain_forms[]          @relation("capital_gain_forms_tax_year_id_tax_yearTotax_years")
+  credits_forms_credits_forms_tax_year_idTotax_years                            credits_forms[]               @relation("credits_forms_tax_year_idTotax_years")
+  credits_forms_credits_forms_tax_year_id_tax_yearTotax_years                   credits_forms[]               @relation("credits_forms_tax_year_id_tax_yearTotax_years")
+  deductions_forms_deductions_forms_tax_year_idTotax_years                      deductions_forms[]            @relation("deductions_forms_tax_year_idTotax_years")
+  deductions_forms_deductions_forms_tax_year_id_tax_yearTotax_years             deductions_forms[]            @relation("deductions_forms_tax_year_id_tax_yearTotax_years")
+  expenses_forms_expenses_forms_tax_year_idTotax_years                          expenses_forms[]              @relation("expenses_forms_tax_year_idTotax_years")
+  expenses_forms_expenses_forms_tax_year_id_tax_yearTotax_years                 expenses_forms[]              @relation("expenses_forms_tax_year_id_tax_yearTotax_years")
+  final_min_income_forms                                                        final_min_income_forms[]
+  final_tax_forms_final_tax_forms_tax_year_idTotax_years                        final_tax_forms[]             @relation("final_tax_forms_tax_year_idTotax_years")
+  final_tax_forms_final_tax_forms_tax_year_id_tax_yearTotax_years               final_tax_forms[]             @relation("final_tax_forms_tax_year_id_tax_yearTotax_years")
+  form_completion_status_form_completion_status_tax_year_id_tax_yearTotax_years form_completion_status[]      @relation("form_completion_status_tax_year_id_tax_yearTotax_years")
+  form_completion_status_form_completion_status_tax_year_idTotax_years          form_completion_status[]      @relation("form_completion_status_tax_year_idTotax_years")
+  reductions_forms_reductions_forms_tax_year_id_tax_yearTotax_years             reductions_forms[]            @relation("reductions_forms_tax_year_id_tax_yearTotax_years")
+  reductions_forms_reductions_forms_tax_year_idTotax_years                      reductions_forms[]            @relation("reductions_forms_tax_year_idTotax_years")
+  tax_calculations_tax_calculations_tax_year_id_tax_yearTotax_years             tax_calculations[]            @relation("tax_calculations_tax_year_id_tax_yearTotax_years")
+  tax_calculations_tax_calculations_tax_year_idTotax_years                      tax_calculations[]            @relation("tax_calculations_tax_year_idTotax_years")
+  tax_computation_forms                                                         tax_computation_forms[]
+  tax_returns                                                                   tax_returns[]
+  tax_slabs                                                                     tax_slabs[]
+  wealth_forms_wealth_forms_tax_year_id_tax_yearTotax_years                     wealth_forms[]                @relation("wealth_forms_tax_year_id_tax_yearTotax_years")
+  wealth_forms_wealth_forms_tax_year_idTotax_years                              wealth_forms[]                @relation("wealth_forms_tax_year_idTotax_years")
+  wealth_reconciliation_forms                                                   wealth_reconciliation_forms[]
+  wealth_statement_forms                                                        wealth_statement_forms[]
+
+  @@unique([id, tax_year], map: "unique_tax_year_id_year")
+  @@index([tax_year], map: "idx_tax_years_year")
+}
+
+model user_sessions {
+  id                                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                               String    @db.Uuid
+  user_email                            String    @db.VarChar(255)
+  session_token                         String    @unique
+  ip_address                            String?   @db.Inet
+  user_agent                            String?
+  expires_at                            DateTime  @db.Timestamp(6)
+  created_at                            DateTime? @default(now()) @db.Timestamp(6)
+  users_user_sessions_user_idTousers    users     @relation("user_sessions_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+  users_user_sessions_user_emailTousers users     @relation("user_sessions_user_emailTousers", fields: [user_email], references: [email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+
+  @@index([expires_at], map: "idx_sessions_expires")
+  @@index([session_token], map: "idx_sessions_token")
+  @@index([user_id, user_email], map: "idx_sessions_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                                                                      String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  organization_id                                                         String?                  @db.Uuid
+  email                                                                   String                   @unique @db.VarChar(255)
+  phone                                                                   String?                  @db.VarChar(20)
+  cnic                                                                    String?                  @unique @db.VarChar(15)
+  name                                                                    String                   @db.VarChar(255)
+  date_of_birth                                                           DateTime?                @db.Date
+  password_hash                                                           String
+  email_verified                                                          Boolean?                 @default(false)
+  user_type                                                               String                   @db.VarChar(50)
+  role                                                                    String                   @db.VarChar(50)
+  permissions                                                             Json?
+  preferences                                                             Json?
+  parent_user_id                                                          String?                  @db.Uuid
+  relationship_type                                                       String?                  @db.VarChar(50)
+  is_active                                                               Boolean?                 @default(true)
+  last_login_at                                                           DateTime?                @db.Timestamp(6)
+  created_at                                                              DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at                                                              DateTime?                @default(now()) @db.Timestamp(6)
+  created_by                                                              String?                  @db.Uuid
+  adjustable_tax_forms_adjustable_tax_forms_last_updated_byTousers        adjustable_tax_forms[]   @relation("adjustable_tax_forms_last_updated_byTousers")
+  adjustable_tax_forms_adjustable_tax_forms_user_idTousers                adjustable_tax_forms[]   @relation("adjustable_tax_forms_user_idTousers")
+  adjustable_tax_forms_adjustable_tax_forms_user_id_user_emailTousers     adjustable_tax_forms[]   @relation("adjustable_tax_forms_user_id_user_emailTousers")
+  audit_log_audit_log_user_idTousers                                      audit_log[]              @relation("audit_log_user_idTousers")
+  audit_log_audit_log_user_id_user_emailTousers                           audit_log[]              @relation("audit_log_user_id_user_emailTousers")
+  capital_gain_forms_capital_gain_forms_last_updated_byTousers            capital_gain_forms[]     @relation("capital_gain_forms_last_updated_byTousers")
+  capital_gain_forms_capital_gain_forms_user_idTousers                    capital_gain_forms[]     @relation("capital_gain_forms_user_idTousers")
+  capital_gain_forms_capital_gain_forms_user_id_user_emailTousers         capital_gain_forms[]     @relation("capital_gain_forms_user_id_user_emailTousers")
+  credits_forms_credits_forms_last_updated_byTousers                      credits_forms[]          @relation("credits_forms_last_updated_byTousers")
+  credits_forms_credits_forms_user_idTousers                              credits_forms[]          @relation("credits_forms_user_idTousers")
+  credits_forms_credits_forms_user_id_user_emailTousers                   credits_forms[]          @relation("credits_forms_user_id_user_emailTousers")
+  deductions_forms_deductions_forms_last_updated_byTousers                deductions_forms[]       @relation("deductions_forms_last_updated_byTousers")
+  deductions_forms_deductions_forms_user_idTousers                        deductions_forms[]       @relation("deductions_forms_user_idTousers")
+  deductions_forms_deductions_forms_user_id_user_emailTousers             deductions_forms[]       @relation("deductions_forms_user_id_user_emailTousers")
+  document_vault                                                          document_vault[]
+  expenses_forms_expenses_forms_last_updated_byTousers                    expenses_forms[]         @relation("expenses_forms_last_updated_byTousers")
+  expenses_forms_expenses_forms_user_idTousers                            expenses_forms[]         @relation("expenses_forms_user_idTousers")
+  expenses_forms_expenses_forms_user_id_user_emailTousers                 expenses_forms[]         @relation("expenses_forms_user_id_user_emailTousers")
+  final_min_income_forms_final_min_income_forms_last_updated_byTousers    final_min_income_forms[] @relation("final_min_income_forms_last_updated_byTousers")
+  final_min_income_forms_final_min_income_forms_user_idTousers            final_min_income_forms[] @relation("final_min_income_forms_user_idTousers")
+  final_min_income_forms_final_min_income_forms_user_id_user_emailTousers final_min_income_forms[] @relation("final_min_income_forms_user_id_user_emailTousers")
+  final_tax_forms_final_tax_forms_last_updated_byTousers                  final_tax_forms[]        @relation("final_tax_forms_last_updated_byTousers")
+  final_tax_forms_final_tax_forms_user_idTousers                          final_tax_forms[]        @relation("final_tax_forms_user_idTousers")
+  final_tax_forms_final_tax_forms_user_id_user_emailTousers               final_tax_forms[]        @relation("final_tax_forms_user_id_user_emailTousers")
+  form_completion_status_form_completion_status_user_id_user_emailTousers form_completion_status[] @relation("form_completion_status_user_id_user_emailTousers")
+  form_completion_status_form_completion_status_user_idTousers            form_completion_status[] @relation("form_completion_status_user_idTousers")
+  personal_information                                                    personal_information[]
+  reductions_forms_reductions_forms_user_id_user_emailTousers             reductions_forms[]       @relation("reductions_forms_user_id_user_emailTousers")
+  reductions_forms_reductions_forms_last_updated_byTousers                reductions_forms[]       @relation("reductions_forms_last_updated_byTousers")
+  reductions_forms_reductions_forms_user_idTousers                        reductions_forms[]       @relation("reductions_forms_user_idTousers")
+  tax_calculations_tax_calculations_user_id_user_emailTousers             tax_calculations[]       @relation("tax_calculations_user_id_user_emailTousers")
+  tax_calculations_tax_calculations_user_idTousers                        tax_calculations[]       @relation("tax_calculations_user_idTousers")
+  tax_computation_forms_tax_computation_forms_last_updated_byTousers      tax_computation_forms[]  @relation("tax_computation_forms_last_updated_byTousers")
+  tax_computation_forms_tax_computation_forms_user_email_user_idTousers   tax_computation_forms[]  @relation("tax_computation_forms_user_email_user_idTousers")
+  tax_computation_forms_tax_computation_forms_user_idTousers              tax_computation_forms[]  @relation("tax_computation_forms_user_idTousers")
+  tax_returns_tax_returns_user_idTousers                                  tax_returns[]            @relation("tax_returns_user_idTousers")
+  tax_returns_tax_returns_user_id_user_emailTousers                       tax_returns[]            @relation("tax_returns_user_id_user_emailTousers")
+  user_sessions_user_sessions_user_idTousers                              user_sessions[]          @relation("user_sessions_user_idTousers")
+  user_sessions_user_sessions_user_emailTousers                           user_sessions[]          @relation("user_sessions_user_emailTousers")
+  users                                                                   users?                   @relation("usersTousers", fields: [parent_user_id], references: [id], onUpdate: NoAction, map: "fk_parent_user")
+  other_users                                                             users[]                  @relation("usersTousers")
+  organizations                                                           organizations?           @relation(fields: [organization_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wealth_forms_wealth_forms_user_id_user_emailTousers                     wealth_forms[]           @relation("wealth_forms_user_id_user_emailTousers")
+  wealth_forms_wealth_forms_last_updated_byTousers                        wealth_forms[]           @relation("wealth_forms_last_updated_byTousers")
+  wealth_forms_wealth_forms_user_idTousers                                wealth_forms[]           @relation("wealth_forms_user_idTousers")
+  wealth_statement_forms_wealth_statement_forms_last_updated_byTousers    wealth_statement_forms[] @relation("wealth_statement_forms_last_updated_byTousers")
+  wealth_statement_forms_wealth_statement_forms_user_email_user_idTousers wealth_statement_forms[] @relation("wealth_statement_forms_user_email_user_idTousers")
+  wealth_statement_forms_wealth_statement_forms_user_idTousers            wealth_statement_forms[] @relation("wealth_statement_forms_user_idTousers")
+
+  @@unique([id, email], map: "unique_user_id_email")
+  @@index([cnic], map: "idx_users_cnic")
+  @@index([email], map: "idx_users_email")
+  @@index([organization_id], map: "idx_users_org")
+  @@index([parent_user_id], map: "idx_users_parent")
+}
+
+model wealth_forms {
+  id                                                     String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                          String      @db.Uuid
+  user_id                                                String      @db.Uuid
+  user_email                                             String      @db.VarChar(255)
+  tax_year_id                                            String      @db.Uuid
+  tax_year                                               String      @db.VarChar(10)
+  property_previous_year                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_previous_year                               Decimal?    @default(0) @db.Decimal(15, 2)
+  vehicle_previous_year                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  jewelry_previous_year                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  cash_previous_year                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  pf_previous_year                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  bank_balance_previous_year                             Decimal?    @default(0) @db.Decimal(15, 2)
+  other_assets_previous_year                             Decimal?    @default(0) @db.Decimal(15, 2)
+  property_current_year                                  Decimal?    @default(0) @db.Decimal(15, 2)
+  investment_current_year                                Decimal?    @default(0) @db.Decimal(15, 2)
+  vehicle_current_year                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  jewelry_current_year                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  cash_current_year                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  pf_current_year                                        Decimal?    @default(0) @db.Decimal(15, 2)
+  bank_balance_current_year                              Decimal?    @default(0) @db.Decimal(15, 2)
+  other_assets_current_year                              Decimal?    @default(0) @db.Decimal(15, 2)
+  loan_previous_year                                     Decimal?    @default(0) @db.Decimal(15, 2)
+  loan_current_year                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  other_liabilities_previous_year                        Decimal?    @default(0) @db.Decimal(15, 2)
+  other_liabilities_current_year                         Decimal?    @default(0) @db.Decimal(15, 2)
+  total_assets_previous_year                             Decimal?    @default(dbgenerated("(((((((COALESCE(property_previous_year, (0)::numeric) + COALESCE(investment_previous_year, (0)::numeric)) + COALESCE(vehicle_previous_year, (0)::numeric)) + COALESCE(jewelry_previous_year, (0)::numeric)) + COALESCE(cash_previous_year, (0)::numeric)) + COALESCE(pf_previous_year, (0)::numeric)) + COALESCE(bank_balance_previous_year, (0)::numeric)) + COALESCE(other_assets_previous_year, (0)::numeric))")) @db.Decimal(15, 2)
+  total_assets_current_year                              Decimal?    @default(dbgenerated("(((((((COALESCE(property_current_year, (0)::numeric) + COALESCE(investment_current_year, (0)::numeric)) + COALESCE(vehicle_current_year, (0)::numeric)) + COALESCE(jewelry_current_year, (0)::numeric)) + COALESCE(cash_current_year, (0)::numeric)) + COALESCE(pf_current_year, (0)::numeric)) + COALESCE(bank_balance_current_year, (0)::numeric)) + COALESCE(other_assets_current_year, (0)::numeric))")) @db.Decimal(15, 2)
+  total_liabilities_previous_year                        Decimal?    @default(dbgenerated("(COALESCE(loan_previous_year, (0)::numeric) + COALESCE(other_liabilities_previous_year, (0)::numeric))")) @db.Decimal(15, 2)
+  total_liabilities_current_year                         Decimal?    @default(dbgenerated("(COALESCE(loan_current_year, (0)::numeric) + COALESCE(other_liabilities_current_year, (0)::numeric))")) @db.Decimal(15, 2)
+  net_worth_previous_year                                Decimal?    @default(dbgenerated("((((((((COALESCE(property_previous_year, (0)::numeric) + COALESCE(investment_previous_year, (0)::numeric)) + COALESCE(vehicle_previous_year, (0)::numeric)) + COALESCE(jewelry_previous_year, (0)::numeric)) + COALESCE(cash_previous_year, (0)::numeric)) + COALESCE(pf_previous_year, (0)::numeric)) + COALESCE(bank_balance_previous_year, (0)::numeric)) + COALESCE(other_assets_previous_year, (0)::numeric)) - (COALESCE(loan_previous_year, (0)::numeric) + COALESCE(other_liabilities_previous_year, (0)::numeric)))")) @db.Decimal(15, 2)
+  net_worth_current_year                                 Decimal?    @default(dbgenerated("((((((((COALESCE(property_current_year, (0)::numeric) + COALESCE(investment_current_year, (0)::numeric)) + COALESCE(vehicle_current_year, (0)::numeric)) + COALESCE(jewelry_current_year, (0)::numeric)) + COALESCE(cash_current_year, (0)::numeric)) + COALESCE(pf_current_year, (0)::numeric)) + COALESCE(bank_balance_current_year, (0)::numeric)) + COALESCE(other_assets_current_year, (0)::numeric)) - (COALESCE(loan_current_year, (0)::numeric) + COALESCE(other_liabilities_current_year, (0)::numeric)))")) @db.Decimal(15, 2)
+  wealth_increase                                        Decimal?    @default(dbgenerated("(((((((((COALESCE(property_current_year, (0)::numeric) + COALESCE(investment_current_year, (0)::numeric)) + COALESCE(vehicle_current_year, (0)::numeric)) + COALESCE(jewelry_current_year, (0)::numeric)) + COALESCE(cash_current_year, (0)::numeric)) + COALESCE(pf_current_year, (0)::numeric)) + COALESCE(bank_balance_current_year, (0)::numeric)) + COALESCE(other_assets_current_year, (0)::numeric)) - (COALESCE(loan_current_year, (0)::numeric) + COALESCE(other_liabilities_current_year, (0)::numeric))) - ((((((((COALESCE(property_previous_year, (0)::numeric) + COALESCE(investment_previous_year, (0)::numeric)) + COALESCE(vehicle_previous_year, (0)::numeric)) + COALESCE(jewelry_previous_year, (0)::numeric)) + COALESCE(cash_previous_year, (0)::numeric)) + COALESCE(pf_previous_year, (0)::numeric)) + COALESCE(bank_balance_previous_year, (0)::numeric)) + COALESCE(other_assets_previous_year, (0)::numeric)) - (COALESCE(loan_previous_year, (0)::numeric) + COALESCE(other_liabilities_previous_year, (0)::numeric))))")) @db.Decimal(15, 2)
+  is_complete                                            Boolean?    @default(false)
+  last_updated_by                                        String?     @db.Uuid
+  created_at                                             DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                             DateTime?   @default(now()) @db.Timestamp(6)
+  tax_years_wealth_forms_tax_year_id_tax_yearTotax_years tax_years   @relation("wealth_forms_tax_year_id_tax_yearTotax_years", fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction, map: "fk_tax_year")
+  users_wealth_forms_user_id_user_emailTousers           users       @relation("wealth_forms_user_id_user_emailTousers", fields: [user_id, user_email], references: [id, email], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_email")
+  users_wealth_forms_last_updated_byTousers              users?      @relation("wealth_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                            tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years_wealth_forms_tax_year_idTotax_years          tax_years   @relation("wealth_forms_tax_year_idTotax_years", fields: [tax_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_wealth_forms_user_idTousers                      users       @relation("wealth_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tax_return_id], map: "idx_wealth_forms_return")
+  @@index([user_id, user_email], map: "idx_wealth_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_wealth_forms_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model wealth_reconciliation_forms {
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tax_return_id            String?      @db.Uuid
+  user_id                  String       @db.Uuid
+  user_email               String       @db.VarChar(255)
+  tax_year_id              String?      @db.Uuid
+  tax_year                 String       @db.VarChar(10)
+  net_assets_current_year  Decimal?     @default(0) @db.Decimal(15, 2)
+  net_assets_previous_year Decimal?     @default(0) @db.Decimal(15, 2)
+  net_assets_increase      Decimal?     @default(0) @db.Decimal(15, 2)
+  income_normal_tax        Decimal?     @default(0) @db.Decimal(15, 2)
+  income_exempt_from_tax   Decimal?     @default(0) @db.Decimal(15, 2)
+  income_final_tax         Decimal?     @default(0) @db.Decimal(15, 2)
+  foreign_remittance       Decimal?     @default(0) @db.Decimal(15, 2)
+  inheritance              Decimal?     @default(0) @db.Decimal(15, 2)
+  gift_value               Decimal?     @default(0) @db.Decimal(15, 2)
+  asset_disposal_gain_loss Decimal?     @default(0) @db.Decimal(15, 2)
+  other_inflows            Decimal?     @default(0) @db.Decimal(15, 2)
+  total_inflows            Decimal?     @default(0) @db.Decimal(15, 2)
+  personal_expenses        Decimal      @default(0) @db.Decimal(15, 2)
+  adjustments_outflows     Decimal?     @default(0) @db.Decimal(15, 2)
+  gift_outflow             Decimal?     @default(0) @db.Decimal(15, 2)
+  loss_on_disposal         Decimal?     @default(0) @db.Decimal(15, 2)
+  total_outflows           Decimal?     @default(0) @db.Decimal(15, 2)
+  calculated_net_increase  Decimal?     @default(0) @db.Decimal(15, 2)
+  unreconciled_difference  Decimal?     @default(0) @db.Decimal(15, 2)
+  is_complete              Boolean?     @default(false)
+  last_updated_by          String?      @db.Uuid
+  created_at               DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime?    @default(now()) @db.Timestamptz(6)
+  non_cash_expenses        Decimal?     @default(0) @db.Decimal(15, 2)
+  tax_returns              tax_returns? @relation(fields: [tax_return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_years                tax_years?   @relation(fields: [tax_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, user_email, tax_year_id], map: "unique_wealth_reconciliation_per_user_year")
+  @@index([is_complete, tax_year_id], map: "idx_wealth_reconciliation_completion")
+  @@index([tax_return_id], map: "idx_wealth_reconciliation_forms_return")
+  @@index([user_id, user_email], map: "idx_wealth_reconciliation_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_wealth_reconciliation_forms_year")
+  @@index([user_id, tax_year_id], map: "idx_wealth_reconciliation_user_tax_year")
+  @@index([user_id, tax_year_id], map: "idx_wealth_reconciliation_user_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model wealth_statement_forms {
+  id                                                     String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tax_return_id                                          String      @db.Uuid
+  user_id                                                String      @db.Uuid
+  user_email                                             String      @db.VarChar(255)
+  tax_year_id                                            String      @db.Uuid
+  tax_year                                               String      @default("2025-26") @db.VarChar(10)
+  agricultural_property_prev                             Decimal?    @default(0) @db.Decimal(15, 2)
+  commercial_property_prev                               Decimal?    @default(0) @db.Decimal(15, 2)
+  equipment_prev                                         Decimal?    @default(0) @db.Decimal(15, 2)
+  animals_prev                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  investments_prev                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  debt_receivable_prev                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicles_prev                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  precious_possessions_prev                              Decimal?    @default(0) @db.Decimal(15, 2)
+  household_effects_prev                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  personal_items_prev                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  cash_prev                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  other_assets_prev                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  agricultural_property_curr                             Decimal?    @default(0) @db.Decimal(15, 2)
+  commercial_property_curr                               Decimal?    @default(0) @db.Decimal(15, 2)
+  equipment_curr                                         Decimal?    @default(0) @db.Decimal(15, 2)
+  animals_curr                                           Decimal?    @default(0) @db.Decimal(15, 2)
+  investments_curr                                       Decimal?    @default(0) @db.Decimal(15, 2)
+  debt_receivable_curr                                   Decimal?    @default(0) @db.Decimal(15, 2)
+  motor_vehicles_curr                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  precious_possessions_curr                              Decimal?    @default(0) @db.Decimal(15, 2)
+  household_effects_curr                                 Decimal?    @default(0) @db.Decimal(15, 2)
+  personal_items_curr                                    Decimal?    @default(0) @db.Decimal(15, 2)
+  cash_curr                                              Decimal?    @default(0) @db.Decimal(15, 2)
+  other_assets_curr                                      Decimal?    @default(0) @db.Decimal(15, 2)
+  business_liabilities_prev                              Decimal?    @default(0) @db.Decimal(15, 2)
+  personal_liabilities_prev                              Decimal?    @default(0) @db.Decimal(15, 2)
+  business_liabilities_curr                              Decimal?    @default(0) @db.Decimal(15, 2)
+  personal_liabilities_curr                              Decimal?    @default(0) @db.Decimal(15, 2)
+  total_assets_prev                                      Decimal?    @default(dbgenerated("(((((((((((COALESCE(agricultural_property_prev, (0)::numeric) + COALESCE(commercial_property_prev, (0)::numeric)) + COALESCE(equipment_prev, (0)::numeric)) + COALESCE(animals_prev, (0)::numeric)) + COALESCE(investments_prev, (0)::numeric)) + COALESCE(debt_receivable_prev, (0)::numeric)) + COALESCE(motor_vehicles_prev, (0)::numeric)) + COALESCE(precious_possessions_prev, (0)::numeric)) + COALESCE(household_effects_prev, (0)::numeric)) + COALESCE(personal_items_prev, (0)::numeric)) + COALESCE(cash_prev, (0)::numeric)) + COALESCE(other_assets_prev, (0)::numeric))")) @db.Decimal(15, 2)
+  total_assets_curr                                      Decimal?    @default(dbgenerated("(((((((((((COALESCE(agricultural_property_curr, (0)::numeric) + COALESCE(commercial_property_curr, (0)::numeric)) + COALESCE(equipment_curr, (0)::numeric)) + COALESCE(animals_curr, (0)::numeric)) + COALESCE(investments_curr, (0)::numeric)) + COALESCE(debt_receivable_curr, (0)::numeric)) + COALESCE(motor_vehicles_curr, (0)::numeric)) + COALESCE(precious_possessions_curr, (0)::numeric)) + COALESCE(household_effects_curr, (0)::numeric)) + COALESCE(personal_items_curr, (0)::numeric)) + COALESCE(cash_curr, (0)::numeric)) + COALESCE(other_assets_curr, (0)::numeric))")) @db.Decimal(15, 2)
+  total_liabilities_prev                                 Decimal?    @default(dbgenerated("(COALESCE(business_liabilities_prev, (0)::numeric) + COALESCE(personal_liabilities_prev, (0)::numeric))")) @db.Decimal(15, 2)
+  total_liabilities_curr                                 Decimal?    @default(dbgenerated("(COALESCE(business_liabilities_curr, (0)::numeric) + COALESCE(personal_liabilities_curr, (0)::numeric))")) @db.Decimal(15, 2)
+  net_wealth_prev                                        Decimal?    @default(dbgenerated("((((((((((((COALESCE(agricultural_property_prev, (0)::numeric) + COALESCE(commercial_property_prev, (0)::numeric)) + COALESCE(equipment_prev, (0)::numeric)) + COALESCE(animals_prev, (0)::numeric)) + COALESCE(investments_prev, (0)::numeric)) + COALESCE(debt_receivable_prev, (0)::numeric)) + COALESCE(motor_vehicles_prev, (0)::numeric)) + COALESCE(precious_possessions_prev, (0)::numeric)) + COALESCE(household_effects_prev, (0)::numeric)) + COALESCE(personal_items_prev, (0)::numeric)) + COALESCE(cash_prev, (0)::numeric)) + COALESCE(other_assets_prev, (0)::numeric)) - (COALESCE(business_liabilities_prev, (0)::numeric) + COALESCE(personal_liabilities_prev, (0)::numeric)))")) @db.Decimal(15, 2)
+  net_wealth_curr                                        Decimal?    @default(dbgenerated("((((((((((((COALESCE(agricultural_property_curr, (0)::numeric) + COALESCE(commercial_property_curr, (0)::numeric)) + COALESCE(equipment_curr, (0)::numeric)) + COALESCE(animals_curr, (0)::numeric)) + COALESCE(investments_curr, (0)::numeric)) + COALESCE(debt_receivable_curr, (0)::numeric)) + COALESCE(motor_vehicles_curr, (0)::numeric)) + COALESCE(precious_possessions_curr, (0)::numeric)) + COALESCE(household_effects_curr, (0)::numeric)) + COALESCE(personal_items_curr, (0)::numeric)) + COALESCE(cash_curr, (0)::numeric)) + COALESCE(other_assets_curr, (0)::numeric)) - (COALESCE(business_liabilities_curr, (0)::numeric) + COALESCE(personal_liabilities_curr, (0)::numeric)))")) @db.Decimal(15, 2)
+  is_complete                                            Boolean?    @default(false)
+  last_updated_by                                        String?     @db.Uuid
+  created_at                                             DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at                                             DateTime?   @default(now()) @db.Timestamp(6)
+  users_wealth_statement_forms_last_updated_byTousers    users?      @relation("wealth_statement_forms_last_updated_byTousers", fields: [last_updated_by], references: [id], onUpdate: NoAction)
+  tax_returns                                            tax_returns @relation(fields: [tax_return_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tax_years                                              tax_years   @relation(fields: [tax_year_id, tax_year], references: [id, tax_year], onDelete: NoAction, onUpdate: NoAction)
+  users_wealth_statement_forms_user_email_user_idTousers users       @relation("wealth_statement_forms_user_email_user_idTousers", fields: [user_email, user_id], references: [email, id], onDelete: Cascade, onUpdate: NoAction)
+  users_wealth_statement_forms_user_idTousers            users       @relation("wealth_statement_forms_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([net_wealth_curr], map: "idx_wealth_net_wealth_curr")
+  @@index([tax_return_id], map: "idx_wealth_statement_forms_return")
+  @@index([user_id, user_email], map: "idx_wealth_statement_forms_user")
+  @@index([tax_year_id, tax_year], map: "idx_wealth_statement_forms_year")
+}
