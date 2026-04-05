@@ -27,7 +27,7 @@ const FORM_STEPS = [
     title: 'Final/Min Tax Income',
     description: 'Income subject to final/fixed/minimum tax',
     icon: '🏛️',
-    formType: 'final_min_income_forms'
+    formType: 'final-min-income'
   },
   {
     id: 'adjustable_tax',
@@ -41,42 +41,42 @@ const FORM_STEPS = [
     title: 'Tax Reductions',
     description: 'Teacher, export, and other reductions',
     icon: '📉',
-    formType: 'reductions_forms'
+    formType: 'reductions'
   },
   {
     id: 'credits',
     title: 'Tax Credits',
     description: 'Charitable donations and investments',
     icon: '🎁',
-    formType: 'credits_forms'
+    formType: 'credits'
   },
   {
     id: 'deductions',
     title: 'Tax Deductions',
     description: 'Advance tax and foreign tax credits',
     icon: '💳',
-    formType: 'deductions_forms'
+    formType: 'deductions'
   },
   {
     id: 'final_tax',
     title: 'Final Tax',
     description: 'Sukuk, bonds, and final tax items',
     icon: '🏦',
-    formType: 'final_tax_forms'
+    formType: 'final-tax'
   },
   {
     id: 'capital_gain',
     title: 'Capital Gains',
     description: 'Property and securities transactions',
     icon: '🏘️',
-    formType: 'capital_gain_forms'
+    formType: 'capital-gains'
   },
   {
     id: 'expenses',
     title: 'Allowable Expenses',
     description: 'Business and professional expenses',
     icon: '📝',
-    formType: 'expenses_forms'
+    formType: 'expenses'
   },
   {
     id: 'wealth',

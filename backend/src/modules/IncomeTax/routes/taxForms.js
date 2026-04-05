@@ -775,6 +775,10 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: e.message });
     }
 
+    // Resolve tax_year_id for the data payload
+    const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
+    const taxYearId = taxYearRow.rows[0].id;
+
     // Check if adjustable tax form already exists
     const existingFormResult = await pool.query(
       'SELECT id FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2',
