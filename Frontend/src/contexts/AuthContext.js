@@ -19,6 +19,12 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    toast.success('Logged out successfully');
+  };
+
   // Set up axios interceptors
   useEffect(() => {
     // Request interceptor to add auth token
@@ -37,8 +43,11 @@ export const AuthProvider = ({ children }) => {
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Only trigger logout for 401 errors that are NOT login attempts
-        if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
+        // Only trigger logout for 401 errors that are NOT login attempts or register attempts
+        if (error.response?.status === 401 &&
+            !error.config?.url?.includes('/login') &&
+            !error.config?.url?.includes('/register')) {
+          console.log('axios interceptor: 401 detected, logging out');
           logout();
           toast.error('Session expired. Please login again.');
         }
@@ -50,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, []);
+  }, [logout]);
 
   // Check if user is logged in on app start
   useEffect(() => {
@@ -181,12 +190,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await axios.post('/api/register', userData);
-      
+
       const { token, user: newUser } = response.data;
-      
+
       localStorage.setItem('token', token);
       setUser(newUser);
-      
+
       toast.success(`Welcome, ${newUser.name}!`);
       return { success: true };
     } catch (error) {
@@ -194,12 +203,6 @@ export const AuthProvider = ({ children }) => {
       toast.error(message);
       return { success: false, error: message };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    toast.success('Logged out successfully');
   };
 
   const updateUser = (userData) => {
