@@ -790,8 +790,9 @@ router.post('/adjustable-tax', auth, async (req, res) => {
     if (taxReturnResult.rows.length === 0) {
       // Create new tax return
       const newTaxReturnResult = await pool.query(
-        'INSERT INTO tax_returns (user_id, tax_year_id, tax_year, status) VALUES ($1, $2, $3, $4) RETURNING id',
-        [userId, taxYearId, taxYear, 'in_progress']
+        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
+         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
+        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
       );
       taxReturnId = newTaxReturnResult.rows[0].id;
     } else {
@@ -1365,8 +1366,9 @@ const saveFormData = async (tableName, formKey, req, res) => {
     let taxReturnId;
     if (taxReturnResult.rows.length === 0) {
       const newReturn = await pool.query(
-        'INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [userId, userEmail, taxYearId, taxYear, 'draft']
+        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
+         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
+        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
       );
       taxReturnId = newReturn.rows[0].id;
     } else {
@@ -1733,8 +1735,9 @@ router.post('/final-min-income', auth, async (req, res) => {
 
     if (taxReturnResult.rows.length === 0) {
       const newTaxReturnResult = await pool.query(
-        'INSERT INTO tax_returns (user_id, tax_year_id, tax_year, status) VALUES ($1, $2, $3, $4) RETURNING id',
-        [userId, taxYearId, taxYear, 'in_progress']
+        `INSERT INTO tax_returns (user_id, user_email, tax_year_id, tax_year, filing_status, return_number)
+         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING id`,
+        [userId, userEmail, taxYearId, taxYear, `TR-${userId.substring(0, 8)}-${taxYear}`]
       );
       taxReturnId = newTaxReturnResult.rows[0].id;
     } else {

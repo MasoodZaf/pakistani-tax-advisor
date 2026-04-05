@@ -17,7 +17,6 @@ const adminModule = require('./modules/Admin');
 
 // Legacy routes (still needed for compatibility)
 const incomeFormRoutes = require('./routes/incomeForm');
-const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
 
 // Initialize Express app
@@ -30,10 +29,9 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
+      ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
       'http://localhost:3000',
-      'http://localhost:3001',
-      'https://yourdomain.com', // Add your production domain here
-      process.env.FRONTEND_URL
+      process.env.FRONTEND_URL,
     ].filter(Boolean);
 
     if (allowedOrigins.includes(origin)) {
@@ -85,9 +83,6 @@ app.use('/api/income-form', incomeFormRoutes); // Direct income form routes
 // Import and mount tax forms routes
 const taxFormsRoutes = require('./modules/IncomeTax/routes/taxForms');
 app.use('/api/tax-forms', taxFormsRoutes); // Tax forms API routes
-
-// Keep admin routes for now (until moved to Admin module)
-app.use('/api/old-admin', adminRoutes); // Legacy admin routes
 
 // Tax Computation routes (Inter-form data linking)
 try {

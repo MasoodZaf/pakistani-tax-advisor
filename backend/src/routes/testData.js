@@ -188,12 +188,12 @@ async function ensureTaxReturn(userId) {
     const taxReturnId = uuidv4();
 
     await client.query(`
-      INSERT INTO tax_returns (id, user_id, user_email, tax_year_id, tax_year, status, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, 'draft', NOW(), NOW())
-      ON CONFLICT (user_id, tax_year)
+      INSERT INTO tax_returns (id, user_id, user_email, tax_year_id, tax_year, return_number, filing_status, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, 'draft', NOW(), NOW())
+      ON CONFLICT (user_id, tax_year_id)
       DO UPDATE SET updated_at = NOW()
       RETURNING id
-    `, [taxReturnId, userId, testData.user.email, testData.taxYear.id, testData.taxYear.tax_year]);
+    `, [taxReturnId, userId, testData.user.email, testData.taxYear.id, testData.taxYear.tax_year, `TR-${userId.substring(0, 8)}-${testData.taxYear.tax_year}`]);
 
     // Get the tax return ID
     const result = await client.query(`
