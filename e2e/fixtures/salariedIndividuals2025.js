@@ -82,18 +82,85 @@ const inputs = {
     },
   },
 
-  // The capital_gain_forms DB schema uses aggregated buckets
-  // (property_2_3_years, property_4_plus_years, securities) while the form's
-  // UI uses per-row holding-period keys with their own client-side
-  // aggregation before save. Mapping the reference workbook's per-row CGT
-  // values into the right buckets requires schema-aware logic that's not
-  // trivial enough to belong in a fixture. Skipped in v1; the calc still
-  // runs without a capital-gain row (taxableIncomeIncludingCG just equals
-  // taxableIncomeExcludingCG).
+  // POST /api/tax-forms/capital-gains
+  // The DB uses aggregated buckets (property_1_year, property_2_3_years,
+  // property_4_plus_years, securities, other_capital_gains) and computes
+  // total_capital_gains / total_capital_gains_tax as GENERATED columns.
+  // The reference workbook's per-row figures are aggregated into those
+  // buckets here. Reference values:
+  //   R6 — holding 2-3 yrs, Constructed property, Taxable=500k, WHT=50k
+  //   R17 — Securities u/s 37A @12.5% pre-July 2022, Taxable=1m, WHT=125k
   capital_gain: {
-    endpoint: 'none',
-    note: 'Skipped in v1 — DB schema uses aggregated buckets; UI does its own pre-save aggregation. Per-row → bucket mapping is the subject of a later sprint.',
-    payload: {},
+    endpoint: 'POST /api/tax-forms/capital-gains',
+    payload: {
+      property_2_3_years:                500000,
+      property_2_3_years_tax_rate:         0.10,
+      property_2_3_years_tax_deducted:    50000,
+      securities:                       1000000,
+      securities_tax_rate:                0.125,
+      securities_tax_deducted:           125000,
+    },
+  },
+
+  // POST /api/tax-forms/wealth_forms — note underscore, not dash, and the
+  // _forms suffix in the URL. Asset/liability rows from the reference
+  // Wealth Statement sheet are aggregated into the eight per-bucket
+  // columns (totals are generated).
+  // Reference (Prev/Curr in PKR):
+  //   Property (DHA / Bahria):                       5,000,000 / 5,000,000
+  //   Investment Habib Metro:                        1,000,000 /   500,000
+  //   Investment Behbood:                           12,500,000 / 20,000,000
+  //   Vehicle:                                       2,500,000 / 6,000,000
+  //   Jewelry:                                       1,200,000 / 1,400,000
+  //   Cash:                                            500,000 /   240,000
+  //   Accumulated PF:                                2,500,000 / 3,940,000
+  //   Bank Loan (liability):                           500,000 /   300,000
+  wealth: {
+    endpoint: 'POST /api/tax-forms/wealth_forms',
+    payload: {
+      property_previous_year:                                          5000000,
+      property_current_year:                                           5000000,
+      // 1m HBL + 12.5m Behbood = 13.5m prev; 0.5m HBL + 20m Behbood = 20.5m curr
+      investment_previous_year:                                       13500000,
+      investment_current_year:                                        20500000,
+      vehicle_previous_year:                                           2500000,
+      vehicle_current_year:                                            6000000,
+      jewelry_previous_year:                                           1200000,
+      jewelry_current_year:                                            1400000,
+      cash_previous_year:                                               500000,
+      cash_current_year:                                                240000,
+      pf_previous_year:                                                2500000,
+      pf_current_year:                                                 3940000,
+      loan_previous_year:                                               500000,
+      loan_current_year:                                                300000,
+    },
+  },
+
+  // POST /api/tax-forms/wealth_reconciliation_forms
+  // The reference's reconciliation:
+  //   Inflows: normal-tax income 24.06m + exempt 2.42m + other 2.95m +
+  //            final/fixed 18.90m + non-cash adj −1.70m + remittance 5.00m
+  //          = 51.63m
+  //   Outflows: personal expenses 39.55m
+  //   Net asset increase = 51.63m − 39.55m = 12.08m  (matches asset delta)
+  //   → unreconciled_difference = 0 (the form's pass condition).
+  // The DB has no `non_cash_expenses` column, so the −1.70m adjustment is
+  // folded into other_receipts (18.90m + 2.95m − 1.70m = 20.15m).
+  wealth_reconciliation: {
+    endpoint: 'POST /api/tax-forms/wealth_reconciliation_forms',
+    payload: {
+      net_assets_previous_year:                                       24700000,
+      net_assets_current_year:                                        36780000,
+      net_assets_increase:                                            12080000,
+      taxable_income:                                                 24060000,
+      exempt_income:                                                   2420000,
+      gift_received:                                                   5000000,
+      other_receipts:                                                 20150000,
+      total_inflows:                                                  51630000,
+      personal_expenses:                                              39550000,
+      total_outflows:                                                 39550000,
+      unreconciled_difference:                                               0,
+    },
   },
 
   // POST /api/tax-forms/final-min-income — dividend, sukuk, prize amounts
@@ -171,19 +238,6 @@ const inputs = {
     },
   },
 
-  // POST /api/tax-forms/wealth_forms — TODO: schema validation needed
-  wealth: {
-    endpoint: 'none',
-    note: 'Skipped in v1 — schema mapping for the rich asset/liability rows in the reference file is the subject of a later sprint.',
-    payload: {},
-  },
-
-  // POST /api/tax-forms/wealth_reconciliation_forms — TODO
-  wealth_reconciliation: {
-    endpoint: 'none',
-    note: 'Skipped in v1 alongside wealth_statement.',
-    payload: {},
-  },
 };
 
 // Reference computation values — these were calculated against last year's

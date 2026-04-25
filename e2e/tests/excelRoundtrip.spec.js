@@ -50,11 +50,16 @@ async function postStep({ api, token, step, def }) {
   }
 
   // Map step id → actual URL path. Most steps follow `/api/tax-forms/{step-with-dashes}`,
-  // but `capital_gain` is exposed under the plural `capital-gains` route, and
-  // `income` uses the legacy `/api/income-form/:taxYear` endpoint.
+  // but several have one-off routes:
+  //  - income uses the legacy /api/income-form/:taxYear
+  //  - capital_gain → plural `capital-gains`
+  //  - wealth → underscore + _forms suffix
+  //  - wealth_reconciliation → underscore + _forms suffix
   const STEP_URLS = {
-    income:        `/api/income-form/${TAX_YEAR}`,
-    capital_gain:  '/api/tax-forms/capital-gains',
+    income:                '/api/income-form/' + TAX_YEAR,
+    capital_gain:          '/api/tax-forms/capital-gains',
+    wealth:                '/api/tax-forms/wealth_forms',
+    wealth_reconciliation: '/api/tax-forms/wealth_reconciliation_forms',
   };
   const url = STEP_URLS[step] || `/api/tax-forms/${step.replace(/_/g, '-')}`;
 
@@ -153,6 +158,21 @@ test.describe('Excel round-trip — Salaried Individuals 2025 fixture', () => {
       // Surcharge is non-negative
       assertOK('surcharge >= 0', (tax.surcharge || 0) >= 0);
     }
+
+    // Wealth reconciliation invariant — must round-trip the value we sent
+    // (the reference workbook's reconciliation balances to zero, so the
+    // FBR-rejection alert tile on the dashboard should NOT fire).
+    try {
+      const wrRes = await api.get('/api/tax-forms/wealth_reconciliation_forms', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (wrRes.status() === 200) {
+        const body  = await wrRes.json();
+        const saved = body?.data || body?.record || {};
+        const diff  = Math.abs(parseFloat(saved.unreconciled_difference || 0));
+        assertOK('wealth reconciliation unreconciled_difference rounds to zero', diff < 1);
+      }
+    } catch (_) { /* GET not required for the test to pass */ }
 
     const allAssertionsPassed = assertions.length > 0 && assertions.every((a) => a.ok);
     const passed =
