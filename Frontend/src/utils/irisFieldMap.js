@@ -129,6 +129,79 @@ export const INCOME_FIELDS = [
   },
 ];
 
+// ── Property — Receipts / Deductions (same 4-column shape as Income) ───────
+// Sourced from IRIS 2.0 Property → Receipts / Deductions page. The app
+// today stores only gross rent on income_forms.other_taxable_income_rent;
+// we apply Section 15A's standard 20% repair allowance here so the
+// per-row breakdown matches what IRIS would compute.
+export const PROPERTY_FIELDS = [
+  // ── Top-line ─────────────────────────────────────────────────────────────
+  {
+    code: '2000', label: 'Income / (Loss) from Property', isTotal: true,
+    computeFrom: (ctx) => {
+      const rent = num(ctx.income?.other_taxable_income_rent);
+      if (rent === 0) return null;
+      const repairAllowance = Math.round(rent * 0.20);
+      const net = rent - repairAllowance;
+      return { total: net, normal: net, exempt: 0 };
+    },
+  },
+  // ── Receipts ─────────────────────────────────────────────────────────────
+  {
+    code: '2029', label: 'Total Receipts from Property', isTotal: true,
+    computeFrom: (ctx) => {
+      const rent = num(ctx.income?.other_taxable_income_rent);
+      if (rent === 0) return null;
+      return { total: rent, normal: rent, exempt: 0 };
+    },
+  },
+  {
+    code: '2001', label: 'Rent Received or Receivable',
+    computeFrom: (ctx) => {
+      const rent = num(ctx.income?.other_taxable_income_rent);
+      if (rent === 0) return null;
+      return { total: rent, normal: rent, exempt: 0 };
+    },
+  },
+  // 2002-2005 are not separately tracked yet — stubs drop unless populated.
+  { code: '2002', label: '1/10th of Amount not Adjustable against Rent',                  computeFrom: () => null },
+  { code: '2003', label: 'Forfeited Deposit under a Contract for Sale of Property',       computeFrom: () => null },
+  { code: '2004', label: 'Recovery of Unpaid Irrecoverable Rent allowed as deduction',    computeFrom: () => null },
+  { code: '2005', label: 'Unpaid Liabilities exceeding three Years',                      computeFrom: () => null },
+
+  // ── Deductions ───────────────────────────────────────────────────────────
+  {
+    code: '2099', label: 'Total Deductions from Property', isTotal: true,
+    computeFrom: (ctx) => {
+      const rent = num(ctx.income?.other_taxable_income_rent);
+      const allow = Math.round(rent * 0.20);
+      if (allow === 0) return null;
+      return { total: allow, normal: allow, exempt: 0 };
+    },
+  },
+  {
+    code: '2031', label: '1/5th of Rent of Building for Repairs (Section 15A)',
+    computeFrom: (ctx) => {
+      const rent = num(ctx.income?.other_taxable_income_rent);
+      const allow = Math.round(rent * 0.20);
+      if (allow === 0) return null;
+      return { total: allow, normal: allow, exempt: 0 };
+    },
+  },
+  // 2032-2098 not separately tracked yet — drop unless populated. Future
+  // work: dedicated Property form on the app side to capture these inputs.
+  { code: '2032', label: 'Insurance Premium',                                              computeFrom: () => null },
+  { code: '2033', label: 'Local Rate / Tax / Charge / Cess',                               computeFrom: () => null },
+  { code: '2034', label: 'Ground Rent',                                                    computeFrom: () => null },
+  { code: '2035', label: 'Profit on Capital borrowed for Investment in Property',          computeFrom: () => null },
+  { code: '2036', label: 'Share in Rental Income Paid to HBFC / Banks',                    computeFrom: () => null },
+  { code: '2037', label: 'Rent Collection Expenditure',                                    computeFrom: () => null },
+  { code: '2038', label: 'Legal Service Charges',                                          computeFrom: () => null },
+  { code: '2039', label: 'Amount claimed as Irrecoverable Rent',                           computeFrom: () => null },
+  { code: '2097', label: 'Payment of Liabilities treated as Income',                       computeFrom: () => null },
+  { code: '2098', label: 'Other Deductions against Rent',                                  computeFrom: () => null },
+];
+
 // ── Tax Reductions (Code | Total Amount | Tax Reducted | Description | Tax Chargeable) ─
 export const TAX_REDUCTION_FIELDS = [
   {
@@ -311,6 +384,7 @@ export function buildIrisSections(ctx) {
   return {
     top_summary:       TOP_SUMMARY_FIELDS.map(renderRow).filter(Boolean),
     income:            INCOME_FIELDS.map(renderRow).filter(Boolean),
+    property:          PROPERTY_FIELDS.map(renderRow).filter(Boolean),
     tax_reductions:    TAX_REDUCTION_FIELDS.map(renderRow).filter(Boolean),
     capital_assets:    CAPITAL_ASSETS_FIELDS.map(renderRow).filter(Boolean),
     adjustable_tax:    ADJUSTABLE_TAX_FIELDS.map(renderRow).filter(Boolean),

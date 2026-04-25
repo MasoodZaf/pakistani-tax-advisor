@@ -207,6 +207,22 @@ export async function generateIrisPdf(ctx) {
     formatRow: (r) => [r.code, fmt(r.total), fmt(r.exempt), r.label, fmt(r.normal)],
   });
 
+  // ── Property — Receipts / Deductions ──────────────────────────────────────
+  renderTabularSection({
+    title: 'Property — Receipts / Deductions',
+    rows:  sections.property,
+    head:  ['Code', 'Total Amount', 'Exempt / Fixed / Final Tax', 'Description', 'Subject to Normal Tax'],
+    totalCodes: ['2000', '2029', '2099'],
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 90, halign: 'right' },
+      2: { cellWidth: 90, halign: 'right' },
+      3: { cellWidth: 'auto' },
+      4: { cellWidth: 90, halign: 'right' },
+    },
+    formatRow: (r) => [r.code, fmt(r.total), fmt(r.exempt), r.label, fmt(r.normal)],
+  });
+
   // ── Tax Reductions ────────────────────────────────────────────────────────
   renderTabularSection({
     title: 'Tax Reductions',
