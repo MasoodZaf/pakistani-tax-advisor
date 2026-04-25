@@ -24,7 +24,6 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
         toast.error(response.data.message || 'Failed to load user tax records');
       }
     } catch (error) {
-      console.error('Error fetching user tax records:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to load user tax records';
       toast.error(errorMessage);
     } finally {
@@ -230,36 +229,12 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Salary Income (PKR)
+                            Annual Salary Income (PKR)
                           </label>
                           <input
                             type="number"
                             name="salary_income"
                             value={formData.salary_income || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Business Income (PKR)
-                          </label>
-                          <input
-                            type="number"
-                            name="business_income"
-                            value={formData.business_income || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rental Income (PKR)
-                          </label>
-                          <input
-                            type="number"
-                            name="rental_income"
-                            value={formData.rental_income || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           />
@@ -278,24 +253,12 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Employer Name
+                            Total Gross Income (PKR)
                           </label>
                           <input
-                            type="text"
-                            name="employer_name"
-                            value={formData.employer_name || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Employer NTN
-                          </label>
-                          <input
-                            type="text"
-                            name="employer_ntn"
-                            value={formData.employer_ntn || ''}
+                            type="number"
+                            name="total_income"
+                            value={formData.total_income || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           />
@@ -308,24 +271,12 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                           <div className="font-medium">{formatCurrency(formsData.income?.salary_income)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Business Income:</span>
-                          <div className="font-medium">{formatCurrency(formsData.income?.business_income)}</div>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">Rental Income:</span>
-                          <div className="font-medium">{formatCurrency(formsData.income?.rental_income)}</div>
-                        </div>
-                        <div>
                           <span className="text-sm text-gray-600">Other Income:</span>
                           <div className="font-medium">{formatCurrency(formsData.income?.other_income)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Employer:</span>
-                          <div className="font-medium">{formsData.income?.employer_name || 'Not specified'}</div>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">Employer NTN:</span>
-                          <div className="font-medium">{formsData.income?.employer_ntn || 'Not specified'}</div>
+                          <span className="text-sm text-gray-600">Total Income:</span>
+                          <div className="font-medium">{formatCurrency(formsData.income?.total_income)}</div>
                         </div>
                       </div>
                     )}
@@ -380,36 +331,36 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Donations (PKR)
+                            Other Deductions (PKR)
                           </label>
                           <input
                             type="number"
-                            name="donations"
-                            value={formData.donations || ''}
+                            name="other_deductions"
+                            value={formData.other_deductions || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Medical Expenses (PKR)
+                            Advance Tax (PKR)
                           </label>
                           <input
                             type="number"
-                            name="medical_expenses"
-                            value={formData.medical_expenses || ''}
+                            name="advance_tax"
+                            value={formData.advance_tax || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Education Expenses (PKR)
+                            Total Deductions (PKR)
                           </label>
                           <input
                             type="number"
-                            name="education_expenses"
-                            value={formData.education_expenses || ''}
+                            name="total_deductions"
+                            value={formData.total_deductions || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
                           />
@@ -422,16 +373,16 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                           <div className="font-medium">{formatCurrency(formsData.deductions?.zakat_paid)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Donations:</span>
-                          <div className="font-medium">{formatCurrency(formsData.deductions?.donations)}</div>
+                          <span className="text-sm text-gray-600">Other Deductions:</span>
+                          <div className="font-medium">{formatCurrency(formsData.deductions?.other_deductions)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Medical Expenses:</span>
-                          <div className="font-medium">{formatCurrency(formsData.deductions?.medical_expenses)}</div>
+                          <span className="text-sm text-gray-600">Advance Tax:</span>
+                          <div className="font-medium">{formatCurrency(formsData.deductions?.advance_tax)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Education Expenses:</span>
-                          <div className="font-medium">{formatCurrency(formsData.deductions?.education_expenses)}</div>
+                          <span className="text-sm text-gray-600">Total Deductions:</span>
+                          <div className="font-medium">{formatCurrency(formsData.deductions?.total_deductions)}</div>
                         </div>
                       </div>
                     )}
@@ -485,36 +436,12 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Advance Tax Paid (PKR)
+                            Debt Tax Amount (PKR)
                           </label>
                           <input
                             type="number"
                             name="advance_tax_paid"
                             value={formData.advance_tax_paid || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Withholding Tax (PKR)
-                          </label>
-                          <input
-                            type="number"
-                            name="withholding_tax"
-                            value={formData.withholding_tax || ''}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Refund Due (PKR)
-                          </label>
-                          <input
-                            type="number"
-                            name="refund_due"
-                            value={formData.refund_due || ''}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
                           />
@@ -527,16 +454,8 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                           <div className="font-medium">{formatCurrency(formsData.final_tax?.total_tax_liability)}</div>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-600">Advance Tax Paid:</span>
+                          <span className="text-sm text-gray-600">Debt Tax Amount:</span>
                           <div className="font-medium">{formatCurrency(formsData.final_tax?.advance_tax_paid)}</div>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">Withholding Tax:</span>
-                          <div className="font-medium">{formatCurrency(formsData.final_tax?.withholding_tax)}</div>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-600">Refund Due:</span>
-                          <div className="font-medium">{formatCurrency(formsData.final_tax?.refund_due)}</div>
                         </div>
                       </div>
                     )}

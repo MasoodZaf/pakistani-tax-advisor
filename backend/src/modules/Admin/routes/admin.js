@@ -2,71 +2,36 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
+const jwtAuth = require('../../../middleware/auth'); // Standardized JWT middleware
+const { insertAudit } = require('../../../helpers/auditLog');
+const { BCRYPT_ROUNDS, validatePasswordPolicy } = require('../../../helpers/passwordPolicy');
 
 const router = express.Router();
 
-// Middleware to verify admin authentication
-const requireAdmin = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        message: 'Please provide a valid Bearer token'
-      });
-    }
-    
-    const sessionToken = authHeader.substring(7);
-    
-    if (!sessionToken || sessionToken.length < 10) {
-      return res.status(401).json({ 
-        error: 'Invalid session token',
-        message: 'Session token must be at least 10 characters'
-      });
-    }
-    
-    // Verify session token exists and get user info
-    const sessionResult = await pool.query(`
-      SELECT us.user_id, us.user_email, u.name, u.role, u.permissions
-      FROM user_sessions us
-      JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
-    `, [sessionToken]);
-    
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({ 
-        error: 'Invalid or expired session',
-        message: 'Please login again'
-      });
-    }
-    
-    const user = sessionResult.rows[0];
-    
-    // Check if user has admin privileges
-    if (!['admin', 'super_admin'].includes(user.role)) {
-      return res.status(403).json({ 
+/**
+ * requireAdmin — chains JWT verification then checks admin role.
+ * Sets req.user (from jwtAuth) — all routes use req.user instead of req.user.
+ */
+const requireAdmin = [
+  jwtAuth,
+  (req, res, next) => {
+    if (!['admin', 'super_admin'].includes(req.user?.role)) {
+      return res.status(403).json({
         error: 'Access denied',
         message: 'Admin privileges required'
       });
     }
-    
-    req.admin = user;
     next();
-    
-  } catch (error) {
-    logger.error('Admin authentication error:', error);
-    res.status(500).json({ 
-      error: 'Authentication error',
-      message: error.message
-    });
   }
-};
+];
 
 // Get all users (admin only)
 router.get('/users', requireAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '' } = req.query;
+    const { page = 1, search = '' } = req.query;
+    // Cap the page size to 2000 to prevent accidental OOM, but allow admin
+    // dashboards to pull the full list without pagination UI.
+    const limit = Math.min(parseInt(req.query.limit) || 50, 2000);
     const offset = (page - 1) * limit;
     
     let whereClause = 'WHERE 1=1';
@@ -265,14 +230,14 @@ router.put('/tax-years/:id/status', requireAdmin, async (req, res) => {
         field_name, new_value, category
       ) VALUES ($1, $2, 'update', 'tax_years', $3, $4, $5, $6)
     `, [
-      req.admin.user_id, req.admin.user_email, id,
+      req.user.id, req.user.email, id,
       'status_update', JSON.stringify({ isActive, isCurrent }),
       'tax_year_status_update'
     ]);
     
     await client.query('COMMIT');
     
-    logger.info(`Tax year ${result.rows[0].tax_year} status updated by admin ${req.admin.user_email}`);
+    logger.info(`Tax year ${result.rows[0].tax_year} status updated by admin ${req.user.email}`);
     
     res.json({
       success: true,
@@ -328,14 +293,14 @@ router.post('/tax-years', requireAdmin, async (req, res) => {
           field_name, new_value, category
         ) VALUES ($1, $2, 'create', 'tax_years', $3, $4, $5, $6)
       `, [
-        req.admin.user_id, req.admin.user_email, result.rows[0].id,
+        req.user.id, req.user.email, result.rows[0].id,
         'tax_year_creation', JSON.stringify(result.rows[0]),
         'tax_year_management'
       ]);
       
       await client.query('COMMIT');
       
-      logger.info(`New tax year ${taxYear} created by admin ${req.admin.user_email}`);
+      logger.info(`New tax year ${taxYear} created by admin ${req.user.email}`);
       
       res.json({
         success: true,
@@ -386,12 +351,12 @@ router.put('/users/:id/status', requireAdmin, async (req, res) => {
         field_name, new_value, category
       ) VALUES ($1, $2, 'update', 'users', $3, $4, $5, $6)
     `, [
-      req.admin.user_id, req.admin.user_email, id,
+      req.user.id, req.user.email, id,
       'user_status_update', JSON.stringify({ isActive }),
       'user_management'
     ]);
     
-    logger.info(`User ${result.rows[0].email} status updated by admin ${req.admin.user_email}`);
+    logger.info(`User ${result.rows[0].email} status updated by admin ${req.user.email}`);
     
     res.json({
       success: true,
@@ -478,7 +443,7 @@ router.post('/users', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
     
     // Check if requester is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Super admin privileges required'
@@ -505,20 +470,25 @@ router.post('/users', requireAdmin, async (req, res) => {
 
     // Check if user with same name already exists
     const existingName = await client.query(
-      'SELECT id, email FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
+      'SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
       [name]
     );
 
     if (existingName.rows.length > 0) {
+      // Generic 409 — do not echo the existing email (PII / enumeration).
       return res.status(409).json({
-        error: 'A user with this name already exists',
-        message: `A user named "${name}" already exists with email: ${existingName.rows[0].email}`,
-        suggestion: 'Please use a different name or contact support if this is the same person'
+        error: 'Name already in use',
+        message: 'Please choose a different name for this user.',
       });
     }
-    
+
+    const policy = validatePasswordPolicy(password, { email });
+    if (!policy.ok) {
+      return res.status(400).json({ error: 'Password does not meet policy', message: policy.message });
+    }
+
     const bcrypt = require('bcrypt');
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     
     // Create user
     const userResult = await client.query(`
@@ -555,7 +525,8 @@ router.post('/users', requireAdmin, async (req, res) => {
           newUser.email,
           currentTaxYear.id,
           currentTaxYear.tax_year,
-          `TR-${newUser.id.slice(0, 8)}-${currentTaxYear.tax_year}`
+          // Full UUID (not 8-char prefix) — unique across all users.
+          `TR-${newUser.id}-${currentTaxYear.tax_year}`
         ]);
         
         // Initialize form tables
@@ -567,38 +538,33 @@ router.post('/users', requireAdmin, async (req, res) => {
           'form_completion_status'
         ];
         
+        // Idempotent seed: DO NOTHING on (user_id, tax_year) unique from phase-d.
         for (const tableName of formTables) {
           await client.query(`
             INSERT INTO ${tableName} (
               id, tax_return_id, user_id, user_email,
               tax_year_id, tax_year, created_at
             ) VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (user_id, tax_year) DO NOTHING
           `, [taxReturnId, newUser.id, newUser.email, currentTaxYear.id, currentTaxYear.tax_year]);
         }
       }
     }
     
-    // Log audit trail
-    try {
-      await client.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action, table_name, record_id,
-          ip_address, user_agent, created_at
-        )
-        VALUES ($1, $2, 'create', 'users', $3, $4, $5, NOW())
-      `, [
-        req.admin.user_id,
-        req.admin.user_email,
-        newUser.id,
-        req.ip,
-        req.headers['user-agent']
-      ]);
-    } catch (auditError) {
-      logger.warn('Audit log failed:', auditError.message);
-    }
-    
+    // Mandatory audit — inside the same transaction so a failure rolls back the create.
+    await insertAudit(client, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'create',
+      tableName: 'users',
+      recordId: newUser.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
     await client.query('COMMIT');
-    
+
     logger.info(`User created by admin: ${email}`);
     
     res.json({
@@ -637,7 +603,7 @@ router.put('/users/:id', requireAdmin, async (req, res) => {
     const targetUser = userResult.rows[0];
     
     // Regular admin cannot edit other admins
-    if (req.admin.role === 'admin' && ['admin', 'super_admin'].includes(targetUser.role)) {
+    if (req.user.role === 'admin' && ['admin', 'super_admin'].includes(targetUser.role)) {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Cannot edit admin users'
@@ -659,7 +625,7 @@ router.put('/users/:id', requireAdmin, async (req, res) => {
       values.push(email);
     }
     
-    if (role !== undefined && req.admin.role === 'super_admin') {
+    if (role !== undefined && req.user.role === 'super_admin') {
       updates.push(`role = $${paramCount++}`);
       values.push(role);
     }
@@ -692,26 +658,21 @@ router.put('/users/:id', requireAdmin, async (req, res) => {
     `, values);
     
     const updatedUser = updateResult.rows[0];
-    
-    // Log audit trail
-    try {
-      await pool.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action, table_name, record_id,
-          ip_address, user_agent, created_at
-        )
-        VALUES ($1, $2, 'update', 'users', $3, $4, $5, NOW())
-      `, [
-        req.admin.user_id,
-        req.admin.user_email,
-        updatedUser.id,
-        req.ip,
-        req.headers['user-agent']
-      ]);
-    } catch (auditError) {
-      logger.warn('Audit log failed:', auditError.message);
-    }
-    
+
+    // Mandatory audit — update-user is NOT transactional today, so a failure
+    // here surfaces a 500 to the admin after the update already landed. That's
+    // still better than silently losing the audit record.
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'update',
+      tableName: 'users',
+      recordId: updatedUser.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
     res.json({
       success: true,
       data: updatedUser,
@@ -735,7 +696,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
 
     // Check if requester is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({
         error: 'Access denied',
         message: 'Super admin privileges required'
@@ -764,7 +725,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     }
 
     // Cannot delete self
-    if (targetUser.id === req.admin.user_id) {
+    if (targetUser.id === req.user.id) {
       return res.status(403).json({
         error: 'Access denied',
         message: 'Cannot delete your own account'
@@ -783,24 +744,17 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
 
     logger.info(`User deleted successfully: ${targetUser.email}`);
 
-    // Log audit trail (this will work since the user is deleted but audit can still log to NULL user_id)
-    try {
-      await client.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action, table_name, record_id,
-          ip_address, user_agent, created_at
-        )
-        VALUES ($1, $2, 'delete', 'users', $3, $4, $5, NOW())
-      `, [
-        req.admin.user_id,
-        req.admin.user_email,
-        targetUser.id,
-        req.ip,
-        req.headers['user-agent']
-      ]);
-    } catch (auditError) {
-      logger.warn('Audit log failed:', auditError.message);
-    }
+    // Mandatory audit — inside transaction, rolls back the delete on failure.
+    await insertAudit(client, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'delete',
+      tableName: 'users',
+      recordId: targetUser.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
 
     await client.query('COMMIT');
 
@@ -1010,13 +964,17 @@ router.get('/users/:id/tax-records', requireAdmin, async (req, res) => {
     const currentReturn = taxReturns.find(tr => tr.is_current);
     
     if (currentReturn) {
-      // Get all form data for current year separately
+      // Columns updated from the legacy monthly_salary/other_sources/grand_total
+      // (which never existed on the live schema — see schema.legacy.sql) to
+      // the actual income_forms columns. annual_salary_wages_total rolls up
+      // the salary slab; other_income_no_min_tax_total is the non-minimum-tax
+      // other-income bucket; total_employment_income is the grand total.
       const incomeData = await pool.query(`
-        SELECT 
+        SELECT
           'income' as form_type,
-          COALESCE(monthly_salary, 0) as salary_income,
-          COALESCE(other_sources, 0) as other_income,
-          COALESCE(grand_total, 0) as total_income,
+          COALESCE(annual_salary_wages_total, 0) as salary_income,
+          COALESCE(other_income_no_min_tax_total, 0) as other_income,
+          COALESCE(total_employment_income, 0) as total_income,
           'N/A' as employer_name
         FROM income_forms inf
         WHERE tax_return_id = $1
@@ -1121,19 +1079,20 @@ router.put('/users/:userId/tax-forms/:formType', requireAdmin, async (req, res) 
     
     switch (formType) {
       case 'income':
+        // Stored columns are annual (not monthly/grand_total as legacy code had).
+        // income_forms has `annual_basic_salary` and `total_employment_income`
+        // as a DB-generated column, so we only write the inputs.
         updateResult = await client.query(`
-          UPDATE income_forms 
-          SET 
-            monthly_salary = $1,
-            other_sources = $2,
-            total_gross_income = $3,
+          UPDATE income_forms
+          SET
+            annual_basic_salary = $1,
+            other_taxable_income_others = $2,
             updated_at = NOW()
-          WHERE tax_return_id = $4
+          WHERE tax_return_id = $3
           RETURNING *
         `, [
-          (formData.salary_income || 0) / 12, // Convert annual to monthly
+          formData.salary_income || 0,
           formData.other_income || 0,
-          formData.total_income || 0,
           taxReturnId
         ]);
         break;
@@ -1189,8 +1148,8 @@ router.put('/users/:userId/tax-forms/:formType', requireAdmin, async (req, res) 
         field_name, new_value, category, ip_address, user_agent
       ) VALUES ($1, $2, 'update', $3, $4, $5, $6, $7, $8, $9)
     `, [
-      req.admin.user_id,
-      req.admin.user_email,
+      req.user.id,
+      req.user.email,
       `${formType}_forms`,
       taxReturnId,
       'admin_tax_form_edit',
@@ -1202,7 +1161,7 @@ router.put('/users/:userId/tax-forms/:formType', requireAdmin, async (req, res) 
     
     await client.query('COMMIT');
     
-    logger.info(`Admin ${req.admin.user_email} updated ${formType} form for user ${userId}`);
+    logger.info(`Admin ${req.user.email} updated ${formType} form for user ${userId}`);
     
     res.json({
       success: true,
@@ -1226,7 +1185,7 @@ router.put('/users/:userId/tax-forms/:formType', requireAdmin, async (req, res) 
 router.get('/user-credentials', requireAdmin, async (req, res) => {
   try {
     // Check if user is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Only super admin can access user credentials' 
@@ -1253,10 +1212,19 @@ router.get('/user-credentials', requireAdmin, async (req, res) => {
       ORDER BY u.created_at DESC
     `);
 
-    // Log super admin access (temporarily disabled for testing)
-    // TODO: Fix audit logging - req.admin object structure issue
+    // Mandatory audit — viewing credentials is privileged; no silent drop.
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'view_credentials',
+      tableName: 'users',
+      changeSummary: 'Super admin accessed user credentials list',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
 
-    logger.info(`Super admin ${req.admin.user_email || req.admin.name} accessed user credentials list`);
+    logger.info(`Super admin ${req.user.email} accessed user credentials list`);
 
     res.json({
       success: true,
@@ -1277,7 +1245,7 @@ router.get('/user-credentials', requireAdmin, async (req, res) => {
 router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => {
   try {
     // Check if user is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Only super admin can access user login credentials' 
@@ -1315,8 +1283,8 @@ router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => 
         user_id: targetUser.id,
         user_email: targetUser.email,
         admin_assisted: true,
-        admin_id: req.admin.user_id,
-        admin_email: req.admin.user_email,
+        admin_id: req.user.id,
+        admin_email: req.user.email,
         exp: Math.floor(Date.now() / 1000) + (10 * 60) // 10 minutes only
       },
       process.env.JWT_SECRET
@@ -1332,21 +1300,7 @@ router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => 
       expiresIn: 600 // 10 minutes
     };
 
-    logger.info(`Super admin ${req.admin.user_email} accessed login credentials for user ${targetUser.email}`);
-
-    // Optional: Invalidate admin session to force clean logout
-    // This ensures the admin is automatically logged out when impersonating
-    try {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const sessionToken = authHeader.substring(7);
-        await pool.query('DELETE FROM user_sessions WHERE session_token = $1', [sessionToken]);
-        logger.info(`Admin session invalidated for user impersonation: ${req.admin.user_email}`);
-      }
-    } catch (sessionError) {
-      logger.warn('Failed to invalidate admin session:', sessionError.message);
-      // Don't fail the request if session cleanup fails
-    }
+    logger.info(`Super admin ${req.user.email} accessed login credentials for user ${targetUser.email}`);
 
     res.json({
       success: true,
@@ -1367,7 +1321,7 @@ router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => 
 router.post('/impersonate/:userId', requireAdmin, async (req, res) => {
   try {
     // Check if user is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Only super admin can impersonate users' 
@@ -1400,47 +1354,45 @@ router.post('/impersonate/:userId', requireAdmin, async (req, res) => {
       });
     }
 
-    // Create impersonation session token
+    // Mandatory audit — must succeed BEFORE the impersonation token is handed
+    // out. If the audit trail is broken we refuse to issue the token.
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'impersonate_start',
+      tableName: 'users',
+      recordId: targetUser.id,
+      newValue: { target_user: targetUser.email, target_user_name: targetUser.name },
+      category: 'super_admin_impersonation',
+      severity: 'high',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
+    // Impersonation session token.
+    //   - `userId` (camelCase) so middleware/auth.js can validate it like any
+    //     other JWT; prior `user_id` claim silently failed lookup.
+    //   - 1-hour TTL — impersonation is for focused admin tasks, not day-long
+    //     sessions.
+    //   - `isImpersonation` + `actingAdminId` carried for downstream audit /
+    //     UI (banner, end-impersonation).
     const impersonationToken = jwt.sign(
       {
-        user_id: targetUser.id,
-        user_email: targetUser.email,
-        user_name: targetUser.name,
-        user_role: targetUser.role,
+        userId: targetUser.id,
+        email: targetUser.email,
+        name: targetUser.name,
+        role: targetUser.role,
         user_type: targetUser.user_type,
-        impersonated_by: req.admin.user_id,
-        impersonated_by_email: req.admin.user_email,
-        is_impersonation: true,
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+        isImpersonation: true,
+        actingAdminId: req.user.id,
+        actingAdminEmail: req.user.email,
+        exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
       },
       process.env.JWT_SECRET
     );
 
-    // Log impersonation start (temporarily disabled)
-    // TODO: Fix audit logging - req.admin object structure issue
-    /*
-    await pool.query(`
-      INSERT INTO audit_log (
-        user_id, user_email, action, table_name, record_id,
-        field_name, new_value, category, ip_address, user_agent
-      ) VALUES ($1, $2, 'impersonate_start', 'users', $3, $4, $5, $6, $7, $8)
-    `, [
-      req.admin.user_id,
-      req.admin.user_email,
-      targetUser.id,
-      'user_impersonation',
-      JSON.stringify({
-        target_user: targetUser.email,
-        target_user_name: targetUser.name,
-        return_url: returnUrl
-      }),
-      'super_admin_impersonation',
-      req.ip,
-      req.headers['user-agent']
-    ]);
-    */
-
-    logger.info(`Super admin ${req.admin.user_email} started impersonating user ${targetUser.email}`);
+    logger.info(`Super admin ${req.user.email} started impersonating user ${targetUser.email}`);
 
     res.json({
       success: true,
@@ -1454,11 +1406,11 @@ router.post('/impersonate/:userId', requireAdmin, async (req, res) => {
           user_type: targetUser.user_type
         },
         impersonatedBy: {
-          id: req.admin.user_id,
-          name: req.admin.name,
-          email: req.admin.user_email
+          id: req.user.id,
+          name: req.user.name,
+          email: req.user.email
         },
-        expiresIn: 24 * 60 * 60 // 24 hours in seconds
+        expiresIn: 60 * 60 // 1 hour in seconds
       },
       message: `Successfully impersonating ${targetUser.name}`
     });
@@ -1472,12 +1424,11 @@ router.post('/impersonate/:userId', requireAdmin, async (req, res) => {
   }
 });
 
-// Test route to verify no middleware interference
-router.post('/test-end-impersonation', async (req, res) => {
-  res.json({ success: true, message: 'Route works without middleware' });
-});
-
-// End impersonation (return to admin)
+// End impersonation (return to admin) — requires valid JWT
+// end-impersonation is called WITH the impersonation token — whose role is
+// 'user', not 'admin'. `requireAdmin` would reject it. We validate the JWT
+// manually and enforce the real gate: isImpersonation=true AND actingAdminId
+// resolves to an admin row.
 router.post('/end-impersonation', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -1486,23 +1437,26 @@ router.post('/end-impersonation', async (req, res) => {
     }
 
     const token = authHeader.substring(7);
-    logger.debug('End impersonation token received', { tokenPrefix: token.substring(0, 50) });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    logger.debug('Decoded token', decoded);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-    if (!decoded.is_impersonation) {
-      return res.status(400).json({ 
+    if (!decoded.isImpersonation) {
+      return res.status(400).json({
         error: 'Not in impersonation mode',
         message: 'Cannot end impersonation - not currently impersonating'
       });
     }
 
-    // Get admin user details
+    // Get admin user details from the acting-admin claim.
     const adminResult = await pool.query(`
       SELECT id, name, email, role, user_type, is_active
-      FROM users 
+      FROM users
       WHERE id = $1 AND role IN ('admin', 'super_admin')
-    `, [decoded.impersonated_by]);
+    `, [decoded.actingAdminId]);
 
     if (adminResult.rows.length === 0) {
       return res.status(404).json({ error: 'Admin user not found' });
@@ -1510,44 +1464,36 @@ router.post('/end-impersonation', async (req, res) => {
 
     const adminUser = adminResult.rows[0];
 
-    // Create new admin session token
+    // Mandatory audit — ended impersonation is a privileged transition, same
+    // level as the start. Must succeed before we issue the new admin token.
+    await insertAudit(pool, {
+      userId: decoded.actingAdminId,
+      userEmail: decoded.actingAdminEmail,
+      action: 'impersonate_end',
+      tableName: 'users',
+      recordId: decoded.userId,
+      newValue: { target_user: decoded.email },
+      category: 'super_admin_impersonation',
+      severity: 'high',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
+    // Restore the admin token — canonical `userId` claim, 8-hour TTL.
     const adminToken = jwt.sign(
       {
-        user_id: adminUser.id,
-        user_email: adminUser.email,
-        user_name: adminUser.name,
-        user_role: adminUser.role,
+        userId: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: adminUser.role,
         user_type: adminUser.user_type,
-        is_admin: true,
         exp: Math.floor(Date.now() / 1000) + (8 * 60 * 60) // 8 hours
       },
       process.env.JWT_SECRET
     );
 
-    // Log impersonation end (temporarily disabled)
-    // TODO: Fix audit logging - req.admin object structure issue
-    /*
-    await pool.query(`
-      INSERT INTO audit_log (
-        user_id, user_email, action, table_name, record_id,
-        field_name, new_value, category, ip_address, user_agent
-      ) VALUES ($1, $2, 'impersonate_end', 'users', $3, $4, $5, $6, $7, $8)
-    `, [
-      decoded.impersonated_by,
-      decoded.impersonated_by_email,
-      decoded.user_id,
-      'user_impersonation',
-      JSON.stringify({
-        target_user: decoded.user_email,
-        session_duration: Math.floor(Date.now() / 1000) - (decoded.exp - (24 * 60 * 60))
-      }),
-      'super_admin_impersonation',
-      req.ip,
-      req.headers['user-agent']
-    ]);
-    */
-
-    logger.info(`Super admin ${decoded.impersonated_by_email} ended impersonation of user ${decoded.user_email}`);
+    logger.info(`Super admin ${decoded.actingAdminEmail} ended impersonation of user ${decoded.email}`);
 
     res.json({
       success: true,
@@ -1571,6 +1517,483 @@ router.post('/end-impersonation', async (req, res) => {
       error: 'Failed to end impersonation',
       message: error.message
     });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// TAX SLABS MANAGEMENT (Super Admin only)
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/admin/tax-slabs?taxYearId=&slabType=
+router.get('/tax-slabs', requireAdmin, async (req, res) => {
+  try {
+    const { taxYearId, slabType } = req.query;
+    let query = `
+      SELECT ts.*, ty.tax_year
+      FROM tax_slabs ts
+      JOIN tax_years ty ON ts.tax_year_id = ty.id
+    `;
+    const params = [];
+    const conds = [];
+    if (taxYearId) { params.push(taxYearId); conds.push(`ts.tax_year_id = $${params.length}`); }
+    if (slabType)  { params.push(slabType);  conds.push(`ts.slab_type = $${params.length}`); }
+    if (conds.length) query += ' WHERE ' + conds.join(' AND ');
+    query += ' ORDER BY ts.slab_order ASC';
+
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    logger.error('Get tax slabs error:', error);
+    res.status(500).json({ error: 'Failed to fetch tax slabs', message: error.message });
+  }
+});
+
+// GET /api/admin/tax-slabs/types  — distinct slab_types in use
+router.get('/tax-slabs/types', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT slab_type FROM tax_slabs ORDER BY slab_type');
+    res.json({ success: true, data: result.rows.map(r => r.slab_type) });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch slab types', message: error.message });
+  }
+});
+
+// POST /api/admin/tax-slabs  — create slab (super_admin only)
+router.post('/tax-slabs', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, effective_from, effective_to } = req.body;
+    if (!tax_year_id || slab_order == null || min_income == null || tax_rate == null || !slab_type) {
+      return res.status(400).json({ error: 'tax_year_id, slab_order, min_income, tax_rate, slab_type are required' });
+    }
+    const result = await pool.query(`
+      INSERT INTO tax_slabs (tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, effective_from, effective_to)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING *
+    `, [tax_year_id, slab_name || `Slab ${slab_order}`, slab_order, min_income, max_income || null, tax_rate, slab_type,
+        effective_from || null, effective_to || null]);
+
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, new_value, category, change_summary)
+      VALUES ($1,$2,'create','tax_slabs',$3,$4,'tax_management',$5)`,
+      [req.user.id, req.user.email, result.rows[0].id,
+       JSON.stringify({ slab_name, min_income, max_income, tax_rate, slab_type }),
+       `Tax slab created: ${slab_name} (${slab_type}) for year ${tax_year_id}`]);
+
+    res.status(201).json({ success: true, data: result.rows[0], message: 'Tax slab created' });
+  } catch (error) {
+    logger.error('Create tax slab error:', error);
+    res.status(500).json({ error: 'Failed to create tax slab', message: error.message });
+  }
+});
+
+// PUT /api/admin/tax-slabs/:id  — update slab (super_admin only)
+router.put('/tax-slabs/:id', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const { slab_name, slab_order, min_income, max_income, tax_rate, slab_type, effective_from, effective_to } = req.body;
+
+    // Fetch old value for audit
+    const old = await pool.query('SELECT * FROM tax_slabs WHERE id=$1', [id]);
+    if (!old.rows.length) return res.status(404).json({ error: 'Slab not found' });
+
+    const result = await pool.query(`
+      UPDATE tax_slabs SET
+        slab_name=COALESCE($1,slab_name), slab_order=COALESCE($2,slab_order),
+        min_income=COALESCE($3,min_income), max_income=$4,
+        tax_rate=COALESCE($5,tax_rate), slab_type=COALESCE($6,slab_type),
+        effective_from=$7, effective_to=$8, updated_at=NOW()
+      WHERE id=$9 RETURNING *
+    `, [slab_name, slab_order, min_income, max_income ?? null, tax_rate, slab_type,
+        effective_from || null, effective_to || null, id]);
+
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, old_value, new_value, category, change_summary)
+      VALUES ($1,$2,'update','tax_slabs',$3,$4,$5,'tax_management',$6)`,
+      [req.user.id, req.user.email, id,
+       JSON.stringify({ tax_rate: old.rows[0].tax_rate, min_income: old.rows[0].min_income }),
+       JSON.stringify({ tax_rate, min_income, max_income }),
+       `Tax slab updated: ${slab_name || old.rows[0].slab_name}`]);
+
+    res.json({ success: true, data: result.rows[0], message: 'Tax slab updated' });
+  } catch (error) {
+    logger.error('Update tax slab error:', error);
+    res.status(500).json({ error: 'Failed to update tax slab', message: error.message });
+  }
+});
+
+// DELETE /api/admin/tax-slabs/:id  (super_admin only)
+router.delete('/tax-slabs/:id', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const old = await pool.query('SELECT * FROM tax_slabs WHERE id=$1', [id]);
+    if (!old.rows.length) return res.status(404).json({ error: 'Slab not found' });
+
+    await pool.query('DELETE FROM tax_slabs WHERE id=$1', [id]);
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, old_value, category, change_summary)
+      VALUES ($1,$2,'delete','tax_slabs',$3,$4,'tax_management',$5)`,
+      [req.user.id, req.user.email, id, JSON.stringify(old.rows[0]),
+       `Tax slab deleted: ${old.rows[0].slab_name}`]);
+
+    res.json({ success: true, message: 'Tax slab deleted' });
+  } catch (error) {
+    logger.error('Delete tax slab error:', error);
+    res.status(500).json({ error: 'Failed to delete tax slab', message: error.message });
+  }
+});
+
+// POST /api/admin/tax-slabs/clone  — copy all slabs from one year to another (super_admin only)
+router.post('/tax-slabs/clone', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { fromTaxYearId, toTaxYearId, slabType } = req.body;
+    if (!fromTaxYearId || !toTaxYearId) return res.status(400).json({ error: 'fromTaxYearId and toTaxYearId required' });
+
+    let q = 'SELECT * FROM tax_slabs WHERE tax_year_id=$1';
+    const params = [fromTaxYearId];
+    if (slabType) { q += ' AND slab_type=$2'; params.push(slabType); }
+
+    const slabs = await pool.query(q, params);
+    if (!slabs.rows.length) return res.status(404).json({ error: 'No slabs found for source year' });
+
+    // Remove existing slabs in target year (for same slab_type if specified)
+    if (slabType) {
+      await pool.query('DELETE FROM tax_slabs WHERE tax_year_id=$1 AND slab_type=$2', [toTaxYearId, slabType]);
+    } else {
+      await pool.query('DELETE FROM tax_slabs WHERE tax_year_id=$1', [toTaxYearId]);
+    }
+
+    const inserted = [];
+    for (const slab of slabs.rows) {
+      const r = await pool.query(`
+        INSERT INTO tax_slabs (tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, effective_from)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *
+      `, [toTaxYearId, slab.slab_name, slab.slab_order, slab.min_income, slab.max_income, slab.tax_rate, slab.slab_type]);
+      inserted.push(r.rows[0]);
+    }
+
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, category, change_summary)
+      VALUES ($1,$2,'clone','tax_slabs','tax_management',$3)`,
+      [req.user.id, req.user.email, `Cloned ${inserted.length} slabs from ${fromTaxYearId} to ${toTaxYearId}`]);
+
+    res.json({ success: true, data: inserted, message: `${inserted.length} slabs cloned successfully` });
+  } catch (error) {
+    logger.error('Clone tax slabs error:', error);
+    res.status(500).json({ error: 'Failed to clone tax slabs', message: error.message });
+  }
+});
+
+// POST /api/admin/tax-slabs/preview  — calculate tax with current slabs for test income
+router.post('/tax-slabs/preview', requireAdmin, async (req, res) => {
+  try {
+    const { taxYearId, income, slabType = 'individual' } = req.body;
+    if (!taxYearId || income == null) return res.status(400).json({ error: 'taxYearId and income required' });
+
+    const slabs = await pool.query(
+      'SELECT * FROM tax_slabs WHERE tax_year_id=$1 AND slab_type=$2 ORDER BY slab_order',
+      [taxYearId, slabType]
+    );
+
+    if (!slabs.rows.length) return res.json({ success: true, data: { totalTax: 0, effectiveRate: 0, breakdown: [] } });
+
+    let totalTax = 0;
+    const breakdown = [];
+    const inc = parseFloat(income);
+
+    for (const slab of slabs.rows) {
+      const lo = parseFloat(slab.min_income);
+      const hi = slab.max_income ? parseFloat(slab.max_income) : Infinity;
+      if (inc < lo) break;
+      const taxable = Math.min(inc, hi) - lo + 1;
+      const rate = parseFloat(slab.tax_rate);
+      const tax = taxable * rate;
+      totalTax += tax;
+      breakdown.push({
+        slab_name: slab.slab_name,
+        range: `${lo.toLocaleString()} – ${slab.max_income ? parseFloat(slab.max_income).toLocaleString() : '∞'}`,
+        taxable_amount: taxable,
+        rate: (rate * 100).toFixed(2) + '%',
+        tax_amount: Math.round(tax)
+      });
+      if (inc <= hi) break;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        income: inc,
+        totalTax: Math.round(totalTax),
+        effectiveRate: ((totalTax / inc) * 100).toFixed(2) + '%',
+        marginalRate: breakdown.length ? breakdown[breakdown.length - 1].rate : '0%',
+        breakdown
+      }
+    });
+  } catch (error) {
+    logger.error('Tax slab preview error:', error);
+    res.status(500).json({ error: 'Failed to preview tax', message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// USER ROLE MANAGEMENT (Super Admin only)
+// ─────────────────────────────────────────────────────────────────
+
+router.put('/users/:id/role', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    const allowed = ['user', 'admin', 'super_admin', 'taxpayer'];
+    if (!allowed.includes(role)) return res.status(400).json({ error: `Role must be one of: ${allowed.join(', ')}` });
+    if (id === req.user.id) return res.status(400).json({ error: 'Cannot change your own role' });
+
+    const old = await pool.query('SELECT * FROM users WHERE id=$1', [id]);
+    if (!old.rows.length) return res.status(404).json({ error: 'User not found' });
+
+    await pool.query('UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2', [role, id]);
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, old_value, new_value, category, change_summary)
+      VALUES ($1,$2,'update','users',$3,$4,$5,'user_management',$6)`,
+      [req.user.id, req.user.email, id,
+       JSON.stringify({ role: old.rows[0].role }),
+       JSON.stringify({ role }),
+       `Role changed: ${old.rows[0].email} from ${old.rows[0].role} to ${role}`]);
+
+    res.json({ success: true, message: `Role updated to ${role}` });
+  } catch (error) {
+    logger.error('Update user role error:', error);
+    res.status(500).json({ error: 'Failed to update role', message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// TAX YEAR MANAGEMENT (Admin+ can read, super_admin can write)
+// ─────────────────────────────────────────────────────────────────
+
+router.post('/tax-years', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { taxYear, startDate, endDate, filingDeadline, isCurrent, description } = req.body;
+    if (!taxYear) return res.status(400).json({ error: 'taxYear is required (format: YYYY-YY)' });
+
+    if (isCurrent) await pool.query('UPDATE tax_years SET is_current=false');
+
+    const result = await pool.query(`
+      INSERT INTO tax_years (tax_year, start_date, end_date, filing_deadline, is_current, is_active, description)
+      VALUES ($1,$2,$3,$4,$5,true,$6) RETURNING *
+    `, [taxYear, startDate || null, endDate || null, filingDeadline || null, !!isCurrent, description || null]);
+
+    await pool.query(`INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, new_value, category, change_summary)
+      VALUES ($1,$2,'create','tax_years',$3,$4,'tax_management',$5)`,
+      [req.user.id, req.user.email, result.rows[0].id, JSON.stringify({ taxYear, isCurrent }),
+       `Tax year created: ${taxYear}`]);
+
+    res.status(201).json({ success: true, data: result.rows[0], message: `Tax year ${taxYear} created` });
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ error: `Tax year ${req.body.taxYear} already exists` });
+    logger.error('Create tax year error:', error);
+    res.status(500).json({ error: 'Failed to create tax year', message: error.message });
+  }
+});
+
+router.put('/tax-years/:id', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const { isActive, isCurrent, filingDeadline, description } = req.body;
+
+    if (isCurrent) await pool.query('UPDATE tax_years SET is_current=false WHERE id!=$1', [id]);
+
+    const result = await pool.query(`
+      UPDATE tax_years SET
+        is_active=COALESCE($1,is_active), is_current=COALESCE($2,is_current),
+        filing_deadline=COALESCE($3,filing_deadline), description=COALESCE($4,description)
+      WHERE id=$5 RETURNING *
+    `, [isActive, isCurrent, filingDeadline || null, description || null, id]);
+
+    if (!result.rows.length) return res.status(404).json({ error: 'Tax year not found' });
+    res.json({ success: true, data: result.rows[0], message: 'Tax year updated' });
+  } catch (error) {
+    logger.error('Update tax year error:', error);
+    res.status(500).json({ error: 'Failed to update tax year', message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// ADMIN ACCOUNT MANAGEMENT (Super Admin only)
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/admin/admin-accounts  — list all admin + super_admin users
+router.get('/admin-accounts', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const result = await pool.query(`
+      SELECT id, email, name, role, user_type, is_active, created_at, last_login_at,
+             created_by
+      FROM users
+      WHERE role IN ('admin','super_admin')
+      ORDER BY CASE role WHEN 'super_admin' THEN 0 ELSE 1 END, created_at DESC
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    logger.error('Get admin accounts error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin accounts', message: error.message });
+  }
+});
+
+// POST /api/admin/admin-accounts  — create new admin account (super_admin only)
+router.post('/admin-accounts', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { email, name, password, role = 'admin' } = req.body;
+    if (!email || !name || !password) return res.status(400).json({ error: 'email, name and password are required' });
+    if (!['admin', 'super_admin'].includes(role)) return res.status(400).json({ error: 'Role must be admin or super_admin' });
+
+    const existing = await client.query('SELECT id FROM users WHERE email=$1', [email]);
+    if (existing.rows.length > 0) return res.status(409).json({ error: 'A user with this email already exists' });
+
+    const bcrypt = require('bcrypt');
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+    const result = await client.query(`
+      INSERT INTO users (email, name, password_hash, user_type, role, is_active, created_by)
+      VALUES ($1, $2, $3, 'admin', $4, true, $5)
+      RETURNING id, email, name, role, user_type, is_active, created_at
+    `, [email, name, passwordHash, role, req.user.id]);
+
+    await client.query(`
+      INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, new_value, category, change_summary)
+      VALUES ($1,$2,'create','users',$3,$4,'admin_management',$5)
+    `, [req.user.id, req.user.email, result.rows[0].id,
+        JSON.stringify({ email, name, role }),
+        `Admin account created: ${name} (${email}) with role ${role}`]);
+
+    await client.query('COMMIT');
+    logger.info(`Admin account created by ${req.user.email}: ${email} (${role})`);
+    res.status(201).json({ success: true, data: result.rows[0], message: `Admin account created successfully` });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Create admin account error:', error);
+    res.status(500).json({ error: 'Failed to create admin account', message: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// PUT /api/admin/admin-accounts/:id  — update admin account (super_admin only)
+router.put('/admin-accounts/:id', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const { name, email, role, is_active } = req.body;
+
+    const existing = await pool.query('SELECT * FROM users WHERE id=$1', [id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Admin account not found' });
+    if (id === req.user.id && is_active === false) return res.status(400).json({ error: 'Cannot deactivate your own account' });
+    if (id === req.user.id && role && role !== 'super_admin') return res.status(400).json({ error: 'Cannot change your own role' });
+
+    const updates = [];
+    const vals = [];
+    let p = 1;
+    if (name !== undefined)      { updates.push(`name=$${p++}`);      vals.push(name); }
+    if (email !== undefined)     { updates.push(`email=$${p++}`);     vals.push(email); }
+    if (role !== undefined)      { updates.push(`role=$${p++}`);      vals.push(role); }
+    if (is_active !== undefined) { updates.push(`is_active=$${p++}`); vals.push(is_active); }
+    if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
+    updates.push(`updated_at=NOW()`);
+    vals.push(id);
+
+    const result = await pool.query(
+      `UPDATE users SET ${updates.join(',')} WHERE id=$${p} RETURNING id,email,name,role,is_active,updated_at`,
+      vals
+    );
+
+    await pool.query(`
+      INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, new_value, category, change_summary)
+      VALUES ($1,$2,'update','users',$3,$4,'admin_management',$5)
+    `, [req.user.id, req.user.email, id, JSON.stringify({ name, email, role, is_active }),
+        `Admin account updated: ${existing.rows[0].email}`]);
+
+    res.json({ success: true, data: result.rows[0], message: 'Admin account updated' });
+  } catch (error) {
+    logger.error('Update admin account error:', error);
+    res.status(500).json({ error: 'Failed to update admin account', message: error.message });
+  }
+});
+
+// POST /api/admin/admin-accounts/:id/reset-password  — reset admin password (super_admin only)
+router.post('/admin-accounts/:id/reset-password', requireAdmin, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.status(403).json({ error: 'Super Admin only' });
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    const existing = await pool.query('SELECT * FROM users WHERE id=$1 AND role IN (\'admin\',\'super_admin\')', [id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Admin account not found' });
+
+    const policy = validatePasswordPolicy(newPassword, { email: existing.rows[0].email });
+    if (!policy.ok) return res.status(400).json({ error: policy.message });
+
+    const bcrypt = require('bcrypt');
+    const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.query('UPDATE users SET password_hash=$1, updated_at=NOW() WHERE id=$2', [hash, id]);
+
+    await pool.query(`
+      INSERT INTO audit_log (user_id, user_email, action, table_name, record_id, new_value, category, change_summary)
+      VALUES ($1,$2,'password_reset','users',$3,$4,'admin_management',$5)
+    `, [req.user.id, req.user.email, id, JSON.stringify({ by: req.user.email }),
+        `Password reset for admin: ${existing.rows[0].email}`]);
+
+    logger.info(`Password reset for admin ${existing.rows[0].email} by ${req.user.email}`);
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    logger.error('Reset admin password error:', error);
+    res.status(500).json({ error: 'Failed to reset password', message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// AUDIT LOGS (read-only)
+// ─────────────────────────────────────────────────────────────────
+
+router.get('/audit-logs', requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, table_name, action, user_email, category, search } = req.query;
+    const offset = (page - 1) * limit;
+
+    const params = [];
+    const conds = [];
+    if (table_name) { params.push(table_name); conds.push(`al.table_name=$${params.length}`); }
+    if (action)     { params.push(action);     conds.push(`al.action=$${params.length}`); }
+    if (user_email) { params.push(`%${user_email}%`); conds.push(`al.user_email ILIKE $${params.length}`); }
+    if (category)   { params.push(category);   conds.push(`al.category=$${params.length}`); }
+    if (search)     { params.push(`%${search}%`); conds.push(`(al.change_summary ILIKE $${params.length} OR al.user_email ILIKE $${params.length} OR al.table_name ILIKE $${params.length})`); }
+
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+
+    const countResult = await pool.query(`SELECT COUNT(*) FROM audit_log al ${where}`, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    params.push(parseInt(limit), offset);
+    const result = await pool.query(`
+      SELECT al.id, al.user_email, al.action, al.table_name, al.record_id,
+             al.field_name, al.old_value, al.new_value, al.change_summary,
+             al.ip_address, al.category, al.severity, al.created_at
+      FROM audit_log al
+      ${where}
+      ORDER BY al.created_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    logger.error('Audit logs error:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs', message: error.message });
   }
 });
 

@@ -38,7 +38,6 @@ const Reports = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading available years:', error);
       toast.error('Failed to load available tax years');
     }
   };
@@ -57,7 +56,6 @@ const Reports = () => {
         toast.success('Report loaded successfully');
       }
     } catch (error) {
-      console.error('Error loading report:', error);
       if (error.response?.status === 404) {
         toast.error('No tax data found for selected year');
       } else {
@@ -79,8 +77,53 @@ const Reports = () => {
   };
 
   const exportToPDF = () => {
-    toast.info('PDF export functionality will be implemented with a PDF generation library');
-    // TODO: Implement PDF export using libraries like jsPDF or react-pdf
+    if (!reportData) return;
+
+    const tabLabels = {
+      summary: 'Tax Summary',
+      income: 'Income Analysis',
+      adjustable: 'Adjustable Tax Report',
+      wealth: 'Wealth Reconciliation Report'
+    };
+
+    // Inject a one-time print stylesheet
+    const styleId = 'paktax-print-style';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.media = 'print';
+      style.textContent = `
+        @page { margin: 20mm 15mm; size: A4; }
+        body * { visibility: hidden !important; }
+        #paktax-report-print, #paktax-report-print * { visibility: visible !important; }
+        #paktax-report-print { position: absolute; left: 0; top: 0; width: 100%; }
+        #paktax-report-print .no-print { display: none !important; }
+        nav, header, footer, aside, .sidebar { display: none !important; }
+        .print-header { margin-bottom: 16px; border-bottom: 2px solid #1e40af; padding-bottom: 12px; }
+        .print-header h1 { font-size: 20px; font-weight: 700; color: #1e3a8a; margin: 0 0 4px; }
+        .print-header p { font-size: 12px; color: #6b7280; margin: 0; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Wrap the active report content for printing
+    const reportEl = document.getElementById('paktax-report-print');
+    if (reportEl) {
+      // Inject a print header with title + year
+      let headerEl = reportEl.querySelector('.print-header');
+      if (!headerEl) {
+        headerEl = document.createElement('div');
+        headerEl.className = 'print-header';
+        reportEl.insertBefore(headerEl, reportEl.firstChild);
+      }
+      headerEl.innerHTML = `
+        <h1>Pakistan Tax Advisor — ${tabLabels[activeTab]}</h1>
+        <p>Tax Year: ${selectedYear} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+      `;
+    }
+
+    window.print();
+    toast.success('Print dialog opened — save as PDF from your browser');
   };
 
   const exportToExcel = () => {
@@ -91,8 +134,8 @@ const Reports = () => {
     
     if (activeTab === 'summary') {
       csvContent += "Tax Year,Income Type,Amount\n";
-      csvContent += `${selectedYear},Total Taxable Income,${reportData.income?.total_taxable_income || 0}\n`;
-      csvContent += `${selectedYear},Adjustable Tax,${reportData.adjustableTax?.total_adjustable_tax || 0}\n`;
+      csvContent += `${selectedYear},Total Taxable Income,${reportData.rawData?.income?.total_taxable_income ?? reportData.summary?.totalIncome ?? 0}\n`;
+      csvContent += `${selectedYear},Adjustable Tax,${reportData.rawData?.adjustableTax?.total_adjustable_tax ?? reportData.summary?.totalWithholdingTax ?? 0}\n`;
       csvContent += `${selectedYear},Tax Credits,${reportData.credits?.total_credits || 0}\n`;
       csvContent += `${selectedYear},Tax Deductions,${reportData.deductions?.total_deductions || 0}\n`;
     } else if (activeTab === 'income') {
@@ -131,8 +174,11 @@ const Reports = () => {
   const SummaryReport = ({ data }) => {
     if (!data) return null;
 
-    const totalTaxableIncome = data.income?.total_taxable_income || 0;
-    const totalAdjustableTax = data.adjustableTax?.total_adjustable_tax || 0;
+    // tax-calculation-summary returns { summary, rawData: { income, adjustableTax }, calculations }
+    const incomeRow = data.rawData?.income || data.income || {};
+    const adjustableTaxRow = data.rawData?.adjustableTax || data.adjustableTax || {};
+    const totalTaxableIncome = parseFloat(incomeRow.total_taxable_income ?? data.summary?.totalIncome ?? 0);
+    const totalAdjustableTax = parseFloat(adjustableTaxRow.total_adjustable_tax ?? data.summary?.totalWithholdingTax ?? 0);
     const totalCredits = data.credits?.total_credits || 0;
     const totalDeductions = data.deductions?.total_deductions || 0;
 
@@ -185,19 +231,19 @@ const Reports = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Monthly Salary</span>
-              <span className="font-medium">{formatCurrency(data.income?.monthly_salary)}</span>
+              <span className="font-medium">{formatCurrency(incomeRow.monthly_salary)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Bonus</span>
-              <span className="font-medium">{formatCurrency(data.income?.bonus)}</span>
+              <span className="font-medium">{formatCurrency(incomeRow.bonus)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Car Allowance</span>
-              <span className="font-medium">{formatCurrency(data.income?.car_allowance)}</span>
+              <span className="font-medium">{formatCurrency(incomeRow.car_allowance)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Other Taxable Income</span>
-              <span className="font-medium">{formatCurrency(data.income?.other_taxable)}</span>
+              <span className="font-medium">{formatCurrency(incomeRow.other_taxable)}</span>
             </div>
             <div className="flex justify-between items-center py-2 bg-gray-50 font-semibold">
               <span className="text-gray-900">Total Taxable Income</span>
@@ -213,7 +259,7 @@ const Reports = () => {
     if (!data) return null;
 
     const regularIncome = data.regularIncome?.total_taxable_income || 0;
-    const capitalGains = data.capitalGains?.total_capital_gains || 0;
+    const capitalGains = data.capitalGains?.total_capital_gain || data.capitalGains?.total_capital_gains || 0;
     const finalTaxIncome = (data.finalTaxIncome?.sukuk_amount || 0) + (data.finalTaxIncome?.debt_amount || 0);
 
     return (
@@ -601,7 +647,7 @@ const Reports = () => {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-6" id="paktax-report-print">
           {loading ? (
             <div className="text-center py-12">
               <RefreshCw className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />

@@ -2,37 +2,39 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'frontend/**'
+      - 'Frontend/**'
+      - '.github/workflows/frontend.yml'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'frontend/**'
+      - 'Frontend/**'
+      - '.github/workflows/frontend.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18.x'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
 
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm ci
+      - name: Install dependencies
+        run: |
+          cd Frontend
+          npm ci
 
-    - name: Build application
-      run: |
-        cd frontend
-        npm run build
-      env:
-        CI: true
-        GENERATE_SOURCEMAP: false 
+      - name: Build application
+        run: |
+          cd Frontend
+          npm run build
+        env:
+          CI: true
+          GENERATE_SOURCEMAP: false

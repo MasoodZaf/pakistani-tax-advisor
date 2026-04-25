@@ -191,7 +191,11 @@ class CalculationService {
   }
 
   /**
-   * Calculate Progressive Tax based on FBR slabs (Cumulative Method)
+   * Calculate Progressive Tax (cumulative method) from DB-sourced slabs.
+   * Slab rows are expected to match `tax_slabs` columns: min_income, max_income, tax_rate.
+   * max_income may be null/undefined for the open-ended top slab.
+   * Boundary rule: a slab applies to income STRICTLY greater than min_income
+   * (so income exactly equal to a slab boundary sits in the lower slab).
    */
   static calculateProgressiveTax(taxableIncome, progressiveTaxRates) {
     try {
@@ -199,27 +203,28 @@ class CalculationService {
         return 0;
       }
 
-      // Sort rates by minimum amount
-      const sortedRates = progressiveTaxRates.sort((a, b) => a.min_amount - b.min_amount);
+      const toNum = (v) => (v === null || v === undefined ? null : Number(v));
+      const sortedRates = progressiveTaxRates
+        .slice()
+        .sort((a, b) => toNum(a.min_income) - toNum(b.min_income));
+
       let totalTax = 0;
-
       for (const slab of sortedRates) {
-        // Check if taxable income exceeds this slab's minimum
-        if (taxableIncome > slab.min_amount) {
-          // Calculate the amount taxable in this slab
-          const slabMax = slab.max_amount === Infinity ? taxableIncome : Math.min(taxableIncome, slab.max_amount);
-          const taxableAtThisSlab = slabMax - slab.min_amount;
+        const minIncome = toNum(slab.min_income);
+        const maxIncome = toNum(slab.max_income); // null → open-ended top slab
+        const rate = toNum(slab.tax_rate);
 
-          if (taxableAtThisSlab > 0) {
-            // Calculate tax for this slab: (Taxable Amount at this slab * Rate)
-            const slabTax = taxableAtThisSlab * slab.tax_rate;
-            totalTax += slabTax; // Cumulative approach
-
-            logger.debug(`Progressive tax slab: Income ${taxableIncome}, Slab ${slab.min_amount}-${slabMax}, Taxable ${taxableAtThisSlab}, Rate ${slab.tax_rate}, Tax ${slabTax}, Total ${totalTax}`);
-          }
+        // DB seeds min_income as "starts-at" (e.g. 600,001), while the FBR semantic
+        // treats the break-point (600,000) as the exclusive lower bound of the next
+        // slab. Normalize: effectiveLower = min - 1 for non-zero mins.
+        const effectiveLower = minIncome > 0 ? minIncome - 1 : 0;
+        if (taxableIncome <= effectiveLower) continue;
+        const ceiling = maxIncome === null ? taxableIncome : Math.min(taxableIncome, maxIncome);
+        const taxableAtThisSlab = ceiling - effectiveLower;
+        if (taxableAtThisSlab > 0 && rate > 0) {
+          totalTax += taxableAtThisSlab * rate;
         }
       }
-
       return Math.round(totalTax);
     } catch (error) {
       logger.error('Error in progressive tax calculation:', error);
@@ -228,68 +233,44 @@ class CalculationService {
   }
 
   /**
-   * Calculate Tax Computation Form Excel formulas (Sheet 6)
+   * Fetch the salaried-individual slab set for a given tax_year_id from DB.
+   * Callers should pass this to calculateProgressiveTax.
    */
-  static calculateTaxComputationFields(data, progressiveTaxRates) {
-    try {
-      const calculations = {};
-
-      // Excel Formula B9: SUM(B6:B8) = Total Income
-      calculations.total_income =
-        (data.incomeFromSalary || 0) +
-        (data.incomeFromOtherSources || 0) +
-        (data.incomeFromCapitalGains || 0);
-
-      // Excel Formula B11: B9-B10 = Taxable Income excluding CG
-      calculations.taxable_income_excluding_cg =
-        calculations.total_income - (data.totalIncomeCG || 0);
-
-      // Excel Formula B13: B11+B12 = Taxable Income including CG
-      calculations.taxable_income_including_cg =
-        calculations.taxable_income_excluding_cg + (data.capitalGainsIncome || 0);
-
-      // Excel Formula B16: Progressive Tax Calculation
-      calculations.normal_income_tax =
-        this.calculateProgressiveTax(calculations.taxable_income_excluding_cg, progressiveTaxRates);
-
-      // Excel Formula B17: IF(B11>10000000,B16*10%,0) = Surcharge (Finance Act 2025)
-      calculations.surcharge =
-        calculations.taxable_income_excluding_cg > 10000000
-          ? Math.round(calculations.normal_income_tax * 0.10)
-          : 0;
-
-      // Excel Formula B18: Capital gains tax (from CG form)
-      calculations.capital_gains_tax = data.capitalGainsTax || 0;
-
-      // Excel Formula B19: SUM(B16:B18) = Total Tax before adjustments
-      calculations.total_tax_before_adjustments =
-        calculations.normal_income_tax +
-        calculations.surcharge +
-        calculations.capital_gains_tax;
-
-      // Excel Formula B22: B19-B20-B21 = Net Tax Payable
-      calculations.net_tax_payable =
-        calculations.total_tax_before_adjustments -
-        (data.taxReductions || 0) -
-        (data.taxCredits || 0);
-
-      // Excel Formula B30: B25-B28-B29 = Balance Payable/Refundable
-      calculations.balance_payable_refundable =
-        calculations.net_tax_payable -
-        (data.withholdingTax || 0) -
-        (data.advanceTax || 0);
-
-      logger.info('Tax computation calculations completed', {
-        total_income: calculations.total_income,
-        normal_income_tax: calculations.normal_income_tax,
-        net_tax_payable: calculations.net_tax_payable
-      });
-
-      return calculations;
-    } catch (error) {
-      logger.error('Error in tax computation calculations:', error);
-      throw error;
+  static async getSlabsForTaxYear(pool, taxYearId, slabType = 'individual') {
+    const r = await pool.query(
+      `SELECT min_income, max_income, tax_rate, fixed_amount
+       FROM tax_slabs
+       WHERE tax_year_id = $1 AND slab_type = $2
+       ORDER BY slab_order ASC`,
+      [taxYearId, slabType]
+    );
+    if (r.rows.length === 0) {
+      throw new Error(`No ${slabType} tax slabs configured for tax_year_id ${taxYearId}`);
     }
+    return r.rows;
+  }
+
+  /**
+   * Super Tax u/s 4C, ITO 2001 (Finance Act 2025)
+   * Charged on persons with income exceeding Rs 150M.
+   * Flat rate applied on TOTAL income (not just the marginal excess).
+   * Division IIA of Part I of the First Schedule.
+   */
+  static calculateSuperTax(income) {
+    if (!income || income <= 150000000) return 0;
+    const slabs = [
+      { max: 200000000, rate: 0.01 },
+      { max: 250000000, rate: 0.02 },
+      { max: 300000000, rate: 0.03 },
+      { max: 350000000, rate: 0.04 },
+      { max: 400000000, rate: 0.06 },
+      { max: 500000000, rate: 0.08 },
+      { max: Infinity,  rate: 0.10 },
+    ];
+    for (const slab of slabs) {
+      if (income <= slab.max) return Math.round(income * slab.rate);
+    }
+    return 0;
   }
 
   /**

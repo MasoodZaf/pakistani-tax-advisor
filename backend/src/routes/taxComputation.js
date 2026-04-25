@@ -1,14 +1,90 @@
 /**
- * Tax Computation Routes - Inter-Form Data Linking API
- * Provides endpoints that replicate Excel sheet references and calculations
+ * Tax Computation Routes — backend-owned compute endpoints.
+ *
+ *   GET  /api/tax-computation/:taxYear                 — run against saved DB data
+ *   GET  /api/tax-computation/:taxYear/summary         — full summary (saved data)
+ *   POST /api/tax-computation/:taxYear/preview         — compute from unsaved form data
+ *   GET  /api/tax-computation/years/filable            — years the frontend may offer
+ *   POST /api/tax-computation/:taxYear/update-links    — refresh adjustable-form links
+ *
+ * All rates are DB-sourced via TaxRateService (year-versioned).
  */
 
 const express = require('express');
 const TaxCalculationService = require('../services/taxCalculationService');
+const TaxRateService = require('../services/taxRateService');
 const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 const router = express.Router();
+
+/**
+ * GET /api/tax-computation/years/filable
+ * Returns the tax years the frontend dropdown may offer. A year is "filable"
+ * only if its rate tables (slabs + surcharge + super-tax) are seeded. This
+ * enforces "no advance filing" — the dropdown can't show a year the system
+ * can't actually compute.
+ */
+router.get('/years/filable', auth, async (req, res) => {
+  try {
+    const rows = await TaxRateService.listFilableYears();
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    logger.error('Error listing filable years:', error);
+    res.status(500).json({ success: false, message: 'Failed to list filable years' });
+  }
+});
+
+/**
+ * GET /api/tax-computation/:taxYear/rates
+ * Return the DB-sourced rate set for a tax year. Frontend caches this via the
+ * useTaxRates hook and uses it for any display-only presentation of rates
+ * (slab labels, cap percentages) — no more hardcoded constants in the UI.
+ */
+router.get('/:taxYear/rates', auth, async (req, res) => {
+  try {
+    const { taxYear } = req.params;
+    const rates = await TaxRateService.getAllRates(taxYear);
+    res.json({ success: true, data: rates });
+  } catch (error) {
+    logger.error('Failed to load rates:', error);
+    const isConfigError = /not configured|No /.test(error?.message || '');
+    res.status(isConfigError ? 400 : 500).json({
+      success: false,
+      message: isConfigError ? error.message : 'Failed to load rates',
+    });
+  }
+});
+
+/**
+ * POST /api/tax-computation/:taxYear/preview
+ * Compute the tax breakdown from unsaved form data in the request body.
+ *
+ * Body shape: { inputs: { income, adjustable_tax, capital_gain, reductions,
+ *                          credits, deductions } }
+ * Each sub-object is a flat map of DB-column-name -> value.
+ */
+router.post('/:taxYear/preview', auth, async (req, res) => {
+  try {
+    const { taxYear } = req.params;
+    const inputs = (req.body && req.body.inputs) || {};
+
+    const preview = await TaxCalculationService.previewTaxComputation(taxYear, inputs);
+    res.json({ success: true, data: preview });
+  } catch (error) {
+    logger.error('Tax preview failed:', error);
+    // Preview is user-facing UX; surface "rates not configured" as 400 for UX,
+    // keep real 500s for unexpected problems.
+    const isConfigError =
+      typeof error?.message === 'string' &&
+      (error.message.includes('not configured') || error.message.includes('No '));
+    const status = isConfigError ? 400 : 500;
+    res.status(status).json({
+      success: false,
+      message: isConfigError ? error.message : 'Failed to preview tax computation',
+    });
+  }
+});
 
 /**
  * GET /api/tax-computation/:taxYear

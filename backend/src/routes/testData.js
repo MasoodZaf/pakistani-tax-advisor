@@ -1,19 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
+const { pool } = require('../config/database');
+const auth = require('../middleware/auth');
 
-// Database connection
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'tax_advisor',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-  max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
-  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
-});
+// Require super_admin role for every test-data operation.
+function requireSuperAdmin(req, res, next) {
+  if (req.user?.role !== 'super_admin') {
+    logger.warn('Test route access denied — not super_admin', {
+      userId: req.user?.id,
+      role: req.user?.role,
+    });
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  next();
+}
+
+router.use(auth, requireSuperAdmin);
 
 // Test data from Excel extraction
 const testData = {
@@ -193,7 +197,7 @@ async function ensureTaxReturn(userId) {
       ON CONFLICT (user_id, tax_year_id)
       DO UPDATE SET updated_at = NOW()
       RETURNING id
-    `, [taxReturnId, userId, testData.user.email, testData.taxYear.id, testData.taxYear.tax_year, `TR-${userId.substring(0, 8)}-${testData.taxYear.tax_year}`]);
+    `, [taxReturnId, userId, testData.user.email, testData.taxYear.id, testData.taxYear.tax_year, `TR-${userId}-${testData.taxYear.tax_year}`]);
 
     // Get the tax return ID
     const result = await client.query(`

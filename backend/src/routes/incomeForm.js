@@ -20,7 +20,8 @@ router.get('/:taxYear', auth, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // Return empty form structure if no data found
+      // Return empty form structure if no data found. Wrap in {success,data}
+      // so the response shape matches every other /api/tax-forms/* endpoint.
       const emptyForm = {
         user_id: userId,
         tax_year: taxYear,
@@ -43,13 +44,14 @@ router.get('/:taxYear', auth, async (req, res) => {
       };
 
       logger.info(`No income form data found for user ${userId}, tax year ${taxYear}, returning empty form`);
-      return res.json(emptyForm);
+      // Flat root copy kept for back-compat with any legacy frontend code that
+      // reads the row directly. New code should use .data.
+      return res.json({ success: true, data: emptyForm, ...emptyForm });
     }
 
     const incomeForm = result.rows[0];
     logger.info(`Income form data retrieved for user ${userId}, tax year ${taxYear}`);
-    logger.info(`ACTUAL DATA RETURNED: allowances=${incomeForm.allowances}, bonus=${incomeForm.bonus}, annual_basic_salary=${incomeForm.annual_basic_salary}`);
-    res.json(incomeForm);
+    res.json({ success: true, data: incomeForm, ...incomeForm });
 
   } catch (error) {
     logger.error('Error fetching income form data:', error);

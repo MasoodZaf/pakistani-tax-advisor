@@ -1,330 +1,300 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import { Link } from 'react-router-dom';
-import { 
-  FileText, 
-  BarChart3, 
-  TrendingUp, 
-  Calendar, 
-  CheckCircle,
-  Clock,
-  AlertCircle
+import {
+  FileText, BarChart3, TrendingUp, Calendar,
+  CheckCircle, Clock, ArrowRight, AlertCircle,
+  Zap, Settings, ChevronRight
 } from 'lucide-react';
+
+const Styles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;500;600;700&display=swap');
+    .dash-root { font-family: 'Nunito', sans-serif; -webkit-font-smoothing: antialiased; color: #1e2a4a; }
+    .dash-display { font-family: 'Bricolage Grotesque', sans-serif; }
+    .dash-card { background: #fff; border: 1px solid #e3e2dc; border-radius: 18px; transition: box-shadow 0.2s; }
+    .dash-card:hover { box-shadow: 0 4px 20px rgba(26,28,32,0.07); }
+    .dash-link-card {
+      background: #fff; border: 1px solid #e3e2dc; border-radius: 14px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    }
+    .dash-link-card:hover { border-color: #a8c890; background: #f5f8ea; transform: translateX(2px); }
+    .form-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f0efeb; }
+    .form-row:last-child { border-bottom: none; }
+    .progress-track { width: 100%; height: 8px; background: #EAE6BC; border-radius: 100px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #28396C, #3d5a90); border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px; background: #28396C; color: #fff;
+      font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 700;
+      border-radius: 12px; text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .cta-btn:hover { background: #1e2d5a; transform: translateY(-1px); }
+    @keyframes countRing { from { stroke-dashoffset: 251; } }
+    .progress-ring-fill { animation: countRing 1.2s ease-out forwards; }
+  `}</style>
+);
+
+function CircularProgress({ pct, size = 96 }) {
+  const r    = 40;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (circ * pct) / 100;
+  return (
+    <svg width={size} height={size} viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx="48" cy="48" r={r} stroke="#EAE6BC" strokeWidth="8" fill="none" />
+      <circle className="progress-ring-fill" cx="48" cy="48" r={r}
+        stroke="url(#pgGrad)" strokeWidth="8" fill="none"
+        strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+      />
+      <defs>
+        <linearGradient id="pgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#28396C" />
+          <stop offset="100%" stopColor="#3d5a90" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getDaysRemaining() {
+  const deadline = new Date('2026-09-30T23:59:59');
+  return Math.max(0, Math.ceil((new Date() - deadline) / (1000 * 60 * 60 * 24)) * -1);
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { taxReturn, getCompletionPercentage, FORM_STEPS, completedSteps, taxCalculation, formData } = useTaxForm();
+  const { taxReturn, getCompletionPercentage, FORM_STEPS, completedSteps, taxCalculation } = useTaxForm();
 
-  const completionPercentage = getCompletionPercentage();
+  const pct          = getCompletionPercentage();
   const completedCount = completedSteps.size;
-  const totalSteps = FORM_STEPS.length;
+  const totalSteps   = FORM_STEPS.length;
+  const daysLeft     = getDaysRemaining();
+  const firstName    = user?.name?.split(' ')[0] || 'there';
+  const filingStatus = taxReturn?.filing_status || 'draft';
 
-  // Calculate real tax values from form data
-  const getTaxDueAmount = () => {
+  const deadlineColor = daysLeft < 30 ? '#c0392b' : daysLeft < 90 ? '#4a7a2a' : '#4a7a2a';
+
+  const taxDue = useMemo(() => {
     if (taxCalculation) {
-      const additionalTax = taxCalculation.additional_tax_due || 0;
+      const due    = taxCalculation.additional_tax_due || 0;
       const refund = taxCalculation.refund_due || 0;
-      
-      if (additionalTax > 0) {
-        return `PKR ${additionalTax.toLocaleString()}`;
-      } else if (refund > 0) {
-        return `PKR -${refund.toLocaleString()}`;
-      } else {
-        return 'PKR 0';
-      }
+      if (due > 0)    return { label: `Rs ${due.toLocaleString()}`,    note: 'Additional tax due',   color: '#c0392b' };
+      if (refund > 0) return { label: `Rs ${refund.toLocaleString()}`, note: 'Refund expected',      color: '#4a7a2a' };
+      return { label: 'Rs 0', note: 'No additional tax', color: '#4a7a2a' };
     }
-    
-    // Fallback to income form data if available
-    if (formData?.income) {
-      const income = formData.income;
-      const taxableIncome = parseFloat(income.total_taxable_income || 0);
-      const taxPaid = parseFloat(income.salary_tax_deducted || 0);
-      
-      if (taxableIncome > 0) {
-        // Basic tax calculation
-        let tax = 0;
-        if (taxableIncome <= 600000) {
-          tax = 0;
-        } else if (taxableIncome <= 1200000) {
-          tax = (taxableIncome - 600000) * 0.025;
-        } else if (taxableIncome <= 2200000) {
-          tax = 15000 + (taxableIncome - 1200000) * 0.125;
-        } else if (taxableIncome <= 3200000) {
-          tax = 140000 + (taxableIncome - 2200000) * 0.20;
-        } else if (taxableIncome <= 4100000) {
-          tax = 340000 + (taxableIncome - 3200000) * 0.25;
-        } else {
-          tax = 565000 + (taxableIncome - 4100000) * 0.35;
-        }
-        
-        const netTax = Math.round(tax) - taxPaid;
-        if (netTax > 0) {
-          return `PKR ${netTax.toLocaleString()}`;
-        } else if (netTax < 0) {
-          return `PKR -${Math.abs(netTax).toLocaleString()}`;
-        }
-      }
-    }
-    
-    return 'PKR 0';
-  };
+    return { label: '—', note: pct > 0 ? 'Fill all forms to compute' : 'Start your return', color: '#7a8890' };
+  }, [taxCalculation, pct]);
 
-  const getTaxDueSubtitle = () => {
-    if (taxCalculation) {
-      const additionalTax = taxCalculation.additional_tax_due || 0;
-      const refund = taxCalculation.refund_due || 0;
-      
-      if (additionalTax > 0) {
-        return 'Additional tax due';
-      } else if (refund > 0) {
-        return 'Refund due';
-      } else {
-        return 'No additional tax';
-      }
-    }
-    
-    if (completionPercentage < 100) {
-      return 'Complete forms to calculate';
-    }
-    
-    return 'Calculation pending';
-  };
+  const nextIncomplete = FORM_STEPS.find(s => !completedSteps.has(s.id));
 
-  const getReturnStatus = () => {
-    if (taxReturn?.filing_status) {
-      const status = taxReturn.filing_status.charAt(0).toUpperCase() + taxReturn.filing_status.slice(1);
-      return status;
-    }
-    return 'Draft';
-  };
-
-  const getReturnSubtitle = () => {
-    if (taxReturn?.filing_status === 'submitted') {
-      return 'Successfully submitted';
-    } else if (taxReturn?.filing_status === 'draft') {
-      return 'Not yet submitted';
-    }
-    return 'Not yet submitted';
-  };
-
-  // Real data for dashboard
-  const stats = [
-    {
-      title: 'Tax Return Progress',
-      value: `${completionPercentage}%`,
-      subtitle: `${completedCount}/${totalSteps} sections completed`,
-      icon: FileText,
-      color: 'blue',
-      link: '/tax-forms'
-    },
-    {
-      title: 'Estimated Tax Due',
-      value: getTaxDueAmount(),
-      subtitle: getTaxDueSubtitle(),
-      icon: BarChart3,
-      color: getTaxDueAmount().includes('-') ? 'green' : 'red',
-      link: '/tax-forms'
-    },
-    {
-      title: 'Filing Deadline',
-      value: 'Sep 30, 2025',
-      subtitle: 'Tax Year 2025-26',
-      icon: Calendar,
-      color: 'orange',
-      link: '/tax-forms'
-    },
-    {
-      title: 'Return Status',
-      value: getReturnStatus(),
-      subtitle: getReturnSubtitle(),
-      icon: CheckCircle,
-      color: taxReturn?.filing_status === 'submitted' ? 'green' : 'purple',
-      link: '/tax-forms'
-    }
+  const quickLinks = [
+    { to: '/income-tax',       icon: FileText,   color: '#28396C', bg: '#EAE6BC', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
+    { to: '/wealth-statement', icon: BarChart3,   color: '#3d6020', bg: '#F0FFC2', label: 'Wealth Statement',   desc: 'Assets, liabilities and reconciliation' },
+    { to: '/reports',          icon: TrendingUp,  color: '#4a7a2a', bg: '#F0FFC2', label: 'Tax Summary Report', desc: 'View computed tax and download' },
+    { to: '/settings',         icon: Settings,    color: '#5e6b7c', bg: '#f0f2f5', label: 'Account Settings',   desc: 'Profile and preferences' },
   ];
 
-  const getColorClasses = (color) => {
-    const colors = {
-      blue: 'bg-blue-50 text-blue-600 border-blue-200',
-      green: 'bg-green-50 text-green-600 border-green-200',
-      red: 'bg-red-50 text-red-600 border-red-200',
-      orange: 'bg-orange-50 text-orange-600 border-orange-200',
-      purple: 'bg-purple-50 text-purple-600 border-purple-200'
-    };
-    return colors[color] || colors.blue;
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
+    <div className="dash-root" style={{ maxWidth: 1080, margin: '0 auto' }}>
+      <Styles />
+
+      {/* ── Greeting banner ── */}
+      <div style={{
+        background: '#28396C',
+        backgroundImage: 'radial-gradient(ellipse at 80% 0%, rgba(181,225,139,0.12) 0%, transparent 55%)',
+        borderRadius: 20, padding: '28px 32px', marginBottom: 24,
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.04,
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }} />
+        <svg style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', opacity: 0.05 }} width="120" height="120" viewBox="0 0 120 120" fill="none">
+          <rect x="60" y="4" width="78" height="78" rx="3" transform="rotate(45 60 60)" stroke="white" strokeWidth="1.5"/>
+          <rect x="60" y="20" width="50" height="50" rx="3" transform="rotate(45 60 60)" stroke="white" strokeWidth="1.5"/>
+        </svg>
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, {user?.name}!
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: 600, marginBottom: 4 }}>{getGreeting()}</p>
+            <h1 className="dash-display" style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.025em', marginBottom: 8 }}>
+              {firstName}
             </h1>
-            <p className="text-gray-600 mt-1">
-              Tax Year 2025-26 • Pakistani Tax Advisory System
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Your Role</div>
-            <div className="font-medium text-gray-900 capitalize">
-              {user?.role?.replace('_', ' ')}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Tax Year 2025-26</span>
+              <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: filingStatus === 'submitted' ? '#B5E18B' : 'rgba(255,255,255,0.5)', textTransform: 'capitalize' }}>{filingStatus}</span>
             </div>
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {[
+              { value: daysLeft, label: 'days left' },
+              { value: `${completedCount}/${totalSteps}`, label: 'forms done' },
+            ].map(({ value, label }) => (
+              <div key={label} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '12px 18px', textAlign: 'center' }}>
+                <p className="dash-display" style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{value}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginTop: 3 }}>{label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Link
-              key={index}
-              to={stat.link}
-              className={`
-                block p-6 rounded-lg border-2 transition-all duration-200 hover:shadow-md
-                ${getColorClasses(stat.color)}
-              `}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <Icon className="w-8 h-8" />
-                <div className="text-right">
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                </div>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{stat.title}</h3>
-              <p className="text-sm text-gray-600">{stat.subtitle}</p>
-            </Link>
-          );
-        })}
-      </div>
+      {/* ── Main grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 20, marginBottom: 20 }}>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Tax Return Progress */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Tax Return Progress</h2>
-          
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>Overall Progress</span>
-              <span>{completionPercentage}%</span>
+        {/* Progress card */}
+        <div className="dash-card" style={{ padding: '24px 26px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <h2 className="dash-display" style={{ fontSize: 17, fontWeight: 700, color: '#1e2a4a', letterSpacing: '-0.02em' }}>Return progress</h2>
+              <p style={{ fontSize: 13, color: '#4a5575', fontWeight: 500, marginTop: 2 }}>
+                {completedCount === 0 ? 'Start filling your forms below' : `${totalSteps - completedCount} section${totalSteps - completedCount !== 1 ? 's' : ''} remaining`}
+              </p>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${completionPercentage}%` }}
-              />
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CircularProgress pct={pct} />
+              <div style={{ position: 'absolute', textAlign: 'center' }}>
+                <p className="dash-display" style={{ fontSize: 17, fontWeight: 800, color: '#28396C', lineHeight: 1 }}>{pct}%</p>
+              </div>
             </div>
           </div>
 
-          {/* Recent Steps */}
-          <div className="space-y-3">
-            {FORM_STEPS.slice(0, 3).map((step) => {
-              const isCompleted = completedSteps.has(step.id);
+          <div className="progress-track" style={{ marginBottom: 20 }}>
+            <div className="progress-fill" style={{ width: `${pct}%` }} />
+          </div>
+
+          <div>
+            {FORM_STEPS.slice(0, 6).map(step => {
+              const done = completedSteps.has(step.id);
               return (
-                <div key={step.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-lg">{step.icon}</div>
+                <div key={step.id} className="form-row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>{step.icon}</span>
                     <div>
-                      <div className="font-medium text-gray-900">{step.title}</div>
-                      <div className="text-sm text-gray-600">{step.description}</div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a' }}>{step.title}</p>
+                      <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500 }}>{step.description}</p>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
-                    {isCompleted ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <Clock className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
+                  {done
+                    ? <CheckCircle size={16} color="#4a7a2a" />
+                    : <Clock size={15} color="#d1d5db" />
+                  }
                 </div>
               );
             })}
+            {FORM_STEPS.length > 6 && (
+              <div style={{ paddingTop: 10, textAlign: 'center' }}>
+                <Link to="/income-tax" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textDecoration: 'none' }}>
+                  + {FORM_STEPS.length - 6} more forms →
+                </Link>
+              </div>
+            )}
           </div>
 
-          <div className="mt-6">
-            <Link
-              to="/tax-forms"
-              className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors text-center block"
-            >
-              Continue Tax Return
+          <div style={{ marginTop: 20 }}>
+            <Link to={nextIncomplete ? '/income-tax' : '/reports'} className="cta-btn" style={{ width: '100%', justifyContent: 'center' }}>
+              {completedCount === 0 ? 'Start your return' : nextIncomplete ? `Continue — ${nextIncomplete.title}` : 'View tax summary'}
+              <ArrowRight size={15} />
             </Link>
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h2>
-          
-          <div className="space-y-3">
-            <Link
-              to="/tax-forms"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <FileText className="w-5 h-5 text-primary-600" />
-              <div>
-                <div className="font-medium text-gray-900">Tax Forms</div>
-                <div className="text-sm text-gray-600">Complete your tax return</div>
-              </div>
-            </Link>
-            
-            <Link
-              to="/reports"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <BarChart3 className="w-5 h-5 text-green-600" />
-              <div>
-                <div className="font-medium text-gray-900">Reports</div>
-                <div className="text-sm text-gray-600">View tax calculations and reports</div>
-              </div>
-            </Link>
-            
-            <Link
-              to="/settings"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <div>
-                <div className="font-medium text-gray-900">Settings</div>
-                <div className="text-sm text-gray-600">Manage your account settings</div>
-              </div>
-            </Link>
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {['admin', 'super_admin'].includes(user?.role) && (
-              <Link
-                to="/admin"
-                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <AlertCircle className="w-5 h-5 text-purple-600" />
-                <div>
-                  <div className="font-medium text-gray-900">Admin Panel</div>
-                  <div className="text-sm text-gray-600">System administration</div>
-                </div>
-              </Link>
+          {/* Tax estimate */}
+          <div className="dash-card" style={{ padding: '20px 22px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Estimated tax</p>
+            <p className="dash-display" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: taxDue.color, marginBottom: 4 }}>{taxDue.label}</p>
+            <p style={{ fontSize: 13, color: '#4a5575', fontWeight: 500 }}>{taxDue.note}</p>
+          </div>
+
+          {/* Deadline */}
+          <div className="dash-card" style={{ padding: '20px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+              <Calendar size={13} color="#7a8890" />
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filing deadline</p>
+            </div>
+            <p className="dash-display" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.025em', color: deadlineColor, marginBottom: 3 }}>Sep 30, 2026</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#4a5575' }}>
+              {daysLeft > 0 ? `${daysLeft} days from today` : 'Deadline passed'}
+            </p>
+            {daysLeft < 90 && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, background: daysLeft < 30 ? '#fdf2f2' : '#F0FFC2', borderRadius: 8, padding: '6px 10px' }}>
+                <AlertCircle size={13} color={daysLeft < 30 ? '#c0392b' : '#4a7a2a'} />
+                <p style={{ fontSize: 12, fontWeight: 700, color: daysLeft < 30 ? '#c0392b' : '#4a7a2a' }}>
+                  {daysLeft < 30 ? 'File soon — penalty applies' : 'Less than 3 months left'}
+                </p>
+              </div>
             )}
           </div>
+
+          {/* Next step */}
+          {nextIncomplete && (
+            <div style={{ background: '#F0FFC2', border: '1.5px solid #c0da94', borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Zap size={13} color="#3d6020" />
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#3d6020', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Up next</p>
+              </div>
+              <p className="dash-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2a4a', marginBottom: 3 }}>{nextIncomplete.title}</p>
+              <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 12 }}>{nextIncomplete.description}</p>
+              <Link to="/income-tax" className="cta-btn" style={{ fontSize: 13, padding: '9px 16px' }}>
+                Open form <ChevronRight size={14} />
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Important Notices */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-6 h-6 text-yellow-600 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-yellow-900 mb-2">Important Reminders</h3>
-            <ul className="text-sm text-yellow-800 space-y-1">
-              <li>• Tax return filing deadline: September 30, 2025</li>
-              <li>• Ensure all supporting documents are available</li>
-              <li>• Review all information carefully before submission</li>
-              <li>• Keep backup copies of your submitted return</li>
-            </ul>
-          </div>
+      {/* Quick links */}
+      <div className="dash-card" style={{ padding: '22px 24px', marginBottom: 20 }}>
+        <h2 className="dash-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2a4a', letterSpacing: '-0.02em', marginBottom: 16 }}>Quick access</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {quickLinks.map(({ to, icon: Icon, color, bg, label, desc }) => (
+            <Link key={to} to={to} className="dash-link-card">
+              <div style={{ width: 38, height: 38, background: bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={17} color={color} />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2a4a' }}>{label}</p>
+                <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500 }}>{desc}</p>
+              </div>
+            </Link>
+          ))}
+          {['admin', 'super_admin'].includes(user?.role) && (
+            <Link to="/admin" className="dash-link-card">
+              <div style={{ width: 38, height: 38, background: '#fdf2f2', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertCircle size={17} color="#c0392b" />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2a4a' }}>Admin Panel</p>
+                <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500 }}>User management and system</p>
+              </div>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Reminder strip */}
+      <div style={{ background: '#F0FFC2', border: '1px solid #c0da94', borderRadius: 14, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <AlertCircle size={18} color="#4a7a2a" style={{ flexShrink: 0, marginTop: 1 }} />
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#2d4a10', marginBottom: 4 }}>Before you submit</p>
+          <p style={{ fontSize: 13, color: '#3d6020', fontWeight: 500, lineHeight: 1.6 }}>
+            Review all entered data carefully · Keep supporting documents ready · Verify CNIC and NTN · Deadline for Tax Year 2025-26 is <strong>September 30, 2026</strong>.
+          </p>
         </div>
       </div>
     </div>

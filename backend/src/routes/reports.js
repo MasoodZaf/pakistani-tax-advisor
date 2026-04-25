@@ -159,16 +159,17 @@ router.get('/income-analysis/:taxYear', auth, async (req, res) => {
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 
-    // Get capital gains data
+    // Get capital gains data (canonical column names are singular: total_capital_gain)
     const capitalGainsData = await pool.query(`
-      SELECT 
+      SELECT
         property_1_year,
         property_2_3_years,
         property_4_plus_years,
         securities,
         other_capital_gains,
-        total_capital_gains
-      FROM capital_gain_forms 
+        total_capital_gain,
+        total_capital_gain_tax
+      FROM capital_gain_forms
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 
@@ -418,7 +419,7 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
     const taxYear = taxReturnResult.rows[0].tax_year;
 
     // Get the corrected tax calculation summary using TaxCalculator
-    const summaryResponse = await axios.get(`http://localhost:3001/api/reports/tax-calculation-summary/${taxYear}`, {
+    const summaryResponse = await axios.get(`http://localhost:${process.env.PORT || 3001}/api/reports/tax-calculation-summary/${taxYear}`, {
       headers: {
         Authorization: req.headers.authorization
       }
@@ -510,10 +511,14 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
     // Generate HTML for PDF
     const htmlContent = generateFBRHTML(taxData);
 
-    // Create PDF using Puppeteer
+    // Create PDF using Puppeteer. The container uses a distro-installed
+    // Chromium at /usr/bin/chromium exposed via PUPPETEER_EXECUTABLE_PATH
+    // (set in the Dockerfile). Locally the env var is unset and Puppeteer's
+    // bundled Chromium is used.
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();

@@ -1,0 +1,1280 @@
+{
+  "version": "2026-04-24T18:56:02Z",
+  "generated_at": "2026-04-24T18:56:02.440Z",
+  "generator": "exportRatesBundle.js on node",
+  "tax_years": [
+    {
+      "tax_year": "2024-25",
+      "slabs": [
+        {
+          "slab_type": "individual",
+          "slab_order": 1,
+          "slab_name": "Slab 1",
+          "min_income": 0,
+          "max_income": 600000,
+          "tax_rate": 0,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 2,
+          "slab_name": "Slab 2",
+          "min_income": 600001,
+          "max_income": 1200000,
+          "tax_rate": 0.05,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 3,
+          "slab_name": "Slab 3",
+          "min_income": 1200001,
+          "max_income": 2200000,
+          "tax_rate": 0.15,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 4,
+          "slab_name": "Slab 4",
+          "min_income": 2200001,
+          "max_income": 3200000,
+          "tax_rate": 0.25,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 5,
+          "slab_name": "Slab 5",
+          "min_income": 3200001,
+          "max_income": 4100000,
+          "tax_rate": 0.3,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 6,
+          "slab_name": "Slab 6",
+          "min_income": 4100001,
+          "max_income": null,
+          "tax_rate": 0.35,
+          "fixed_amount": 0
+        }
+      ],
+      "rates": [
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "donation_u61",
+          "tax_rate": 0.3,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Charitable donation cap u/s 61: 30% of taxable income",
+          "fbr_reference": "ITO 2001 s.61"
+        },
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "donation_u61_associate",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Donation to associate u/s 61: 15% of taxable income",
+          "fbr_reference": "ITO 2001 s.61 proviso"
+        },
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "pension_u63",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Voluntary pension contribution u/s 63: 20% of taxable income",
+          "fbr_reference": "ITO 2001 s.63"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_max_children",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 2,
+          "description": "Education expense deduction: maximum 2 children",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_max_taxable_income",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 1500000,
+          "description": "Education expense deduction requires taxable income up to Rs 1.5M",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_per_child_cap",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 60000,
+          "description": "Education expense: Rs 60,000 per child (max 2 children)",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_max_taxable_income",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 1500000,
+          "description": "Prof. expenses (POS) deduction requires taxable income up to Rs 1.5M",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_pos_amount_pct",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_taxable_income_pct",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "behbood_certificate_max_rate",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Behbood certificate profit: tax not to exceed 5% of profit",
+          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "capital_gain_immovable_ex_serv_50",
+          "tax_rate": 0.5,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Capital gain on immovable property: 50% reduction (ex-serviceman, War wounded)",
+          "fbr_reference": "2nd Sched Pt III cl.9A"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "capital_gain_immovable_ex_serv_75",
+          "tax_rate": 0.75,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Capital gain on immovable property: 75% reduction (ex-serviceman, War wounded)",
+          "fbr_reference": "2nd Sched Pt III cl.9A"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "teacher_researcher",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Full-time teacher/researcher: 25% tax reduction on salary tax",
+          "fbr_reference": "ITO 2001 s.100C"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_1",
+          "tax_rate": 0.01,
+          "min_amount": 150000001,
+          "max_amount": 200000000,
+          "fixed_amount": 0,
+          "description": "1% on income 150M-200M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_2",
+          "tax_rate": 0.02,
+          "min_amount": 200000001,
+          "max_amount": 250000000,
+          "fixed_amount": 0,
+          "description": "2% on income 200M-250M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_3",
+          "tax_rate": 0.03,
+          "min_amount": 250000001,
+          "max_amount": 300000000,
+          "fixed_amount": 0,
+          "description": "3% on income 250M-300M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_4",
+          "tax_rate": 0.04,
+          "min_amount": 300000001,
+          "max_amount": 350000000,
+          "fixed_amount": 0,
+          "description": "4% on income 300M-350M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_5",
+          "tax_rate": 0.06,
+          "min_amount": 350000001,
+          "max_amount": 400000000,
+          "fixed_amount": 0,
+          "description": "6% on income 350M-400M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_6",
+          "tax_rate": 0.08,
+          "min_amount": 400000001,
+          "max_amount": 500000000,
+          "fixed_amount": 0,
+          "description": "8% on income 400M-500M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_7",
+          "tax_rate": 0.1,
+          "min_amount": 500000001,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "10% on income > 500M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "surcharge",
+          "rate_category": "salaried_above_10m",
+          "tax_rate": 0.1,
+          "min_amount": 10000000,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Surcharge 10% for salaried above Rs 10M (pre-FA-2025)",
+          "fbr_reference": "Finance Act 2024"
+        }
+      ]
+    },
+    {
+      "tax_year": "2025-26",
+      "slabs": [
+        {
+          "slab_type": "individual",
+          "slab_order": 1,
+          "slab_name": "Up to 600K",
+          "min_income": 0,
+          "max_income": 600000,
+          "tax_rate": 0,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 2,
+          "slab_name": "Slab 2 — 1%",
+          "min_income": 600001,
+          "max_income": 1200000,
+          "tax_rate": 0.01,
+          "fixed_amount": 0
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 3,
+          "slab_name": "Slab 3 — 11%",
+          "min_income": 1200001,
+          "max_income": 2200000,
+          "tax_rate": 0.11,
+          "fixed_amount": 30000
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 4,
+          "slab_name": "Slab 4 — 23%",
+          "min_income": 2200001,
+          "max_income": 3200000,
+          "tax_rate": 0.23,
+          "fixed_amount": 180000
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 5,
+          "slab_name": "3.2M to 4.1M",
+          "min_income": 3200001,
+          "max_income": 4100000,
+          "tax_rate": 0.3,
+          "fixed_amount": 430000
+        },
+        {
+          "slab_type": "individual",
+          "slab_order": 6,
+          "slab_name": "Above 4.1M",
+          "min_income": 4100001,
+          "max_income": null,
+          "tax_rate": 0.35,
+          "fixed_amount": 700000
+        }
+      ],
+      "rates": [
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_1_year",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property u/s 37(1A) — holding ≤ 1 year",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_2_years",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding 1-2 years",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_3_years",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding 2-3 years",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_4_years",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding 3-4 years",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_5_years",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding 4-5 years",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_6_years",
+          "tax_rate": 0.025,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding 5-6 years",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_over_6_years",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property — holding > 6 years (exempt)",
+          "fbr_reference": "ITO 2001 s.37(1A)"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "property_atl_post_july_2024",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "ATL Filer property gains post July 1, 2024",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "property_non_atl_post_july_2024",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Non-ATL Filer property gains post July 1, 2024",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_12_5_percent_before_july_2022",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Securities acquired before 1-Jul-2022 @ 12.5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_15_percent",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Securities u/s 37A @ 15%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_37a_7_5_percent",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Securities u/s 37A @ 7.5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_before_july_2013",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Securities acquired before 1-Jul-2013 @ 5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_mutual_funds_10",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Mutual Funds/REIT 10%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_mutual_funds_10_percent",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Securities / mutual funds / REIT @ 10%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_mutual_funds_12_5",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Stock Funds 12.5%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_mutual_funds_12_5_percent",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Stock-fund mutual funds / REIT @ 12.5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_other_25_percent",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Non-stock-fund mutual funds / REIT @ 25%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_pmex",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "PMEX/Cash Settled Securities",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_pmex_settled",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "PMEX / cash-settled securities @ 5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_pre_2013",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Securities acquired before July 1, 2013",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "securities_standard",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Standard Securities 7.5%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+        },
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "donation_u61",
+          "tax_rate": 0.3,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Charitable donation cap u/s 61: 30% of taxable income",
+          "fbr_reference": "ITO 2001 s.61"
+        },
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "donation_u61_associate",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Donation to associate u/s 61: 15% of taxable income",
+          "fbr_reference": "ITO 2001 s.61 proviso"
+        },
+        {
+          "rate_type": "credit_cap",
+          "rate_category": "pension_u63",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Voluntary pension contribution u/s 63: 20% of taxable income",
+          "fbr_reference": "ITO 2001 s.63"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_max_children",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 2,
+          "description": "Education expense deduction: maximum 2 children",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_max_taxable_income",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 1500000,
+          "description": "Education expense deduction requires taxable income up to Rs 1.5M",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_per_child_cap",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 60000,
+          "description": "Education expense: Rs 60,000 per child (max 2 children)",
+          "fbr_reference": "ITO 2001 s.60D"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_max_taxable_income",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 1500000,
+          "description": "Prof. expenses (POS) deduction requires taxable income up to Rs 1.5M",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_pos_amount_pct",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "prof_expenses_taxable_income_pct",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
+          "fbr_reference": "ITO 2001 s.60C"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "bonus_shares",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Bonus shares",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 236Z"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "capital_gain_securities_less_12m",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "CGT on securities held < 12 months u/s 37A — 15%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "capital_gain_securities_over_12m",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "CGT on securities held ≥ 12 months u/s 37A — 12.5%",
+          "fbr_reference": "ITO 2001 s.37A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "commission_agents",
+          "tax_rate": 0.12,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Commission to stock-exchange members / agents u/s 233 — 12%",
+          "fbr_reference": "ITO 2001 s.233"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_ipp_7_5pc",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend from IPP shares — 7.5%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_ipp_shares",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Dividend IPP Shares",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_listed_companies",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend from listed companies u/s 150 — 15% final tax",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_mutual_funds_debt",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Mutual Funds with 50%+ debt",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_other",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend from unlisted / other companies u/s 150 — 25% final tax",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_other_spv",
+          "tax_rate": 0.35,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Dividend from other SPV",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_other_spv_35pc",
+          "tax_rate": 0.35,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend from other SPV (biomass/bagasse IPP) — 35%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_regular_15pc",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Regular dividend (< 50% income from profit on debt) — 15%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_regular_25pc",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Mutual funds / REITs with ≥ 50% income from profit on debt — 25%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_reit_spv",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Dividend from REIT SPV",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_reit_spv_0pc",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend from REIT/SPV (pass-through to CPPAG) — 0%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_specie_15pc",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Dividend in specie — 15%",
+          "fbr_reference": "ITO 2001 s.150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "dividend_standard",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Standard Dividend Rate",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "lottery_crossword_winnings",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Lottery/raffle/quiz u/s 156A — 20% final tax",
+          "fbr_reference": "ITO 2001 s.156A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "prize_bond",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Prize on Bond/Puzzle",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 156"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "prize_bond_winnings",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Prize bonds u/s 156 — 15% final tax",
+          "fbr_reference": "ITO 2001 s.156"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "prize_lottery",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Prize Lottery/Raffle",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 156"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "profit_debt_151_up_to_5m",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 5000000,
+          "fixed_amount": 0,
+          "description": "Profit on debt u/s 151 (individual, up to Rs 5M) — 20% FA 2025",
+          "fbr_reference": "ITO 2001 s.151"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "profit_debt_15_final",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 5000000,
+          "fixed_amount": 0,
+          "description": "Profit on debt u/s 151, final tax (individual) — FA 2025: 20%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 7B"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "profit_defence_savings",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Defence Savings Certificates u/s 151(1)(b) — 10% final WHT",
+          "fbr_reference": "ITO 2001 s.151"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "profit_govt_securities",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "NSS / Post Office profit u/s 151(1)(a) — 10% final WHT",
+          "fbr_reference": "ITO 2001 s.151"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_1m_to_5m",
+          "tax_rate": 0.125,
+          "min_amount": 1000000,
+          "max_amount": 5000000,
+          "fixed_amount": 0,
+          "description": "Sukook Rs 1M to 5M",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_individual_1m_to_5m",
+          "tax_rate": 0.125,
+          "min_amount": 1000001,
+          "max_amount": 5000000,
+          "fixed_amount": 0,
+          "description": "Sukook returns (individual, Rs 1-5M) — 12.5%",
+          "fbr_reference": "ITO 2001 s.151A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_individual_above_5m",
+          "tax_rate": 0.25,
+          "min_amount": 5000001,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Sukook returns (individual, > Rs 5M) — 25% minimum tax",
+          "fbr_reference": "ITO 2001 s.151A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_individual_up_to_1m",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 1000000,
+          "fixed_amount": 0,
+          "description": "Sukook returns (individual, up to Rs 1M) — 10%",
+          "fbr_reference": "ITO 2001 s.151A"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_return_25",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Return on Sukook 25%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+        },
+        {
+          "rate_type": "final_tax",
+          "rate_category": "sukook_up_to_1m",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 1000000,
+          "fixed_amount": 0,
+          "description": "Sukook up to Rs 1M",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "behbood_certificate_max_rate",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Behbood certificate profit: tax not to exceed 5% of profit",
+          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "capital_gain_immovable_ex_serv_50",
+          "tax_rate": 0.5,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Capital gain on immovable property: 50% reduction (ex-serviceman, War wounded)",
+          "fbr_reference": "2nd Sched Pt III cl.9A"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "capital_gain_immovable_ex_serv_75",
+          "tax_rate": 0.75,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Capital gain on immovable property: 75% reduction (ex-serviceman, War wounded)",
+          "fbr_reference": "2nd Sched Pt III cl.9A"
+        },
+        {
+          "rate_type": "reduction",
+          "rate_category": "teacher_researcher",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "Full-time teacher/researcher: 25% tax reduction on salary tax",
+          "fbr_reference": "ITO 2001 s.100C"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_1",
+          "tax_rate": 0.01,
+          "min_amount": 150000001,
+          "max_amount": 200000000,
+          "fixed_amount": 0,
+          "description": "1% on income 150M-200M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_2",
+          "tax_rate": 0.02,
+          "min_amount": 200000001,
+          "max_amount": 250000000,
+          "fixed_amount": 0,
+          "description": "2% on income 200M-250M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_3",
+          "tax_rate": 0.03,
+          "min_amount": 250000001,
+          "max_amount": 300000000,
+          "fixed_amount": 0,
+          "description": "3% on income 250M-300M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_4",
+          "tax_rate": 0.04,
+          "min_amount": 300000001,
+          "max_amount": 350000000,
+          "fixed_amount": 0,
+          "description": "4% on income 300M-350M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_5",
+          "tax_rate": 0.06,
+          "min_amount": 350000001,
+          "max_amount": 400000000,
+          "fixed_amount": 0,
+          "description": "6% on income 350M-400M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_6",
+          "tax_rate": 0.08,
+          "min_amount": 400000001,
+          "max_amount": 500000000,
+          "fixed_amount": 0,
+          "description": "8% on income 400M-500M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "super_tax",
+          "rate_category": "tier_7",
+          "tax_rate": 0.1,
+          "min_amount": 500000001,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "10% on income > 500M",
+          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+        },
+        {
+          "rate_type": "surcharge",
+          "rate_category": "salaried_above_10m",
+          "tax_rate": 0.09,
+          "min_amount": 10000000,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Surcharge for salaried individuals with income > 10M",
+          "fbr_reference": "Finance Act 2024, Section 4B"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "cellphone_bill",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Cellphone Bill",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 236"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "directorship_fee",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Directorship Fee u/s 149(3)",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 149"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "electricity_bill_235",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Electricity bill (domestic) u/s 235 — 7.5%",
+          "fbr_reference": "ITO 2001 s.235"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "electricity_domestic",
+          "tax_rate": 0.075,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Electricity Bill Domestic Consumer",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 235"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "functions_gatherings_236cb_atl",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Functions/gatherings u/s 236CB — filer 10%",
+          "fbr_reference": "ITO 2001 s.236CB"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "functions_gatherings_236cb_nonatl",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Functions/gatherings u/s 236CB — non-filer 20%",
+          "fbr_reference": "ITO 2001 s.236CB"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "internet_bill_236_1d",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Internet bill u/s 236(1)(d) — 15%",
+          "fbr_reference": "ITO 2001 s.236"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "motor_vehicle_leasing_231b1a",
+          "tax_rate": 0.04,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Leasing of motor vehicle u/s 231B(1A) — 4%",
+          "fbr_reference": "ITO 2001 s.231B(1A)"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "motor_vehicle_transfer",
+          "tax_rate": 0.03,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Motor Vehicle Transfer Fee",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 231B"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "motor_vehicle_transfer_231b2",
+          "tax_rate": 0.03,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Motor vehicle transfer fee u/s 231B(2) — 3%",
+          "fbr_reference": "ITO 2001 s.231B(2)"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "phone_unit_236_1c",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Phone unit u/s 236(1)(c) — 15%",
+          "fbr_reference": "ITO 2001 s.236"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "prepaid_internet_card_236_1e",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Prepaid internet card u/s 236(1)(e) — 15%",
+          "fbr_reference": "ITO 2001 s.236"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "prepaid_telephone_card_236_1b",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Prepaid telephone card u/s 236(1)(b) — 15%",
+          "fbr_reference": "ITO 2001 s.236"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "profit_debt_15",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Profit on Debt u/s 151 @15%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "profit_debt_151_20",
+          "tax_rate": 0.2,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Profit on debt u/s 151 — FA 2025 raised from 15% to 20%",
+          "fbr_reference": "ITO 2001 s.151"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "rent_section_155",
+          "tax_rate": 0.1,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Rent received Section 155",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 155"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "rent_section_155_individual",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Rent deduction u/s 155 (individual) — 15%",
+          "fbr_reference": "ITO 2001 s.155"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "sukook_12_5",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999.99,
+          "fixed_amount": 0,
+          "description": "Sukook u/s 151A @12.5%",
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151A"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "sukook_151a",
+          "tax_rate": 0.125,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Sukook profit u/s 151A — 12.5%",
+          "fbr_reference": "ITO 2001 s.151A"
+        },
+        {
+          "rate_type": "withholding",
+          "rate_category": "telephone_bill_236_1e",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Telephone bill u/s 236(1)(e) — 15%",
+          "fbr_reference": "ITO 2001 s.236"
+        }
+      ]
+    }
+  ],
+  "checksum": "fb7d2f1c2953b5f7a3ff925c737d9bb4f5a0936396216e7a962d716b4e15824d"
+}

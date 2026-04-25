@@ -1,64 +1,14 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const auth = require('../middleware/auth'); // Standardized JWT middleware
 
 const router = express.Router();
 
-// Middleware to verify session token authentication
-const requireAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'No token provided'
-      });
-    }
-
-    const sessionToken = authHeader.substring(7);
-
-    // Verify session token exists and is valid
-    const sessionResult = await pool.query(`
-      SELECT us.user_id, us.user_email, u.id, u.email, u.name, u.user_type, u.role, u.is_active
-      FROM user_sessions us
-      JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
-    `, [sessionToken]);
-
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({
-        error: 'Invalid session',
-        message: 'Session expired or invalid'
-      });
-    }
-
-    const sessionData = sessionResult.rows[0];
-    req.user = {
-      id: sessionData.id,
-      email: sessionData.email,
-      name: sessionData.name,
-      user_type: sessionData.user_type,
-      role: sessionData.role,
-      is_active: sessionData.is_active
-    };
-    req.userId = sessionData.user_id;
-    req.userEmail = sessionData.user_email;
-    next();
-
-  } catch (error) {
-    logger.error('Auth middleware error:', error);
-    res.status(500).json({
-      error: 'Authentication error',
-      message: 'Internal server error during authentication'
-    });
-  }
-};
-
 // GET personal information for a user and tax year
-router.get('/:taxYear', requireAuth, async (req, res) => {
+router.get('/:taxYear', auth, async (req, res) => {
   try {
-    const { userId } = req;
+    const userId = req.user.id;
     const { taxYear } = req.params;
 
     const result = await pool.query(`
@@ -90,13 +40,13 @@ router.get('/:taxYear', requireAuth, async (req, res) => {
 });
 
 // POST/PUT personal information (create or update)
-router.post('/:taxYear', requireAuth, async (req, res) => {
+router.post('/:taxYear', auth, async (req, res) => {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const { userId } = req;
+    const userId = req.user.id;
     const { taxYear } = req.params;
     const {
       full_name,
@@ -206,9 +156,9 @@ router.post('/:taxYear', requireAuth, async (req, res) => {
 });
 
 // DELETE personal information
-router.delete('/:taxYear', requireAuth, async (req, res) => {
+router.delete('/:taxYear', auth, async (req, res) => {
   try {
-    const { userId } = req;
+    const userId = req.user.id;
     const { taxYear } = req.params;
 
     const result = await pool.query(`

@@ -1,34 +1,76 @@
 const winston = require('winston');
+const DailyRotateFile = require('winston-daily-rotate-file');
 const path = require('path');
 
-// Define log format
+const isProd = process.env.NODE_ENV === 'production';
+
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.json()
 );
 
-// Create logger instance
-const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  format: logFormat,
-  transports: [
-    // Write all logs to console
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    }),
-    // Write all logs with level 'info' and below to combined.log
-    new winston.transports.File({
-      filename: path.join(__dirname, '../../logs/combined.log')
-    }),
-    // Write all logs with level 'error' and below to error.log
-    new winston.transports.File({
-      filename: path.join(__dirname, '../../logs/error.log'),
-      level: 'error'
-    })
-  ]
+// Redact keys that sometimes leak into error objects / request bodies. Defensive —
+// code shouldn't be logging these, but belt-and-suspenders.
+const redactSensitive = winston.format((info) => {
+  const SENSITIVE_KEYS = new Set([
+    'password', 'password_hash', 'newPassword', 'currentPassword',
+    'token', 'jwt', 'authorization', 'Authorization', 'cookie', 'Cookie',
+  ]);
+  const walk = (obj) => {
+    if (!obj || typeof obj !== 'object') return;
+    for (const k of Object.keys(obj)) {
+      if (SENSITIVE_KEYS.has(k)) {
+        obj[k] = '[REDACTED]';
+      } else if (typeof obj[k] === 'object') {
+        walk(obj[k]);
+      }
+    }
+  };
+  walk(info);
+  return info;
+})();
+
+const consoleTransport = new winston.transports.Console({
+  format: winston.format.combine(
+    redactSensitive,
+    isProd ? winston.format.json() : winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  ),
 });
 
-module.exports = logger; 
+// Rotating file transports — keep disk from growing unbounded.
+//   combined.log — all levels; 20 MB/file, 14 days retention, gzip on rotation
+//   error.log    — errors only; 20 MB/file, 30 days retention, gzip on rotation
+const logDir = path.join(__dirname, '../../logs');
+
+const combinedRotate = new DailyRotateFile({
+  dirname: logDir,
+  filename: 'combined-%DATE%.log',
+  datePattern: 'YYYY-MM-DD',
+  zippedArchive: true,
+  maxSize: '20m',
+  maxFiles: '14d',
+  level: 'info',
+  format: winston.format.combine(redactSensitive, logFormat),
+});
+
+const errorRotate = new DailyRotateFile({
+  dirname: logDir,
+  filename: 'error-%DATE%.log',
+  datePattern: 'YYYY-MM-DD',
+  zippedArchive: true,
+  maxSize: '20m',
+  maxFiles: '30d',
+  level: 'error',
+  format: winston.format.combine(redactSensitive, logFormat),
+});
+
+const logger = winston.createLogger({
+  level: isProd ? 'info' : 'debug',
+  format: logFormat,
+  transports: [consoleTransport, combinedRotate, errorRotate],
+});
+
+module.exports = logger;

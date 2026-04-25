@@ -1,0 +1,122 @@
+name: E2E smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'e2e/**'
+      - 'backend/**'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'e2e/**'
+      - 'backend/**'
+      - '.github/workflows/e2e.yml'
+
+jobs:
+  e2e:
+    name: Playwright smoke
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tax_advisor_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: tax_advisor_e2e
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tax_advisor_e2e?schema=public
+      JWT_SECRET: ci-e2e-jwt-secret-at-least-32-chars-long
+      NODE_ENV: test
+      E2E_API_URL: http://localhost:3001
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          npm ci
+
+      - name: Initialize schema + migrations + seeds
+        run: |
+          cd backend
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/0_init/migration.sql
+          for f in $(ls database/migrations/phase-*.sql | sort); do
+            echo "applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+            INSERT INTO tax_years (id, tax_year, is_current, is_active, start_date, end_date, description)
+            VALUES (gen_random_uuid(), '2025-26', true, true, '2025-07-01', '2026-06-30', 'TY 2025-26')
+            ON CONFLICT (tax_year) DO NOTHING;
+            INSERT INTO tax_slabs (id, tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, fixed_amount)
+            SELECT gen_random_uuid(), ty.id, v.name, v.ord, v.min, v.max, v.rate, 'individual', v.fixed
+            FROM tax_years ty, (VALUES
+              ('slab_1', 1, 0::numeric, 600000::numeric, 0::numeric, 0::numeric),
+              ('slab_2', 2, 600001, 1200000, 0.01, 0),
+              ('slab_3', 3, 1200001, 2200000, 0.11, 6000),
+              ('slab_4', 4, 2200001, 3200000, 0.23, 116000),
+              ('slab_5', 5, 3200001, 4100000, 0.30, 346000),
+              ('slab_6', 6, 4100001, NULL, 0.35, 616000)
+            ) AS v(name, ord, min, max, rate, fixed)
+            WHERE ty.tax_year = '2025-26';
+          "
+
+      - name: Boot backend
+        run: |
+          cd backend
+          nohup npm start > backend.log 2>&1 &
+          echo $! > backend.pid
+          # wait up to 30s for health
+          for i in {1..30}; do
+            if curl -sf http://localhost:3001/api/health >/dev/null; then echo "backend up"; break; fi
+            sleep 1
+          done
+
+      - name: Install e2e deps
+        run: |
+          cd e2e
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        env:
+          E2E_SKIP_WEBSERVER: '1'
+        run: |
+          cd e2e
+          npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
+      - name: Stop backend
+        if: always()
+        run: |
+          [ -f backend/backend.pid ] && kill $(cat backend/backend.pid) || true

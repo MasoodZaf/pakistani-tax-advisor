@@ -12,8 +12,12 @@ services:
       POSTGRES_DB: ${DB_NAME:-tax_advisor}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
+    # DO NOT expose the DB port on the host. The backend reaches it over the
+    # internal docker network (host=database, port=5432). If you need psql
+    # access from the host, use `docker compose exec database psql …`
+    # or bind to 127.0.0.1 explicitly ("127.0.0.1:5432:5432").
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrate-2025-26.sql:/docker-entrypoint-initdb.d/01-init.sql

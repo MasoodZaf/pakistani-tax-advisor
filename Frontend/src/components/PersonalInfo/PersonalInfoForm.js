@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTaxYear } from '../../contexts/TaxYearContext';
 
 const PersonalInfoForm = () => {
   const { user } = useAuth();
+  const { currentTaxYear } = useTaxYear();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [currentTaxYear, setCurrentTaxYear] = useState('2025-26');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -59,7 +60,6 @@ const PersonalInfoForm = () => {
         }));
       }
     } catch (error) {
-      console.error('Error fetching personal info:', error);
       // If error, assume no data exists and show form
       setFormData(prev => ({
         ...prev,
@@ -143,7 +143,6 @@ const PersonalInfoForm = () => {
         toast.error(response.data.message || 'Failed to save personal information');
       }
     } catch (error) {
-      console.error('Error saving personal info:', error);
       toast.error(error.response?.data?.message || 'Failed to save personal information');
     } finally {
       setSaving(false);

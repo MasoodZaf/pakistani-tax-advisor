@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../../../contexts/AuthContext';
 import { 
   Settings as SettingsIcon, 
@@ -62,23 +63,10 @@ const SystemSettings = () => {
 
   const fetchSystemSettings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/admin/system-settings`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        setSettings(result.data);
-      } else {
-        toast.error('Failed to load system settings');
-      }
-    } catch (error) {
-      console.error('Error fetching system settings:', error);
-      toast.error('Error loading system settings');
+      const response = await axios.get('/api/admin/system-settings');
+      setSettings(response.data.data);
+    } catch {
+      toast.error('Failed to load system settings');
     } finally {
       setLoading(false);
     }
@@ -87,20 +75,10 @@ const SystemSettings = () => {
   const fetchSystemHealth = async () => {
     setLoadingHealth(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/admin/system-settings/health/status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setSystemHealth(result.data);
-      }
-    } catch (error) {
-      console.error('Error fetching system health:', error);
+      const response = await axios.get('/api/admin/system-settings/health/status');
+      setSystemHealth(response.data.data);
+    } catch {
+      // Health check failure is non-critical — no toast
     } finally {
       setLoadingHealth(false);
     }
@@ -129,32 +107,17 @@ const SystemSettings = () => {
       const setting = settings[category]?.find(s => s.setting_key === settingKey);
       if (!setting) return;
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/admin/system-settings/${settingKey}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          category: category,
-          setting_value: setting.setting_value,
-          data_type: setting.data_type,
-          description: setting.description,
-          is_public: setting.is_public || false
-        })
+      await axios.put(`/api/admin/system-settings/${settingKey}`, {
+        category,
+        setting_value: setting.setting_value,
+        data_type: setting.data_type,
+        description: setting.description,
+        is_public: setting.is_public || false,
       });
-
-      if (response.ok) {
-        toast.success('Setting saved successfully');
-        await fetchSystemSettings(); // Refresh to get updated timestamps
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to save setting');
-      }
+      toast.success('Setting saved successfully');
+      await fetchSystemSettings();
     } catch (error) {
-      console.error('Error saving setting:', error);
-      toast.error('Error saving setting');
+      toast.error(error.response?.data?.message || 'Failed to save setting');
     } finally {
       setSaving(false);
     }
@@ -167,26 +130,11 @@ const SystemSettings = () => {
 
     try {
       setSaving(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/admin/system-settings/reset-defaults', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ category })
-      });
-
-      if (response.ok) {
-        toast.success(`Settings reset to defaults successfully`);
-        await fetchSystemSettings();
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to reset settings');
-      }
+      await axios.post('/api/admin/system-settings/reset-defaults', { category });
+      toast.success('Settings reset to defaults successfully');
+      await fetchSystemSettings();
     } catch (error) {
-      console.error('Error resetting settings:', error);
-      toast.error('Error resetting settings');
+      toast.error(error.response?.data?.message || 'Failed to reset settings');
     } finally {
       setSaving(false);
     }

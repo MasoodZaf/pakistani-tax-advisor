@@ -406,34 +406,44 @@ class ExcelService {
 
   // Update form data in database
   async updateFormData(client, tableName, taxReturnId, userId, userEmail, taxYearId, taxYear, formData) {
-    const fields = Object.keys(formData);
-    if (fields.length === 0) return;
-
-    // Get list of generated columns for this table to skip them
-    const generatedColumnsResult = await client.query(`
-      SELECT column_name
+    // Fetch ALL columns for this table (schema, not request) and their generated-flag.
+    const columnsResult = await client.query(`
+      SELECT column_name, is_generated
       FROM information_schema.columns
-      WHERE table_name = $1 AND is_generated = 'ALWAYS'
+      WHERE table_schema = 'public' AND table_name = $1
     `, [tableName]);
 
-    const generatedColumns = new Set(generatedColumnsResult.rows.map(row => row.column_name));
+    if (columnsResult.rows.length === 0) {
+      logger.warn(`updateFormData: no columns found for table "${tableName}" — skipping`);
+      return;
+    }
 
-    // Filter out generated columns
-    const updateableFields = fields.filter(field => !generatedColumns.has(field));
+    const allColumns = new Set(columnsResult.rows.map((r) => r.column_name));
+    const generatedColumns = new Set(
+      columnsResult.rows.filter((r) => r.is_generated === 'ALWAYS').map((r) => r.column_name)
+    );
+
+    // Drop keys that (a) aren't real columns or (b) are generated.
+    const requestFields = Object.keys(formData);
+    const rejectedFields = requestFields.filter(
+      (f) => !allColumns.has(f) || generatedColumns.has(f)
+    );
+    if (rejectedFields.length > 0) {
+      logger.warn('excelService.updateFormData dropped unknown/generated keys', {
+        table: tableName,
+        count: rejectedFields.length,
+        sample: rejectedFields.slice(0, 5),
+      });
+    }
+    const updateableFields = requestFields.filter(
+      (f) => allColumns.has(f) && !generatedColumns.has(f)
+    );
 
     if (updateableFields.length === 0) return;
 
-    // Check if table has user_email and tax_year_id columns
-    const columnsResult = await client.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = $1 AND column_name IN ('user_email', 'tax_year_id', 'tax_year')
-    `, [tableName]);
-
-    const tableColumns = new Set(columnsResult.rows.map(row => row.column_name));
-    const hasUserEmail = tableColumns.has('user_email');
-    const hasTaxYearId = tableColumns.has('tax_year_id');
-    const hasTaxYear = tableColumns.has('tax_year');
+    const hasUserEmail = allColumns.has('user_email');
+    const hasTaxYearId = allColumns.has('tax_year_id');
+    const hasTaxYear = allColumns.has('tax_year');
 
     // First check if record exists
     const existingResult = await client.query(
@@ -548,7 +558,7 @@ class ExcelService {
           property_4_plus_years: { label: 'Property (4+ Years)', description: 'Property held for 4+ years', excelCell: 'B7' },
           securities: { label: 'Securities', description: 'Securities capital gains', excelCell: 'E17' },
           other_capital_gains: { label: 'Other Capital Gains', description: 'Other capital gains', excelCell: 'B18' },
-          total_capital_gains: { label: 'Total Capital Gains', description: 'Total capital gains (E19)', excelCell: 'E19', calculated: true }
+          total_capital_gain: { label: 'Total Capital Gains', description: 'Total capital gains (E19)', excelCell: 'E19', calculated: true }
         }
       },
       wealth_forms: {

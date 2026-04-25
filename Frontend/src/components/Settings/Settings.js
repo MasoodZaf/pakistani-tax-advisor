@@ -1,10 +1,29 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff } from 'lucide-react';
+import { useTaxForm } from '../../contexts/TaxFormContext';
+import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+/* ─── Income stream definitions (mirrors Onboarding) ─────────────────────── */
+const INCOME_STREAMS = [
+  { id: 'bank_profit',    icon: '🏦', title: 'Bank / Savings Profit',         desc: 'Savings accounts, NSS, term deposits, defence savings' },
+  { id: 'dividends',      icon: '📈', title: 'Dividends from Shares',          desc: 'Dividends from listed or unlisted companies' },
+  { id: 'securities',     icon: '📊', title: 'Listed Shares / Mutual Funds',   desc: 'Capital gains on PSX shares, mutual funds, REIT units' },
+  { id: 'sukuk',          icon: '🕌', title: 'Sukuk / Bond Income',            desc: 'Profit from sukuk and Islamic investment instruments' },
+  { id: 'rental',         icon: '🏠', title: 'Rental Income',                  desc: 'Rent received from residential or commercial property' },
+  { id: 'property_gain',  icon: '🏘️', title: 'Property Sale (Capital Gain)',   desc: 'Gain on sale of immovable property (house, plot, shop)' },
+  { id: 'directorship',   icon: '🧑‍💼', title: 'Directorship / Board Fees',     desc: 'Fees from company board membership or directorship' },
+  { id: 'foreign_income', icon: '🌐', title: 'Foreign Income / Remittances',   desc: 'Income earned abroad or foreign remittances received' },
+  { id: 'prizes',         icon: '🎟️', title: 'Prize Bonds / Winnings',         desc: 'Winnings from prize bonds, lottery, or raffle' },
+  { id: 'pension',        icon: '🏛️', title: 'Pension from Former Employer',   desc: 'Pension from a previous employer (taxable above Rs. 10M — Finance Act 2025)' },
+  { id: 'agriculture',    icon: '🌾', title: 'Agriculture Income',             desc: 'Income from agricultural land (federally exempt; declaration required by FBR)' },
+];
 
 const Settings = () => {
   const { user } = useAuth();
+  const { incomeProfile, updateIncomeProfile } = useTaxForm();
+
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -17,6 +36,53 @@ const Settings = () => {
     confirm: false
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Income streams state — initialised from context; re-syncs when context loads from API
+  const [localAddons, setLocalAddons]   = useState(() => incomeProfile?.addons || []);
+  const [streamsDirty, setStreamsDirty] = useState(false);
+
+  // Keep local state in sync when context finishes loading (avoids empty initial render)
+  React.useEffect(() => {
+    if (!streamsDirty) {
+      setLocalAddons(incomeProfile?.addons || []);
+    }
+  }, [incomeProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [streamsSaving, setStreamsSaving] = useState(false);
+  const [removingStream, setRemovingStream] = useState(null); // id of stream pending removal confirmation
+
+  const toggleAddon = (id) => {
+    const isActive = localAddons.includes(id);
+    if (isActive) {
+      // Ask for confirmation before removing — user may have entered data for this stream
+      setRemovingStream(id);
+    } else {
+      setLocalAddons(prev => [...prev, id]);
+      setStreamsDirty(true);
+    }
+  };
+
+  const confirmRemove = () => {
+    setLocalAddons(prev => prev.filter(x => x !== removingStream));
+    setStreamsDirty(true);
+    setRemovingStream(null);
+  };
+
+  const saveStreams = async () => {
+    setStreamsSaving(true);
+    const ok = await updateIncomeProfile(localAddons);
+    setStreamsSaving(false);
+    if (ok) {
+      toast.success('Income streams updated');
+      setStreamsDirty(false);
+    } else {
+      toast.error('Failed to save — please try again');
+    }
+  };
+
+  const cancelStreams = () => {
+    setLocalAddons(incomeProfile?.addons || []);
+    setStreamsDirty(false);
+  };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -32,36 +98,17 @@ const Settings = () => {
     }
     
     setIsChangingPassword(true);
-    
+
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/change-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
+      await axios.post('/api/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
       });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success('Password changed successfully');
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-        setShowPasswordModal(false);
-      } else {
-        toast.error(data.message || 'Failed to change password');
-      }
+      toast.success('Password changed successfully');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordModal(false);
     } catch (error) {
-      toast.error('An error occurred while changing password');
+      toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setIsChangingPassword(false);
     }
@@ -130,6 +177,122 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Income Streams */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-3">
+            <SlidersHorizontal className="w-6 h-6 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Income Streams</h2>
+          </div>
+          {streamsDirty && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cancelStreams}
+                className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveStreams}
+                disabled={streamsSaving}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {streamsSaving ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Primary type — always locked */}
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4">
+          <span className="text-lg">💼</span>
+          <div className="flex-1">
+            <p className="text-sm font-700 font-semibold text-green-900">Salaried Employee</p>
+            <p className="text-xs text-green-700">Primary income type — always included</p>
+          </div>
+          <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-3">
+          Toggle additional income streams. Only the relevant forms will appear in your filing flow.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {INCOME_STREAMS.map(stream => {
+            const active = localAddons.includes(stream.id);
+            return (
+              <button
+                key={stream.id}
+                onClick={() => toggleAddon(stream.id)}
+                className="flex items-center gap-3 text-left px-3 py-2.5 rounded-lg border transition-all"
+                style={{
+                  borderColor: active ? '#2563eb' : '#e5e7eb',
+                  background: active ? '#eff6ff' : '#fff',
+                }}
+              >
+                <span className="text-lg flex-shrink-0 leading-none">{stream.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{stream.title}</p>
+                  <p className="text-xs text-gray-500 leading-tight line-clamp-1">{stream.desc}</p>
+                </div>
+                <div
+                  className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition-colors"
+                  style={{
+                    border: `2px solid ${active ? '#2563eb' : '#d1d5db'}`,
+                    background: active ? '#2563eb' : '#fff',
+                  }}
+                >
+                  {active && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-gray-400 mt-3">
+          Changes take effect immediately in the sidebar navigation and form progress.
+        </p>
+      </div>
+
+      {/* Remove stream confirmation dialog */}
+      {removingStream && (() => {
+        const stream = INCOME_STREAMS.find(s => s.id === removingStream);
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm mx-4 shadow-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900">Remove income stream?</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">
+                <strong>{stream?.icon} {stream?.title}</strong> will be removed from your filing flow.
+              </p>
+              <p className="text-sm text-gray-500 mb-5">
+                Any data already entered in the related forms will be preserved — it just won't show in your navigation until you add this stream back.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemovingStream(null)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Keep it
+                </button>
+                <button
+                  onClick={confirmRemove}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Settings Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

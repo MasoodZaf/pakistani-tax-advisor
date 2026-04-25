@@ -93,7 +93,6 @@ const Register = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Registration error:', error);
     } finally {
       setLoading(false);
     }

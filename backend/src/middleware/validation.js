@@ -251,14 +251,15 @@ class ValidationMiddleware {
       'property_4_plus_years',
       'securities',
       'other_capital_gains',
-      'total_capital_gains',
+      'total_capital_gain',
       'property_1_year_tax_due',
       'property_2_3_years_tax_due',
       'securities_tax_due',
       'other_capital_gains_tax',
       'property_1_year_tax_deducted',
       'property_2_3_years_tax_deducted',
-      'securities_tax_deducted'
+      'securities_tax_deducted',
+      'total_capital_gain_tax'
     ];
 
     capitalGainsFields.forEach(field => {

@@ -20,16 +20,18 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Fetch users from API
+  // Fetch users from API. Request a large page so the UI renders the full
+  // dataset — the default backend page is 50, which caused "deleted users
+  // seem to still be there" because positions 51+ shifted in after each
+  // delete. Client-side search/filter handles narrowing.
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/users');
+      const response = await axios.get('/api/admin/users', { params: { limit: 1000 } });
       if (response.data.success) {
         setUsers(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
       toast.error('Failed to fetch users');
     } finally {
       setLoading(false);
@@ -44,7 +46,6 @@ const UserManagement = () => {
         setStats(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
     }
   };
 
@@ -85,16 +86,24 @@ const UserManagement = () => {
     );
   };
 
-  // Delete user
+  // Delete user — optimistic: remove from local state immediately so the row
+  // disappears even before the server round-trip finishes. Reconcile with
+  // fetchUsers at the end.
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
-    
+
+    const previous = users;
+    setUsers(prev => prev.filter(u => u.id !== userId));
+
     try {
       await axios.delete(`/api/admin/users/${userId}`);
       toast.success('User deleted successfully');
-      fetchUsers();
       fetchStats();
+      // Re-fetch to reconcile with server (in case of cascade side-effects).
+      fetchUsers();
     } catch (error) {
+      // Roll back the optimistic removal on failure.
+      setUsers(previous);
       toast.error(error.response?.data?.message || 'Failed to delete user');
     }
   };
@@ -113,21 +122,42 @@ const UserManagement = () => {
     }
   };
 
-  // Bulk delete
+  // Bulk delete — optimistic removal + allSettled so one failure (e.g. a
+  // super_admin or self) doesn't block reporting which of the rest succeeded.
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
-    
-    try {
-      await Promise.all(
-        selectedUsers.map(userId => axios.delete(`/api/admin/users/${userId}`))
-      );
-      toast.success('Users deleted successfully');
-      setSelectedUsers([]);
-      fetchUsers();
-      fetchStats();
-    } catch (error) {
-      toast.error('Failed to delete some users');
+
+    const ids = [...selectedUsers];
+    const previous = users;
+    setSelectedUsers([]);
+    setUsers(prev => prev.filter(u => !ids.includes(u.id)));
+
+    const results = await Promise.allSettled(
+      ids.map(userId => axios.delete(`/api/admin/users/${userId}`))
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.length - succeeded;
+
+    if (failed === 0) {
+      toast.success(`${succeeded} user${succeeded === 1 ? '' : 's'} deleted successfully`);
+    } else if (succeeded === 0) {
+      setUsers(previous); // nothing went through, restore
+      const firstErr = results.find(r => r.status === 'rejected')?.reason;
+      toast.error(firstErr?.response?.data?.message || 'Failed to delete users');
+    } else {
+      // Partial success — keep optimistic removal of the successes, restore the failures.
+      const failedIds = results
+        .map((r, i) => (r.status === 'rejected' ? ids[i] : null))
+        .filter(Boolean);
+      setUsers(prev => {
+        const kept = previous.filter(u => failedIds.includes(u.id));
+        return [...prev, ...kept];
+      });
+      toast.error(`${succeeded} deleted, ${failed} failed`);
     }
+
+    fetchUsers();
+    fetchStats();
   };
 
   // Filter users

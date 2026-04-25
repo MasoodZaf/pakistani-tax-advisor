@@ -102,10 +102,16 @@ chmod +x setup.sh
    DB_PASSWORD=your_db_password
    ```
 
-5. Initialize the database:
+5. Initialize the database (Prisma baseline + phase migrations):
    ```bash
-   psql -U your_db_user -d tax_advisor -f schema.sql
+   cd backend
+   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/0_init/migration.sql
+   for f in $(ls database/migrations/phase-*.sql | sort); do
+     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+   done
    ```
+   Note: the root-level `schema.legacy.sql` is kept for historical reference
+   only — do not use it to bootstrap a new database.
 
 6. Start the development servers:
 

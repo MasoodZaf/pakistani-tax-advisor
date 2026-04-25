@@ -1,10 +1,12 @@
 /**
- * Tax Rates for Final/Minimum Tax Income Categories (TY2025)
- * Based on FBR tax tables for dividends, profit on debt, and other final tax income
+ * Tax Rates for Final/Minimum Tax Income Categories (TY 2025-26, Finance Act 2025)
+ *
+ * NOTE: These are a short-term hardcoded rate set. Phase B moves all of this into
+ * DB-versioned rate tables keyed by tax_year_id so that TY-on-TY changes don't
+ * require a code deploy.
  *
  * Format: { fieldName: { atl: rate, nonAtl: rate } } or { fieldName: fixedRate }
- * ATL = Active Tax List (company paying tax)
- * Non-ATL = Not on Active Tax List (company not paying tax or individual)
+ * ATL = Active Taxpayer List filer  |  Non-ATL = non-filer
  */
 
 const FINAL_MIN_TAX_RATES = {
@@ -49,11 +51,11 @@ const FINAL_MIN_TAX_RATES = {
 
   // Profit on Debt - Section 151
   profitOnDebt: {
-    // For individuals/AOPs
+    // For individuals/AOPs — FA 2025 raised the rate from 15% to 20%.
     individual_up_to_5m: {
-      rate: 0.15,
+      rate: 0.20,
       limit: 5000000,
-      description: 'Profit on debt up to Rs. 5M - Final Tax'
+      description: 'Profit on debt up to Rs. 5M - Final Tax (FA 2025: 20%)'
     },
     individual_above_5m: {
       rate: null, // Subject to minimum tax
@@ -117,10 +119,10 @@ const FINAL_MIN_TAX_RATES = {
     }
   },
 
-  // Bonus Shares
+  // Bonus Shares — WHT u/s 236Z is 10% (was previously seeded at 0.92 in error).
   bonus_shares: {
-    rate: 0.92, // This seems like an error in the original doc, typically would be much lower
-    description: 'Bonus shares issued by companies u/s 236Z'
+    rate: 0.10,
+    description: 'Bonus shares issued by companies u/s 236Z (10%)'
   },
 
   // Employment Related

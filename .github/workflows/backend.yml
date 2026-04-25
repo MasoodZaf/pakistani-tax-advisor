@@ -2,21 +2,47 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend.yml'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend.yml'
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit tests (no DB)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run unit tests
+        run: |
+          cd backend
+          npx jest tests/unit --ci --reporters=default
+
+  integration-tests:
+    name: Integration tests (DB-backed)
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -25,32 +51,84 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: tax_advisor_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tax_advisor_test?schema=public
+      # 32+ chars as required by middleware/auth.js at boot
+      JWT_SECRET: ci-test-only-jwt-secret-minimum-32-characters-long
+      NODE_ENV: test
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18.x'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-    - name: Install dependencies
-      run: |
-        cd backend
-        npm ci
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
 
-    - name: Check application starts
-      run: |
-        cd backend
-        timeout 10s npm start || true
-      env:
-        DB_HOST: localhost
-        DB_PORT: 5432
-        DB_USER: postgres
-        DB_PASSWORD: postgres
-        NODE_ENV: test 
+      - name: Initialize schema from Prisma baseline
+        run: |
+          cd backend
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/0_init/migration.sql
+
+      - name: Apply phase migrations (phase-b, phase-c, phase-d)
+        run: |
+          cd backend
+          for f in $(ls database/migrations/phase-*.sql | sort); do
+            echo "applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Seed tax years + slabs
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+            INSERT INTO tax_years (id, tax_year, is_current, is_active, start_date, end_date, description)
+            VALUES
+              (gen_random_uuid(), '2024-25', false, true, '2024-07-01', '2025-06-30', 'TY 2024-25'),
+              (gen_random_uuid(), '2025-26', true,  true, '2025-07-01', '2026-06-30', 'TY 2025-26')
+            ON CONFLICT (tax_year) DO NOTHING;
+
+            INSERT INTO tax_slabs (id, tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, fixed_amount)
+            SELECT gen_random_uuid(), ty.id, v.name, v.ord, v.min, v.max, v.rate, 'individual', v.fixed
+            FROM tax_years ty, (VALUES
+              ('slab_1', 1, 0::numeric, 600000::numeric, 0::numeric, 0::numeric),
+              ('slab_2', 2, 600001, 1200000, 0.01, 0),
+              ('slab_3', 3, 1200001, 2200000, 0.11, 6000),
+              ('slab_4', 4, 2200001, 3200000, 0.23, 116000),
+              ('slab_5', 5, 3200001, 4100000, 0.30, 346000),
+              ('slab_6', 6, 4100001, NULL, 0.35, 616000)
+            ) AS v(name, ord, min, max, rate, fixed)
+            WHERE ty.tax_year = '2025-26';
+
+            INSERT INTO tax_slabs (id, tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, fixed_amount)
+            SELECT gen_random_uuid(), ty.id, v.name, v.ord, v.min, v.max, v.rate, 'individual', v.fixed
+            FROM tax_years ty, (VALUES
+              ('slab_1', 1, 0::numeric, 600000::numeric, 0::numeric, 0::numeric),
+              ('slab_2', 2, 600001, 1200000, 0.05, 0),
+              ('slab_3', 3, 1200001, 2200000, 0.15, 0),
+              ('slab_4', 4, 2200001, 3200000, 0.25, 0),
+              ('slab_5', 5, 3200001, 4100000, 0.30, 0),
+              ('slab_6', 6, 4100001, NULL, 0.35, 0)
+            ) AS v(name, ord, min, max, rate, fixed)
+            WHERE ty.tax_year = '2024-25';
+          "
+
+      - name: Run integration tests
+        run: |
+          cd backend
+          npx jest tests/integration --ci --runInBand --reporters=default

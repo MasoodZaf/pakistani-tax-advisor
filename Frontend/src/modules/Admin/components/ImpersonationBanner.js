@@ -46,7 +46,6 @@ const ImpersonationBanner = ({ user, onEndImpersonation }) => {
         toast.error(response.data.message || 'Failed to end impersonation');
       }
     } catch (error) {
-      console.error('End impersonation error:', error);
       toast.error(error.response?.data?.message || 'Failed to end impersonation');
     } finally {
       setEnding(false);

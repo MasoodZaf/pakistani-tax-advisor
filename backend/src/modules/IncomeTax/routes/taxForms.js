@@ -3,8 +3,21 @@ const { pool } = require('../../../config/database');
 const auth = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
 const TaxRateService = require('../../../services/taxRateService');
+
+// Helper: fetch the current tax year from the DB at runtime (not hardcoded)
+async function getCurrentTaxYear() {
+  const result = await pool.query(
+    `SELECT tax_year FROM tax_years WHERE is_current = true AND is_active = true LIMIT 1`
+  );
+  if (result.rows.length === 0) throw new Error('No current tax year configured in the database.');
+  return result.rows[0].tax_year;
+}
 const CalculationService = require('../../../services/calculationService');
 const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
+const {
+  getAllowedColumns,
+  filterToAllowedColumns,
+} = require('../../../helpers/tableColumns');
 
 const router = express.Router();
 
@@ -21,6 +34,9 @@ async function recalculateFormCompletion(userId, taxYear) {
       { table: 'capital_gain_forms', column: 'capital_gain_form_complete' },
       { table: 'expenses_forms', column: 'expenses_form_complete' },
       { table: 'wealth_forms', column: 'wealth_form_complete' },
+      { table: 'final_min_income_forms', column: 'final_min_income_form_complete' },
+      { table: 'wealth_reconciliation_forms', column: 'wealth_reconciliation_form_complete' },
+      { table: 'tax_computation_forms', column: 'tax_computation_form_complete' },
     ];
 
     const completionStatus = {};
@@ -33,22 +49,10 @@ async function recalculateFormCompletion(userId, taxYear) {
         );
 
         if (result.rows.length > 0) {
-          const formData = result.rows[0];
-          const excludeFields = [
-            'id',
-            'user_id',
-            'user_email',
-            'tax_year_id',
-            'tax_year',
-            'tax_return_id',
-            'created_at',
-            'updated_at',
-            'last_updated_by',
-          ];
-          const hasData = Object.entries(formData).some(
-            ([key, value]) => !excludeFields.includes(key) && typeof value === 'number' && value > 0
-          );
-          completionStatus[form.column] = hasData;
+          // Use the explicit is_complete flag set when the user clicks "Complete & Next".
+          // Do NOT use hasData (any numeric > 0) — that fires as soon as any data is entered
+          // and would falsely mark forms complete before the user intentionally finishes them.
+          completionStatus[form.column] = Boolean(result.rows[0].is_complete);
         } else {
           completionStatus[form.column] = false;
         }
@@ -59,8 +63,6 @@ async function recalculateFormCompletion(userId, taxYear) {
     }
 
     const completedCount = Object.values(completionStatus).filter(Boolean).length;
-    const totalForms = formsToCheck.length;
-    const percentage = Math.round((completedCount / totalForms) * 100);
 
     await pool.query(
       `UPDATE form_completion_status
@@ -69,8 +71,11 @@ async function recalculateFormCompletion(userId, taxYear) {
            deductions_form_complete = $5, final_tax_form_complete = $6,
            capital_gain_form_complete = $7, expenses_form_complete = $8,
            wealth_form_complete = $9,
+           final_min_income_form_complete = $10,
+           wealth_reconciliation_form_complete = $11,
+           tax_computation_form_complete = $12,
            last_updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $10 AND tax_year = $11`,
+       WHERE user_id = $13 AND tax_year = $14`,
       [
         completionStatus['income_form_complete'],
         completionStatus['adjustable_tax_form_complete'],
@@ -81,13 +86,16 @@ async function recalculateFormCompletion(userId, taxYear) {
         completionStatus['capital_gain_form_complete'],
         completionStatus['expenses_form_complete'],
         completionStatus['wealth_form_complete'],
+        completionStatus['final_min_income_form_complete'],
+        completionStatus['wealth_reconciliation_form_complete'],
+        completionStatus['tax_computation_form_complete'],
         userId,
         taxYear,
       ]
     );
 
     logger.info(
-      `Form completion recalculated for ${userId}: ${completedCount}/${totalForms} forms completed`
+      `Form completion recalculated for ${userId}: ${completedCount}/${formsToCheck.length} forms completed`
     );
   } catch (error) {
     logger.error('Error recalculating completion:', error);
@@ -98,12 +106,26 @@ async function recalculateFormCompletion(userId, taxYear) {
 router.get('/current-return', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = '2025-26'; // Default to current tax year
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
 
     logger.info(`Fetching current tax return for user ${userId}, tax year ${taxYear}`);
 
     // Recalculate form completion from actual database data
     await recalculateFormCompletion(userId, taxYear);
+
+    // Fetch income_profile from actual tax_returns row (if it exists)
+    let incomeProfile = { primary: 'salaried', addons: [] };
+    try {
+      const trResult = await pool.query(
+        `SELECT income_profile FROM tax_returns WHERE user_id = $1 AND tax_year = $2 LIMIT 1`,
+        [userId, taxYear]
+      );
+      if (trResult.rows.length > 0 && trResult.rows[0].income_profile) {
+        incomeProfile = trResult.rows[0].income_profile;
+      }
+    } catch (err) {
+      logger.warn('Could not fetch income_profile from tax_returns:', err.message);
+    }
 
     // Initialize response structure
     const response = {
@@ -112,6 +134,7 @@ router.get('/current-return', auth, async (req, res) => {
         user_id: userId,
         tax_year: taxYear,
         status: 'in_progress',
+        income_profile: incomeProfile,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
@@ -142,9 +165,15 @@ router.get('/current-return', auth, async (req, res) => {
         if (completionStatus.deductions_form_complete) response.completedSteps.push('deductions');
         if (completionStatus.final_tax_form_complete) response.completedSteps.push('final_tax');
         if (completionStatus.capital_gain_form_complete)
-          response.completedSteps.push('capital_gains');
+          response.completedSteps.push('capital_gain');
         if (completionStatus.expenses_form_complete) response.completedSteps.push('expenses');
-        if (completionStatus.wealth_form_complete) response.completedSteps.push('wealth_statement');
+        if (completionStatus.wealth_form_complete) response.completedSteps.push('wealth');
+        if (completionStatus.final_min_income_form_complete)
+          response.completedSteps.push('final_min_income');
+        if (completionStatus.wealth_reconciliation_form_complete)
+          response.completedSteps.push('wealth_reconciliation');
+        if (completionStatus.tax_computation_form_complete)
+          response.completedSteps.push('tax_computation');
 
         logger.info(
           `Completion status loaded for user ${userId}: ${response.completedSteps.length} forms completed (${response.completionPercentage}%)`
@@ -222,7 +251,7 @@ router.get('/current-return', auth, async (req, res) => {
       );
 
       if (capitalGainResult.rows.length > 0) {
-        response.formData.capital_gains = capitalGainResult.rows[0];
+        response.formData.capital_gain = capitalGainResult.rows[0];
         logger.info(`Capital gains data found for user ${userId}`);
       }
     } catch (error) {
@@ -257,16 +286,11 @@ router.get('/current-return', auth, async (req, res) => {
       if (finalMinIncomeResult.rows.length > 0) {
         const finalMinData = finalMinIncomeResult.rows[0];
 
-        // Debug logging
-        logger.info(`[DEBUG] Current salary_u_s_12_7: ${finalMinData.salary_u_s_12_7}, type: ${typeof finalMinData.salary_u_s_12_7}`);
-        logger.info(`[DEBUG] Income form available: ${!!incomeFormForFinalMin}, total_employment_income: ${incomeFormForFinalMin?.total_employment_income}`);
-        logger.info(`[DEBUG] Adjustable tax available: ${!!adjustableTaxForFinalMin}, salary_tax_collected: ${adjustableTaxForFinalMin?.salary_employees_149_tax_collected}`);
 
         // Auto-link salary amount and tax deducted if they're 0
         if (incomeFormForFinalMin) {
           const salaryValue = parseFloat(finalMinData.salary_u_s_12_7);
           const shouldAutoLink = (salaryValue === 0 || finalMinData.salary_u_s_12_7 === null) && incomeFormForFinalMin.annual_salary_wages_total > 0;
-          logger.info(`[DEBUG] Should auto-link amount? salaryValue=${salaryValue}, shouldAutoLink=${shouldAutoLink}`);
 
           if (shouldAutoLink) {
             finalMinData.salary_u_s_12_7 = parseFloat(
@@ -279,7 +303,6 @@ router.get('/current-return', auth, async (req, res) => {
         if (adjustableTaxForFinalMin) {
           const taxDeductedValue = parseFloat(finalMinData.salary_u_s_12_7_tax_deducted);
           const shouldAutoLinkTax = (taxDeductedValue === 0 || finalMinData.salary_u_s_12_7_tax_deducted === null) && adjustableTaxForFinalMin.salary_employees_149_tax_collected > 0;
-          logger.info(`[DEBUG] Should auto-link tax? taxDeductedValue=${taxDeductedValue}, shouldAutoLinkTax=${shouldAutoLinkTax}`);
 
           if (shouldAutoLinkTax) {
             finalMinData.salary_u_s_12_7_tax_deducted = parseFloat(
@@ -343,6 +366,10 @@ router.get('/current-return', auth, async (req, res) => {
           dividend_u_s_150_31pc_atl_amount: 0,
           dividend_u_s_150_31pc_atl_tax_deducted: 0,
           dividend_u_s_150_31pc_atl_tax_chargeable: 0,
+
+          dividend_u_s_150_25pc_bf_losses: 0,
+          dividend_u_s_150_25pc_bf_losses_tax_deducted: 0,
+          dividend_u_s_150_25pc_bf_losses_tax_chargeable: 0,
 
           return_on_investment_sukuk_u_s_151_1a_10pc_amount: 0,
           return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted: 0,
@@ -481,19 +508,20 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching expenses data:', error);
     }
 
-    // Fetch wealth statement form data
+    // Fetch wealth form data (stored in wealth_forms — matches WealthStatementForm field names)
     try {
       const wealthResult = await pool.query(
-        'SELECT * FROM wealth_statement_forms WHERE user_id = $1 AND tax_year = $2',
+        'SELECT * FROM wealth_forms WHERE user_id = $1 AND tax_year = $2',
         [userId, taxYear]
       );
 
       if (wealthResult.rows.length > 0) {
-        response.formData.wealth_statement = wealthResult.rows[0];
-        logger.info(`Wealth statement data found for user ${userId}`);
+        // Key must be 'wealth' to match TaxFormContext FORM_STEPS id and WealthStatementForm context reads
+        response.formData.wealth = wealthResult.rows[0];
+        logger.info(`Wealth form data found for user ${userId}`);
       }
     } catch (error) {
-      logger.error('Error fetching wealth statement data:', error);
+      logger.error('Error fetching wealth form data:', error);
     }
 
     // Fetch wealth reconciliation form data
@@ -542,7 +570,7 @@ router.get('/current-return', auth, async (req, res) => {
 router.post('/create-return', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = '2025-26'; // Default to current tax year
+    const taxYear = req.body.taxYear || await getCurrentTaxYear();
 
     logger.info(`Creating new tax return for user ${userId}, tax year ${taxYear}`);
 
@@ -551,6 +579,7 @@ router.post('/create-return', auth, async (req, res) => {
       user_id: userId,
       tax_year: taxYear,
       status: 'draft',
+      income_profile: { primary: 'salaried', addons: [] },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -571,11 +600,51 @@ router.post('/create-return', auth, async (req, res) => {
   }
 });
 
+// POST /api/tax-forms/income-profile - Save income profile (addons selection)
+router.post('/income-profile', auth, async (req, res) => {
+  try {
+    const userId    = req.user.id;
+    const userEmail = req.user.email;
+    const taxYear   = req.body.taxYear || await getCurrentTaxYear();
+    const { addons } = req.body;
+
+    if (!Array.isArray(addons)) {
+      return res.status(400).json({ success: false, message: 'addons must be an array' });
+    }
+
+    const VALID_ADDONS = [
+      'bank_profit', 'dividends', 'securities', 'sukuk',
+      'rental', 'property_gain', 'directorship', 'foreign_income',
+      'prizes', 'pension', 'agriculture',
+    ];
+    const sanitised = addons.filter(a => VALID_ADDONS.includes(a));
+
+    // Ensure the tax return row exists (creates if first time)
+    const taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+
+    await pool.query(
+      `UPDATE tax_returns
+       SET income_profile = $1, updated_at = NOW()
+       WHERE id = $2`,
+      [JSON.stringify({ primary: 'salaried', addons: sanitised }), taxReturnId]
+    );
+
+    logger.info(`Income profile saved for user ${userId}: addons=[${sanitised.join(',')}]`);
+    res.json({
+      success: true,
+      income_profile: { primary: 'salaried', addons: sanitised },
+    });
+  } catch (error) {
+    logger.error('Error saving income profile:', error);
+    res.status(500).json({ success: false, message: 'Failed to save income profile' });
+  }
+});
+
 // GET /api/tax-forms/adjustable-tax - Get adjustable tax form data with auto-linking
 router.get('/adjustable-tax', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
 
     logger.info(`Fetching adjustable tax data for user ${userId}, tax year ${taxYear}`);
 
@@ -657,58 +726,65 @@ router.get('/adjustable-tax', auth, async (req, res) => {
 
     const adjustableTaxData = result.rows[0];
 
-    // Auto-link values if they are 0 and income form has data AND calculate tax
+    // Auto-link values if they are 0 and income form has data AND calculate tax.
+    // pg NUMERIC columns come back as strings ("0.00") — ALWAYS coerce with
+    // parseFloat before equality checks, or `=== 0` is permanently false and
+    // auto-link silently skips on every existing row.
     if (incomeFormData) {
       let needsRecalculation = false;
+      const toNum = (v) => {
+        const n = typeof v === 'number' ? v : parseFloat(v);
+        return Number.isFinite(n) ? n : 0;
+      };
 
+      // Always use the income-form value for salary — it's the canonical source.
+      const incomeSalary = toNum(incomeFormData.annual_salary_wages_total);
       if (
-        (adjustableTaxData.salary_employees_149_gross_receipt === 0 ||
-          adjustableTaxData.salary_employees_149_gross_receipt === null) &&
-        incomeFormData.annual_salary_wages_total > 0
+        toNum(adjustableTaxData.salary_employees_149_gross_receipt) === 0 &&
+        incomeSalary > 0
       ) {
-        adjustableTaxData.salary_employees_149_gross_receipt = parseFloat(
-          incomeFormData.annual_salary_wages_total
-        );
-        // Keep existing tax_collected value - it's a user input field
-        logger.info(
-          'Auto-linked salary employees (annual salary wages total):',
-          incomeFormData.annual_salary_wages_total
-        );
+        adjustableTaxData.salary_employees_149_gross_receipt = incomeSalary;
+        logger.info('Auto-linked salary employees (annual salary wages total):', incomeSalary);
         needsRecalculation = true;
       }
+
+      const incomeDirectorship = toNum(incomeFormData.directorship_fee);
       if (
-        adjustableTaxData.directorship_fee_149_3_gross_receipt === 0 &&
-        incomeFormData.directorship_fee > 0
+        toNum(adjustableTaxData.directorship_fee_149_3_gross_receipt) === 0 &&
+        incomeDirectorship > 0
       ) {
-        adjustableTaxData.directorship_fee_149_3_gross_receipt = incomeFormData.directorship_fee;
-        logger.info('Auto-linked directorship fee:', incomeFormData.directorship_fee);
+        adjustableTaxData.directorship_fee_149_3_gross_receipt = incomeDirectorship;
+        logger.info('Auto-linked directorship fee:', incomeDirectorship);
         needsRecalculation = true;
       }
+
+      const incomeProfit15 = toNum(incomeFormData.profit_on_debt_15_percent);
       if (
-        adjustableTaxData.profit_debt_151_15_gross_receipt === 0 &&
-        incomeFormData.profit_on_debt_15_percent > 0
+        toNum(adjustableTaxData.profit_debt_151_15_gross_receipt) === 0 &&
+        incomeProfit15 > 0
       ) {
-        adjustableTaxData.profit_debt_151_15_gross_receipt =
-          incomeFormData.profit_on_debt_15_percent;
-        logger.info('Auto-linked profit debt 15%:', incomeFormData.profit_on_debt_15_percent);
+        adjustableTaxData.profit_debt_151_15_gross_receipt = incomeProfit15;
+        logger.info('Auto-linked profit debt 15%:', incomeProfit15);
         needsRecalculation = true;
       }
+
+      const incomeSukook = toNum(incomeFormData.profit_on_debt_12_5_percent);
       if (
-        adjustableTaxData.profit_debt_sukook_151a_gross_receipt === 0 &&
-        incomeFormData.profit_on_debt_12_5_percent > 0
+        toNum(adjustableTaxData.profit_debt_sukook_151a_gross_receipt) === 0 &&
+        incomeSukook > 0
       ) {
-        adjustableTaxData.profit_debt_sukook_151a_gross_receipt =
-          incomeFormData.profit_on_debt_12_5_percent;
-        logger.info('Auto-linked profit debt 12.5%:', incomeFormData.profit_on_debt_12_5_percent);
+        adjustableTaxData.profit_debt_sukook_151a_gross_receipt = incomeSukook;
+        logger.info('Auto-linked profit debt 12.5%:', incomeSukook);
         needsRecalculation = true;
       }
+
+      const incomeRent = toNum(incomeFormData.other_taxable_income_rent);
       if (
-        adjustableTaxData.tax_deducted_rent_section_155_gross_receipt === 0 &&
-        incomeFormData.other_taxable_income_rent > 0
+        toNum(adjustableTaxData.tax_deducted_rent_section_155_gross_receipt) === 0 &&
+        incomeRent > 0
       ) {
-        adjustableTaxData.tax_deducted_rent_section_155_gross_receipt =
-          incomeFormData.other_taxable_income_rent;
-        logger.info('Auto-linked rent income:', incomeFormData.other_taxable_income_rent);
+        adjustableTaxData.tax_deducted_rent_section_155_gross_receipt = incomeRent;
+        logger.info('Auto-linked rent income:', incomeRent);
         needsRecalculation = true;
       }
 
@@ -761,7 +837,7 @@ router.post('/adjustable-tax', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const userEmail = req.user.email;
-    const taxYear = req.body.taxYear || '2025-26';
+    const taxYear = req.body.taxYear || await getCurrentTaxYear();
     const isComplete = req.body.isComplete || false;
     const formData = req.body;
 
@@ -850,7 +926,11 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       getNumericValue(formData.taxDeductedRentSection155?.grossReceipt) ||
       0;
 
+    // Frontend sends the long form name motor_vehicle_transfer_fee_231b2_*;
+    // legacy short names kept as fallbacks so old Excel imports / nested
+    // payloads still work.
     cleanedData.motor_vehicle_transfer_gross_receipt =
+      getNumericValue(formData.motor_vehicle_transfer_fee_231b2_gross_receipt) ||
       getNumericValue(formData.motor_vehicle_transfer_gross_receipt) ||
       getNumericValue(formData.motorVehicleTransferFee231B2?.grossReceipt) ||
       0;
@@ -897,23 +977,28 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       getNumericValue(formData.advanceTaxMotorVehicle231B2A?.taxCollected) ||
       0;
 
+    // Frontend field names include the `_235` / `_236_1f` section suffixes;
+    // legacy short names kept as fallbacks.
     cleanedData.electricity_domestic_gross_receipt =
+      getNumericValue(formData.electricity_bill_domestic_235_gross_receipt) ||
       getNumericValue(formData.electricity_domestic_gross_receipt) ||
       getNumericValue(formData.electricityBillDomestic235?.grossReceipt) ||
       0;
 
     cleanedData.cellphone_bill_gross_receipt =
+      getNumericValue(formData.cellphone_bill_236_1f_gross_receipt) ||
       getNumericValue(formData.cellphone_bill_gross_receipt) ||
       getNumericValue(formData.cellphoneBill236_1F?.grossReceipt) ||
       0;
 
-    // Tax collected fields for utilities
     cleanedData.electricity_domestic_tax_collected =
+      getNumericValue(formData.electricity_bill_domestic_235_tax_collected) ||
       getNumericValue(formData.electricity_domestic_tax_collected) ||
       getNumericValue(formData.electricityBillDomestic235?.taxCollected) ||
       0;
 
     cleanedData.cellphone_bill_tax_collected =
+      getNumericValue(formData.cellphone_bill_236_1f_tax_collected) ||
       getNumericValue(formData.cellphone_bill_tax_collected) ||
       getNumericValue(formData.cellphoneBill236_1F?.taxCollected) ||
       0;
@@ -1088,9 +1173,9 @@ router.post('/adjustable-tax', auth, async (req, res) => {
     // Auto-link from Income Form if data is available and fields are zero
     // Map ALL 5 fields: salary, directorship, profit 15%, sukook 12.5%, rent
     if (incomeFormData) {
-      // Auto-link salary from total_employment_income
+      // Auto-link salary from annual_salary_wages_total (withholding certificate value, excl. non-cash benefits)
       cleanedData.salary_employees_149_gross_receipt = parseFloat(
-        incomeFormData.total_employment_income || 0
+        incomeFormData.annual_salary_wages_total || incomeFormData.total_employment_income || 0
       );
       if (cleanedData.salary_employees_149_gross_receipt > 0) {
         logger.info(
@@ -1169,6 +1254,22 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       total_tax: calculations.total_tax_collected,
     });
 
+    // Helper: use user's explicitly provided tax value if present (even if 0),
+    // fall back to calculated only when user didn't send the field at all.
+    // Uses ?? (nullish coalescing) so 0 is treated as a valid override.
+    const userTax = (flatField, nestedObj, nestedKey, calculatedValue) => {
+      const flat = formData[flatField];
+      if (flat !== null && flat !== undefined && flat !== '') {
+        return parseFloat(flat);
+      }
+      const nested = nestedObj?.[nestedKey];
+      if (nested !== null && nested !== undefined && nested !== '') {
+        return parseFloat(nested);
+      }
+      // User didn't provide — use FBR-calculated value
+      return calculatedValue ?? 0;
+    };
+
     // Prepare data for the complex database structure (maintain backward compatibility)
     const adjustableTaxData = {
       tax_return_id: taxReturnId,
@@ -1178,22 +1279,33 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       tax_year: taxYear,
 
       // Map to existing database fields - main ones we need for testing
+      // For auto-calculated but editable fields: respect user's value (including explicit 0)
       directorship_fee_149_3_gross_receipt: cleanedData.directorship_fee_149_3_gross_receipt,
-      directorship_fee_149_3_tax_collected: calculations.directorship_fee_149_3_tax_collected || 0,
+      directorship_fee_149_3_tax_collected: userTax(
+        'directorship_fee_149_3_tax_collected', formData.directorshipFee149_3, 'taxCollected',
+        calculations.directorship_fee_149_3_tax_collected),
       profit_debt_151_15_gross_receipt: cleanedData.profit_debt_15_percent_gross_receipt,
-      profit_debt_151_15_tax_collected: calculations.profit_debt_15_percent_tax_collected || 0,
+      profit_debt_151_15_tax_collected: userTax(
+        'profit_debt_151_15_tax_collected', formData.profitDebt151_15, 'taxCollected',
+        calculations.profit_debt_15_percent_tax_collected),
       profit_debt_sukook_151a_gross_receipt: cleanedData.profit_debt_sukook_151a_gross_receipt,
-      profit_debt_sukook_151a_tax_collected: calculations.sukook_12_5_percent_tax_collected || 0,
+      profit_debt_sukook_151a_tax_collected: userTax(
+        'profit_debt_sukook_151a_tax_collected', formData.profitDebtSukook151A, 'taxCollected',
+        calculations.sukook_12_5_percent_tax_collected),
       tax_deducted_rent_section_155_gross_receipt:
         cleanedData.tax_deducted_rent_section_155_gross_receipt,
-      tax_deducted_rent_section_155_tax_collected: calculations.rent_section_155_tax_collected || 0,
+      tax_deducted_rent_section_155_tax_collected: userTax(
+        'tax_deducted_rent_section_155_tax_collected', formData.taxDeductedRentSection155, 'taxCollected',
+        calculations.rent_section_155_tax_collected),
       motor_vehicle_transfer_fee_231b2_gross_receipt:
         cleanedData.motor_vehicle_transfer_gross_receipt,
-      motor_vehicle_transfer_fee_231b2_tax_collected:
-        calculations.motor_vehicle_transfer_tax_collected || 0,
+      motor_vehicle_transfer_fee_231b2_tax_collected: userTax(
+        'motor_vehicle_transfer_fee_231b2_tax_collected', formData.motorVehicleTransferFee231B2, 'taxCollected',
+        calculations.motor_vehicle_transfer_tax_collected),
       electricity_bill_domestic_235_gross_receipt: cleanedData.electricity_domestic_gross_receipt,
-      electricity_bill_domestic_235_tax_collected:
-        calculations.electricity_domestic_tax_collected || 0,
+      electricity_bill_domestic_235_tax_collected: userTax(
+        'electricity_bill_domestic_235_tax_collected', formData.electricityBillDomestic235, 'taxCollected',
+        calculations.electricity_domestic_tax_collected),
       cellphone_bill_236_1f_gross_receipt: cleanedData.cellphone_bill_236_1f_gross_receipt || 0,
       cellphone_bill_236_1f_tax_collected: cleanedData.cellphone_bill_236_1f_tax_collected || 0,
 
@@ -1313,17 +1425,33 @@ router.post('/adjustable-tax', auth, async (req, res) => {
 
 // Removed duplicate income_forms endpoint - now using /api/income-form/* for all income operations
 
-// Helper function to save form data generically
+// Helper function to save form data generically.
+//
+// Atomic upsert via INSERT ... ON CONFLICT (user_id, tax_year) DO UPDATE SET ...
+// Requires the target table to carry the unique constraint added in
+// phase-d-form-unique-constraints.sql. Before that migration, this helper
+// fell back to a SELECT-then-INSERT/UPDATE pattern which raced under
+// concurrent saves and duplicated rows.
+//
+// Identifiers (table, columns) are NEVER taken from request input — they come
+// from getAllowedColumns(tableName), sourced from information_schema.
 const saveFormData = async (tableName, formKey, req, res) => {
   try {
     const userId = req.user.id;
     const userEmail = req.user.email;
-    const taxYear = req.body.taxYear || req.query.taxYear || '2025-26';
+    const taxYear = req.body.taxYear || req.query.taxYear || await getCurrentTaxYear();
     const formData = req.body;
 
     logger.info(`Saving ${formKey} data for user ${userId}, tax year ${taxYear}`);
 
-    // Get or create tax return (validated + typed via Prisma helper)
+    let allowedColumns;
+    try {
+      allowedColumns = await getAllowedColumns(tableName);
+    } catch (e) {
+      logger.error(`saveFormData rejected: ${e.message}`);
+      return res.status(500).json({ success: false, message: 'Save target not permitted' });
+    }
+
     let taxReturnId;
     try {
       taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
@@ -1331,63 +1459,48 @@ const saveFormData = async (tableName, formKey, req, res) => {
       return res.status(400).json({ success: false, message: e.message });
     }
 
-    // Resolve tax_year_id for the data payload
     const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
+    if (taxYearRow.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid tax year' });
+    }
     const taxYearId = taxYearRow.rows[0].id;
 
-    // Check if form exists
-    const existingResult = await pool.query(
-      `SELECT id FROM ${tableName} WHERE user_id = $1 AND tax_year = $2`,
-      [userId, taxYear]
-    );
+    // Strip request-envelope fields (not DB columns).
+    const { taxYear: _, taxReturnId: _taxReturnId, isComplete, ...cleanFormData } = formData;
 
-    // Prepare data - filter out taxYear from formData to avoid duplication
-    const { taxYear: _, ...cleanFormData } = formData;
-    const dataToSave = {
+    // Server-controlled fields: overwrite any matching request-body keys.
+    const serverFields = {
       tax_return_id: taxReturnId,
       user_id: userId,
       user_email: userEmail,
       tax_year_id: taxYearId,
       tax_year: taxYear,
-      ...cleanFormData,
+      is_complete: isComplete || false,
       last_updated_by: userId,
     };
 
-    let result;
-    if (existingResult.rows.length > 0) {
-      // Update
-      const updateFields = Object.keys(dataToSave)
-        .filter(
-          (key) =>
-            !['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year'].includes(key)
-        )
-        .map((key, index) => `${key} = $${index + 3}`)
-        .join(', ');
+    const clientFields = filterToAllowedColumns(tableName, allowedColumns, cleanFormData);
+    const dataToSave = { ...clientFields, ...serverFields };
 
-      const updateValues = Object.keys(dataToSave)
-        .filter(
-          (key) =>
-            !['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year'].includes(key)
-        )
-        .map((key) => dataToSave[key]);
+    // Identity fields never get overwritten on ON CONFLICT UPDATE.
+    const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
 
-      result = await pool.query(
-        `UPDATE ${tableName} SET ${updateFields}, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND tax_year = $2 RETURNING *`,
-        [userId, taxYear, ...updateValues]
-      );
-    } else {
-      // Insert
-      const insertFields = Object.keys(dataToSave).join(', ');
-      const insertPlaceholders = Object.keys(dataToSave)
-        .map((_, index) => `$${index + 1}`)
-        .join(', ');
-      const insertValues = Object.values(dataToSave);
+    const columns = Object.keys(dataToSave);
+    const values = columns.map((c) => dataToSave[c]);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    const updateAssignments = columns
+      .filter((c) => !identityKeys.has(c))
+      .map((c) => `${c} = EXCLUDED.${c}`)
+      .concat(['updated_at = CURRENT_TIMESTAMP'])
+      .join(', ');
 
-      result = await pool.query(
-        `INSERT INTO ${tableName} (${insertFields}) VALUES (${insertPlaceholders}) RETURNING *`,
-        insertValues
-      );
-    }
+    const sql =
+      `INSERT INTO ${tableName} (${columns.join(', ')}) ` +
+      `VALUES (${placeholders}) ` +
+      `ON CONFLICT (user_id, tax_year) DO UPDATE SET ${updateAssignments} ` +
+      `RETURNING *`;
+
+    const result = await pool.query(sql, values);
 
     logger.info(`${formKey} data saved for user ${userId}`);
     res.json({
@@ -1400,7 +1513,6 @@ const saveFormData = async (tableName, formKey, req, res) => {
     res.status(500).json({
       success: false,
       message: `Failed to save ${formKey} data`,
-      error: error.message,
     });
   }
 };
@@ -1409,7 +1521,7 @@ const saveFormData = async (tableName, formKey, req, res) => {
 router.get('/capital-gains', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM capital_gain_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -1432,7 +1544,7 @@ router.post('/capital-gains', auth, (req, res) =>
 router.get('/final-min-income', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
 
     logger.info(`Fetching final/min income data for user ${userId}, tax year ${taxYear}`);
 
@@ -1502,6 +1614,10 @@ router.get('/final-min-income', auth, async (req, res) => {
           dividend_u_s_150_31pc_atl_amount: 0,
           dividend_u_s_150_31pc_atl_tax_deducted: 0,
           dividend_u_s_150_31pc_atl_tax_chargeable: 0,
+
+          dividend_u_s_150_25pc_bf_losses: 0,
+          dividend_u_s_150_25pc_bf_losses_tax_deducted: 0,
+          dividend_u_s_150_25pc_bf_losses_tax_chargeable: 0,
 
           return_on_investment_sukuk_u_s_151_1a_10pc_amount: 0,
           return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted: 0,
@@ -1580,36 +1696,24 @@ router.get('/final-min-income', auth, async (req, res) => {
 
     const finalMinIncomeData = result.rows[0];
 
-    // Auto-link salary amount and tax deducted if they're 0 and source forms have data
+    // Auto-link salary + tax deducted if the saved values are 0/null and the
+    // source forms have data. pg NUMERIC values come back as strings (e.g.
+    // "0.00"), so `=== 0` was silently false — always coerce with parseFloat.
     if (incomeFormData) {
-      if (
-        (finalMinIncomeData.salary_u_s_12_7 === 0 ||
-          finalMinIncomeData.salary_u_s_12_7 === null) &&
-        incomeFormData.annual_salary_wages_total > 0
-      ) {
-        finalMinIncomeData.salary_u_s_12_7 = parseFloat(
-          incomeFormData.annual_salary_wages_total
-        );
-        logger.info(
-          'Auto-linked salary amount:',
-          finalMinIncomeData.salary_u_s_12_7
-        );
+      const existingSalary = parseFloat(finalMinIncomeData.salary_u_s_12_7) || 0;
+      const incomeSalary = parseFloat(incomeFormData.annual_salary_wages_total) || 0;
+      if (existingSalary === 0 && incomeSalary > 0) {
+        finalMinIncomeData.salary_u_s_12_7 = incomeSalary;
+        logger.info('Auto-linked salary amount:', incomeSalary);
       }
     }
 
     if (adjustableTaxData) {
-      if (
-        (finalMinIncomeData.salary_u_s_12_7_tax_deducted === 0 ||
-          finalMinIncomeData.salary_u_s_12_7_tax_deducted === null) &&
-        adjustableTaxData.salary_employees_149_tax_collected > 0
-      ) {
-        finalMinIncomeData.salary_u_s_12_7_tax_deducted = parseFloat(
-          adjustableTaxData.salary_employees_149_tax_collected
-        );
-        logger.info(
-          'Auto-linked salary tax deducted:',
-          finalMinIncomeData.salary_u_s_12_7_tax_deducted
-        );
+      const existingTax = parseFloat(finalMinIncomeData.salary_u_s_12_7_tax_deducted) || 0;
+      const adjTax = parseFloat(adjustableTaxData.salary_employees_149_tax_collected) || 0;
+      if (existingTax === 0 && adjTax > 0) {
+        finalMinIncomeData.salary_u_s_12_7_tax_deducted = adjTax;
+        logger.info('Auto-linked salary tax deducted:', adjTax);
       }
     }
 
@@ -1663,7 +1767,7 @@ router.post('/final-min-income', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const userEmail = req.user.email;
-    const taxYear = req.body.taxYear || '2025-26';
+    const taxYear = req.body.taxYear || await getCurrentTaxYear();
     const isComplete = req.body.isComplete || false;
     const formData = req.body;
 
@@ -1714,9 +1818,13 @@ router.post('/final-min-income', auth, async (req, res) => {
       dividend_u_s_150_7_5pc_ipp_shares_amount: getNumericValue(formData.dividend_u_s_150_7_5pc_ipp_shares_amount),
       dividend_u_s_150_7_5pc_ipp_shares_tax_deducted: getNumericValue(formData.dividend_u_s_150_7_5pc_ipp_shares_tax_deducted),
 
-      // Dividend u/s 150 - Regular dividend (15%/30% or 25%/50%)
+      // Dividend u/s 150 - @15% (Dividend in kind / MF <50% profit on debt)
       dividend_u_s_150_31pc_atl_amount: getNumericValue(formData.dividend_u_s_150_31pc_atl_amount),
       dividend_u_s_150_31pc_atl_tax_deducted: getNumericValue(formData.dividend_u_s_150_31pc_atl_tax_deducted),
+
+      // Dividend u/s 150 - @25% (Companies with BF losses / MF 50%+ profit on debt)
+      dividend_u_s_150_25pc_bf_losses: getNumericValue(formData.dividend_u_s_150_25pc_bf_losses_amount),
+      dividend_u_s_150_25pc_bf_losses_tax_deducted: getNumericValue(formData.dividend_u_s_150_25pc_bf_losses_tax_deducted),
 
       // Return on Investment in Sukuk u/s 151(1A) @ 10%
       return_on_investment_sukuk_u_s_151_1a_10pc_amount: getNumericValue(formData.return_on_investment_sukuk_u_s_151_1a_10pc_amount),
@@ -1797,9 +1905,13 @@ router.post('/final-min-income', auth, async (req, res) => {
       dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable:
         getNumericValue(formData.dividend_u_s_150_7_5pc_ipp_shares_tax_deducted) || 0,
 
-      // Regular dividend - Tax chargeable = tax deducted
+      // @15% dividend - Tax chargeable = tax deducted
       dividend_u_s_150_31pc_atl_tax_chargeable:
         getNumericValue(formData.dividend_u_s_150_31pc_atl_tax_deducted) || 0,
+
+      // @25% dividend (BF losses) - Tax chargeable = tax deducted
+      dividend_u_s_150_25pc_bf_losses_tax_chargeable:
+        getNumericValue(formData.dividend_u_s_150_25pc_bf_losses_tax_deducted) || 0,
 
       // Sukuk @ 10% - Tax chargeable = tax deducted
       return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable:
@@ -1877,18 +1989,30 @@ router.post('/final-min-income', auth, async (req, res) => {
       totalMappedFields: Object.keys(mappedCleanedData).length
     });
 
-    // Prepare data for database
+    // Load the column allow-list for this table.
+    const allowedColumns = await getAllowedColumns('final_min_income_forms');
+
+    // Drop any request keys not present in the table's column list.
+    const safeMappedData = filterToAllowedColumns(
+      'final_min_income_forms',
+      allowedColumns,
+      mappedCleanedData
+    );
+    const safeTaxChargeable = filterToAllowedColumns(
+      'final_min_income_forms',
+      allowedColumns,
+      taxChargeableCalculations
+    );
+
+    // Server-controlled fields win on conflict.
     const finalMinIncomeData = {
+      ...safeMappedData,
+      ...safeTaxChargeable,
       tax_return_id: taxReturnId,
       user_id: userId,
       user_email: userEmail,
       tax_year_id: taxYearId,
       tax_year: taxYear,
-
-      // Merge amounts (with mapped field names), tax_deducted, and calculated tax_chargeable
-      ...mappedCleanedData,
-      ...taxChargeableCalculations,
-
       is_complete: isComplete,
       last_updated_by: userId,
     };
@@ -1901,55 +2025,24 @@ router.post('/final-min-income', auth, async (req, res) => {
       totalFields: Object.keys(finalMinIncomeData).length
     });
 
-    // Check if form already exists
-    const existingFormResult = await pool.query(
-      'SELECT id FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2',
-      [userId, taxYear]
+    // Atomic upsert — relies on UNIQUE(user_id, tax_year) from phase-d migration.
+    const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
+    const columns = Object.keys(finalMinIncomeData);
+    const values = columns.map((c) => finalMinIncomeData[c]);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    const updateAssignments = columns
+      .filter((c) => !identityKeys.has(c))
+      .map((c) => `${c} = EXCLUDED.${c}`)
+      .concat(['updated_at = CURRENT_TIMESTAMP'])
+      .join(', ');
+
+    const result = await pool.query(
+      `INSERT INTO final_min_income_forms (${columns.join(', ')})
+       VALUES (${placeholders})
+       ON CONFLICT (user_id, tax_year) DO UPDATE SET ${updateAssignments}
+       RETURNING *`,
+      values
     );
-
-    let result;
-    if (existingFormResult.rows.length > 0) {
-      // Update existing form
-      const updateFields = Object.keys(finalMinIncomeData)
-        .filter(
-          (key) =>
-            key !== 'tax_return_id' &&
-            key !== 'user_id' &&
-            key !== 'user_email' &&
-            key !== 'tax_year_id' &&
-            key !== 'tax_year'
-        )
-        .map((key, index) => `${key} = $${index + 3}`)
-        .join(', ');
-
-      const updateValues = Object.keys(finalMinIncomeData)
-        .filter(
-          (key) =>
-            key !== 'tax_return_id' &&
-            key !== 'user_id' &&
-            key !== 'user_email' &&
-            key !== 'tax_year_id' &&
-            key !== 'tax_year'
-        )
-        .map((key) => finalMinIncomeData[key]);
-
-      result = await pool.query(
-        `UPDATE final_min_income_forms SET ${updateFields}, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND tax_year = $2 RETURNING *`,
-        [userId, taxYear, ...updateValues]
-      );
-    } else {
-      // Insert new form
-      const insertFields = Object.keys(finalMinIncomeData).join(', ');
-      const insertPlaceholders = Object.keys(finalMinIncomeData)
-        .map((_, index) => `$${index + 1}`)
-        .join(', ');
-      const insertValues = Object.values(finalMinIncomeData);
-
-      result = await pool.query(
-        `INSERT INTO final_min_income_forms (${insertFields}) VALUES (${insertPlaceholders}) RETURNING *`,
-        insertValues
-      );
-    }
 
     logger.info(`Final/min income data saved for user ${userId}, tax year ${taxYear}`, {
       total_fields_saved: Object.keys(result.rows[0]).length,
@@ -1968,7 +2061,6 @@ router.post('/final-min-income', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to save final/min income data',
-      error: error.message,
     });
   }
 });
@@ -1977,7 +2069,7 @@ router.post('/final-min-income', auth, async (req, res) => {
 router.get('/reductions', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -2000,7 +2092,7 @@ router.post('/reductions', auth, (req, res) =>
 router.get('/credits', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -2021,7 +2113,7 @@ router.post('/credits', auth, (req, res) => saveFormData('credits_forms', 'credi
 router.get('/deductions', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM deductions_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -2044,7 +2136,7 @@ router.post('/deductions', auth, (req, res) =>
 router.get('/final-tax', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM final_tax_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -2067,7 +2159,7 @@ router.post('/final-tax', auth, (req, res) =>
 router.get('/expenses', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
     const result = await pool.query(
       'SELECT * FROM expenses_forms WHERE user_id = $1 AND tax_year = $2',
       [userId, taxYear]
@@ -2088,7 +2180,7 @@ router.post('/expenses', auth, (req, res) => saveFormData('expenses_forms', 'exp
 router.get('/tax-computation', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const taxYear = req.query.taxYear || '2025-26';
+    const taxYear = req.query.taxYear || await getCurrentTaxYear();
 
     logger.info(
       `Fetching tax computation for user ${userId}, tax year ${taxYear} with auto-linking`
@@ -2192,38 +2284,48 @@ router.get('/tax-computation', auth, async (req, res) => {
 
     // Build Tax Computation with auto-linked values
     // Excel Sheet 6: Tax Computation mapping
+    // pg NUMERIC columns come back as strings. Coerce with toNum() before ANY
+    // arithmetic — otherwise `"0.00" + "0.00"` was producing `"0.000.00"`.
+    const toNum = (v) => {
+      const n = typeof v === 'number' ? v : parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const capitalGainValue =
+      toNum(capitalGainsData?.total_capital_gain) ||
+      toNum(capitalGainsData?.total_capital_gains);
+
     const taxComputation = {
       // B6: Income from Salary = Income Form B27 (total_employment_income)
-      income_from_salary: incomeData?.total_employment_income || 0,
+      income_from_salary: toNum(incomeData?.total_employment_income),
 
       // B7: Income from Other Sources = Income Form B22 + B25
       income_from_other_sources:
-        (incomeData?.other_income_min_tax_total || 0) +
-        (incomeData?.other_income_no_min_tax_total || 0),
+        toNum(incomeData?.other_income_min_tax_total) +
+        toNum(incomeData?.other_income_no_min_tax_total),
 
-      // B8: Capital Gains = Capital Gains Form total
-      capital_gains: capitalGainsData?.total_capital_gains || 0,
-
-      // B9: Total Taxable Income = B6 + B7 + B8 (auto-calculated in database)
-      // This will be calculated by generated column
+      // B8: Capital Gains. Exposed under both `capital_gain` (canonical) and
+      // `capital_gains_loss` (the DB column name used on tax_computation_forms)
+      // so frontend code can read either.
+      capital_gain: capitalGainValue,
+      capital_gains_loss: capitalGainValue,
 
       // B12: Withholding Income Tax = Adjustable Tax B32 (total_adjustable_tax)
-      withholding_income_tax: adjustableTaxData?.total_adjustable_tax || 0,
+      withholding_income_tax: toNum(adjustableTaxData?.total_adjustable_tax),
 
       // B13: Tax Credits = Credits Form total
-      tax_credits: creditsData?.total_tax_credits || 0,
+      tax_credits: toNum(creditsData?.total_tax_credits),
 
       // B14: Total Reductions = Reductions Form total
-      total_reductions: reductionsData?.total_reductions || 0,
+      total_reductions: toNum(reductionsData?.total_reductions),
 
       // User can still override these if needed
-      tax_payable_u_s_1: existingTaxComputation?.tax_payable_u_s_1 || 0,
-      minimum_tax_u_s_113: existingTaxComputation?.minimum_tax_u_s_113 || 0,
-      tax_payable_after_minimum: existingTaxComputation?.tax_payable_after_minimum || 0,
-      surcharge_if_applicable: existingTaxComputation?.surcharge_if_applicable || 0,
-      tax_payable_before_credit: existingTaxComputation?.tax_payable_before_credit || 0,
-      refund_due: existingTaxComputation?.refund_due || 0,
-      balance_tax_payable: existingTaxComputation?.balance_tax_payable || 0,
+      tax_payable_u_s_1: toNum(existingTaxComputation?.tax_payable_u_s_1),
+      minimum_tax_u_s_113: toNum(existingTaxComputation?.minimum_tax_u_s_113),
+      tax_payable_after_minimum: toNum(existingTaxComputation?.tax_payable_after_minimum),
+      surcharge_if_applicable: toNum(existingTaxComputation?.surcharge_if_applicable),
+      tax_payable_before_credit: toNum(existingTaxComputation?.tax_payable_before_credit),
+      refund_due: toNum(existingTaxComputation?.refund_due),
+      balance_tax_payable: toNum(existingTaxComputation?.balance_tax_payable),
     };
 
     // Log the auto-linked values
@@ -2262,6 +2364,18 @@ router.get('/tax-computation', auth, async (req, res) => {
 // POST /api/tax-forms/tax-computation - Save tax computation data
 router.post('/tax-computation', auth, (req, res) =>
   saveFormData('tax_computation_forms', 'tax_computation', req, res)
+);
+
+// POST /api/tax-forms/wealth_forms - Save wealth statement data
+// Called by TaxFormContext when step id='wealth' (formType='wealth_forms')
+router.post('/wealth_forms', auth, (req, res) =>
+  saveFormData('wealth_forms', 'wealth', req, res)
+);
+
+// POST /api/tax-forms/wealth_reconciliation_forms - Save wealth reconciliation data
+// Called by TaxFormContext when step id='wealth_reconciliation' (formType='wealth_reconciliation_forms')
+router.post('/wealth_reconciliation_forms', auth, (req, res) =>
+  saveFormData('wealth_reconciliation_forms', 'wealth_reconciliation', req, res)
 );
 
 module.exports = router;

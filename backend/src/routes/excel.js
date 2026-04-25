@@ -3,6 +3,7 @@ const multer = require('multer');
 const ExcelService = require('../services/excelService');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const auth = require('../middleware/auth'); // Standardized JWT middleware
 
 const router = express.Router();
 
@@ -17,7 +18,6 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel.sheet.macroEnabled.12'
     ];
-    
     if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.xlsx')) {
       cb(null, true);
     } else {
@@ -26,61 +26,11 @@ const upload = multer({
   }
 });
 
-// Middleware to verify session token authentication
-const requireAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        message: 'No token provided'
-      });
-    }
-    
-    const sessionToken = authHeader.substring(7);
-    
-    const sessionResult = await pool.query(`
-      SELECT us.user_id, us.user_email, u.id, u.email, u.name, u.user_type, u.role, u.is_active 
-      FROM user_sessions us
-      JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
-    `, [sessionToken]);
-    
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({ 
-        error: 'Invalid session',
-        message: 'Session expired or invalid'
-      });
-    }
-    
-    const sessionData = sessionResult.rows[0];
-    req.user = {
-      id: sessionData.id,
-      email: sessionData.email,
-      name: sessionData.name,
-      user_type: sessionData.user_type,
-      role: sessionData.role,
-      is_active: sessionData.is_active
-    };
-    req.userId = sessionData.user_id;
-    req.userEmail = sessionData.user_email;
-    next();
-    
-  } catch (error) {
-    logger.error('Auth middleware error:', error);
-    res.status(500).json({ 
-      error: 'Authentication error',
-      message: 'Internal server error during authentication'
-    });
-  }
-};
-
 // Export tax return as Excel workbook
-router.get('/export/:taxYear', requireAuth, async (req, res) => {
+router.get('/export/:taxYear', auth, async (req, res) => {
   try {
     const { taxYear } = req.params;
-    const userId = req.userId;
+    const userId = req.user.id;
 
     logger.info(`Excel export requested for user ${userId}, tax year ${taxYear}`);
 
@@ -120,10 +70,10 @@ router.get('/export/:taxYear', requireAuth, async (req, res) => {
 });
 
 // Import Excel workbook and update tax return data
-router.post('/import/:taxYear', requireAuth, upload.single('excelFile'), async (req, res) => {
+router.post('/import/:taxYear', auth, upload.single('excelFile'), async (req, res) => {
   try {
     const { taxYear } = req.params;
-    const userId = req.userId;
+    const userId = req.user.id;
 
     if (!req.file) {
       return res.status(400).json({
@@ -157,7 +107,7 @@ router.post('/import/:taxYear', requireAuth, upload.single('excelFile'), async (
       VALUES ($1, $2, $3, $4, $5, NOW())
     `, [
       userId,
-      req.userEmail,
+      req.user.email,
       'EXCEL_IMPORT',
       'multiple_forms',
       `Excel workbook imported for tax year ${taxYear}`
@@ -198,9 +148,9 @@ router.post('/import/:taxYear', requireAuth, upload.single('excelFile'), async (
 });
 
 // Get import/export history
-router.get('/history', requireAuth, async (req, res) => {
+router.get('/history', auth, async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
 
     const historyResult = await pool.query(`
       SELECT 
@@ -229,10 +179,10 @@ router.get('/history', requireAuth, async (req, res) => {
 });
 
 // Validate Excel file before import (preview)
-router.post('/validate/:taxYear', requireAuth, upload.single('excelFile'), async (req, res) => {
+router.post('/validate/:taxYear', auth, upload.single('excelFile'), async (req, res) => {
   try {
     const { taxYear } = req.params;
-    const userId = req.userId;
+    const userId = req.user.id;
 
     if (!req.file) {
       return res.status(400).json({

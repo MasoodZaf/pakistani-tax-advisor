@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext';
+import { useTaxYear } from './TaxYearContext';
 
 const TaxFormContext = createContext();
 
@@ -97,12 +98,34 @@ const FORM_STEPS = [
     title: 'Tax Computation Summary',
     description: 'Complete tax calculation and final summary',
     icon: '🧮',
-    formType: 'tax_computation_forms'
+    formType: 'tax-computation'
   }
 ];
 
+// Steps that are always shown regardless of income profile
+const ALWAYS_ACTIVE_STEP_IDS = new Set([
+  'income', 'final_min_income', 'adjustable_tax', 'reductions',
+  'credits', 'deductions', 'expenses', 'wealth', 'wealth_reconciliation', 'tax_computation',
+]);
+
+// Conditional steps — shown only when at least one listed addon is selected
+const CONDITIONAL_STEP_ADDONS = {
+  capital_gain: ['property_gain', 'securities'],
+  final_tax:    ['bank_profit', 'dividends', 'securities', 'prizes'],
+};
+
+function deriveActiveSteps(formSteps, addons = []) {
+  const addonSet = new Set(addons);
+  return formSteps.filter(step => {
+    if (ALWAYS_ACTIVE_STEP_IDS.has(step.id)) return true;
+    const required = CONDITIONAL_STEP_ADDONS[step.id];
+    return required && required.some(a => addonSet.has(a));
+  });
+}
+
 export const TaxFormProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loginPayload, clearLoginPayload } = useAuth();
+  const { currentTaxYear } = useTaxYear();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({});
   const [completedSteps, setCompletedSteps] = useState(new Set());
@@ -110,19 +133,34 @@ export const TaxFormProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [taxCalculation, setTaxCalculation] = useState(null);
+  const [incomeProfile, setIncomeProfile] = useState({ primary: 'salaried', addons: [] });
 
   // Load tax return when user authentication changes
+  // Skip for admin users — they manage other users' returns, not their own
+  const isAdmin = ['admin', 'super_admin'].includes(user?.role);
+
   useEffect(() => {
-    if (user) {
+    if (user && !isAdmin) {
+      // Seed the tax return immediately from login payload so the dashboard
+      // renders with real data while the full form fetch happens in the background
+      if (loginPayload?.currentYearData) {
+        const ly = loginPayload.currentYearData;
+        setTaxReturn(ly);
+        // Seed completion percentage from login data
+        if (ly.completion_percentage != null) {
+          const total = FORM_STEPS.length;
+          const done  = Math.round((ly.completion_percentage / 100) * total);
+          setCompletedSteps(new Set(FORM_STEPS.slice(0, done).map(s => s.id)));
+        }
+      }
       loadTaxReturn();
     } else {
-      // Clear data when user logs out
       setFormData({});
       setCompletedSteps(new Set());
       setTaxReturn(null);
       setTaxCalculation(null);
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTaxReturn = async () => {
     try {
@@ -133,33 +171,50 @@ export const TaxFormProvider = ({ children }) => {
         setTaxReturn(response.data.taxReturn);
         setFormData(response.data.formData || {});
         setCompletedSteps(new Set(response.data.completedSteps || []));
+        if (response.data.taxReturn.income_profile) {
+          setIncomeProfile(response.data.taxReturn.income_profile);
+        }
       } else {
-        // Create new tax return silently
         await createNewTaxReturn();
       }
     } catch (error) {
-      console.warn('Tax return not available yet:', error.message);
-      // Don't create new tax return automatically to avoid errors
-      // The income form can work without it
-      setTaxReturn(null);
-      setFormData({});
-      setCompletedSteps(new Set());
+      // Keep the seed data from loginPayload if the fetch fails
+      if (!taxReturn) {
+        setTaxReturn(null);
+        setFormData({});
+        setCompletedSteps(new Set());
+      }
     } finally {
       setLoading(false);
+      clearLoginPayload(); // release the seed data — real data is now loaded
+    }
+  };
+
+  const updateIncomeProfile = async (addons) => {
+    try {
+      const response = await axios.post('/api/tax-forms/income-profile', {
+        addons,
+        taxYear: currentTaxYear,
+      });
+      if (response.data.success) {
+        setIncomeProfile(response.data.income_profile);
+      }
+      return response.data.success;
+    } catch {
+      return false;
     }
   };
 
   const createNewTaxReturn = async () => {
     try {
       const response = await axios.post('/api/tax-forms/create-return');
-      setTaxReturn(response.data.taxReturn);
+      const newTaxReturn = response.data.taxReturn;
+      setTaxReturn(newTaxReturn);
       setFormData({});
       setCompletedSteps(new Set());
-      console.log('New tax return created successfully');
-      return true;
+      return newTaxReturn; // return object so callers can use it immediately
     } catch (error) {
-      console.warn('Could not create tax return:', error.message);
-      return false;
+      return null;
     }
   };
 
@@ -173,17 +228,30 @@ export const TaxFormProvider = ({ children }) => {
     }));
   };
 
+  // Copy-forward from the prior-year archive. Staged into formData but NOT
+  // auto-saved — user must open the form and click Save to persist.
+  useEffect(() => {
+    const handler = (event) => {
+      const { step, values } = event.detail || {};
+      if (!step || !values) return;
+      updateFormData(step, values);
+    };
+    window.addEventListener('copyForwardFromArchive', handler);
+    return () => window.removeEventListener('copyForwardFromArchive', handler);
+  }, []);
+
   const saveFormStep = async (stepId, data, markComplete = false) => {
-    // For income form, we don't need a tax return - it has its own API
     const step = FORM_STEPS.find(s => s.id === stepId);
-    if (step && step.formType === 'income-form') {
-      // Income form doesn't need tax return validation
-    } else if (!taxReturn) {
-      // Only show error for non-income forms
-      console.warn('No tax return found for step:', stepId);
-      // Try to create a tax return instead of showing error
-      const created = await createNewTaxReturn();
-      if (!created) {
+    if (!step) {
+      toast.error('Invalid form step');
+      return false;
+    }
+
+    // Resolve the tax return to use — may need to create one on first save
+    let activeTaxReturn = taxReturn;
+    if (step.formType !== 'income-form' && !activeTaxReturn) {
+      activeTaxReturn = await createNewTaxReturn();
+      if (!activeTaxReturn) {
         toast.error('Unable to create tax return. Please try again.');
         return false;
       }
@@ -191,27 +259,24 @@ export const TaxFormProvider = ({ children }) => {
 
     try {
       setSaving(true);
-      
-      const step = FORM_STEPS.find(s => s.id === stepId);
-      if (!step) {
-        throw new Error('Invalid step ID');
-      }
 
       let response;
 
       // Handle income form with the working income-form API
       if (step.formType === 'income-form') {
-        response = await axios.post('/api/income-form/2025-26', data);
+        response = await axios.post(`/api/income-form/${currentTaxYear || '2025-26'}`, data);
       } else {
         response = await axios.post(`/api/tax-forms/${step.formType}`, {
-          taxReturnId: taxReturn.id,
+          taxReturnId: activeTaxReturn.id,
           ...data,
           isComplete: markComplete
         });
       }
 
-      // Update local form data
-      updateFormData(stepId, data);
+      // Update local form data — prefer response data (contains DB-computed columns like
+      // total_adjustable_tax, net_worth_current_year etc.) over the raw sent payload.
+      const responseData = response.data?.data || response.data?.formData;
+      updateFormData(stepId, responseData || data);
 
       if (markComplete) {
         setCompletedSteps(prev => new Set([...prev, stepId]));
@@ -223,7 +288,6 @@ export const TaxFormProvider = ({ children }) => {
       }
       return true;
     } catch (error) {
-      console.error('Error saving form:', error);
       const message = error.response?.data?.message || 'Failed to save form';
       toast.error(message);
       return false;
@@ -248,7 +312,6 @@ export const TaxFormProvider = ({ children }) => {
       toast.success('Tax calculation completed');
       return response.data.calculation;
     } catch (error) {
-      console.error('Error calculating tax:', error);
       const message = error.response?.data?.message || 'Tax calculation failed';
       toast.error(message);
       return null;
@@ -283,7 +346,6 @@ export const TaxFormProvider = ({ children }) => {
       toast.success('Tax return submitted successfully');
       return true;
     } catch (error) {
-      console.error('Error submitting tax return:', error);
       const message = error.response?.data?.message || 'Submission failed';
       toast.error(message);
       return false;
@@ -318,14 +380,20 @@ export const TaxFormProvider = ({ children }) => {
     return completedSteps.has(stepId);
   };
 
+  // Active steps = always-shown + conditionally unlocked by selected addons
+  const activeSteps = deriveActiveSteps(FORM_STEPS, incomeProfile.addons);
+
   const getCompletionPercentage = () => {
-    return Math.round((completedSteps.size / FORM_STEPS.length) * 100);
+    const activeCompleted = activeSteps.filter(s => completedSteps.has(s.id)).length;
+    return activeSteps.length > 0 ? Math.round((activeCompleted / activeSteps.length) * 100) : 0;
   };
 
   const value = {
     // Form configuration
     FORM_STEPS,
-    
+    activeSteps,       // filtered by income profile — use this for navigation and progress
+    incomeProfile,
+
     // Current state
     currentStep,
     formData,
@@ -334,19 +402,20 @@ export const TaxFormProvider = ({ children }) => {
     loading,
     saving,
     taxCalculation,
-    
+
     // Navigation
     goToStep,
     nextStep,
     previousStep,
-    
+
     // Data management
     updateFormData,
     saveFormStep,
     getStepData,
     isStepCompleted,
     getCompletionPercentage,
-    
+    updateIncomeProfile,
+
     // Tax operations
     calculateTax,
     submitTaxReturn,

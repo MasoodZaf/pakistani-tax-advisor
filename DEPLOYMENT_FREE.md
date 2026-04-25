@@ -60,7 +60,9 @@
 #### Database (PlanetScale):
 1. Go to [planetscale.com](https://planetscale.com)
 2. Create new database
-3. Import your schema from `/database/schema.sql`
+3. Apply the Prisma baseline + phase migrations (see Database Setup below).
+   The legacy `/database/schema.sql` and root `schema.legacy.sql` are NOT
+   authoritative — do not use them to bootstrap a new database.
 
 #### Backend (Vercel Functions):
 - Convert to serverless functions (requires code changes)
@@ -83,11 +85,16 @@
 
 ### 🗄️ Database Setup:
 
-1. **Import Schema:**
-   ```sql
-   -- Run the contents of /database/schema.sql
-   -- This includes all tables: users, tax_years, system_settings, etc.
+1. **Apply migrations (authoritative — do not use legacy schema files):**
+   ```bash
+   cd backend
+   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/0_init/migration.sql
+   for f in $(ls database/migrations/phase-*.sql | sort); do
+     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+   done
    ```
+   This creates all tables (users, tax_years, tax_slabs, tax_rates_config,
+   form tables, tax_return_history) and seeds TY 2024-25 + TY 2025-26 rates.
 
 2. **Insert Default Data:**
    ```bash

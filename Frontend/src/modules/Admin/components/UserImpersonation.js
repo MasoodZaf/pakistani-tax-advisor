@@ -42,7 +42,6 @@ const UserImpersonation = ({ onClose }) => {
         toast.error(response.data.message || 'Failed to load user credentials');
       }
     } catch (error) {
-      console.error('Load user credentials error:', error);
       toast.error(error.response?.data?.message || 'Failed to load user credentials');
     } finally {
       setLoading(false);
@@ -95,7 +94,6 @@ const UserImpersonation = ({ onClose }) => {
         toast.error(response.data.message || 'Failed to get user credentials');
       }
     } catch (error) {
-      console.error('Get credentials error:', error);
       toast.error(error.response?.data?.message || 'Failed to get user credentials');
     } finally {
       setImpersonating(false);

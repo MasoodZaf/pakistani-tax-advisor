@@ -2,11 +2,15 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-jwt-secret-for-development';
-
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET environment variable is required for production');
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET environment variable is required. Set it in your .env or deploy config — no default will be used.'
+  );
 }
+if (process.env.JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters long.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const auth = async (req, res, next) => {
   try {

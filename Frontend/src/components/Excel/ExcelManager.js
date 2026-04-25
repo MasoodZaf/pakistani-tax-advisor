@@ -40,7 +40,6 @@ const ExcelManager = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading available years:', error);
       toast.error('Failed to load available tax years');
     }
   };
@@ -52,7 +51,6 @@ const ExcelManager = () => {
         setHistory(response.data.data);
       }
     } catch (error) {
-      console.error('Error loading history:', error);
     }
   };
 
@@ -85,7 +83,6 @@ const ExcelManager = () => {
       loadHistory(); // Refresh history
 
     } catch (error) {
-      console.error('Export error:', error);
       if (error.response?.status === 404) {
         toast.error('No tax data found for selected year');
       } else {
@@ -129,7 +126,6 @@ const ExcelManager = () => {
       }
 
     } catch (error) {
-      console.error('Validation error:', error);
       toast.error('File validation failed');
       setValidationResult({
         valid: false,
@@ -172,7 +168,6 @@ const ExcelManager = () => {
       }
 
     } catch (error) {
-      console.error('Import error:', error);
       toast.error(error.response?.data?.message || 'Failed to import Excel file');
     } finally {
       setLoading(false);

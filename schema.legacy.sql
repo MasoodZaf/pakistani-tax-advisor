@@ -1,3 +1,23 @@
+-- =============================================================================
+-- ⚠️  LEGACY — DO NOT RUN AGAINST A NEW DATABASE ⚠️
+-- =============================================================================
+-- This file is kept for historical reference only. It diverges from the live
+-- schema in at least the following ways:
+--   • Pre-FA-2025 tax slab boundaries (2.4M/3.6M/6M instead of 2.2M/3.2M/4.1M)
+--   • No ON DELETE CASCADE on foreign keys (user deletion relies on cascades)
+--   • Missing tables: wealth_statement_forms, document_vault,
+--     personal_information, system_settings, tax_rates_config
+--   • Missing UNIQUE(user_id, tax_year_id) on tax_returns
+--   • Seeds a published default admin password hash (security hole)
+--
+-- The authoritative schema is backend/prisma/schema.prisma +
+-- backend/prisma/migrations/0_init/migration.sql, plus the
+-- backend/database/migrations/phase-*.sql chain (applied in order).
+--
+-- If you need a fresh database: follow backend/README (or apply the Prisma
+-- migrations + phase-b + phase-c + phase-d SQL files).
+-- =============================================================================
+
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -933,6 +953,219 @@ CREATE TRIGGER audit_wealth_forms_trigger
     AFTER INSERT OR UPDATE OR DELETE ON wealth_forms
     FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MISSING TABLES (required by auth.js registration and taxForms.js routes)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Final / Minimum Income Forms (Schedule IV / Section 12(7) etc.)
+CREATE TABLE final_min_income_forms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tax_return_id UUID NOT NULL REFERENCES tax_returns(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    user_email VARCHAR(255) NOT NULL,
+    tax_year_id UUID NOT NULL REFERENCES tax_years(id),
+    tax_year VARCHAR(10) NOT NULL,
+    -- Salary u/s 12(7)
+    salary_u_s_12_7 DECIMAL(15,2) DEFAULT 0,
+    salary_u_s_12_7_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    salary_u_s_12_7_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Dividends u/s 150
+    dividend_u_s_150_0pc_share_profit_reit_spv_amount DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_0pc_share_profit_reit_spv_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_35pc_share_profit_other_spv_amount DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_35pc_share_profit_other_spv_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_7_5pc_ipp_shares_amount DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_7_5pc_ipp_shares_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_31pc_atl_amount DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_31pc_atl_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_31pc_atl_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_25pc_bf_losses DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_25pc_bf_losses_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    dividend_u_s_150_25pc_bf_losses_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Sukuk / Return on Investment u/s 151(1)(a)
+    return_on_investment_sukuk_u_s_151_1a_10pc_amount DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_12_5pc_amount DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_25pc_amount DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_25pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    return_invest_exceed_1m_sukuk_saa_12_5pc_amount DECIMAL(15,2) DEFAULT 0,
+    return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    return_invest_not_exceed_1m_sukuk_saa_10pc_amount DECIMAL(15,2) DEFAULT 0,
+    return_invest_not_exceed_1m_sukuk_saa_10pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Profit on Debt u/s 151(1)(a) / S39
+    profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_amount DECIMAL(15,2) DEFAULT 0,
+    profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    profit_debt_national_savings_defence_39_14a_amount DECIMAL(15,2) DEFAULT 0,
+    profit_debt_national_savings_defence_39_14a_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    profit_debt_national_savings_defence_39_14a_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    interest_income_profit_debt_7b_up_to_5m_amount DECIMAL(15,2) DEFAULT 0,
+    interest_income_profit_debt_7b_up_to_5m_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    interest_income_profit_debt_7b_up_to_5m_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Prize / Lottery u/s 156
+    prize_raffle_lottery_quiz_promotional_156_amount DECIMAL(15,2) DEFAULT 0,
+    prize_raffle_lottery_quiz_promotional_156_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    prize_raffle_lottery_quiz_promotional_156_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    prize_bond_cross_world_puzzle_156_amount DECIMAL(15,2) DEFAULT 0,
+    prize_bond_cross_world_puzzle_156_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    prize_bond_cross_world_puzzle_156_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Bonus Shares u/s 236F
+    bonus_shares_companies_236f_amount DECIMAL(15,2) DEFAULT 0,
+    bonus_shares_companies_236f_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    bonus_shares_companies_236f_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Employment Termination Benefits u/s 12(6)
+    employment_termination_benefits_12_6_avg_rate_amount DECIMAL(15,2) DEFAULT 0,
+    employment_termination_benefits_12_6_avg_rate_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    employment_termination_benefits_12_6_avg_rate_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Salary Arrears u/s 12(7) at relevant rate
+    salary_arrears_12_7_relevant_rate_amount DECIMAL(15,2) DEFAULT 0,
+    salary_arrears_12_7_relevant_rate_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    salary_arrears_12_7_relevant_rate_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Capital Gain (linked from capital_gain_forms)
+    capital_gain_amount DECIMAL(15,2) DEFAULT 0,
+    capital_gain_tax_deducted DECIMAL(15,2) DEFAULT 0,
+    capital_gain_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Totals
+    subtotal_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    grand_total_tax_chargeable DECIMAL(15,2) DEFAULT 0,
+    -- Meta
+    is_complete BOOLEAN DEFAULT false,
+    last_updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fmi_user_email FOREIGN KEY (user_id, user_email) REFERENCES users(id, email),
+    CONSTRAINT fk_fmi_tax_year FOREIGN KEY (tax_year_id, tax_year) REFERENCES tax_years(id, tax_year)
+);
+
+-- Wealth Reconciliation Forms
+CREATE TABLE wealth_reconciliation_forms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tax_return_id UUID NOT NULL REFERENCES tax_returns(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    user_email VARCHAR(255) NOT NULL,
+    tax_year_id UUID NOT NULL REFERENCES tax_years(id),
+    tax_year VARCHAR(10) NOT NULL,
+    -- Net Assets
+    net_assets_current_year DECIMAL(15,2) DEFAULT 0,
+    net_assets_previous_year DECIMAL(15,2) DEFAULT 0,
+    net_assets_increase DECIMAL(15,2) DEFAULT 0,
+    -- Inflows
+    taxable_income DECIMAL(15,2) DEFAULT 0,
+    exempt_income DECIMAL(15,2) DEFAULT 0,
+    gift_received DECIMAL(15,2) DEFAULT 0,
+    loan_received DECIMAL(15,2) DEFAULT 0,
+    other_receipts DECIMAL(15,2) DEFAULT 0,
+    total_inflows DECIMAL(15,2) DEFAULT 0,
+    -- Outflows
+    personal_expenses DECIMAL(15,2) DEFAULT 0,
+    gift_outflow DECIMAL(15,2) DEFAULT 0,
+    gift_value DECIMAL(15,2) DEFAULT 0,
+    loan_repaid DECIMAL(15,2) DEFAULT 0,
+    other_payments DECIMAL(15,2) DEFAULT 0,
+    total_outflows DECIMAL(15,2) DEFAULT 0,
+    -- Reconciliation
+    unreconciled_difference DECIMAL(15,2) DEFAULT 0,
+    -- Meta
+    is_complete BOOLEAN DEFAULT false,
+    last_updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_wr_user_email FOREIGN KEY (user_id, user_email) REFERENCES users(id, email),
+    CONSTRAINT fk_wr_tax_year FOREIGN KEY (tax_year_id, tax_year) REFERENCES tax_years(id, tax_year)
+);
+
+-- Tax Computation Forms (Summary / Excel Sheet 6)
+CREATE TABLE tax_computation_forms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tax_return_id UUID NOT NULL REFERENCES tax_returns(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    user_email VARCHAR(255) NOT NULL,
+    tax_year_id UUID NOT NULL REFERENCES tax_years(id),
+    tax_year VARCHAR(10) NOT NULL,
+    -- Income sources (auto-linked from other forms)
+    income_from_salary DECIMAL(15,2) DEFAULT 0,
+    income_from_other_sources DECIMAL(15,2) DEFAULT 0,
+    capital_gains DECIMAL(15,2) DEFAULT 0,
+    total_taxable_income DECIMAL(15,2) DEFAULT 0,
+    -- Tax computation
+    gross_tax_liability DECIMAL(15,2) DEFAULT 0,
+    withholding_income_tax DECIMAL(15,2) DEFAULT 0,
+    tax_credits DECIMAL(15,2) DEFAULT 0,
+    total_reductions DECIMAL(15,2) DEFAULT 0,
+    tax_payable_u_s_1 DECIMAL(15,2) DEFAULT 0,
+    minimum_tax_u_s_113 DECIMAL(15,2) DEFAULT 0,
+    tax_payable_after_minimum DECIMAL(15,2) DEFAULT 0,
+    surcharge_if_applicable DECIMAL(15,2) DEFAULT 0,
+    tax_payable_before_credit DECIMAL(15,2) DEFAULT 0,
+    refund_due DECIMAL(15,2) DEFAULT 0,
+    balance_tax_payable DECIMAL(15,2) DEFAULT 0,
+    -- Meta
+    is_complete BOOLEAN DEFAULT false,
+    last_updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tc_user_email FOREIGN KEY (user_id, user_email) REFERENCES users(id, email),
+    CONSTRAINT fk_tc_tax_year FOREIGN KEY (tax_year_id, tax_year) REFERENCES tax_years(id, tax_year)
+);
+
+-- Tax Return History (for prior-year upload feature)
+CREATE TABLE IF NOT EXISTS tax_return_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    tax_year VARCHAR(9) NOT NULL,
+    source_format VARCHAR(10) NOT NULL,
+    raw_data JSONB,
+    mapped_data JSONB,
+    rate_flags JSONB,
+    upload_date TIMESTAMP DEFAULT NOW(),
+    is_verified BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for new tables
+CREATE INDEX idx_final_min_income_user ON final_min_income_forms(user_id, user_email);
+CREATE INDEX idx_final_min_income_return ON final_min_income_forms(tax_return_id);
+CREATE INDEX idx_final_min_income_year ON final_min_income_forms(tax_year_id, tax_year);
+
+CREATE INDEX idx_wealth_recon_user ON wealth_reconciliation_forms(user_id, user_email);
+CREATE INDEX idx_wealth_recon_return ON wealth_reconciliation_forms(tax_return_id);
+CREATE INDEX idx_wealth_recon_year ON wealth_reconciliation_forms(tax_year_id, tax_year);
+
+CREATE INDEX idx_tax_comp_user ON tax_computation_forms(user_id, user_email);
+CREATE INDEX idx_tax_comp_return ON tax_computation_forms(tax_return_id);
+CREATE INDEX idx_tax_comp_year ON tax_computation_forms(tax_year_id, tax_year);
+
+CREATE INDEX idx_tax_history_user ON tax_return_history(user_id);
+CREATE INDEX idx_tax_history_year ON tax_return_history(tax_year);
+
+-- Triggers for updated_at on new tables
+CREATE TRIGGER update_final_min_income_forms_updated_at
+    BEFORE UPDATE ON final_min_income_forms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_wealth_reconciliation_forms_updated_at
+    BEFORE UPDATE ON wealth_reconciliation_forms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tax_computation_forms_updated_at
+    BEFORE UPDATE ON tax_computation_forms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- TAX YEAR SEED DATA
+-- ─────────────────────────────────────────────────────────────────────────────
+
 -- Insert initial tax year and slabs for 2024-25
 INSERT INTO tax_years (
     tax_year, start_date, end_date, filing_deadline, is_current, is_active, description
@@ -941,7 +1174,7 @@ INSERT INTO tax_years (
     '2024-07-01',
     '2025-06-30',
     '2025-09-30',
-    true,
+    false,
     true,
     'Tax Year 2024-25'
 );
@@ -957,4 +1190,32 @@ INSERT INTO tax_slabs (
     ((SELECT id FROM tax_year), 'Slab 3', 3, 1200001, 2200000, 0.15, 'individual', '{"individual": true}', '2024-07-01', '2025-06-30'),
     ((SELECT id FROM tax_year), 'Slab 4', 4, 2200001, 3200000, 0.25, 'individual', '{"individual": true}', '2024-07-01', '2025-06-30'),
     ((SELECT id FROM tax_year), 'Slab 5', 5, 3200001, 4100000, 0.30, 'individual', '{"individual": true}', '2024-07-01', '2025-06-30'),
-    ((SELECT id FROM tax_year), 'Slab 6', 6, 4100001, NULL, 0.35, 'individual', '{"individual": true}', '2024-07-01', '2025-06-30'); 
+    ((SELECT id FROM tax_year), 'Slab 6', 6, 4100001, NULL, 0.35, 'individual', '{"individual": true}', '2024-07-01', '2025-06-30');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Tax Year 2025-26 (Finance Act 2025) — CURRENT ACTIVE YEAR
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO tax_years (
+    tax_year, start_date, end_date, filing_deadline, is_current, is_active, description
+) VALUES (
+    '2025-26',
+    '2025-07-01',
+    '2026-06-30',
+    '2026-09-30',
+    true,
+    true,
+    'Tax Year 2025-26 (Finance Act 2025)'
+);
+
+-- Tax slabs for 2025-26 (Finance Act 2025 — salaried individuals)
+WITH tax_year AS (SELECT id FROM tax_years WHERE tax_year = '2025-26')
+INSERT INTO tax_slabs (
+    tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate,
+    slab_type, applicable_to, effective_from, effective_to
+) VALUES
+    ((SELECT id FROM tax_year), 'Slab 1', 1, 0,        600000,   0.0000, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
+    ((SELECT id FROM tax_year), 'Slab 2', 2, 600001,   1200000,  0.0500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
+    ((SELECT id FROM tax_year), 'Slab 3', 3, 1200001,  2200000,  0.1500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
+    ((SELECT id FROM tax_year), 'Slab 4', 4, 2200001,  3200000,  0.2500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
+    ((SELECT id FROM tax_year), 'Slab 5', 5, 3200001,  4100000,  0.3000, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
+    ((SELECT id FROM tax_year), 'Slab 6', 6, 4100001,  NULL,     0.3500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'); 

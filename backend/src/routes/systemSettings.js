@@ -1,67 +1,20 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const jwtAuth = require('../middleware/auth');
 
 const router = express.Router();
 
-// Middleware to verify admin authentication
-const requireAdmin = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        message: 'Please provide a valid Bearer token'
-      });
+// Require JWT auth + admin role
+const requireAdmin = [
+  jwtAuth,
+  (req, res, next) => {
+    if (!['admin', 'super_admin'].includes(req.user?.role)) {
+      return res.status(403).json({ error: 'Access denied', message: 'Admin privileges required' });
     }
-    
-    const sessionToken = authHeader.substring(7);
-    
-    if (!sessionToken || sessionToken.length < 10) {
-      return res.status(401).json({ 
-        error: 'Invalid session token',
-        message: 'Session token must be at least 10 characters'
-      });
-    }
-    
-    // Verify session token exists and get user info
-    const sessionResult = await pool.query(`
-      SELECT us.user_id, us.user_email, u.name, u.role, u.permissions
-      FROM user_sessions us
-      JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
-    `, [sessionToken]);
-    
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({ 
-        error: 'Invalid or expired session',
-        message: 'Please login again'
-      });
-    }
-    
-    const user = sessionResult.rows[0];
-    
-    // Check if user has admin privileges
-    if (!['admin', 'super_admin'].includes(user.role)) {
-      return res.status(403).json({ 
-        error: 'Access denied',
-        message: 'Admin privileges required'
-      });
-    }
-    
-    req.admin = user;
     next();
-    
-  } catch (error) {
-    logger.error('Admin authentication error:', error);
-    res.status(500).json({ 
-      error: 'Authentication error',
-      message: error.message
-    });
   }
-};
+];
 
 // Get all system settings
 router.get('/', requireAdmin, async (req, res) => {
@@ -208,7 +161,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
           }
           break;
         case 'boolean':
-          validatedValue = Boolean(setting_value);
+          validatedValue = setting_value === 'true' || setting_value === true;
           break;
         case 'json':
           if (typeof setting_value === 'string') {
@@ -248,7 +201,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
           updated_by_email = $6
         WHERE setting_key = $7
         RETURNING *
-      `, [category, validatedValue, data_type, description, is_public, req.admin.user_email, key]);
+      `, [category, validatedValue, data_type, description, is_public, req.user.email, key]);
     } else {
       // Create new setting
       result = await client.query(`
@@ -260,7 +213,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
           uuid_generate_v4(), $1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $7
         )
         RETURNING *
-      `, [category, key, validatedValue, data_type, description, is_public, req.admin.user_email]);
+      `, [category, key, validatedValue, data_type, description, is_public, req.user.email]);
     }
     
     // Log the change
@@ -270,8 +223,8 @@ router.put('/:key', requireAdmin, async (req, res) => {
         field_name, new_value, category, ip_address, user_agent
       ) VALUES ($1, $2, $3, 'system_settings', $4, $5, $6, 'system_configuration', $7, $8)
     `, [
-      req.admin.user_id,
-      req.admin.user_email,
+      req.user.id,
+      req.user.email,
       existingResult.rows.length > 0 ? 'update' : 'create',
       result.rows[0].id,
       'setting_update',
@@ -282,7 +235,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
     
     await client.query('COMMIT');
     
-    logger.info(`System setting '${key}' ${existingResult.rows.length > 0 ? 'updated' : 'created'} by admin ${req.admin.user_email}`);
+    logger.info(`System setting '${key}' ${existingResult.rows.length > 0 ? 'updated' : 'created'} by admin ${req.user.email}`);
     
     res.json({
       success: true,
@@ -310,7 +263,7 @@ router.delete('/:key', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
     
     // Check if user is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Super admin privileges required to delete settings'
@@ -339,8 +292,8 @@ router.delete('/:key', requireAdmin, async (req, res) => {
         field_name, old_value, category, ip_address, user_agent
       ) VALUES ($1, $2, 'delete', 'system_settings', $3, $4, $5, 'system_configuration', $6, $7)
     `, [
-      req.admin.user_id,
-      req.admin.user_email,
+      req.user.id,
+      req.user.email,
       result.rows[0].id,
       'setting_deletion',
       JSON.stringify(result.rows[0]),
@@ -350,7 +303,7 @@ router.delete('/:key', requireAdmin, async (req, res) => {
     
     await client.query('COMMIT');
     
-    logger.info(`System setting '${key}' deleted by super admin ${req.admin.user_email}`);
+    logger.info(`System setting '${key}' deleted by super admin ${req.user.email}`);
     
     res.json({
       success: true,
@@ -416,7 +369,7 @@ router.post('/bulk-update', requireAdmin, async (req, res) => {
             updated_by_email = $6
           WHERE setting_key = $7
           RETURNING *
-        `, [category, value, data_type, description, is_public, req.admin.user_email, key]);
+        `, [category, value, data_type, description, is_public, req.user.email, key]);
       } else {
         // Create new setting
         result = await client.query(`
@@ -428,7 +381,7 @@ router.post('/bulk-update', requireAdmin, async (req, res) => {
             uuid_generate_v4(), $1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $7
           )
           RETURNING *
-        `, [category, key, value, data_type, description, is_public, req.admin.user_email]);
+        `, [category, key, value, data_type, description, is_public, req.user.email]);
       }
       
       updatedSettings.push(result.rows[0]);
@@ -441,8 +394,8 @@ router.post('/bulk-update', requireAdmin, async (req, res) => {
         field_name, new_value, category, ip_address, user_agent
       ) VALUES ($1, $2, 'bulk_update', 'system_settings', $3, $4, $5, 'system_configuration', $6, $7)
     `, [
-      req.admin.user_id,
-      req.admin.user_email,
+      req.user.id,
+      req.user.email,
       'bulk_update',
       'bulk_settings_update',
       JSON.stringify({ count: updatedSettings.length, keys: settings.map(s => s.key) }),
@@ -452,7 +405,7 @@ router.post('/bulk-update', requireAdmin, async (req, res) => {
     
     await client.query('COMMIT');
     
-    logger.info(`Bulk update of ${updatedSettings.length} system settings by admin ${req.admin.user_email}`);
+    logger.info(`Bulk update of ${updatedSettings.length} system settings by admin ${req.user.email}`);
     
     res.json({
       success: true,
@@ -480,7 +433,7 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
     
     // Check if user is super admin
-    if (req.admin.role !== 'super_admin') {
+    if (req.user.role !== 'super_admin') {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'Super admin privileges required to reset settings'
@@ -494,9 +447,9 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
       'tax_calculation': [
         {
           key: 'default_tax_year',
-          value: '2025-26',
+          value: null, // Resolved dynamically from tax_years WHERE is_current=true
           data_type: 'string',
-          description: 'Default tax year for new tax returns'
+          description: 'Default tax year for new tax returns (set is_current=true in tax_years table)'
         },
         {
           key: 'minimum_taxable_income',
@@ -639,7 +592,7 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
             updated_at = NOW(),
             updated_by_email = EXCLUDED.updated_by_email
           RETURNING *
-        `, [cat, setting.key, setting.value, setting.data_type, setting.description, req.admin.user_email]);
+        `, [cat, setting.key, setting.value, setting.data_type, setting.description, req.user.email]);
         
         resetSettings.push(result.rows[0]);
       }
@@ -652,8 +605,8 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
         field_name, new_value, category, ip_address, user_agent
       ) VALUES ($1, $2, 'reset_defaults', 'system_settings', $3, $4, $5, 'system_configuration', $6, $7)
     `, [
-      req.admin.user_id,
-      req.admin.user_email,
+      req.user.id,
+      req.user.email,
       'reset_action',
       'settings_reset',
       JSON.stringify({ category: category || 'all', count: resetSettings.length }),
@@ -663,7 +616,7 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
     
     await client.query('COMMIT');
     
-    logger.info(`System settings reset to defaults (${category || 'all'}) by super admin ${req.admin.user_email}`);
+    logger.info(`System settings reset to defaults (${category || 'all'}) by super admin ${req.user.email}`);
     
     res.json({
       success: true,

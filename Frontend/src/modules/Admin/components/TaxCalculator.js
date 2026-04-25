@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Calculator, TrendingUp, FileText, DollarSign } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useTaxYear } from '../../../contexts/TaxYearContext';
 
 const TaxCalculator = ({ onClose }) => {
+  const { currentTaxYear, availableYears } = useTaxYear();
   const [formData, setFormData] = useState({
     income: '',
     allowances: '',
-    tax_year: '2025-26'
+    tax_year: currentTaxYear || '2025-26'
   });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -126,8 +128,9 @@ const TaxCalculator = ({ onClose }) => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="2025-26">2025-26</option>
-                    <option value="2024-25">2024-25</option>
+                    {(availableYears.length ? availableYears : ['2025-26', '2024-25']).map(yr => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
                   </select>
                 </div>
 

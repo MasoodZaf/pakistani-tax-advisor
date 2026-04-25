@@ -1,337 +1,394 @@
 /**
- * Tax Calculation Service - Inter-Form Data Linking
- * Replicates Excel sheet references like =Income!B16, =Capital Gain!E19
- * This service handles automatic data flow between forms exactly like Excel
+ * Tax Calculation Service — orchestrates cross-form computation.
+ *
+ * All rates come from DB via TaxRateService (year-versioned, no hardcoded fallbacks).
+ * Pure-math primitives live in CalculationService.
+ *
+ * Two entry points:
+ *   - calculateTaxComputation(userId, taxYear)   — reads saved form data from DB
+ *   - previewTaxComputation(userId, taxYear, in) — same math, but input comes from
+ *                                                  unsaved form data (for UI preview)
  */
 
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const CalculationService = require('./calculationService');
+const TaxRateService = require('./taxRateService');
+
+const toNum = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 class TaxCalculationService {
-  
-  /**
-   * Get Income Form Data (Excel "Income" sheet)
-   * This replicates all the calculated fields from Excel Income sheet
-   */
+  // Kept for backwards-compatibility with routes that call it directly.
+  static async resolveTaxYearId(taxYear) {
+    return TaxRateService.resolveTaxYearId(taxYear);
+  }
+
+  // ──────── DB-backed form reads ────────
+
   static async getIncomeFormData(userId, taxYear) {
-    try {
-      const result = await pool.query(`
-        SELECT 
-          -- Input fields
-          annual_basic_salary,
-          allowances,
-          bonus,
-          medical_allowance,
-          pension_from_ex_employer,
-          employment_termination_payment,
-          retirement_from_approved_funds,
-          directorship_fee,
-          other_cash_benefits,
-          employer_contribution_provident,
-          taxable_car_value,
-          other_taxable_subsidies,
-          profit_on_debt_15_percent,
-          profit_on_debt_12_5_percent,
-          other_taxable_income_rent,
-          other_taxable_income_others,
-          
-          -- Excel calculated fields (auto-calculated by database)
-          income_exempt_from_tax as b15_income_exempt_from_tax,
-          annual_salary_wages_total as b16_annual_salary_wages_total,
-          non_cash_benefit_exempt as b22_non_cash_benefit_exempt,
-          total_non_cash_benefits as b23_total_non_cash_benefits,
-          other_income_min_tax_total as b28_other_income_min_tax_total,
-          other_income_no_min_tax_total as b33_other_income_no_min_tax_total,
-          total_employment_income,
-          
-          updated_at
-        FROM income_forms 
-        WHERE user_id = $1 AND tax_year = $2
-      `, [userId, taxYear]);
-
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error getting income form data:', error);
-      throw error;
-    }
+    const result = await pool.query(
+      `SELECT
+        annual_basic_salary, allowances, bonus, medical_allowance,
+        pension_from_ex_employer, employment_termination_payment,
+        retirement_from_approved_funds, directorship_fee,
+        other_cash_benefits, employer_contribution_provident,
+        taxable_car_value, other_taxable_subsidies,
+        profit_on_debt_15_percent, profit_on_debt_12_5_percent,
+        other_taxable_income_rent, other_taxable_income_others,
+        income_exempt_from_tax           AS b15_income_exempt_from_tax,
+        annual_salary_wages_total        AS b16_annual_salary_wages_total,
+        non_cash_benefit_exempt          AS b22_non_cash_benefit_exempt,
+        total_non_cash_benefits          AS b23_total_non_cash_benefits,
+        other_income_min_tax_total       AS b28_other_income_min_tax_total,
+        other_income_no_min_tax_total    AS b33_other_income_no_min_tax_total,
+        total_employment_income,
+        updated_at
+      FROM income_forms
+      WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return result.rows[0] || null;
   }
 
-  /**
-   * Get Adjustable Tax Form Data (Excel "Adjustable Tax" sheet)
-   * Links to Income sheet data automatically
-   */
   static async getAdjustableFormData(userId, taxYear) {
-    try {
-      // First get income data for linking
-      const incomeData = await this.getIncomeFormData(userId, taxYear);
-      
-      const result = await pool.query(`
-        SELECT *
-        FROM adjustable_tax_forms 
-        WHERE user_id = $1 AND tax_year = $2
-      `, [userId, taxYear]);
+    const incomeData = await this.getIncomeFormData(userId, taxYear);
 
-      const adjustableData = result.rows[0] || {};
+    const result = await pool.query(
+      `SELECT * FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    const adjustableData = result.rows[0] || {};
 
-      // Excel sheet linking: Adjustable Tax references Income sheet
-      if (incomeData) {
-        // Excel: Adjustable Tax B5 = Income!B16
-        adjustableData.salary_employees_149_gross_receipt = incomeData.b16_annual_salary_wages_total;
-        
-        // Excel: Adjustable Tax B6 = Income!B13
-        adjustableData.directorship_fee_149_3_gross_receipt = incomeData.directorship_fee;
-        
-        // Excel: Adjustable Tax B7 = Income!B26
-        adjustableData.profit_debt_15_percent_gross_receipt = incomeData.profit_on_debt_15_percent;
-        
-        // Excel: Adjustable Tax B8 = Income!B27
-        adjustableData.sukook_12_5_percent_gross_receipt = incomeData.profit_on_debt_12_5_percent;
-        
-        // Excel: Adjustable Tax B9 = Income!B31
-        adjustableData.rent_section_155_gross_receipt = incomeData.other_taxable_income_rent;
-      }
-
-      return adjustableData;
-    } catch (error) {
-      logger.error('Error getting adjustable tax form data:', error);
-      throw error;
+    // Inter-form linking from income_forms (Excel cross-sheet references).
+    if (incomeData) {
+      adjustableData.salary_employees_149_gross_receipt = incomeData.b16_annual_salary_wages_total;
+      adjustableData.directorship_fee_149_3_gross_receipt = incomeData.directorship_fee;
+      adjustableData.profit_debt_15_percent_gross_receipt = incomeData.profit_on_debt_15_percent;
+      adjustableData.sukook_12_5_percent_gross_receipt = incomeData.profit_on_debt_12_5_percent;
+      adjustableData.rent_section_155_gross_receipt = incomeData.other_taxable_income_rent;
     }
+    return adjustableData;
   }
 
-  /**
-   * Get Capital Gains Form Data (Excel "Capital Gain" sheet)
-   */
   static async getCapitalGainsData(userId, taxYear) {
-    try {
-      const result = await pool.query(`
-        SELECT *
-        FROM capital_gain_forms 
-        WHERE user_id = $1 AND tax_year = $2
-      `, [userId, taxYear]);
-
-      return result.rows[0] || null;
-    } catch (error) {
-      logger.error('Error getting capital gains data:', error);
-      throw error;
-    }
+    const result = await pool.query(
+      `SELECT * FROM capital_gain_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return result.rows[0] || null;
   }
 
+  static async getReductionsData(userId, taxYear) {
+    const r = await pool.query(
+      `SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return r.rows[0] || null;
+  }
+
+  static async getCreditsData(userId, taxYear) {
+    const r = await pool.query(
+      `SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return r.rows[0] || null;
+  }
+
+  static async getDeductionsData(userId, taxYear) {
+    const r = await pool.query(
+      `SELECT * FROM deductions_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return r.rows[0] || null;
+  }
+
+  // ──────── Core compute ────────
+
   /**
-   * Calculate Tax Computation (Excel "Tax Computation" sheet)
-   * This replicates the main tax calculation sheet that references all other sheets
+   * Run the full tax computation for a user + tax_year using DB-stored inputs.
+   * Returns the structured breakdown the frontend renders.
    */
   static async calculateTaxComputation(userId, taxYear) {
-    try {
-      logger.info(`Calculating tax computation for user ${userId}, tax year ${taxYear}`);
+    logger.info(`Tax computation run: user=${userId} year=${taxYear}`);
 
-      // Get data from all forms (like Excel sheet references)
-      const incomeData = await this.getIncomeFormData(userId, taxYear);
-      const adjustableData = await this.getAdjustableFormData(userId, taxYear);
-      const capitalGainsData = await this.getCapitalGainsData(userId, taxYear);
+    const [incomeData, adjustableData, capitalGainsData, reductionsData, creditsData, deductionsData, rates] =
+      await Promise.all([
+        this.getIncomeFormData(userId, taxYear),
+        this.getAdjustableFormData(userId, taxYear),
+        this.getCapitalGainsData(userId, taxYear),
+        this.getReductionsData(userId, taxYear),
+        this.getCreditsData(userId, taxYear),
+        this.getDeductionsData(userId, taxYear),
+        TaxRateService.getAllRates(taxYear),
+      ]);
 
-      if (!incomeData) {
-        throw new Error('Income form data not found - required for tax computation');
-      }
-
-      // Excel Tax Computation calculations
-      const computation = {
-        // Excel B6: Income from Salary = Income!B16 + Income!B23
-        incomeFromSalary: (incomeData.b16_annual_salary_wages_total || 0) + 
-                         (incomeData.b23_total_non_cash_benefits || 0),
-        
-        // Excel B7: Income from Other Sources = Income!B28 + Income!B33
-        incomeFromOtherSources: (incomeData.b28_other_income_min_tax_total || 0) + 
-                               (incomeData.b33_other_income_no_min_tax_total || 0),
-        
-        // Excel B8: Income from Capital Gains = Capital Gain!E19
-        incomeFromCapitalGains: capitalGainsData?.total_capital_gains || 0,
-        
-        // Excel B9: Total Income = B6 + B7 + B8
-        totalIncome: 0, // Will be calculated below
-        
-        // Excel B11: Taxable Income excluding CG = B9 - Capital Gains
-        taxableIncomeExcludingCG: 0,
-        
-        // Excel B16: Normal Income Tax (Progressive calculation)
-        normalIncomeTax: 0,
-        
-        // Excel B17: Surcharge (if income > 10M, then 9% of normal tax)
-        surcharge: 0,
-        
-        // Excel B18: Capital Gains Tax
-        capitalGainsTax: capitalGainsData?.total_capital_gains_tax || 0,
-        
-        // Excel B19: Total Tax before adjustments
-        totalTaxBeforeAdjustments: 0,
-        
-        // Excel B25: Withholding Tax = Adjustable Tax!C32
-        withholdingTax: adjustableData?.total_tax_collected || 0,
-        
-        // Excel B28: Net Tax Payable
-        netTaxPayable: 0,
-        
-        // Excel B30: Balance Payable/Refundable
-        balancePayableRefundable: 0
-      };
-
-      // Calculate totals
-      computation.totalIncome = computation.incomeFromSalary + 
-                               computation.incomeFromOtherSources + 
-                               computation.incomeFromCapitalGains;
-
-      computation.taxableIncomeExcludingCG = computation.totalIncome - 
-                                            computation.incomeFromCapitalGains;
-
-      // Progressive tax calculation (Pakistani tax slabs 2025-26)
-      computation.normalIncomeTax = await this.calculateProgressiveTax(
-        computation.taxableIncomeExcludingCG, 
-        taxYear
-      );
-
-      // Surcharge calculation (10% if income > 10M as per Finance Act 2025)
-      if (computation.taxableIncomeExcludingCG > 10000000) {
-        computation.surcharge = Math.round(computation.normalIncomeTax * 0.10);
-      }
-
-      computation.totalTaxBeforeAdjustments = computation.normalIncomeTax + 
-                                             computation.surcharge + 
-                                             computation.capitalGainsTax;
-
-      computation.netTaxPayable = computation.totalTaxBeforeAdjustments;
-
-      computation.balancePayableRefundable = computation.netTaxPayable - 
-                                            computation.withholdingTax;
-
-      logger.info('Tax computation completed successfully', {
-        totalIncome: computation.totalIncome,
-        normalIncomeTax: computation.normalIncomeTax,
-        netTaxPayable: computation.netTaxPayable,
-        balancePayableRefundable: computation.balancePayableRefundable
-      });
-
-      return computation;
-
-    } catch (error) {
-      logger.error('Error calculating tax computation:', error);
-      throw error;
+    if (!incomeData) {
+      throw new Error('Income form data not found — required for tax computation');
     }
+
+    return this._computeFromInputs({
+      incomeData,
+      adjustableData,
+      capitalGainsData,
+      reductionsData,
+      creditsData,
+      deductionsData,
+      rates,
+      taxYear,
+    });
   }
 
   /**
-   * Calculate Progressive Tax based on Pakistani tax slabs
-   * Replicates Excel progressive tax calculation
+   * Preview: same math, but caller provides in-flight (unsaved) form values.
+   * The frontend uses this to render the computation summary live as the user types.
+   * `inputs` is shaped like { income, adjustable_tax, capital_gain, reductions,
+   * credits, deductions, final_min_income, final_tax } — each a plain object of
+   * field -> value (the same shape saved to the DB).
    */
-  static async calculateProgressiveTax(taxableIncome, taxYear) {
-    try {
-      // Pakistani tax slabs for 2025-26 (these should come from database)
-      const taxSlabs = [
-        { min: 0, max: 600000, rate: 0.00 },
-        { min: 600000, max: 1200000, rate: 0.05 },
-        { min: 1200000, max: 2200000, rate: 0.15 },
-        { min: 2200000, max: 3200000, rate: 0.25 },
-        { min: 3200000, max: 4100000, rate: 0.30 },
-        { min: 4100000, max: Infinity, rate: 0.35 }
-      ];
+  static async previewTaxComputation(taxYear, inputs = {}) {
+    const rates = await TaxRateService.getAllRates(taxYear);
 
-      let totalTax = 0;
+    const incomeData = inputs.income || {};
+    const adjustableData = inputs.adjustable_tax || {};
+    const capitalGainsData = inputs.capital_gain || {};
+    const reductionsData = inputs.reductions || {};
+    const creditsData = inputs.credits || {};
+    const deductionsData = inputs.deductions || {};
 
-      for (const slab of taxSlabs) {
-        if (taxableIncome > slab.min) {
-          const taxableAtThisSlab = Math.min(taxableIncome, slab.max) - slab.min;
-          if (taxableAtThisSlab > 0) {
-            totalTax += taxableAtThisSlab * slab.rate;
-          }
+    // Normalize: preview inputs use snake_case DB names directly; derive the
+    // bN_* aliases the compute function expects, matching getIncomeFormData.
+    const incomeWithAliases = {
+      ...incomeData,
+      b15_income_exempt_from_tax: incomeData.income_exempt_from_tax,
+      b16_annual_salary_wages_total: incomeData.annual_salary_wages_total,
+      b22_non_cash_benefit_exempt: incomeData.non_cash_benefit_exempt,
+      b23_total_non_cash_benefits: incomeData.total_non_cash_benefits,
+      b28_other_income_min_tax_total: incomeData.other_income_min_tax_total,
+      b33_other_income_no_min_tax_total: incomeData.other_income_no_min_tax_total,
+    };
+
+    return this._computeFromInputs({
+      incomeData: incomeWithAliases,
+      adjustableData,
+      capitalGainsData,
+      reductionsData,
+      creditsData,
+      deductionsData,
+      rates,
+      taxYear,
+      preview: true,
+    });
+  }
+
+  /**
+   * Pure function: takes all inputs + rates, returns the breakdown.
+   * Does NOT touch DB. Callable from both the saved-run and preview paths.
+   */
+  static _computeFromInputs({
+    incomeData,
+    adjustableData,
+    capitalGainsData,
+    reductionsData,
+    creditsData,
+    deductionsData,
+    rates,
+    taxYear,
+    preview = false,
+  }) {
+    // ── Income buckets ──
+    const incomeFromSalary =
+      toNum(incomeData?.b16_annual_salary_wages_total) + toNum(incomeData?.b23_total_non_cash_benefits);
+    const incomeFromOtherSources =
+      toNum(incomeData?.b28_other_income_min_tax_total) + toNum(incomeData?.b33_other_income_no_min_tax_total);
+    const incomeFromCapitalGains = toNum(capitalGainsData?.total_capital_gain);
+
+    const totalIncome = incomeFromSalary + incomeFromOtherSources + incomeFromCapitalGains;
+
+    // ── Deductible allowances ──
+    // DB-computed column `total_deduction_from_income` / `total_deductions`
+    // already sums zakat + ushr + professional expenses + education + other.
+    // Read that if present; otherwise fall back to individual components.
+    const deductibleAllowances =
+      toNum(deductionsData?.total_deduction_from_income) ||
+      toNum(deductionsData?.total_deductions) ||
+      (toNum(deductionsData?.zakat_paid_amount) +
+       toNum(deductionsData?.zakat) +
+       toNum(deductionsData?.ushr) +
+       toNum(deductionsData?.professional_expenses_amount) +
+       toNum(deductionsData?.educational_expenses_amount) +
+       toNum(deductionsData?.other_deductions));
+
+    const taxableIncomeExcludingCG = Math.max(0, totalIncome - incomeFromCapitalGains - deductibleAllowances);
+    const taxableIncomeIncludingCG = taxableIncomeExcludingCG + incomeFromCapitalGains;
+
+    // ── Progressive normal tax ──
+    const normalIncomeTax = CalculationService.calculateProgressiveTax(
+      taxableIncomeExcludingCG,
+      rates.slabs
+    );
+
+    // ── Surcharge: DB-driven rate + threshold ──
+    let surcharge = 0;
+    if (taxableIncomeExcludingCG > rates.surcharge.threshold) {
+      surcharge = Math.round(normalIncomeTax * rates.surcharge.rate);
+    }
+
+    // ── CGT: use the per-form computed value (CGT rules vary by asset class) ──
+    const capitalGainsTax = toNum(capitalGainsData?.total_capital_gain_tax);
+
+    const totalTaxBeforeAdjustments = normalIncomeTax + surcharge + capitalGainsTax;
+
+    // ── Reductions (teacher, Behbood, immovable-property ex-serv) ──
+    const totalReductions =
+      toNum(reductionsData?.total_tax_reductions) ||
+      toNum(reductionsData?.total_reductions) ||
+      0;
+
+    // ── Credits (donations, pension). Keep as-is if the form has totaled them. ──
+    const totalCredits = toNum(creditsData?.total_tax_credits) || toNum(creditsData?.total_credits) || 0;
+
+    const netTaxPayable = Math.max(0, totalTaxBeforeAdjustments - totalReductions - totalCredits);
+
+    // ── Super tax u/s 4C (DB-driven brackets) ──
+    const superTax = (() => {
+      const income = taxableIncomeIncludingCG;
+      if (income <= 0) return 0;
+      for (const b of rates.superTax) {
+        if (income >= b.minIncome && income <= b.maxIncome) {
+          return Math.round(income * b.rate);
         }
       }
+      return 0;
+    })();
 
-      return Math.round(totalTax);
+    const totalTaxChargeable = netTaxPayable + superTax;
 
-    } catch (error) {
-      logger.error('Error calculating progressive tax:', error);
-      throw error;
-    }
+    // ── Advance / withholding tax paid ──
+    const withholdingTax = toNum(adjustableData?.total_tax_collected) || toNum(adjustableData?.total_adjustable_tax);
+    const advanceTax = toNum(adjustableData?.advance_tax_u_s_147);
+    const balancePayableRefundable = totalTaxChargeable - withholdingTax - advanceTax;
+
+    const breakdown = {
+      taxYear,
+      preview,
+      income: {
+        incomeFromSalary,
+        incomeFromOtherSources,
+        incomeFromCapitalGains,
+        totalIncome,
+        deductibleAllowances,
+        taxableIncomeExcludingCG,
+        taxableIncomeIncludingCG,
+      },
+      tax: {
+        normalIncomeTax,
+        surcharge,
+        capitalGainsTax,
+        totalTaxBeforeAdjustments,
+        totalReductions,
+        totalCredits,
+        netTaxPayable,
+        superTax,
+        totalTaxChargeable,
+      },
+      payments: {
+        withholdingTax,
+        advanceTax,
+        balancePayableRefundable,
+      },
+      rates: {
+        surchargeRate: rates.surcharge.rate,
+        surchargeThreshold: rates.surcharge.threshold,
+        slabCount: rates.slabs.length,
+      },
+    };
+
+    logger.info('Tax computation produced', {
+      taxYear,
+      preview,
+      totalIncome,
+      normalIncomeTax,
+      netTaxPayable,
+      superTax,
+      balancePayableRefundable,
+    });
+
+    return breakdown;
   }
 
+  // ──────── Legacy methods kept for old route compatibility ────────
+
   /**
-   * Update Adjustable Tax Form with linked data
-   * This automatically updates adjustable tax when income data changes
+   * Mirror adjustable_tax_forms with values linked from income_forms.
+   * Wraps ensureTaxReturn via the common helper.
    */
   static async updateAdjustableFormWithLinks(userId, taxYear) {
-    try {
-      const incomeData = await this.getIncomeFormData(userId, taxYear);
-      
-      if (!incomeData) {
-        logger.warn('No income data found for adjustable tax linking');
-        return;
-      }
+    const incomeData = await this.getIncomeFormData(userId, taxYear);
+    if (!incomeData) {
+      logger.warn('No income data found for adjustable tax linking', { userId, taxYear });
+      return;
+    }
 
-      // Update adjustable tax form with linked values
-      await pool.query(`
-        INSERT INTO adjustable_tax_forms (
-          user_id, tax_year,
-          salary_employees_149_gross_receipt,
-          directorship_fee_149_3_gross_receipt,
-          profit_debt_15_percent_gross_receipt,
-          sukook_12_5_percent_gross_receipt,
-          rent_section_155_gross_receipt
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (user_id, tax_year) DO UPDATE SET
-          salary_employees_149_gross_receipt = EXCLUDED.salary_employees_149_gross_receipt,
-          directorship_fee_149_3_gross_receipt = EXCLUDED.directorship_fee_149_3_gross_receipt,
-          profit_debt_15_percent_gross_receipt = EXCLUDED.profit_debt_15_percent_gross_receipt,
-          sukook_12_5_percent_gross_receipt = EXCLUDED.sukook_12_5_percent_gross_receipt,
-          rent_section_155_gross_receipt = EXCLUDED.rent_section_155_gross_receipt,
-          updated_at = CURRENT_TIMESTAMP
-      `, [
-        userId, taxYear,
+    const taxYearId = await TaxRateService.resolveTaxYearId(taxYear);
+    const userRow = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmail = userRow.rows[0]?.email || null;
+
+    await pool.query(
+      `INSERT INTO adjustable_tax_forms (
+         user_id, user_email, tax_year, tax_year_id,
+         salary_employees_149_gross_receipt,
+         directorship_fee_149_3_gross_receipt,
+         profit_debt_15_percent_gross_receipt,
+         sukook_12_5_percent_gross_receipt,
+         rent_section_155_gross_receipt
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (user_id, tax_year) DO UPDATE SET
+         salary_employees_149_gross_receipt   = EXCLUDED.salary_employees_149_gross_receipt,
+         directorship_fee_149_3_gross_receipt = EXCLUDED.directorship_fee_149_3_gross_receipt,
+         profit_debt_15_percent_gross_receipt = EXCLUDED.profit_debt_15_percent_gross_receipt,
+         sukook_12_5_percent_gross_receipt    = EXCLUDED.sukook_12_5_percent_gross_receipt,
+         rent_section_155_gross_receipt       = EXCLUDED.rent_section_155_gross_receipt,
+         updated_at = CURRENT_TIMESTAMP`,
+      [
+        userId,
+        userEmail,
+        taxYear,
+        taxYearId,
         incomeData.b16_annual_salary_wages_total || 0,
         incomeData.directorship_fee || 0,
         incomeData.profit_on_debt_15_percent || 0,
         incomeData.profit_on_debt_12_5_percent || 0,
-        incomeData.other_taxable_income_rent || 0
-      ]);
-
-      logger.info('Adjustable tax form updated with linked data');
-
-    } catch (error) {
-      logger.error('Error updating adjustable tax form with links:', error);
-      throw error;
-    }
+        incomeData.other_taxable_income_rent || 0,
+      ]
+    );
   }
 
-  /**
-   * Get Complete Tax Summary (like Excel summary)
-   * This provides a complete overview linking all forms
-   */
   static async getCompleteTaxSummary(userId, taxYear) {
-    try {
-      const [incomeData, adjustableData, capitalGainsData, taxComputation] = await Promise.all([
-        this.getIncomeFormData(userId, taxYear),
-        this.getAdjustableFormData(userId, taxYear),
-        this.getCapitalGainsData(userId, taxYear),
-        this.calculateTaxComputation(userId, taxYear)
-      ]);
+    const [incomeData, adjustableData, capitalGainsData, taxComputation] = await Promise.all([
+      this.getIncomeFormData(userId, taxYear),
+      this.getAdjustableFormData(userId, taxYear),
+      this.getCapitalGainsData(userId, taxYear),
+      this.calculateTaxComputation(userId, taxYear),
+    ]);
 
-      return {
-        userId,
-        taxYear,
-        incomeData,
-        adjustableData,
-        capitalGainsData,
-        taxComputation,
-        summary: {
-          totalIncome: taxComputation.totalIncome,
-          totalTax: taxComputation.netTaxPayable,
-          withholdingTax: taxComputation.withholdingTax,
-          balanceDue: taxComputation.balancePayableRefundable,
-          lastUpdated: new Date().toISOString()
-        }
-      };
-
-    } catch (error) {
-      logger.error('Error getting complete tax summary:', error);
-      throw error;
-    }
+    return {
+      userId,
+      taxYear,
+      incomeData,
+      adjustableData,
+      capitalGainsData,
+      taxComputation,
+      summary: {
+        totalIncome: taxComputation.income.totalIncome,
+        totalTax: taxComputation.tax.totalTaxChargeable,
+        withholdingTax: taxComputation.payments.withholdingTax,
+        balanceDue: taxComputation.payments.balancePayableRefundable,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
   }
 }
 

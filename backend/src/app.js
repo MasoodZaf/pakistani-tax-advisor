@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('./config/database');
 const authRoutes = require('./routes/auth');
@@ -9,6 +11,8 @@ const excelRoutes = require('./routes/excel');
 const systemSettingsRoutes = require('./routes/systemSettings');
 const personalInfoRoutes = require('./routes/personalInfo');
 const testDataRoutes = require('./routes/testData');
+const taxHistoryRoutes = require('./routes/taxHistory');
+const taxYearRoutes = require('./routes/taxYear');
 
 // Module imports
 const incomeTaxModule = require('./modules/IncomeTax');
@@ -18,9 +22,28 @@ const adminModule = require('./modules/Admin');
 // Legacy routes (still needed for compatibility)
 const incomeFormRoutes = require('./routes/incomeForm');
 const logger = require('./utils/logger');
+const { expressErrorHandler } = require('./utils/sendError');
+const sentry = require('./utils/sentry');
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection', { reason: reason?.stack || reason });
+  sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+});
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception', { message: err?.message, stack: err?.stack });
+  sentry.captureException(err);
+});
 
 // Initialize Express app
 const app = express();
+
+// Trust the reverse proxy (Render/Railway/nginx) so req.ip reflects the real
+// client, not the proxy — essential for rate limiting.
+app.set('trust proxy', 1);
+
+// Security headers (CSP, X-Frame-Options, etc.) + gzip compression.
+app.use(helmet());
+app.use(compression());
 
 // Configure CORS with security considerations
 const corsOptions = {
@@ -46,43 +69,92 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies — explicit size limit to cap DoS surface.
+app.use(express.json({ limit: '1mb' }));
 
-// Rate limiting for authentication endpoints
+// Defense-in-depth: in production, strip `error` field from any 5xx JSON response.
+// Individual routes still send error.message today; this middleware prevents that
+// from reaching clients in prod until each route is migrated to sendError().
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode >= 500 && body && typeof body === 'object' && 'error' in body) {
+        const { error: _stripped, ...rest } = body;
+        return originalJson(rest);
+      }
+      return originalJson(body);
+    };
+    next();
+  });
+}
+
+// Rate limiting — env-tunable. Defaults keep prod strict, dev workable, and
+// E2E / CI runs can bump further via LOGIN_RATE_LIMIT_MAX / API_RATE_LIMIT_MAX.
+const isProd = process.env.NODE_ENV === 'production';
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 5 : 100, // Higher limit for development
-  message: {
-    success: false,
-    message: 'Too many login attempts from this IP, please try again after 15 minutes.'
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX) || (isProd ? 5 : 1000),
+  message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.API_RATE_LIMIT_MAX) || (isProd ? 60 : 5000),
+  message: { success: false, message: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET',
+});
+
+// Rate limiting — file uploads (very strict)
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 100,
+  message: { success: false, message: 'Too many upload requests. Please wait a minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Serve static files (for test interface)
 app.use(express.static('public'));
 
-// Mount routes with rate limiting on auth endpoints
+// ── Route mounting ──────────────────────────────────────────────────────────
+// Auth (login/register/logout) — strict rate limit
 app.use('/api', loginLimiter, authRoutes);
-app.use('/api/reports', reportsRoutes); // Reports API routes
-app.use('/api/excel', excelRoutes); // Excel import/export routes
-app.use('/api/admin/system-settings', systemSettingsRoutes); // System settings routes
-app.use('/api/personal-info', personalInfoRoutes); // Personal information routes
-app.use('/api/test', testDataRoutes); // Test data population routes
 
-// Mount modular routes
-app.use('/api/income-tax', incomeTaxModule); // Income Tax module
-app.use('/api/wealth-statement', wealthStatementModule); // Wealth Statement module
-app.use('/api/admin', adminModule); // Admin module
+// Public read-only info (tax year config) — no auth, no throttle needed
+app.use('/api/tax-year', taxYearRoutes);
 
-// Legacy API routes (direct routes for compatibility)
-app.use('/api/income-form', incomeFormRoutes); // Direct income form routes
+// Standard authenticated read/write routes — API write limiter
+app.use('/api/reports',           apiWriteLimiter, reportsRoutes);
+app.use('/api/personal-info',     apiWriteLimiter, personalInfoRoutes);
+app.use('/api/admin/system-settings', apiWriteLimiter, systemSettingsRoutes);
 
-// Import and mount tax forms routes
+// File upload routes — strict upload limiter
+app.use('/api/excel',       uploadLimiter, excelRoutes);
+app.use('/api/tax-history', uploadLimiter, taxHistoryRoutes);
+
+// Test data routes — gated behind explicit ENABLE_TEST_ROUTES=true AND super_admin auth.
+// Never auto-enabled by NODE_ENV alone; staging/preview deploys must opt in explicitly.
+if (process.env.ENABLE_TEST_ROUTES === 'true') {
+  logger.warn('Test data routes ENABLED — requires super_admin authentication');
+  app.use('/api/test', testDataRoutes);
+}
+
+// Modular routes — API write limiter
+app.use('/api/income-tax',        apiWriteLimiter, incomeTaxModule);
+app.use('/api/wealth-statement',  apiWriteLimiter, wealthStatementModule);
+app.use('/api/admin',             apiWriteLimiter, adminModule);
+
+// Legacy income form routes (still used by IncomeForm.js)
+app.use('/api/income-form', apiWriteLimiter, incomeFormRoutes);
+
+// Tax forms module routes
 const taxFormsRoutes = require('./modules/IncomeTax/routes/taxForms');
-app.use('/api/tax-forms', taxFormsRoutes); // Tax forms API routes
+app.use('/api/tax-forms', apiWriteLimiter, taxFormsRoutes);
 
 // Tax Computation routes (Inter-form data linking)
 try {
@@ -157,12 +229,36 @@ app.get('/', (req, res) => {
   res.json(response);
 });
 
+// Global error handler — MUST be last middleware. Strips error.message from 5xx in prod.
+app.use(expressErrorHandler);
+
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   logger.info(`Server running on http://${HOST}:${PORT}`);
   logger.info('Try accessing:');
   logger.info(`1. http://${HOST}:${PORT}`);
   logger.info(`2. http://${HOST}:${PORT}/api/health`);
 });
+
+function gracefulShutdown(signal) {
+  logger.info(`${signal} received — shutting down gracefully`);
+  server.close(async () => {
+    try {
+      await pool.end();
+      logger.info('DB pool closed');
+    } catch (e) {
+      logger.error('Error closing DB pool', { message: e?.message });
+    }
+    // Flush any pending Sentry events before exiting.
+    await sentry.flush(2000);
+    process.exit(0);
+  });
+  setTimeout(() => {
+    logger.error('Forced shutdown after 10s timeout');
+    process.exit(1);
+  }, 10000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

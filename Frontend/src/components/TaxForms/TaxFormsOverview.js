@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTaxForm } from '../../contexts/TaxFormContext';
-import { 
-  FileText, 
-  CheckCircle, 
-  Circle, 
-  Play, 
+import {
+  FileText,
+  CheckCircle,
+  Circle,
+  Play,
   BarChart3,
   Clock,
   User,
-  Calendar
+  Calendar,
+  Upload
 } from 'lucide-react';
+import PriorYearUploadModal from '../TaxHistory/PriorYearUploadModal';
+import toast from 'react-hot-toast';
 
 const TaxFormsOverview = () => {
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const navigate = useNavigate();
   const { 
     FORM_STEPS, 
@@ -52,7 +56,7 @@ const TaxFormsOverview = () => {
   const getRoutePath = (stepId) => {
     // Income Tax Module routes
     const incomeTaxSteps = [
-      'income', 'adjustable_tax', 'final_min_income', 'capital_gains',
+      'income', 'adjustable_tax', 'final_min_income', 'capital_gain',
       'reductions', 'credits', 'deductions', 'final_tax', 'expenses', 'tax_computation'
     ];
 
@@ -66,7 +70,7 @@ const TaxFormsOverview = () => {
     const routeMap = {
       'final_min_income': 'final-min-income',
       'adjustable_tax': 'adjustable-tax',
-      'capital_gains': 'capital-gains',
+      'capital_gain': 'capital-gains',
       'tax_computation': 'tax-computation',
       'wealth_reconciliation': 'wealth-reconciliation'
     };
@@ -86,6 +90,7 @@ const TaxFormsOverview = () => {
   };
 
   return (
+    <>
     <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -138,7 +143,7 @@ const TaxFormsOverview = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -223,6 +228,27 @@ const TaxFormsOverview = () => {
               className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Submitting...' : 'Submit Return'}
+            </button>
+          </div>
+        </div>
+
+        {/* Prior Year Upload */}
+        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Upload className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Import Prior Year</h3>
+              <p className="text-sm text-gray-600">Pre-fill from TY 2024-25 return</p>
+            </div>
+          </div>
+          <div className="mt-auto">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Upload Prior Return
             </button>
           </div>
         </div>
@@ -349,6 +375,14 @@ const TaxFormsOverview = () => {
         </div>
       </div>
     </div>
+
+    {/* Prior Year Upload Modal — archive-only; no silent prefill */}
+    {showUploadModal && (
+      <PriorYearUploadModal
+        onClose={() => setShowUploadModal(false)}
+      />
+    )}
+    </>
   );
 };
 
