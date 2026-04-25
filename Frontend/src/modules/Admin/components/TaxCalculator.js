@@ -3,6 +3,7 @@ import { Calculator, TrendingUp, FileText, DollarSign } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
+import { formatCurrency } from '../../../utils/currency';
 
 const TaxCalculator = ({ onClose }) => {
   const { currentTaxYear, availableYears } = useTaxYear();
@@ -49,16 +50,6 @@ const TaxCalculator = ({ onClose }) => {
       setLoading(false);
     }
   };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">

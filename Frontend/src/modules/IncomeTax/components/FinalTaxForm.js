@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalTaxHelp from '../../../help/finalTaxHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 // Final Tax items. Rates are NOT stored here — they live in tax_rates_config
 // (rate_type='final_tax', rate_category=item.id) and are resolved per-year
@@ -205,16 +206,6 @@ const FinalTaxForm = () => {
       navigate('/income-tax/capital-gains');
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
   // Group items for display

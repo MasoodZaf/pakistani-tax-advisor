@@ -22,6 +22,7 @@ import {
 import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalMinIncomeHelp from '../../../help/finalMinIncomeHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 // Static field definitions — kept at module scope so they aren't rebuilt on
 // every render (the component has ~30 inputs; each keystroke was previously
@@ -502,16 +503,6 @@ const FinalMinIncomeForm = () => {
     if (!num || isNaN(num)) return '';
     return new Intl.NumberFormat('en-PK').format(num);
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   const toggleSection = (sectionKey) => {
     setExpandedSections(prev => ({
       ...prev,

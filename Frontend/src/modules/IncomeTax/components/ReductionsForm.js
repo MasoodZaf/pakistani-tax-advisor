@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import reductionsHelp from '../../../help/reductionsHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 const ReductionsForm = () => {
   const navigate = useNavigate();
@@ -189,16 +190,6 @@ const ReductionsForm = () => {
       navigate('/income-tax/credits');
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
   return (

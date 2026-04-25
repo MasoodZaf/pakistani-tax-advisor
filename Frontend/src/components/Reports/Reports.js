@@ -19,6 +19,7 @@ import {
   ArrowUpCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '../../utils/currency';
 
 const Reports = () => {
   const [loading, setLoading] = useState(false);
@@ -90,16 +91,6 @@ const Reports = () => {
       setLoading(false);
     }
   };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount || 0);
-  };
-
   const exportToPDF = async () => {
     if (!reportData) return;
 

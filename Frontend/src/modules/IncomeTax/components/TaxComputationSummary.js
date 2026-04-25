@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import taxComputationHelp from '../../../help/taxComputationHelp';
 import ReadinessChecklist from '../../../components/TaxForms/ReadinessChecklist';
+import { formatCurrency } from '../../../utils/currency';
 
 const TaxComputationSummary = () => {
   const navigate = useNavigate();
@@ -327,16 +328,6 @@ const TaxComputationSummary = () => {
       toast.success('Tax computation saved');
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   if (ratesError) {
     return (
       <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">

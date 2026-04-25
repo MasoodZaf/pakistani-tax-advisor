@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import capitalGainsHelp from '../../../help/capitalGainsHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 // Capital-gain category definitions. Rates are NOT in this array any more —
 // they come from tax_rates_config via useTaxRates() (rate_type='capital_gains',
@@ -157,16 +158,6 @@ const CapitalGainsForm = () => {
       navigate('/income-tax/expenses');
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
   // Group for display

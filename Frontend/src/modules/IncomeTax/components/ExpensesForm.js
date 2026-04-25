@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import expensesHelp from '../../../help/expensesHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 const ExpensesForm = () => {
   const navigate = useNavigate();
@@ -104,16 +105,6 @@ const ExpensesForm = () => {
       navigate('/wealth-statement/wealth-statement');
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   const inputClasses = "form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right";
   const labelClasses = "block text-sm font-medium text-gray-700 mb-2";
 

@@ -26,6 +26,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import adjustableTaxHelp from '../../../help/adjustableTaxHelp';
+import { formatCurrency } from '../../../utils/currency';
 
 
 const AdjustableTaxForm = () => {
@@ -987,16 +988,6 @@ const AdjustableTaxForm = () => {
       }
     }
   };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
   // Format number with comma delimiters (no currency symbol)
   const formatNumber = (value) => {
     if (!value && value !== 0) return '';

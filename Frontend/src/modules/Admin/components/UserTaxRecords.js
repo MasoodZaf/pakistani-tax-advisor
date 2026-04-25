@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Edit, Save, X, User, Calendar, TrendingUp, DollarSign, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatCurrency } from '../../../utils/currency';
 
 const UserTaxRecords = ({ userId, userName, onClose }) => {
   const [userTaxData, setUserTaxData] = useState(null);
@@ -65,15 +66,6 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount) return 'PKR 0';
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
