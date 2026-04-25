@@ -49,11 +49,14 @@ async function postStep({ api, token, step, def }) {
     return { step, endpoint: '—', status: 'skipped', sentFields, note: def.note || '' };
   }
 
-  // Map endpoint label to actual URL path
-  const url =
-    step === 'income'
-      ? `/api/income-form/${TAX_YEAR}`
-      : `/api/tax-forms/${step.replace(/_/g, '-')}`;
+  // Map step id → actual URL path. Most steps follow `/api/tax-forms/{step-with-dashes}`,
+  // but `capital_gain` is exposed under the plural `capital-gains` route, and
+  // `income` uses the legacy `/api/income-form/:taxYear` endpoint.
+  const STEP_URLS = {
+    income:        `/api/income-form/${TAX_YEAR}`,
+    capital_gain:  '/api/tax-forms/capital-gains',
+  };
+  const url = STEP_URLS[step] || `/api/tax-forms/${step.replace(/_/g, '-')}`;
 
   try {
     const res = await api.post(url, { headers, data: def.payload });

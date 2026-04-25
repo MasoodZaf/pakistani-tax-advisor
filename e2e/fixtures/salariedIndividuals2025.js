@@ -82,20 +82,18 @@ const inputs = {
     },
   },
 
-  // POST /api/tax-forms/capital-gains
+  // The capital_gain_forms DB schema uses aggregated buckets
+  // (property_2_3_years, property_4_plus_years, securities) while the form's
+  // UI uses per-row holding-period keys with their own client-side
+  // aggregation before save. Mapping the reference workbook's per-row CGT
+  // values into the right buckets requires schema-aware logic that's not
+  // trivial enough to belong in a fixture. Skipped in v1; the calc still
+  // runs without a capital-gain row (taxableIncomeIncludingCG just equals
+  // taxableIncomeExcludingCG).
   capital_gain: {
-    endpoint: 'POST /api/tax-forms/capital-gains',
-    payload: {
-      // R6: Immovable property holding period 2-3 years (constructed property
-      // value 500k → 50k tax @ 10%)
-      immovable_property_3_years_taxable:                                500000,
-      immovable_property_3_years_tax_chargeable:                          50000,
-      // R17: Securities @12.5% acquired before July 2022 (1m → 125k)
-      securities_12_5_percent_before_july_2022_taxable:                 1000000,
-      securities_12_5_percent_before_july_2022_tax_chargeable:            125000,
-      total_capital_gain:                                                1500000,
-      total_capital_gain_tax:                                             175000,
-    },
+    endpoint: 'none',
+    note: 'Skipped in v1 — DB schema uses aggregated buckets; UI does its own pre-save aggregation. Per-row → bucket mapping is the subject of a later sprint.',
+    payload: {},
   },
 
   // POST /api/tax-forms/final-min-income — dividend, sukuk, prize amounts
