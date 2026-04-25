@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/currency';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTaxForm } from '../../contexts/TaxFormContext';
+import { generateIrisPdf } from '../../utils/irisPdf';
 
 const Reports = () => {
   const [loading, setLoading] = useState(false);
@@ -32,6 +35,9 @@ const Reports = () => {
   // Loaded alongside the summary tab so the headline panel always reflects
   // the same numbers the Tax Computation form shows.
   const [computation, setComputation] = useState(null);
+  // The IRIS export needs the user's profile + every form's raw payload.
+  const { user } = useAuth();
+  const { formData } = useTaxForm();
 
   useEffect(() => {
     loadAvailableYears();
@@ -91,174 +97,43 @@ const Reports = () => {
       setLoading(false);
     }
   };
+  // PDF export — produces an FBR Acknowledgement-Slip-format document with
+  // every IRIS field code visible in column 1. The layout mirrors the real
+  // IRIS slip (see Return.pdf at the repo root) so a consultant can re-key
+  // the values into the IRIS portal without translating field names.
   const exportToPDF = async () => {
-    if (!reportData) return;
-
+    if (!selectedYear) {
+      toast.error('Select a tax year first');
+      return;
+    }
     setLoading(true);
     try {
-      // Lazy-load jsPDF + autoTable so they don't bloat the main bundle.
-      const [{ default: JsPDF }, autoTableMod] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable'),
-      ]);
-      const autoTable = autoTableMod.default || autoTableMod;
-
-      const doc = new JsPDF({ unit: 'pt', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const generatedAt = new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' });
-      const tabLabels = {
-        summary: 'Tax Summary',
-        income: 'Income Analysis',
-        adjustable: 'Adjustable Tax Report',
-        wealth: 'Wealth Reconciliation Report',
-      };
-
-      // ── Header band ──
-      doc.setFillColor(40, 57, 108);
-      doc.rect(0, 0, pageWidth, 56, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Pakistan Tax Advisor', 40, 26);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(tabLabels[activeTab] || 'Tax Report', 40, 44);
-      doc.setFontSize(9);
-      doc.text(`Tax Year ${selectedYear}  •  Generated ${generatedAt}`, pageWidth - 40, 30, { align: 'right' });
-
-      doc.setTextColor(40, 40, 40);
-      let y = 80;
-
-      const sectionTitle = (text) => {
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(40, 57, 108);
-        doc.text(text, 40, y);
-        y += 8;
-        doc.setDrawColor(220, 220, 220);
-        doc.line(40, y, pageWidth - 40, y);
-        y += 14;
-        doc.setTextColor(40, 40, 40);
-      };
-
-      const tableOpts = {
-        styles: { font: 'helvetica', fontSize: 10, cellPadding: 5 },
-        headStyles: { fillColor: [40, 57, 108], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: 40, right: 40 },
-      };
-
-      if (activeTab === 'summary') {
-        // Bottom-line panel — the headline numbers
-        if (computation) {
-          const balance = computation.payments?.balancePayableRefundable || 0;
-          sectionTitle('Bottom Line');
-          autoTable(doc, {
-            ...tableOpts,
-            startY: y,
-            head: [['Item', 'Amount (PKR)']],
-            body: [
-              ['Total taxable income', formatCurrency(computation.income?.taxableIncomeIncludingCG)],
-              ['Total tax chargeable', formatCurrency(computation.tax?.totalTaxChargeable)],
-              ['Tax already paid (WHT + advance)', formatCurrency((computation.payments?.withholdingTax || 0) + (computation.payments?.advanceTax || 0))],
-              [balance > 0.5 ? 'Tax payable to FBR' : balance < -0.5 ? 'Refund due to you' : 'Balance', formatCurrency(Math.abs(balance))],
-            ],
-          });
-          y = doc.lastAutoTable.finalY + 24;
-        }
-
-        sectionTitle('Income Breakdown');
-        const incomeRow = reportData.rawData?.income || reportData.income || {};
-        autoTable(doc, {
-          ...tableOpts,
-          startY: y,
-          head: [['Source', 'Amount (PKR)']],
-          body: [
-            ['Monthly salary',          formatCurrency(incomeRow.monthly_salary)],
-            ['Bonus',                   formatCurrency(incomeRow.bonus)],
-            ['Car allowance',           formatCurrency(incomeRow.car_allowance)],
-            ['Other taxable income',    formatCurrency(incomeRow.other_taxable)],
-            ['Total taxable income',    formatCurrency(incomeRow.total_taxable_income ?? reportData.summary?.totalIncome ?? 0)],
-          ],
-        });
-      } else if (activeTab === 'income') {
-        sectionTitle('Income Analysis');
-        autoTable(doc, {
-          ...tableOpts,
-          startY: y,
-          head: [['Category', 'Amount (PKR)']],
-          body: [
-            ['Regular income',     formatCurrency(reportData.regularIncome?.total_taxable_income || 0)],
-            ['Capital gains',      formatCurrency(reportData.capitalGains?.total_capital_gain || reportData.capitalGains?.total_capital_gains || 0)],
-            ['Final tax income',   formatCurrency((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0))],
-          ],
-        });
-      } else if (activeTab === 'adjustable') {
-        sectionTitle('Adjustable Tax — Total');
-        autoTable(doc, {
-          ...tableOpts,
-          startY: y,
-          head: [['Total adjustable tax', 'Amount (PKR)']],
-          body: [['All categories combined', formatCurrency(reportData.totalAdjustableTax)]],
-        });
-        y = doc.lastAutoTable.finalY + 24;
-
-        const cats = reportData.categories || {};
-        const rows = [];
-        Object.entries(cats).forEach(([category, subs]) => {
-          Object.entries(subs || {}).forEach(([sub, amount]) => {
-            rows.push([category, sub, formatCurrency(amount)]);
-          });
-        });
-        if (rows.length) {
-          sectionTitle('Adjustable Tax — Breakdown');
-          autoTable(doc, {
-            ...tableOpts,
-            startY: y,
-            head: [['Category', 'Subcategory', 'Amount (PKR)']],
-            body: rows,
-          });
-        }
-      } else if (activeTab === 'wealth') {
-        const w = reportData.wealthStatement;
-        if (w) {
-          sectionTitle('Wealth Reconciliation');
-          autoTable(doc, {
-            ...tableOpts,
-            startY: y,
-            head: [['Item', 'Previous year', 'Current year', 'Change']],
-            body: [
-              ['Total assets',       formatCurrency(w.total_assets_previous_year),     formatCurrency(w.total_assets_current_year),      formatCurrency(w.total_assets_current_year - w.total_assets_previous_year)],
-              ['Total liabilities',  formatCurrency(w.total_liabilities_previous_year), formatCurrency(w.total_liabilities_current_year), formatCurrency(w.total_liabilities_current_year - w.total_liabilities_previous_year)],
-              ['Net worth',          formatCurrency(w.net_worth_previous_year),         formatCurrency(w.net_worth_current_year),         formatCurrency(w.wealth_increase)],
-            ],
-          });
-        }
-      }
-
-      // ── Footer with page numbers ──
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(120, 120, 120);
-        doc.text(
-          'This is a computer-generated report. Verify all figures before submitting to FBR.',
-          40,
-          doc.internal.pageSize.getHeight() - 24,
-        );
-        doc.text(
-          `Page ${i} of ${pageCount}`,
-          pageWidth - 40,
-          doc.internal.pageSize.getHeight() - 24,
-          { align: 'right' },
-        );
-      }
-
-      doc.save(`paktax-${activeTab}-${selectedYear}.pdf`);
-      toast.success('PDF downloaded');
+      const filename = await generateIrisPdf({
+        taxYear:        selectedYear,
+        formType:       '114(1) (Return of Income filed voluntarily for complete year)',
+        computation,
+        income:                 formData?.income                 || {},
+        adjustable_tax:         formData?.adjustable_tax         || {},
+        capital_gain:           formData?.capital_gain           || {},
+        reductions:             formData?.reductions             || {},
+        credits:                formData?.credits                || {},
+        deductions:             formData?.deductions             || {},
+        final_min_income:       formData?.final_min_income       || {},
+        expenses:               formData?.expenses               || {},
+        wealth:                 formData?.wealth                 || {},
+        wealth_reconciliation:  formData?.wealth_reconciliation  || {},
+        tax_computation:        formData?.tax_computation        || {},
+        profile: {
+          name:    user?.name,
+          email:   user?.email,
+          cnic:    user?.cnic,
+          ntn:     user?.ntn || user?.cnic,
+          phone:   user?.phone,
+          address: user?.address,
+        },
+      });
+      toast.success(`PDF downloaded: ${filename}`);
     } catch (err) {
-      // Cache or sandbox issues can prevent the lazy import; surface clearly.
       toast.error('PDF export failed — please try again');
       // eslint-disable-next-line no-console
       console.error('PDF export error:', err);
