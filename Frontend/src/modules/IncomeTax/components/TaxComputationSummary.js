@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import taxComputationHelp from '../../../help/taxComputationHelp';
 import ReadinessChecklist from '../../../components/TaxForms/ReadinessChecklist';
+import NumberTrace from '../../../components/TaxForms/NumberTrace';
 import { formatCurrency } from '../../../utils/currency';
 
 const TaxComputationSummary = () => {
@@ -379,6 +380,40 @@ const TaxComputationSummary = () => {
     );
   }
 
+  // Build a per-slab breakdown for the Normal Income Tax trace popover.
+  // Each slab contributes (ceiling − floor) × rate to the total. We render
+  // only slabs that actually applied (income reached them).
+  const buildSlabTrace = (taxableIncome) => {
+    if (!rates?.slabs || taxableIncome <= 0) return [];
+    const rows = [];
+    for (const slab of rates.slabs) {
+      const minI = Number(slab.min_income);
+      const maxI = slab.max_income === null || slab.max_income === undefined
+        ? Number.POSITIVE_INFINITY
+        : Number(slab.max_income);
+      const rate = Number(slab.tax_rate);
+      const floor = minI > 0 ? minI - 1 : 0;
+      if (taxableIncome <= floor) continue;
+      const ceiling = Math.min(taxableIncome, maxI);
+      const taxed = ceiling - floor;
+      if (taxed <= 0) continue;
+      const contrib = Math.round(taxed * rate);
+      rows.push({
+        label: rate === 0
+          ? `Up to Rs ${(maxI === Infinity ? floor : maxI).toLocaleString()} @ 0% (exempt)`
+          : `Slab Rs ${(floor + 1).toLocaleString()}–${(ceiling).toLocaleString()} @ ${(rate * 100).toFixed(rate < 0.1 ? 1 : 0)}%`,
+        value: contrib,
+        note: rate > 0 ? `Rs ${taxed.toLocaleString()} × ${(rate * 100).toFixed(rate < 0.1 ? 1 : 0)}%` : null,
+      });
+    }
+    return rows;
+  };
+
+  // Net tax paid for the Demanded/Refundable trace (depends on the
+  // user-editable refundAdjustment).
+  const netPaidForTrace = (computationData?.base_net_tax_paid || 0) + refundAdjustment;
+  const demandedForTrace = (computationData?.total_tax_chargeable || 0) - netPaidForTrace;
+
   return (
     <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
       {/* Header */}
@@ -482,8 +517,16 @@ const TaxComputationSummary = () => {
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
               <div className="col-span-8 text-blue-900">Total Income</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency(computationData?.total_income)}
+              <div className="col-span-4 text-right text-blue-900 flex justify-end">
+                <NumberTrace
+                  value={computationData?.total_income}
+                  resultLabel="Total Income"
+                  formula="Salary + Other Sources"
+                  trace={[
+                    { label: 'Income from salary',         value: computationData?.income_from_salary },
+                    { label: 'Income from other sources',  value: computationData?.income_from_other_sources },
+                  ]}
+                />
               </div>
             </div>
 
@@ -497,8 +540,16 @@ const TaxComputationSummary = () => {
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
               <div className="col-span-8 text-blue-900">Taxable Income before capital gains/(loss)</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency(computationData?.taxable_income_before_capital_gains)}
+              <div className="col-span-4 text-right text-blue-900 flex justify-end">
+                <NumberTrace
+                  value={computationData?.taxable_income_before_capital_gains}
+                  resultLabel="Taxable Income (excl. CG)"
+                  formula="Total Income − Deductible Allowances"
+                  trace={[
+                    { label: 'Total income',           value: computationData?.total_income },
+                    { label: 'Deductible allowances',  value: computationData?.deductible_allowances, op: '-' },
+                  ]}
+                />
               </div>
             </div>
             
@@ -511,8 +562,16 @@ const TaxComputationSummary = () => {
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
               <div className="col-span-8 text-blue-900">Taxable Income including capital gains/(loss)</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency(computationData?.taxable_income_including_capital_gains)}
+              <div className="col-span-4 text-right text-blue-900 flex justify-end">
+                <NumberTrace
+                  value={computationData?.taxable_income_including_capital_gains}
+                  resultLabel="Taxable Income (incl. CG)"
+                  formula="Taxable Income (excl. CG) + Capital Gains"
+                  trace={[
+                    { label: 'Taxable income (excl. CG)',  value: computationData?.taxable_income_before_capital_gains },
+                    { label: 'Gains from capital assets',  value: computationData?.capital_gains_loss },
+                  ]}
+                />
               </div>
             </div>
 
@@ -523,8 +582,13 @@ const TaxComputationSummary = () => {
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
               <div className="col-span-8 text-gray-700">Normal Income Tax</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.normal_income_tax)}
+              <div className="col-span-4 text-right flex justify-end">
+                <NumberTrace
+                  value={computationData?.normal_income_tax}
+                  resultLabel="Normal Income Tax"
+                  formula="Sum of (slab amount × slab rate)"
+                  trace={buildSlabTrace(computationData?.taxable_income_before_capital_gains || 0)}
+                />
               </div>
             </div>
             
@@ -591,8 +655,20 @@ const TaxComputationSummary = () => {
 
             <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-green-50 font-bold border-2 border-green-200">
               <div className="col-span-8 text-green-900">Total Tax Chargeable</div>
-              <div className="col-span-4 text-right font-mono text-green-900 text-lg">
-                {formatCurrency(computationData?.total_tax_chargeable)}
+              <div className="col-span-4 text-right text-green-900 text-lg flex justify-end">
+                <NumberTrace
+                  value={computationData?.total_tax_chargeable}
+                  resultLabel="Total Tax Chargeable"
+                  formula="Final Income Tax + Super Tax"
+                  trace={[
+                    { label: 'Normal income tax',           value: computationData?.normal_income_tax },
+                    { label: 'Surcharge',                   value: computationData?.surcharge },
+                    { label: 'Capital gains tax',           value: computationData?.capital_gain_tax },
+                    { label: 'Tax reductions',              value: computationData?.tax_reductions, op: '-' },
+                    { label: 'Tax credits',                 value: computationData?.tax_credits,    op: '-' },
+                    { label: 'Super tax u/s 4C',            value: computationData?.super_tax },
+                  ]}
+                />
               </div>
             </div>
 
@@ -633,22 +709,23 @@ const TaxComputationSummary = () => {
               </div>
             </div>
 
-            {/* Final Result */}
-            {(() => {
-              const netPaid = (computationData?.base_net_tax_paid || 0) + refundAdjustment;
-              const demanded = (computationData?.total_tax_chargeable || 0) - netPaid;
-              return (
-                <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-red-50 font-bold border-2 border-red-200">
-                  <div className="col-span-8 text-red-900 text-lg">Income Tax Demanded /(Refundable)</div>
-                  <div className="col-span-4 text-right font-mono text-red-900 text-xl">
-                    {demanded >= 0
-                      ? formatCurrency(demanded)
-                      : `(${formatCurrency(Math.abs(demanded))})`
-                    }
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Final Result — the headline number every user comes here for. */}
+            <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-red-50 font-bold border-2 border-red-200">
+              <div className="col-span-8 text-red-900 text-lg">Income Tax Demanded /(Refundable)</div>
+              <div className="col-span-4 text-right text-red-900 text-xl flex justify-end">
+                <NumberTrace
+                  value={demandedForTrace}
+                  resultLabel={demandedForTrace >= 0 ? 'Tax payable to FBR' : 'Refund due to you'}
+                  formula="Tax chargeable − (WHT + Final-tax + Refund adj.)"
+                  trace={[
+                    { label: 'Total tax chargeable',          value: computationData?.total_tax_chargeable },
+                    { label: 'Withholding income tax',        value: computationData?.withholding_income_tax,  op: '-' },
+                    { label: 'Final tax already paid',        value: computationData?.final_tax_paid,          op: '-' },
+                    { label: 'Refund adjustment (other yrs)', value: refundAdjustment,                          op: '-' },
+                  ]}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
