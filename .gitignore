@@ -96,3 +96,5 @@ __pycache__/
 
 # Prisma
 backend/prisma.config.ts 
+# Local npm cache (sandbox workaround)
+.npm-cache/

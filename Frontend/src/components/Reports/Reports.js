@@ -13,7 +13,10 @@ import {
   Wallet,
   Eye,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  ArrowDownCircle,
+  ArrowUpCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -23,10 +26,31 @@ const Reports = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [activeTab, setActiveTab] = useState('summary');
+  // Bottom-line numbers from /api/tax-computation/:taxYear — full math
+  // (normal tax + surcharge + CGT + super tax − reductions − credits − WHT).
+  // Loaded alongside the summary tab so the headline panel always reflects
+  // the same numbers the Tax Computation form shows.
+  const [computation, setComputation] = useState(null);
 
   useEffect(() => {
     loadAvailableYears();
   }, []);
+
+  useEffect(() => {
+    if (!selectedYear) return;
+    let cancelled = false;
+    axios
+      .get(`/api/tax-computation/${encodeURIComponent(selectedYear)}`)
+      .then((res) => {
+        if (cancelled) return;
+        setComputation(res?.data?.data || null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setComputation(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedYear]);
 
   const loadAvailableYears = async () => {
     try {
@@ -76,99 +100,327 @@ const Reports = () => {
     }).format(amount || 0);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!reportData) return;
 
-    const tabLabels = {
-      summary: 'Tax Summary',
-      income: 'Income Analysis',
-      adjustable: 'Adjustable Tax Report',
-      wealth: 'Wealth Reconciliation Report'
-    };
+    setLoading(true);
+    try {
+      // Lazy-load jsPDF + autoTable so they don't bloat the main bundle.
+      const [{ default: JsPDF }, autoTableMod] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+      const autoTable = autoTableMod.default || autoTableMod;
 
-    // Inject a one-time print stylesheet
-    const styleId = 'paktax-print-style';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.media = 'print';
-      style.textContent = `
-        @page { margin: 20mm 15mm; size: A4; }
-        body * { visibility: hidden !important; }
-        #paktax-report-print, #paktax-report-print * { visibility: visible !important; }
-        #paktax-report-print { position: absolute; left: 0; top: 0; width: 100%; }
-        #paktax-report-print .no-print { display: none !important; }
-        nav, header, footer, aside, .sidebar { display: none !important; }
-        .print-header { margin-bottom: 16px; border-bottom: 2px solid #1e40af; padding-bottom: 12px; }
-        .print-header h1 { font-size: 20px; font-weight: 700; color: #1e3a8a; margin: 0 0 4px; }
-        .print-header p { font-size: 12px; color: #6b7280; margin: 0; }
-      `;
-      document.head.appendChild(style);
-    }
+      const doc = new JsPDF({ unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const generatedAt = new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' });
+      const tabLabels = {
+        summary: 'Tax Summary',
+        income: 'Income Analysis',
+        adjustable: 'Adjustable Tax Report',
+        wealth: 'Wealth Reconciliation Report',
+      };
 
-    // Wrap the active report content for printing
-    const reportEl = document.getElementById('paktax-report-print');
-    if (reportEl) {
-      // Inject a print header with title + year
-      let headerEl = reportEl.querySelector('.print-header');
-      if (!headerEl) {
-        headerEl = document.createElement('div');
-        headerEl.className = 'print-header';
-        reportEl.insertBefore(headerEl, reportEl.firstChild);
+      // ── Header band ──
+      doc.setFillColor(40, 57, 108);
+      doc.rect(0, 0, pageWidth, 56, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pakistan Tax Advisor', 40, 26);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(tabLabels[activeTab] || 'Tax Report', 40, 44);
+      doc.setFontSize(9);
+      doc.text(`Tax Year ${selectedYear}  •  Generated ${generatedAt}`, pageWidth - 40, 30, { align: 'right' });
+
+      doc.setTextColor(40, 40, 40);
+      let y = 80;
+
+      const sectionTitle = (text) => {
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 57, 108);
+        doc.text(text, 40, y);
+        y += 8;
+        doc.setDrawColor(220, 220, 220);
+        doc.line(40, y, pageWidth - 40, y);
+        y += 14;
+        doc.setTextColor(40, 40, 40);
+      };
+
+      const tableOpts = {
+        styles: { font: 'helvetica', fontSize: 10, cellPadding: 5 },
+        headStyles: { fillColor: [40, 57, 108], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 40, right: 40 },
+      };
+
+      if (activeTab === 'summary') {
+        // Bottom-line panel — the headline numbers
+        if (computation) {
+          const balance = computation.payments?.balancePayableRefundable || 0;
+          sectionTitle('Bottom Line');
+          autoTable(doc, {
+            ...tableOpts,
+            startY: y,
+            head: [['Item', 'Amount (PKR)']],
+            body: [
+              ['Total taxable income', formatCurrency(computation.income?.taxableIncomeIncludingCG)],
+              ['Total tax chargeable', formatCurrency(computation.tax?.totalTaxChargeable)],
+              ['Tax already paid (WHT + advance)', formatCurrency((computation.payments?.withholdingTax || 0) + (computation.payments?.advanceTax || 0))],
+              [balance > 0.5 ? 'Tax payable to FBR' : balance < -0.5 ? 'Refund due to you' : 'Balance', formatCurrency(Math.abs(balance))],
+            ],
+          });
+          y = doc.lastAutoTable.finalY + 24;
+        }
+
+        sectionTitle('Income Breakdown');
+        const incomeRow = reportData.rawData?.income || reportData.income || {};
+        autoTable(doc, {
+          ...tableOpts,
+          startY: y,
+          head: [['Source', 'Amount (PKR)']],
+          body: [
+            ['Monthly salary',          formatCurrency(incomeRow.monthly_salary)],
+            ['Bonus',                   formatCurrency(incomeRow.bonus)],
+            ['Car allowance',           formatCurrency(incomeRow.car_allowance)],
+            ['Other taxable income',    formatCurrency(incomeRow.other_taxable)],
+            ['Total taxable income',    formatCurrency(incomeRow.total_taxable_income ?? reportData.summary?.totalIncome ?? 0)],
+          ],
+        });
+      } else if (activeTab === 'income') {
+        sectionTitle('Income Analysis');
+        autoTable(doc, {
+          ...tableOpts,
+          startY: y,
+          head: [['Category', 'Amount (PKR)']],
+          body: [
+            ['Regular income',     formatCurrency(reportData.regularIncome?.total_taxable_income || 0)],
+            ['Capital gains',      formatCurrency(reportData.capitalGains?.total_capital_gain || reportData.capitalGains?.total_capital_gains || 0)],
+            ['Final tax income',   formatCurrency((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0))],
+          ],
+        });
+      } else if (activeTab === 'adjustable') {
+        sectionTitle('Adjustable Tax — Total');
+        autoTable(doc, {
+          ...tableOpts,
+          startY: y,
+          head: [['Total adjustable tax', 'Amount (PKR)']],
+          body: [['All categories combined', formatCurrency(reportData.totalAdjustableTax)]],
+        });
+        y = doc.lastAutoTable.finalY + 24;
+
+        const cats = reportData.categories || {};
+        const rows = [];
+        Object.entries(cats).forEach(([category, subs]) => {
+          Object.entries(subs || {}).forEach(([sub, amount]) => {
+            rows.push([category, sub, formatCurrency(amount)]);
+          });
+        });
+        if (rows.length) {
+          sectionTitle('Adjustable Tax — Breakdown');
+          autoTable(doc, {
+            ...tableOpts,
+            startY: y,
+            head: [['Category', 'Subcategory', 'Amount (PKR)']],
+            body: rows,
+          });
+        }
+      } else if (activeTab === 'wealth') {
+        const w = reportData.wealthStatement;
+        if (w) {
+          sectionTitle('Wealth Reconciliation');
+          autoTable(doc, {
+            ...tableOpts,
+            startY: y,
+            head: [['Item', 'Previous year', 'Current year', 'Change']],
+            body: [
+              ['Total assets',       formatCurrency(w.total_assets_previous_year),     formatCurrency(w.total_assets_current_year),      formatCurrency(w.total_assets_current_year - w.total_assets_previous_year)],
+              ['Total liabilities',  formatCurrency(w.total_liabilities_previous_year), formatCurrency(w.total_liabilities_current_year), formatCurrency(w.total_liabilities_current_year - w.total_liabilities_previous_year)],
+              ['Net worth',          formatCurrency(w.net_worth_previous_year),         formatCurrency(w.net_worth_current_year),         formatCurrency(w.wealth_increase)],
+            ],
+          });
+        }
       }
-      headerEl.innerHTML = `
-        <h1>Pakistan Tax Advisor — ${tabLabels[activeTab]}</h1>
-        <p>Tax Year: ${selectedYear} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-      `;
-    }
 
-    window.print();
-    toast.success('Print dialog opened — save as PDF from your browser');
+      // ── Footer with page numbers ──
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(
+          'This is a computer-generated report. Verify all figures before submitting to FBR.',
+          40,
+          doc.internal.pageSize.getHeight() - 24,
+        );
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          pageWidth - 40,
+          doc.internal.pageSize.getHeight() - 24,
+          { align: 'right' },
+        );
+      }
+
+      doc.save(`paktax-${activeTab}-${selectedYear}.pdf`);
+      toast.success('PDF downloaded');
+    } catch (err) {
+      // Cache or sandbox issues can prevent the lazy import; surface clearly.
+      toast.error('PDF export failed — please try again');
+      // eslint-disable-next-line no-console
+      console.error('PDF export error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const exportToExcel = () => {
+  // Build a multi-sheet workbook spanning all four report tabs (not just the
+  // active one) so the user gets a single file they can hand to a consultant.
+  // Lazy-loads SheetJS to keep the main bundle small.
+  const exportToExcel = async () => {
     if (!reportData) return;
-    
-    // Create CSV content for Excel compatibility
-    let csvContent = "data:text/csv;charset=utf-8,";
-    
-    if (activeTab === 'summary') {
-      csvContent += "Tax Year,Income Type,Amount\n";
-      csvContent += `${selectedYear},Total Taxable Income,${reportData.rawData?.income?.total_taxable_income ?? reportData.summary?.totalIncome ?? 0}\n`;
-      csvContent += `${selectedYear},Adjustable Tax,${reportData.rawData?.adjustableTax?.total_adjustable_tax ?? reportData.summary?.totalWithholdingTax ?? 0}\n`;
-      csvContent += `${selectedYear},Tax Credits,${reportData.credits?.total_credits || 0}\n`;
-      csvContent += `${selectedYear},Tax Deductions,${reportData.deductions?.total_deductions || 0}\n`;
-    } else if (activeTab === 'income') {
-      csvContent += "Tax Year,Income Source,Amount\n";
-      if (reportData.regularIncome) {
-        csvContent += `${selectedYear},Monthly Salary,${reportData.regularIncome.monthly_salary || 0}\n`;
-        csvContent += `${selectedYear},Bonus,${reportData.regularIncome.bonus || 0}\n`;
-        csvContent += `${selectedYear},Car Allowance,${reportData.regularIncome.car_allowance || 0}\n`;
-        csvContent += `${selectedYear},Medical Allowance,${reportData.regularIncome.medical_allowance || 0}\n`;
+
+    setLoading(true);
+    try {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+
+      // ── Summary sheet ──
+      const summaryRows = [
+        ['Pakistan Tax Advisor — Summary', ''],
+        ['Tax Year', selectedYear],
+        ['Generated', new Date().toLocaleDateString('en-PK')],
+        [],
+      ];
+      if (computation) {
+        const balance = computation.payments?.balancePayableRefundable || 0;
+        summaryRows.push(
+          ['Bottom Line', ''],
+          ['Total taxable income (incl. CG)', computation.income?.taxableIncomeIncludingCG || 0],
+          ['Total tax chargeable',            computation.tax?.totalTaxChargeable || 0],
+          ['Tax already paid (WHT + advance)', (computation.payments?.withholdingTax || 0) + (computation.payments?.advanceTax || 0)],
+          [balance > 0.5 ? 'Tax payable to FBR' : balance < -0.5 ? 'Refund due' : 'Balance', Math.abs(balance)],
+          [],
+        );
       }
-    } else if (activeTab === 'adjustable') {
-      csvContent += "Tax Year,Category,Subcategory,Amount\n";
-      const categories = reportData.categories || {};
-      Object.keys(categories).forEach(category => {
-        Object.keys(categories[category]).forEach(subcategory => {
-          csvContent += `${selectedYear},${category},${subcategory},${categories[category][subcategory] || 0}\n`;
+      const incomeRow = reportData.rawData?.income || reportData.income || {};
+      summaryRows.push(
+        ['Income breakdown', ''],
+        ['Monthly salary',          Number(incomeRow.monthly_salary)        || 0],
+        ['Bonus',                   Number(incomeRow.bonus)                 || 0],
+        ['Car allowance',           Number(incomeRow.car_allowance)         || 0],
+        ['Other taxable income',    Number(incomeRow.other_taxable)         || 0],
+        ['Total taxable income',    Number(incomeRow.total_taxable_income ?? reportData.summary?.totalIncome ?? 0)],
+      );
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+      summarySheet['!cols'] = [{ wch: 38 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+      // ── Income sheet ──
+      const ri = reportData.regularIncome || {};
+      const incomeSheet = XLSX.utils.aoa_to_sheet([
+        ['Income Analysis', ''],
+        ['Tax Year', selectedYear],
+        [],
+        ['Section', 'Amount (PKR)'],
+        ['Monthly salary',         Number(ri.monthly_salary)        || 0],
+        ['Bonus',                  Number(ri.bonus)                 || 0],
+        ['Car allowance',          Number(ri.car_allowance)         || 0],
+        ['Medical allowance',      Number(ri.medical_allowance)     || 0],
+        ['Employer contribution',  Number(ri.employer_contribution) || 0],
+        ['Other exempt',           Number(ri.other_exempt)          || 0],
+        ['Total taxable income',   Number(ri.total_taxable_income)  || 0],
+        [],
+        ['Capital gains',          Number(reportData.capitalGains?.total_capital_gain || reportData.capitalGains?.total_capital_gains || 0)],
+        ['Final tax income',       Number((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0))],
+      ]);
+      incomeSheet['!cols'] = [{ wch: 32 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, incomeSheet, 'Income');
+
+      // ── Adjustable tax sheet ──
+      const adjRows = [
+        ['Adjustable Tax Report', ''],
+        ['Tax Year', selectedYear],
+        ['Total adjustable tax', Number(reportData.totalAdjustableTax) || 0],
+        [],
+        ['Category', 'Subcategory', 'Amount (PKR)'],
+      ];
+      const cats = reportData.categories || {};
+      Object.entries(cats).forEach(([cat, subs]) => {
+        Object.entries(subs || {}).forEach(([sub, amt]) => {
+          adjRows.push([cat, sub, Number(amt) || 0]);
         });
       });
+      const adjSheet = XLSX.utils.aoa_to_sheet(adjRows);
+      adjSheet['!cols'] = [{ wch: 22 }, { wch: 28 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, adjSheet, 'Adjustable Tax');
+
+      // ── Wealth sheet ──
+      const w = reportData.wealthStatement;
+      if (w) {
+        const wealthSheet = XLSX.utils.aoa_to_sheet([
+          ['Wealth Reconciliation', ''],
+          ['Tax Year', selectedYear],
+          [],
+          ['Item', 'Previous year', 'Current year', 'Change'],
+          ['Total assets',      Number(w.total_assets_previous_year)     || 0, Number(w.total_assets_current_year)     || 0, (Number(w.total_assets_current_year) || 0) - (Number(w.total_assets_previous_year) || 0)],
+          ['Total liabilities', Number(w.total_liabilities_previous_year) || 0, Number(w.total_liabilities_current_year) || 0, (Number(w.total_liabilities_current_year) || 0) - (Number(w.total_liabilities_previous_year) || 0)],
+          ['Net worth',         Number(w.net_worth_previous_year)         || 0, Number(w.net_worth_current_year)         || 0, Number(w.wealth_increase) || 0],
+        ]);
+        wealthSheet['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+        XLSX.utils.book_append_sheet(wb, wealthSheet, 'Wealth');
+      }
+
+      XLSX.writeFile(wb, `paktax-report-${selectedYear}.xlsx`);
+      toast.success('Excel file downloaded');
+    } catch (err) {
+      toast.error('Excel export failed — please try again');
+      // eslint-disable-next-line no-console
+      console.error('Excel export error:', err);
+    } finally {
+      setLoading(false);
     }
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `tax-report-${activeTab}-${selectedYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success('Excel file downloaded successfully');
   };
 
   const exportToCSV = () => {
-    exportToExcel(); // Same functionality for now
+    if (!reportData) return;
+    // Plain CSV of the active tab — handy for quick copy-paste.
+    const lines = [];
+    if (activeTab === 'summary') {
+      lines.push('Item,Amount (PKR)');
+      const incomeRow = reportData.rawData?.income || reportData.income || {};
+      lines.push(`Total taxable income,${Number(incomeRow.total_taxable_income ?? reportData.summary?.totalIncome ?? 0)}`);
+      lines.push(`Adjustable tax,${Number(reportData.rawData?.adjustableTax?.total_adjustable_tax ?? reportData.summary?.totalWithholdingTax ?? 0)}`);
+      if (computation) {
+        lines.push(`Total tax chargeable,${computation.tax?.totalTaxChargeable || 0}`);
+        lines.push(`Balance payable/refundable,${computation.payments?.balancePayableRefundable || 0}`);
+      }
+    } else if (activeTab === 'income') {
+      lines.push('Source,Amount (PKR)');
+      const ri = reportData.regularIncome || {};
+      ['monthly_salary', 'bonus', 'car_allowance', 'medical_allowance', 'employer_contribution', 'other_exempt']
+        .forEach((k) => lines.push(`${k},${Number(ri[k]) || 0}`));
+    } else if (activeTab === 'adjustable') {
+      lines.push('Category,Subcategory,Amount (PKR)');
+      const cats = reportData.categories || {};
+      Object.entries(cats).forEach(([cat, subs]) => {
+        Object.entries(subs || {}).forEach(([sub, amt]) => {
+          lines.push(`${cat},${sub},${Number(amt) || 0}`);
+        });
+      });
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `paktax-${activeTab}-${selectedYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('CSV downloaded');
   };
 
   const SummaryReport = ({ data }) => {
@@ -182,8 +434,68 @@ const Reports = () => {
     const totalCredits = data.credits?.total_credits || 0;
     const totalDeductions = data.deductions?.total_deductions || 0;
 
+    // Bottom-line numbers — pulled from /api/tax-computation/:year and held
+    // in component state above. Falls back to the simpler /reports figures
+    // when the full-computation endpoint hasn't responded yet.
+    const totalTaxChargeable = computation?.tax?.totalTaxChargeable ?? null;
+    const taxAlreadyPaid =
+      (computation?.payments?.withholdingTax ?? 0) +
+      (computation?.payments?.advanceTax ?? 0);
+    const balance = computation?.payments?.balancePayableRefundable ?? null;
+    const isPayable = (balance ?? 0) > 0.5;
+    const isRefund  = (balance ?? 0) < -0.5;
+
     return (
       <div className="space-y-6">
+        {/* Bottom Line — the headline numbers the user actually came here for */}
+        {computation && (
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className={`px-6 py-5 ${isPayable ? 'bg-red-50 border-b border-red-100' : isRefund ? 'bg-green-50 border-b border-green-100' : 'bg-gray-50 border-b border-gray-100'}`}>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  {isPayable
+                    ? <ArrowUpCircle className="w-7 h-7 text-red-600" />
+                    : isRefund
+                    ? <ArrowDownCircle className="w-7 h-7 text-green-600" />
+                    : <CheckCircle className="w-7 h-7 text-gray-500" />}
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${isPayable ? 'text-red-700' : isRefund ? 'text-green-700' : 'text-gray-600'}`}>
+                      {isPayable ? 'Tax payable to FBR' : isRefund ? 'Refund due to you' : 'Tax position'}
+                    </p>
+                    <p className={`text-3xl font-bold ${isPayable ? 'text-red-900' : isRefund ? 'text-green-900' : 'text-gray-900'}`}>
+                      {formatCurrency(Math.abs(balance || 0))}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 max-w-xs">
+                  {isPayable
+                    ? `Pay this amount when filing your return for ${selectedYear}.`
+                    : isRefund
+                    ? `Claim this refund when filing your return for ${selectedYear}.`
+                    : 'Your withholding and advance tax fully cover the chargeable tax.'}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+              <div className="px-6 py-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total tax chargeable</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalTaxChargeable)}</p>
+                <p className="text-xs text-gray-500 mt-1">Normal + surcharge + CGT + super tax</p>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax already paid</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(taxAlreadyPaid)}</p>
+                <p className="text-xs text-gray-500 mt-1">Withholding + advance tax u/s 147</p>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Taxable income</p>
+                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(computation?.income?.taxableIncomeIncludingCG)}</p>
+                <p className="text-xs text-gray-500 mt-1">Including capital gains</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
             <div className="flex items-center justify-between">
