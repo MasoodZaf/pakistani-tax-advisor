@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
+import { useTaxYear } from '../../../contexts/TaxYearContext';
+import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -13,9 +15,199 @@ import {
   ChevronRight,
   TrendingUp,
   PiggyBank,
-  Award
+  Award,
+  RotateCcw,
+  FileCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import HelpHint from '../../../components/Help/HelpHint';
+import finalMinIncomeHelp from '../../../help/finalMinIncomeHelp';
+
+// Static field definitions — kept at module scope so they aren't rebuilt on
+// every render (the component has ~30 inputs; each keystroke was previously
+// reallocating this structure). Values here are stable metadata only; rates
+// are still DB-sourced at compute time via useTaxRates().
+const FIELD_DEFINITIONS = [
+  {
+    section: 'salaryIncome',
+    sectionTitle: 'Salary Income',
+    sectionIcon: DollarSign,
+    sectionColor: 'blue',
+    fields: [
+      {
+        label: 'Salary u/s 12(7)',
+        amountField: 'salary_u_s_12_7',
+        taxDeductedField: 'salary_u_s_12_7_tax_deducted',
+        taxChargeableField: 'salary_u_s_12_7_tax_chargeable',
+        taxRate: null,
+        autoPopulateAmount: true,
+        slabCalculatedTaxDeducted: true,
+        taxChargeableManual: true,
+        description: 'Amount auto-linked from Income form. Tax Deducted calculated per FBR 2025-26 slabs (editable). Tax Chargeable = manual entry.'
+      }
+    ]
+  },
+  {
+    section: 'dividendInterest',
+    sectionTitle: 'Dividend Income',
+    sectionIcon: TrendingUp,
+    sectionColor: 'green',
+    fields: [
+      {
+        label: 'Dividend u/s 150 @0% (REIT SPV)',
+        amountField: 'dividend_u_s_150_0pc_share_profit_reit_spv_amount',
+        taxDeductedField: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_deducted',
+        taxChargeableField: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable',
+        taxRate: 0.00,
+        description: 'Dividend from REIT/SPV when pass-through to CPPAG'
+      },
+      {
+        label: 'Dividend u/s 150 @35% (Other SPV) - ATL/Non-ATL 35%/70%',
+        amountField: 'dividend_u_s_150_35pc_share_profit_other_spv_amount',
+        taxDeductedField: 'dividend_u_s_150_35pc_share_profit_other_spv_tax_deducted',
+        taxChargeableField: 'dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable',
+        taxRate: 0.35,
+        description: 'Dividend from other SPV (biomass/baggas based power projects)'
+      },
+      {
+        label: 'Dividend u/s 150 @7.5% (IPP Shares) - ATL/Non-ATL 7.5%/15%',
+        amountField: 'dividend_u_s_150_7_5pc_ipp_shares_amount',
+        taxDeductedField: 'dividend_u_s_150_7_5pc_ipp_shares_tax_deducted',
+        taxChargeableField: 'dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable',
+        taxRate: 0.075,
+        description: 'Dividend from IPP shares'
+      },
+      {
+        label: 'Dividend u/s 150 @15% (Dividend in kind or Mutual funds with less than 50% profit on debt)',
+        amountField: 'dividend_u_s_150_31pc_atl_amount',
+        taxDeductedField: 'dividend_u_s_150_31pc_atl_tax_deducted',
+        taxChargeableField: 'dividend_u_s_150_31pc_atl_tax_chargeable',
+        taxRate: 0.15,
+        description: 'Dividend in kind or from mutual funds where profit on debt is less than 50% (ATL 15%, Non-ATL 30%)'
+      },
+      {
+        label: 'Dividend u/s 150 @25% (From Companies not paying tax due to BF losses or Mutual funds with 50% and above profit on debt)',
+        amountField: 'dividend_u_s_150_25pc_bf_losses_amount',
+        taxDeductedField: 'dividend_u_s_150_25pc_bf_losses_tax_deducted',
+        taxChargeableField: 'dividend_u_s_150_25pc_bf_losses_tax_chargeable',
+        taxRate: 0.25,
+        description: 'Dividend from companies with brought-forward losses or mutual funds with 50%+ profit on debt (ATL 25%, Non-ATL 50%)'
+      }
+    ]
+  },
+  {
+    section: 'investmentReturns',
+    sectionTitle: 'Investment Returns (Sukuks)',
+    sectionIcon: PiggyBank,
+    sectionColor: 'purple',
+    fields: [
+      {
+        label: 'Return on Investment in Sukuks u/s 151(1A) @ 25% (Above Rs. 5M)',
+        amountField: 'return_on_investment_sukuk_u_s_151_1a_25pc_amount',
+        taxDeductedField: 'return_on_investment_sukuk_u_s_151_1a_25pc_tax_deducted',
+        taxChargeableField: 'return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable',
+        taxRate: 0.25,
+        description: 'Minimum tax on Sukuk investment returns above Rs. 5M'
+      },
+      {
+        label: 'Return on Investment in Sukuks u/s 151(1A) @ 12.5% (From Rs 1M to Rs 5M)',
+        amountField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_amount',
+        taxDeductedField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted',
+        taxChargeableField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable',
+        taxRate: 0.125,
+        description: 'Final tax on Sukuk investment returns from Rs. 1M to Rs. 5M'
+      },
+      {
+        label: 'Return on Investment in Sukuks u/s 151(1A) @ 10% (Up to Rs 1M)',
+        amountField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_amount',
+        taxDeductedField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_tax_deducted',
+        taxChargeableField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable',
+        taxRate: 0.10,
+        description: 'Final tax on Sukuk investment returns up to Rs. 1M'
+      }
+    ]
+  },
+  {
+    section: 'profitDebt',
+    sectionTitle: 'Profit on Debt',
+    sectionIcon: Calculator,
+    sectionColor: 'yellow',
+    fields: [
+      {
+        label: 'Profit on Debt u/c 5(A)/5AA/5AB of Part II, Second Schedule @ 10% (via FCVA/SCRA)',
+        amountField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_amount',
+        taxDeductedField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_deducted',
+        taxChargeableField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable',
+        taxRate: 0.10,
+        description: 'Debt instrument via FCVA/SCRA for non-resident or resident Pakistani with foreign bank accounts declared under SBP Scheme'
+      },
+      {
+        label: 'Profit on Debt on National Savings Certificates incl. Defence Savings u/s 39(4A) @ Variable Rate',
+        amountField: 'profit_debt_national_savings_defence_39_14a_amount',
+        taxDeductedField: 'profit_debt_national_savings_defence_39_14a_tax_deducted',
+        taxChargeableField: 'profit_debt_national_savings_defence_39_14a_tax_chargeable',
+        taxRate: null,
+        description: 'Chargeable to tax at rate prevailing in the relevant year. Enter Tax Chargeable manually (Amount × relevant year rate)'
+      },
+      {
+        label: 'Interest Income — Profit on Debt u/s 7B (Bank/FI deposits, up to Rs. 5M) @ 20%',
+        amountField: 'interest_income_profit_debt_7b_up_to_5m_amount',
+        taxDeductedField: 'interest_income_profit_debt_7b_up_to_5m_tax_deducted',
+        taxChargeableField: 'interest_income_profit_debt_7b_up_to_5m_tax_chargeable',
+        taxRate: 0.20,
+        description: 'Finance Act 2025: Rate increased from 15% to 20% for bank/financial institution accounts. Final tax if profit does not exceed Rs. 5M.'
+      }
+    ]
+  },
+  {
+    section: 'prizeWinnings',
+    sectionTitle: 'Prize/Winnings',
+    sectionIcon: Award,
+    sectionColor: 'indigo',
+    fields: [
+      {
+        label: 'Prize on Raffle/Lottery/Quiz/Promotional u/s 156 @ 20%',
+        amountField: 'prize_raffle_lottery_quiz_promotional_156_amount',
+        taxDeductedField: 'prize_raffle_lottery_quiz_promotional_156_tax_deducted',
+        taxChargeableField: 'prize_raffle_lottery_quiz_promotional_156_tax_chargeable',
+        taxRate: 0.20,
+        description: 'Prize on Raffle/Lottery/Quiz/Sale promotion - Final Tax'
+      },
+      {
+        label: 'Prize on Prize Bond/Crossword Puzzle u/s 156 @ 15%',
+        amountField: 'prize_bond_cross_world_puzzle_156_amount',
+        taxDeductedField: 'prize_bond_cross_world_puzzle_156_tax_deducted',
+        taxChargeableField: 'prize_bond_cross_world_puzzle_156_tax_chargeable',
+        taxRate: 0.15,
+        description: 'Prize on Prize Bond/crossword puzzle - Final Tax'
+      }
+    ]
+  },
+  {
+    section: 'employmentRelated',
+    sectionTitle: 'Employment-Related Income',
+    sectionIcon: Award,
+    sectionColor: 'red',
+    fields: [
+      {
+        label: 'Bonus shares issued by companies u/s 236Z @ 10%',
+        amountField: 'bonus_shares_companies_236f_amount',
+        taxDeductedField: 'bonus_shares_companies_236f_tax_deducted',
+        taxChargeableField: 'bonus_shares_companies_236f_tax_chargeable',
+        taxRate: 0.10,
+        description: 'Value = day-end price on first day of closure of books (listed), or prescribed value (other companies)'
+      },
+      {
+        label: 'Salary Arrears u/s 12(7) — Chargeable to Tax at Relevant Rate',
+        amountField: 'salary_arrears_12_7_relevant_rate_amount',
+        taxDeductedField: 'salary_arrears_12_7_relevant_rate_tax_deducted',
+        taxChargeableField: 'salary_arrears_12_7_relevant_rate_tax_chargeable',
+        taxRate: null,
+        description: 'Enter average rate of tax applicable. Tax Chargeable = Amount × Average Rate'
+      }
+    ]
+  }
+];
 
 const FinalMinIncomeForm = () => {
   const navigate = useNavigate();
@@ -25,6 +217,8 @@ const FinalMinIncomeForm = () => {
     formData,
     saving
   } = useTaxForm();
+  const { currentTaxYear } = useTaxYear();
+  const { rates } = useTaxRates(currentTaxYear);
 
   const [showHelp, setShowHelp] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -44,256 +238,185 @@ const FinalMinIncomeForm = () => {
     defaultValues: getStepData('final_min_income')
   });
 
-  // Watch for changes in formData from context and update the form
+  // Guard used by auto-populate effects so they don't fire during a reset()
+  // triggered by post-save context sync. Without this, a save would:
+  //   1) update context.formData
+  //   2) trigger the sync effect → reset()
+  //   3) trigger the salary/CG auto-populate effects → setValue() overwriting
+  //      the user's just-saved values back to the computed defaults.
+  const isLoadingFromDB = useRef(false);
+
+  // Map form amount-field → DB rate_category (final_tax). Rates resolved via
+  // useTaxRates(). Fields not listed here fall back to field.taxRate (kept as a
+  // display-only default and a safety net until every category is seeded).
+  const AMOUNT_FIELD_TO_FINAL_TAX_CATEGORY = {
+    dividend_u_s_150_0pc_share_profit_reit_spv_amount:      'dividend_reit_spv_0pc',
+    dividend_u_s_150_35pc_share_profit_other_spv_amount:    'dividend_other_spv_35pc',
+    dividend_u_s_150_7_5pc_ipp_shares_amount:               'dividend_ipp_7_5pc',
+    dividend_u_s_150_31pc_atl_amount:                       'dividend_regular_15pc',
+    dividend_u_s_150_25pc_bf_losses_amount:                 'dividend_regular_25pc',
+    return_on_investment_sukuk_u_s_151_1a_25pc_amount:      'sukook_individual_above_5m',
+    return_invest_exceed_1m_sukuk_saa_12_5pc_amount:        'sukook_individual_1m_to_5m',
+    return_invest_not_exceed_1m_sukuk_saa_10pc_amount:      'sukook_individual_up_to_1m',
+    interest_income_profit_debt_7b_up_to_5m_amount:         'profit_debt_151_up_to_5m',
+    prize_raffle_lottery_quiz_promotional_156_amount:       'prize_lottery',
+    prize_bond_cross_world_puzzle_156_amount:               'prize_bond',
+    bonus_shares_companies_236f_amount:                     'bonus_shares',
+  };
+  const resolveFinalTaxRate = (field) => {
+    const cat = AMOUNT_FIELD_TO_FINAL_TAX_CATEGORY[field.amountField];
+    const dbRate = cat ? rates?.finalTax?.[cat]?.rate : undefined;
+    return dbRate !== undefined ? dbRate : field.taxRate;
+  };
+  // Track the salary we last auto-computed from. Re-sync only when it changes —
+  // respects user edits to salary_u_s_12_7_tax_deducted between saves.
+  const lastSyncedSalaryRef = useRef(null);
+  const lastSyncedCGRef = useRef(null);
+
+  // SINGLE load path: mirror context formData into the form. The standalone axios
+  // fetch that used to live here was removed — TaxFormContext already loads via
+  // GET /current-return and populates formData['final_min_income'].
   useEffect(() => {
     const contextData = formData['final_min_income'];
-    if (contextData && Object.keys(contextData).length > 0) {
-      console.log('[FinalMinIncomeForm] Context data updated, resetting form:', {
-        salary_u_s_12_7: contextData.salary_u_s_12_7,
-        salary_u_s_12_7_tax_deducted: contextData.salary_u_s_12_7_tax_deducted,
-        salary_u_s_12_7_tax_chargeable: contextData.salary_u_s_12_7_tax_chargeable,
-        totalFields: Object.keys(contextData).length
-      });
-      reset(contextData);
-      // Increment refreshKey to force input recreation with new default values
-      setRefreshKey(prev => prev + 1);
-      console.log('[FinalMinIncomeForm] Form reset and inputs recreated');
-    }
-  }, [formData, reset]);
+    if (!contextData || Object.keys(contextData).length === 0) return;
+
+    isLoadingFromDB.current = true;
+    reset(contextData);
+    // Delay clearing the flag so auto-populate effects queued in the same tick
+    // observe it as true and skip.
+    setTimeout(() => {
+      isLoadingFromDB.current = false;
+      setRefreshKey((k) => k + 1);
+    }, 50);
+  }, [formData['final_min_income'], reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Watch all values for auto-calculation
   const watchedValues = watch();
 
+  // Auto-populate Capital Gain row — only when the capital-gain numbers actually
+  // change, not on every formData tick. Skipped during DB reset.
+  useEffect(() => {
+    if (isLoadingFromDB.current) return;
+    const capitalGainData = formData['capital_gain'] || {};
+    if (Object.keys(capitalGainData).length === 0) return;
+
+    const amount = parseFloat(capitalGainData.total_capital_gain) || 0;
+    const taxDeducted = parseFloat(capitalGainData.total_tax_deducted) || 0;
+    const taxChargeable =
+      parseFloat(capitalGainData.total_capital_gain_tax_chargeable ||
+                 capitalGainData.capital_gains_tax_chargeable) || 0;
+
+    const signature = `${amount}|${taxDeducted}|${taxChargeable}`;
+    if (lastSyncedCGRef.current === signature) return;
+    lastSyncedCGRef.current = signature;
+
+    setValue('capital_gain_amount', amount);
+    setValue('capital_gain_tax_deducted', taxDeducted);
+    setValue('capital_gain_tax_chargeable', taxChargeable);
+  }, [formData['capital_gain'], setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Salary-tax calculator — DB-sourced slabs + surcharge via useTaxRates.
+  // Uses the same cumulative-marginal algorithm as the backend
+  // CalculationService.calculateProgressiveTax so numbers match the engine.
+  //
+  // Returns { tax, baseTax, surcharge, slabLabel, rate } — when rates aren't
+  // loaded yet, returns zeroes + a 'rates loading' label rather than computing
+  // with stale constants.
+  const calculateFBRSalaryTax = (annualIncome) => {
+    const income = parseFloat(annualIncome) || 0;
+    if (income <= 0 || !rates?.slabs) {
+      return { tax: 0, baseTax: 0, surcharge: 0, slabLabel: rates ? '≤ Rs 600,000 @ 0%' : 'rates loading', rate: '' };
+    }
+
+    let baseTax = 0;
+    let activeSlab = null;
+    for (const slab of rates.slabs) {
+      const minI = Number(slab.min_income);
+      const maxI = slab.max_income === null || slab.max_income === undefined
+        ? Number.POSITIVE_INFINITY
+        : Number(slab.max_income);
+      const rate = Number(slab.tax_rate);
+      const effectiveLower = minI > 0 ? minI - 1 : 0;
+      if (income <= effectiveLower) continue;
+      const ceiling = Math.min(income, maxI);
+      const taxableAtThisSlab = ceiling - effectiveLower;
+      if (taxableAtThisSlab > 0 && rate > 0) baseTax += taxableAtThisSlab * rate;
+      if (income <= maxI) { activeSlab = { effectiveLower, maxI, rate }; break; }
+      activeSlab = { effectiveLower, maxI, rate };
+    }
+    baseTax = Math.round(baseTax);
+
+    const surchargeRate = rates?.surcharge?.rate ?? 0;
+    const surchargeThreshold = rates?.surcharge?.threshold ?? Infinity;
+    const surcharge = income > surchargeThreshold ? Math.round(baseTax * surchargeRate) : 0;
+
+    const slabLabel = activeSlab
+      ? (activeSlab.maxI === Number.POSITIVE_INFINITY
+          ? `> Rs ${Math.round(activeSlab.effectiveLower / 100000) / 10}M @ ${(activeSlab.rate * 100).toFixed(0)}%`
+          : `Rs ${Math.round(activeSlab.effectiveLower / 1000)}k–${Math.round(activeSlab.maxI / 100000) / 10}M @ ${(activeSlab.rate * 100).toFixed(0)}%`)
+      : '≤ Rs 600,000 @ 0%';
+
+    return { tax: baseTax + surcharge, baseTax, surcharge, slabLabel, rate: slabLabel };
+  };
+
+  // Auto-populate Salary row from the Income form. Fires when either the linked
+  // salary changes OR rates arrive (so the initial pre-fill uses DB-backed slabs
+  // instead of the `rates === null` fallback). Ref-keyed on salary+rates so a
+  // post-save formData tick doesn't re-overwrite the user's edits.
+  useEffect(() => {
+    if (isLoadingFromDB.current) return;
+    if (!rates?.slabs) return; // wait for rates
+
+    const incomeData = formData['income'] || getStepData('income') || {};
+    const salaryAmount =
+      parseFloat(incomeData.annual_salary_wages_total) ||
+      parseFloat(incomeData.total_employment_income) ||
+      0;
+
+    if (salaryAmount <= 0) return;
+    const sig = `${salaryAmount}|${rates.slabs.length}|${rates.surcharge?.rate ?? 0}`;
+    if (lastSyncedSalaryRef.current === sig) return;
+    lastSyncedSalaryRef.current = sig;
+
+    setValue('salary_u_s_12_7', salaryAmount);
+    const { tax } = calculateFBRSalaryTax(salaryAmount);
+    setValue('salary_u_s_12_7_tax_deducted', tax);
+    setTimeout(() => setRefreshKey((k) => k + 1), 0);
+  }, [formData['income'], rates, setValue, getStepData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Get current form data from context for rendering inputs
   const currentFormData = formData['final_min_income'] || {};
 
-  // Define field definitions matching database columns and Excel structure
-  const fieldDefinitions = [
-    // Salary Income
-    {
-      section: 'salaryIncome',
-      sectionTitle: 'Salary Income',
-      sectionIcon: DollarSign,
-      sectionColor: 'blue',
-      fields: [
-        {
-          label: 'Salary u/s 12(7)',
-          amountField: 'salary_u_s_12_7',
-          taxDeductedField: 'salary_u_s_12_7_tax_deducted',
-          taxChargeableField: 'salary_u_s_12_7_tax_chargeable',
-          taxRate: null, // Variable rate from tax computation
-          description: 'Salary income subject to tax at rates in First Schedule'
-        }
-      ]
-    },
+  // fieldDefinitions lives at module scope (see FIELD_DEFINITIONS) — no longer
+  // reallocated per render. Alias kept so existing references compile.
+  const fieldDefinitions = FIELD_DEFINITIONS;
 
-    // Dividend & Interest Income
-    {
-      section: 'dividendInterest',
-      sectionTitle: 'Dividend Income',
-      sectionIcon: TrendingUp,
-      sectionColor: 'green',
-      fields: [
-        {
-          label: 'Dividend u/s 150 @0% (REIT SPV)',
-          amountField: 'dividend_u_s_150_0pc_share_profit_reit_spv_amount',
-          taxDeductedField: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_deducted',
-          taxChargeableField: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable',
-          taxRate: 0.00,
-          description: 'Dividend from REIT/SPV when pass-through to CPPAG'
-        },
-        {
-          label: 'Dividend u/s 150 @35% (Other SPV) - ATL/Non-ATL 35%/70%',
-          amountField: 'dividend_u_s_150_35pc_share_profit_other_spv_amount',
-          taxDeductedField: 'dividend_u_s_150_35pc_share_profit_other_spv_tax_deducted',
-          taxChargeableField: 'dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable',
-          taxRate: 0.35, // ATL rate, Non-ATL is 0.70
-          description: 'Dividend from other SPV (biomass/baggas based power projects)'
-        },
-        {
-          label: 'Dividend u/s 150 @7.5% (IPP Shares) - ATL/Non-ATL 7.5%/15%',
-          amountField: 'dividend_u_s_150_7_5pc_ipp_shares_amount',
-          taxDeductedField: 'dividend_u_s_150_7_5pc_ipp_shares_tax_deducted',
-          taxChargeableField: 'dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable',
-          taxRate: 0.075, // ATL rate, Non-ATL is 0.15
-          description: 'Dividend from IPP shares'
-        },
-        {
-          label: 'Dividend u/s 150 @15% (< 50% profit on debt) - ATL/Non-ATL 15%/30%',
-          amountField: 'dividend_u_s_150_31pc_atl_amount',
-          taxDeductedField: 'dividend_u_s_150_31pc_atl_tax_deducted',
-          taxChargeableField: 'dividend_u_s_150_31pc_atl_tax_chargeable',
-          taxRate: 0.15, // ATL rate, Non-ATL is 0.30
-          description: 'Dividend where company availing exemption or benefiting from c/f business losses'
-        }
-      ]
-    },
-
-    // Investment Returns (Sukuks)
-    {
-      section: 'investmentReturns',
-      sectionTitle: 'Investment Returns (Sukuks)',
-      sectionIcon: PiggyBank,
-      sectionColor: 'purple',
-      fields: [
-        {
-          label: 'Return on Investment in Sukuk u/s 151(1A) @ 10%',
-          amountField: 'return_on_investment_sukuk_u_s_151_1a_10pc_amount',
-          taxDeductedField: 'return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted',
-          taxChargeableField: 'return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable',
-          taxRate: 0.10,
-          description: 'Final Tax on Sukuk investment returns up to certain thresholds'
-        },
-        {
-          label: 'Return on Investment in Sukuk u/s 151(1A) @ 12.5%',
-          amountField: 'return_on_investment_sukuk_u_s_151_1a_12_5pc_amount',
-          taxDeductedField: 'return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_deducted',
-          taxChargeableField: 'return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable',
-          taxRate: 0.125,
-          description: 'Final Tax on Sukuk investment returns at 12.5%'
-        },
-        {
-          label: 'Return on Investment in Sukuk u/s 151(1A) @ 25%',
-          amountField: 'return_on_investment_sukuk_u_s_151_1a_25pc_amount',
-          taxDeductedField: 'return_on_investment_sukuk_u_s_151_1a_25pc_tax_deducted',
-          taxChargeableField: 'return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable',
-          taxRate: 0.25,
-          description: 'Minimum Tax on Sukuk investment returns above Rs. 5M'
-        },
-        {
-          label: 'Return on Investment exceeding Rs. 1M @ 12.5%',
-          amountField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_amount',
-          taxDeductedField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted',
-          taxChargeableField: 'return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable',
-          taxRate: 0.125,
-          description: 'Returns above Rs. 1M up to Rs. 5M @ 12.5%'
-        },
-        {
-          label: 'Return on Investment not exceeding Rs. 1M @ 10%',
-          amountField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_amount',
-          taxDeductedField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_tax_deducted',
-          taxChargeableField: 'return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable',
-          taxRate: 0.10,
-          description: 'Returns up to Rs. 1M @ 10% Final Tax'
-        }
-      ]
-    },
-
-    // Profit on Debt
-    {
-      section: 'profitDebt',
-      sectionTitle: 'Profit on Debt',
-      sectionIcon: Calculator,
-      sectionColor: 'yellow',
-      fields: [
-        {
-          label: 'Profit on Debt u/s 151A/SAA/SAB @ 10%/20% (ATL/Non-ATL)',
-          amountField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_amount',
-          taxDeductedField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_deducted',
-          taxChargeableField: 'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable',
-          taxRate: 0.10, // ATL rate, Non-ATL is 0.20
-          description: 'Profit on Government securities via FCVA'
-        },
-        {
-          label: 'Profit on Debt National Savings/Defence u/s 39(14A) @ Variable%',
-          amountField: 'profit_debt_national_savings_defence_39_14a_amount',
-          taxDeductedField: 'profit_debt_national_savings_defence_39_14a_tax_deducted',
-          taxChargeableField: 'profit_debt_national_savings_defence_39_14a_tax_chargeable',
-          taxRate: null, // Variable rate
-          description: 'Profit on National Savings Certificates (variable rate)'
-        },
-        {
-          label: 'Interest/Profit on Debt u/s 7B (up to 5M) @ 15%',
-          amountField: 'interest_income_profit_debt_7b_up_to_5m_amount',
-          taxDeductedField: 'interest_income_profit_debt_7b_up_to_5m_tax_deducted',
-          taxChargeableField: 'interest_income_profit_debt_7b_up_to_5m_tax_chargeable',
-          taxRate: 0.15,
-          description: 'Profit on debt up to Rs. 5M - Final Tax'
-        }
-      ]
-    },
-
-    // Prize/Winnings
-    {
-      section: 'prizeWinnings',
-      sectionTitle: 'Prize/Winnings',
-      sectionIcon: Award,
-      sectionColor: 'indigo',
-      fields: [
-        {
-          label: 'Prize on Raffle/Lottery/Quiz/Promotional u/s 156 @ 20%',
-          amountField: 'prize_raffle_lottery_quiz_promotional_156_amount',
-          taxDeductedField: 'prize_raffle_lottery_quiz_promotional_156_tax_deducted',
-          taxChargeableField: 'prize_raffle_lottery_quiz_promotional_156_tax_chargeable',
-          taxRate: 0.20,
-          description: 'Prize on Raffle/Lottery/Quiz/Sale promotion - Final Tax'
-        },
-        {
-          label: 'Prize on Prize Bond/Crossword Puzzle u/s 156 @ 15%',
-          amountField: 'prize_bond_cross_world_puzzle_156_amount',
-          taxDeductedField: 'prize_bond_cross_world_puzzle_156_tax_deducted',
-          taxChargeableField: 'prize_bond_cross_world_puzzle_156_tax_chargeable',
-          taxRate: 0.15,
-          description: 'Prize on Prize Bond/crossword puzzle - Final Tax'
-        }
-      ]
-    },
-
-    // Employment-Related
-    {
-      section: 'employmentRelated',
-      sectionTitle: 'Employment-Related Income',
-      sectionIcon: Award,
-      sectionColor: 'red',
-      fields: [
-        {
-          label: 'Bonus Shares u/s 236F',
-          amountField: 'bonus_shares_companies_236f_amount',
-          taxDeductedField: 'bonus_shares_companies_236f_tax_deducted',
-          taxChargeableField: 'bonus_shares_companies_236f_tax_chargeable',
-          taxRate: 0.00, // Typically not taxed at issuance
-          description: 'Bonus shares issued by companies'
-        },
-        {
-          label: 'Employment Termination Benefits u/s 12(6) @ Average Rate',
-          amountField: 'employment_termination_benefits_12_6_avg_rate_amount',
-          taxDeductedField: 'employment_termination_benefits_12_6_avg_rate_tax_deducted',
-          taxChargeableField: 'employment_termination_benefits_12_6_avg_rate_tax_chargeable',
-          taxRate: null, // Variable/Average rate
-          description: 'Chargeable to Tax at Average Rate (0% to 100%)'
-        },
-        {
-          label: 'Salary Arrears u/s 12(7) @ Relevant Rate',
-          amountField: 'salary_arrears_12_7_relevant_rate_amount',
-          taxDeductedField: 'salary_arrears_12_7_relevant_rate_tax_deducted',
-          taxChargeableField: 'salary_arrears_12_7_relevant_rate_tax_chargeable',
-          taxRate: null, // Relevant rate
-          description: 'Chargeable to Tax at Relevant Rate'
-        }
-      ]
-    }
-  ];
-
-  // Auto-calculate tax chargeable when amount changes
+  // Auto-calculate tax chargeable AND tax deducted when amount changes
+  // (fixed-rate fields only). Rate resolved via resolveFinalTaxRate which
+  // prefers DB values (rate_type='final_tax') and falls back to field.taxRate.
   useEffect(() => {
     fieldDefinitions.forEach(section => {
       section.fields.forEach(field => {
-        const amount = watchedValues[field.amountField] || 0;
-        const taxRate = field.taxRate;
+        // Skip salary row — handled by the slab-based effect elsewhere.
+        if (field.autoPopulateAmount || field.slabCalculatedTaxDeducted) return;
+        // Variable-rate rows — user enters tax manually.
+        if (field.taxRate === null) return;
 
-        // Only auto-calculate if there's a fixed tax rate
-        if (taxRate !== null && amount > 0) {
-          const calculatedTax = Math.round(amount * taxRate);
-          const currentTaxChargeable = watchedValues[field.taxChargeableField];
+        const amount = parseFloat(watchedValues[field.amountField]) || 0;
+        const taxRate = resolveFinalTaxRate(field);
+        if (taxRate === undefined || taxRate === null) return;
 
-          // Only update if different to avoid infinite loops
-          if (Math.abs((currentTaxChargeable || 0) - calculatedTax) > 0.01) {
-            setValue(field.taxChargeableField, calculatedTax);
-          }
+        const calculatedTax = (taxRate > 0 && amount > 0) ? Math.round(amount * taxRate) : 0;
+
+        if (Math.abs((parseFloat(watchedValues[field.taxChargeableField]) || 0) - calculatedTax) > 0.01) {
+          setValue(field.taxChargeableField, calculatedTax);
+        }
+        if (Math.abs((parseFloat(watchedValues[field.taxDeductedField]) || 0) - calculatedTax) > 0.01) {
+          setValue(field.taxDeductedField, calculatedTax);
         }
       });
     });
-  }, [watchedValues, setValue]);
+  }, [watchedValues, rates, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate totals
   const calculateTotals = () => {
@@ -329,16 +452,17 @@ const FinalMinIncomeForm = () => {
     await syncInputsToForm();
     const finalData = getValues();
 
-    // Structure the data for backend
+    // Structure the data for backend, include computed totals
     const structuredData = {
       ...finalData,
+      grand_total_tax_chargeable: grandTotal,
       isComplete: true
     };
 
     const success = await saveFormStep('final_min_income', structuredData, true);
     if (success) {
       toast.success('Final/Minimum tax income saved successfully');
-      navigate('/tax-forms/adjustable_tax');
+      navigate('/income-tax/adjustable-tax');
     }
   };
 
@@ -348,6 +472,7 @@ const FinalMinIncomeForm = () => {
 
     const structuredData = {
       ...data,
+      grand_total_tax_chargeable: grandTotal,
       isComplete: false
     };
 
@@ -481,18 +606,18 @@ const FinalMinIncomeForm = () => {
       }} className="space-y-6">
 
         {/* Column Headers */}
-        <div className="grid grid-cols-12 gap-3 items-center py-3 mb-4 bg-gray-800 text-white rounded-lg px-4">
+        <div className="grid grid-cols-12 gap-2 items-center py-3 mb-4 bg-gray-800 text-white rounded-lg px-4">
           <div className="col-span-6">
-            <h3 className="font-semibold">Description</h3>
+            <span className="font-semibold" style={{ fontSize: 'clamp(0.65rem, 1.4vw, 1rem)' }}>Description</span>
           </div>
           <div className="col-span-2 text-center">
-            <h3 className="font-semibold">Amount/Receipt</h3>
+            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Amount/<wbr/>Receipt</span>
           </div>
           <div className="col-span-2 text-center">
-            <h3 className="font-semibold">Tax Deducted</h3>
+            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Tax<br/>Deducted</span>
           </div>
           <div className="col-span-2 text-center">
-            <h3 className="font-semibold">Tax Chargeable</h3>
+            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Tax<br/>Chargeable</span>
           </div>
         </div>
 
@@ -524,55 +649,156 @@ const FinalMinIncomeForm = () => {
                 <div className="px-4 pb-4">
                   <div className="space-y-3">
                     {sectionDef.fields.map((field, fieldIdx) => (
-                      <div key={field.amountField} className="grid grid-cols-12 gap-3 items-center">
+                      <div key={field.amountField} className="grid grid-cols-12 gap-2 items-start py-2 border-b border-gray-100 last:border-0">
                         {/* Description */}
                         <div className="col-span-6">
                           <label className="text-sm font-medium text-gray-700">
                             {field.label}
+                            <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
                           </label>
                           {field.description && (
-                            <p className="text-xs text-gray-500 mt-1">{field.description}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>
+                          )}
+                          {field.slabCalculatedTaxDeducted && (() => {
+                            const salary = parseFloat(watchedValues[field.amountField]) || 0;
+                            if (salary <= 0) return null;
+                            const { tax, baseTax, surcharge, slabLabel, fixedPortion, varRate, threshold } = calculateFBRSalaryTax(salary);
+                            const effectiveRate = ((tax / salary) * 100).toFixed(1);
+                            return (
+                              <div className="mt-1 text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1 space-y-0.5">
+                                <p className="font-medium text-blue-700">FBR Finance Act 2025 Slab: {slabLabel}</p>
+                                {fixedPortion !== undefined && (
+                                  <p className="text-blue-600">
+                                    Rs {fixedPortion.toLocaleString()} + {(varRate * 100)}% × (Rs {salary.toLocaleString()} − Rs {threshold.toLocaleString()})
+                                  </p>
+                                )}
+                                {surcharge > 0 && (
+                                  <p className="text-orange-600 font-medium">
+                                    Base Tax: Rs {baseTax.toLocaleString()} + 9% Surcharge (income &gt; Rs 10M): Rs {surcharge.toLocaleString()}
+                                  </p>
+                                )}
+                                <p className="text-blue-800 font-semibold">
+                                  Total Tax = Rs {tax.toLocaleString()} &nbsp;|&nbsp; Effective Rate: {effectiveRate}%
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Amount/Receipt */}
+                        <div className="col-span-2">
+                          {field.autoPopulateAmount ? (
+                            <input
+                              key={`${field.amountField}-${refreshKey}`}
+                              type="text"
+                              className={readOnlyInputClasses}
+                              value={formatNumber(watchedValues[field.amountField] || 0)}
+                              readOnly
+                              placeholder="0"
+                              title="Auto-populated from Income form"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className={`${inputClasses} bg-green-50`}
+                              placeholder="0"
+                              value={formatNumber(watchedValues[field.amountField] || 0)}
+                              onFocus={(e) => handleNumberFocus(field.amountField, e)}
+                              onChange={(e) => handleNumberInput(field.amountField, e)}
+                              onBlur={(e) => handleNumberBlur(field.amountField, e)}
+                            />
                           )}
                         </div>
 
-                        {/* Amount/Receipt (green background - user input) */}
+                        {/* Tax Deducted */}
                         <div className="col-span-2">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className={`${inputClasses} bg-green-50`}
-                            placeholder="0"
-                            value={formatNumber(watchedValues[field.amountField] || 0)}
-                            onFocus={(e) => handleNumberFocus(field.amountField, e)}
-                            onChange={(e) => handleNumberInput(field.amountField, e)}
-                            onBlur={(e) => handleNumberBlur(field.amountField, e)}
-                          />
+                          {field.slabCalculatedTaxDeducted ? (
+                            <div>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={`${inputClasses} bg-green-50 pr-8`}
+                                  placeholder="0"
+                                  value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
+                                  onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
+                                  onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
+                                  onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
+                                  title="FBR slab-calculated (editable for actual employer deduction)"
+                                />
+                                <button
+                                  type="button"
+                                  title="Reset to FBR slab calculation"
+                                  onClick={() => {
+                                    const salary = parseFloat(watchedValues[field.amountField]) || 0;
+                                    const { tax } = calculateFBRSalaryTax(salary);
+                                    setValue(field.taxDeductedField, tax);
+                                    setRefreshKey(k => k + 1);
+                                  }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-700"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {/* Use actual WHT from employer salary certificate (AdjustableTaxForm) */}
+                              {(() => {
+                                const certWHT = parseFloat(formData['adjustable_tax']?.salary_employees_149_tax_collected) || 0;
+                                if (certWHT <= 0) return null;
+                                return (
+                                  <button
+                                    type="button"
+                                    title={`Use WHT from employer certificate: ${formatCurrency(certWHT)}`}
+                                    onClick={() => {
+                                      setValue(field.taxDeductedField, certWHT);
+                                      setRefreshKey(k => k + 1);
+                                    }}
+                                    className="mt-1 flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 hover:bg-emerald-100 w-full"
+                                  >
+                                    <FileCheck className="w-3 h-3 flex-shrink-0" />
+                                    <span>Use cert. WHT: {formatCurrency(certWHT)}</span>
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className={`${inputClasses} bg-green-50`}
+                              placeholder="0"
+                              value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
+                              onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
+                              onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
+                              onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
+                            />
+                          )}
                         </div>
 
-                        {/* Tax Deducted (green background - user input) */}
+                        {/* Tax Chargeable — manual for salary, auto-calculated for fixed-rate rows */}
                         <div className="col-span-2">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className={`${inputClasses} bg-green-50`}
-                            placeholder="0"
-                            value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
-                            onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
-                            onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
-                            onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
-                          />
-                        </div>
-
-                        {/* Tax Chargeable (read-only - auto-calculated) */}
-                        <div className="col-span-2">
-                          <input
-                            key={`${field.taxChargeableField}-${refreshKey}`}
-                            type="text"
-                            className={readOnlyInputClasses}
-                            value={formatNumber(currentFormData[field.taxChargeableField] || watchedValues[field.taxChargeableField] || 0)}
-                            readOnly
-                            placeholder="0"
-                          />
+                          {field.taxChargeableManual ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className={`${inputClasses} bg-yellow-50 border-yellow-300`}
+                              placeholder="Enter tax"
+                              value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
+                              onFocus={(e) => handleNumberFocus(field.taxChargeableField, e)}
+                              onChange={(e) => handleNumberInput(field.taxChargeableField, e)}
+                              onBlur={(e) => handleNumberBlur(field.taxChargeableField, e)}
+                              title="Manual entry — enter the actual tax chargeable for over/under deduction check"
+                            />
+                          ) : (
+                            <input
+                              key={`${field.taxChargeableField}-${refreshKey}`}
+                              type="text"
+                              className={readOnlyInputClasses}
+                              value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
+                              readOnly
+                              placeholder="0"
+                            />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -583,7 +809,7 @@ const FinalMinIncomeForm = () => {
           );
         })}
 
-        {/* Capital Gain Row */}
+        {/* Capital Gain Row - auto-populated from Capital Gain form (read-only per FBR Excel) */}
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
           <div className="grid grid-cols-12 gap-3 items-center">
             <div className="col-span-6">
@@ -591,31 +817,26 @@ const FinalMinIncomeForm = () => {
                 <Award className="w-4 h-4 inline mr-2 text-orange-600" />
                 Capital Gain (from Capital Gain Form)
               </label>
+              <p className="text-xs text-orange-600 mt-1">Auto-populated from Capital Gain form — fill that form first</p>
             </div>
             <div className="col-span-2">
               <input
                 key={`capital_gain_amount-${refreshKey}`}
                 type="text"
-                inputMode="numeric"
-                className={`${inputClasses} bg-green-50`}
+                className={readOnlyInputClasses}
+                value={formatNumber(watchedValues.capital_gain_amount)}
+                readOnly
                 placeholder="0"
-                defaultValue={formatNumber(watchedValues.capital_gain_amount)}
-                onFocus={(e) => handleNumberFocus('capital_gain_amount', e)}
-                onChange={(e) => handleNumberInput('capital_gain_amount', e)}
-                onBlur={(e) => handleNumberBlur('capital_gain_amount', e)}
               />
             </div>
             <div className="col-span-2">
               <input
                 key={`capital_gain_tax_deducted-${refreshKey}`}
                 type="text"
-                inputMode="numeric"
-                className={`${inputClasses} bg-green-50`}
+                className={readOnlyInputClasses}
+                value={formatNumber(watchedValues.capital_gain_tax_deducted)}
+                readOnly
                 placeholder="0"
-                defaultValue={formatNumber(watchedValues.capital_gain_tax_deducted)}
-                onFocus={(e) => handleNumberFocus('capital_gain_tax_deducted', e)}
-                onChange={(e) => handleNumberInput('capital_gain_tax_deducted', e)}
-                onBlur={(e) => handleNumberBlur('capital_gain_tax_deducted', e)}
               />
             </div>
             <div className="col-span-2">
@@ -632,33 +853,35 @@ const FinalMinIncomeForm = () => {
         </div>
 
         {/* Totals Section */}
-        <div className="bg-gray-800 text-white rounded-lg p-6">
-          <div className="space-y-3">
-            <div className="grid grid-cols-12 gap-3 items-center">
-              <div className="col-span-6">
-                <h3 className="text-lg font-bold">Subtotal Tax Chargeable</h3>
-                <p className="text-sm opacity-75">Sum of all tax chargeable (excluding capital gain)</p>
-              </div>
-              <div className="col-span-6 text-right">
-                <p className="text-2xl font-bold">
-                  {formatCurrency(subtotal)}
-                </p>
-              </div>
+        <div className="bg-gray-800 text-white rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold opacity-80" style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1rem)' }}>
+                Subtotal Tax Chargeable
+              </h3>
+              <p className="text-xs opacity-50">Excluding capital gain</p>
             </div>
+            <p
+              className="font-bold shrink-0"
+              style={{ fontSize: 'clamp(0.9rem, 2vw, 1.5rem)' }}
+            >
+              {formatCurrency(subtotal)}
+            </p>
+          </div>
 
-            <div className="border-t border-gray-600 pt-3">
-              <div className="grid grid-cols-12 gap-3 items-center">
-                <div className="col-span-6">
-                  <h3 className="text-xl font-bold">Grand Total Tax Chargeable</h3>
-                  <p className="text-sm opacity-75">Subtotal + Capital Gain Tax Chargeable</p>
-                </div>
-                <div className="col-span-6 text-right">
-                  <p className="text-3xl font-bold text-yellow-400">
-                    {formatCurrency(grandTotal)}
-                  </p>
-                </div>
-              </div>
+          <div className="border-t border-gray-600 pt-3 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-bold" style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.1rem)' }}>
+                Grand Total Tax Chargeable
+              </h3>
+              <p className="text-xs opacity-50">Subtotal + Capital Gain Tax Chargeable</p>
             </div>
+            <p
+              className="font-bold text-yellow-400 shrink-0"
+              style={{ fontSize: 'clamp(1rem, 2.5vw, 1.8rem)' }}
+            >
+              {formatCurrency(grandTotal)}
+            </p>
           </div>
         </div>
 
@@ -666,7 +889,7 @@ const FinalMinIncomeForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/income')}
+            onClick={() => navigate('/income-tax/income')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

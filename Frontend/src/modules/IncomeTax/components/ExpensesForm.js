@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
@@ -15,36 +15,53 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePriorYearData } from '../../../hooks/usePriorYearData';
+import HelpHint from '../../../components/Help/HelpHint';
+import expensesHelp from '../../../help/expensesHelp';
 
 const ExpensesForm = () => {
   const navigate = useNavigate();
-  const { 
-    saveFormStep, 
-    getStepData, 
-    saving 
+  const {
+    saveFormStep,
+    getStepData,
+    formData: contextFormData,
+    saving
   } = useTaxForm();
-  
+
   const [showHelp, setShowHelp] = useState(false);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
-    formState: { errors } 
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors }
   } = useForm({
     defaultValues: getStepData('expenses')
   });
 
+  // Sync form when saved data loads from API (handles page refresh / navigation back)
+  useEffect(() => {
+    const savedData = contextFormData['expenses'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      reset(savedData);
+    }
+  }, [contextFormData, reset]);
+
   // Watch all values for auto-calculation
   const watchedValues = watch();
+
+  // Prior year pre-fill (expenses are good candidates for year-over-year carry-forward)
+  const { hasPriorData: hasPriorExp, applyPriorYear: applyPriorExp, dismissPriorYear: dismissPriorExp } = usePriorYearData('expenses', setValue);
 
   // Auto-calculate total expenses
   const calculateTotal = (values) => {
     return [
       'rent',
-      'rates',
+      'rates_taxes_charges',
       'income_tax',
-      'vehicle',
+      'vehicle_running_maintenance',
       'travelling',
       'electricity',
       'water',
@@ -52,7 +69,7 @@ const ExpensesForm = () => {
       'telephone',
       'medical',
       'educational',
-      'donations',
+      'donations_zakat_annuity',
       'other_expenses',
       'entertainment',
       'maintenance'
@@ -70,7 +87,7 @@ const ExpensesForm = () => {
     const success = await saveFormStep('expenses', formData, true);
     if (success) {
       toast.success('Expenses information saved successfully');
-      navigate('/tax-forms/wealth');
+      navigate('/wealth-statement/wealth-statement');
     }
   };
 
@@ -84,7 +101,7 @@ const ExpensesForm = () => {
     const success = await saveFormStep('expenses', formData, false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms/wealth');
+      navigate('/wealth-statement/wealth-statement');
     }
   };
 
@@ -138,6 +155,16 @@ const ExpensesForm = () => {
         )}
       </div>
 
+      {hasPriorExp && (
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <span className="text-sm text-indigo-800">Prior year expense data available — apply to pre-fill? Adjust for any changes in your lifestyle.</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={dismissPriorExp} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
+            <button type="button" onClick={applyPriorExp} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Housing & Property Expenses */}
         <div className="bg-blue-50 p-6 rounded-lg">
@@ -150,6 +177,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Rent (PKR)
+                <HelpHint fieldId="rent" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -168,24 +196,26 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Property Rates/Taxes (PKR)
+                <HelpHint fieldId="rates_taxes_charges" source={expensesHelp} />
               </label>
               <input
                 type="number"
                 step="0.01"
-                {...register('rates', {
+                {...register('rates_taxes_charges', {
                   min: { value: 0, message: 'Amount cannot be negative' }
                 })}
                 className={inputClasses}
                 placeholder="0"
               />
-              {errors.rates && (
-                <p className="mt-1 text-sm text-red-600">{errors.rates.message}</p>
+              {errors.rates_taxes_charges && (
+                <p className="mt-1 text-sm text-red-600">{errors.rates_taxes_charges.message}</p>
               )}
             </div>
 
             <div>
               <label className={labelClasses}>
                 Maintenance (PKR)
+                <HelpHint fieldId="maintenance" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -214,6 +244,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Electricity (PKR)
+                <HelpHint fieldId="electricity" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -232,6 +263,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Water (PKR)
+                <HelpHint fieldId="water" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -250,6 +282,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Gas (PKR)
+                <HelpHint fieldId="gas" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -268,6 +301,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Telephone/Internet (PKR)
+                <HelpHint fieldId="telephone" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -296,25 +330,27 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Vehicle Expenses (PKR)
+                <HelpHint fieldId="vehicle_running_maintenance" source={expensesHelp} />
               </label>
               <input
                 type="number"
                 step="0.01"
-                {...register('vehicle', {
+                {...register('vehicle_running_maintenance', {
                   min: { value: 0, message: 'Amount cannot be negative' }
                 })}
                 className={inputClasses}
                 placeholder="0"
               />
               <p className="mt-1 text-xs text-green-600">Fuel, maintenance, insurance</p>
-              {errors.vehicle && (
-                <p className="mt-1 text-sm text-red-600">{errors.vehicle.message}</p>
+              {errors.vehicle_running_maintenance && (
+                <p className="mt-1 text-sm text-red-600">{errors.vehicle_running_maintenance.message}</p>
               )}
             </div>
 
             <div>
               <label className={labelClasses}>
                 Travel Expenses (PKR)
+                <HelpHint fieldId="travelling" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -344,6 +380,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Medical Expenses (PKR)
+                <HelpHint fieldId="medical" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -362,6 +399,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Educational Expenses (PKR)
+                <HelpHint fieldId="educational" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -380,6 +418,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Entertainment (PKR)
+                <HelpHint fieldId="entertainment" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -408,6 +447,7 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Income Tax Paid (PKR)
+                <HelpHint fieldId="income_tax" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -426,24 +466,26 @@ const ExpensesForm = () => {
             <div>
               <label className={labelClasses}>
                 Charitable Donations (PKR)
+                <HelpHint fieldId="donations_zakat_annuity" source={expensesHelp} />
               </label>
               <input
                 type="number"
                 step="0.01"
-                {...register('donations', {
+                {...register('donations_zakat_annuity', {
                   min: { value: 0, message: 'Amount cannot be negative' }
                 })}
                 className={inputClasses}
                 placeholder="0"
               />
-              {errors.donations && (
-                <p className="mt-1 text-sm text-red-600">{errors.donations.message}</p>
+              {errors.donations_zakat_annuity && (
+                <p className="mt-1 text-sm text-red-600">{errors.donations_zakat_annuity.message}</p>
               )}
             </div>
 
             <div>
               <label className={labelClasses}>
                 Other Expenses (PKR)
+                <HelpHint fieldId="other_expenses" source={expensesHelp} />
               </label>
               <input
                 type="number"
@@ -477,8 +519,8 @@ const ExpensesForm = () => {
             <div className="text-center">
               <p className="text-gray-600">Housing</p>
               <p className="font-semibold">
-                {formatCurrency((parseFloat(watchedValues.rent) || 0) + 
-                               (parseFloat(watchedValues.rates) || 0) + 
+                {formatCurrency((parseFloat(watchedValues.rent) || 0) +
+                               (parseFloat(watchedValues.rates_taxes_charges) || 0) +
                                (parseFloat(watchedValues.maintenance) || 0))}
               </p>
             </div>
@@ -494,7 +536,7 @@ const ExpensesForm = () => {
             <div className="text-center">
               <p className="text-gray-600">Transportation</p>
               <p className="font-semibold">
-                {formatCurrency((parseFloat(watchedValues.vehicle) || 0) + 
+                {formatCurrency((parseFloat(watchedValues.vehicle_running_maintenance) || 0) +
                                (parseFloat(watchedValues.travelling) || 0))}
               </p>
             </div>
@@ -513,7 +555,7 @@ const ExpensesForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/capital_gain')}
+            onClick={() => navigate('/income-tax/capital-gains')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

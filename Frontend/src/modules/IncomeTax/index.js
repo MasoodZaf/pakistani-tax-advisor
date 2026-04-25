@@ -10,10 +10,21 @@ import DeductionsForm from './components/DeductionsForm';
 import FinalTaxForm from './components/FinalTaxForm';
 import ExpensesForm from './components/ExpensesForm';
 import TaxComputationSummary from './components/TaxComputationSummary';
+import FormDeck from '../../components/TaxForms/FormDeck';
 
 const IncomeTaxModule = () => {
   return (
     <Routes>
+      <Route
+        index
+        element={
+          <FormDeck
+            scope="income-tax"
+            title="Tax Return Sections"
+            subtitle="All Income Tax forms — including the Tax Computation Summary."
+          />
+        }
+      />
       <Route path="income" element={<IncomeForm />} />
       <Route path="adjustable-tax" element={<AdjustableTaxForm />} />
       <Route path="final-min-income" element={<FinalMinIncomeForm />} />
@@ -25,9 +36,7 @@ const IncomeTaxModule = () => {
       <Route path="expenses" element={<ExpensesForm />} />
       <Route path="tax-computation" element={<TaxComputationSummary />} />
 
-      {/* Default route */}
-      <Route index element={<Navigate to="income" replace />} />
-      <Route path="*" element={<Navigate to="income" replace />} />
+      <Route path="*" element={<Navigate to="" replace />} />
     </Routes>
   );
 };

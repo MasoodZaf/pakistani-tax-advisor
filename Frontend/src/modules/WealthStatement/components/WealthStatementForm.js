@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
@@ -17,24 +17,36 @@ import {
   CheckCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import HelpHint from '../../../components/Help/HelpHint';
+import wealthStatementHelp from '../../../help/wealthStatementHelp';
 
 const WealthStatementForm = () => {
   const navigate = useNavigate();
-  const { 
-    saveFormStep, 
-    getStepData, 
-    saving 
+  const {
+    saveFormStep,
+    getStepData,
+    formData: contextFormData,
+    saving
   } = useTaxForm();
-  
+
   const [showHelp, setShowHelp] = useState(false);
-  
+
   const {
     register,
     handleSubmit,
-    watch
+    watch,
+    reset
   } = useForm({
     defaultValues: getStepData('wealth')
   });
+
+  // Sync form when saved data loads from API (handles page refresh / navigation back)
+  useEffect(() => {
+    const savedData = contextFormData['wealth'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      reset(savedData);
+    }
+  }, [contextFormData, reset]);
 
   // Watch all values for auto-calculation
   const watchedValues = watch();
@@ -95,36 +107,30 @@ const WealthStatementForm = () => {
 
   const totals = calculateWealthTotals(watchedValues);
 
-  const onSubmit = async (data) => {
-    const formData = {
-      ...data,
-      total_assets_previous_year: totals.assetsPrevious,
-      total_assets_current_year: totals.assetsCurrent,
-      total_liabilities_previous_year: totals.liabilitiesPrevious,
-      total_liabilities_current_year: totals.liabilitiesCurrent
-    };
+  const buildWealthPayload = (data) => ({
+    ...data,
+    total_assets_previous_year: totals.assetsPrevious,
+    total_assets_current_year: totals.assetsCurrent,
+    total_liabilities_previous_year: totals.liabilitiesPrevious,
+    total_liabilities_current_year: totals.liabilitiesCurrent,
+    // Include computed net worth so WealthReconciliation can read it from formData
+    net_worth_previous_year: totals.netWorthPrevious,
+    net_worth_current_year: totals.netWorthCurrent,
+  });
 
-    const success = await saveFormStep('wealth', formData, true);
+  const onSubmit = async (data) => {
+    const success = await saveFormStep('wealth', buildWealthPayload(data), true);
     if (success) {
       toast.success('Wealth statement completed successfully');
-      navigate('/tax-forms/wealth-reconciliation');
+      navigate('/wealth-statement/wealth-reconciliation');
     }
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
-    const formData = {
-      ...data,
-      total_assets_previous_year: totals.assetsPrevious,
-      total_assets_current_year: totals.assetsCurrent,
-      total_liabilities_previous_year: totals.liabilitiesPrevious,
-      total_liabilities_current_year: totals.liabilitiesCurrent
-    };
-
-    const success = await saveFormStep('wealth', formData, false);
+    const success = await saveFormStep('wealth', buildWealthPayload(watchedValues), false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms/wealth-reconciliation');
+      navigate('/wealth-statement/wealth-reconciliation');
     }
   };
 
@@ -217,6 +223,7 @@ const WealthStatementForm = () => {
                         <div className="flex items-center space-x-2">
                           <Icon className="w-4 h-4 text-green-600" />
                           <span className="font-medium">{label}</span>
+                          <HelpHint fieldId={key} source={wealthStatementHelp} />
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -306,6 +313,7 @@ const WealthStatementForm = () => {
                         <div className="flex items-center space-x-2">
                           <Icon className="w-4 h-4 text-red-600" />
                           <span className="font-medium">{label}</span>
+                          <HelpHint fieldId={key} source={wealthStatementHelp} />
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -405,7 +413,7 @@ const WealthStatementForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/expenses')}
+            onClick={() => navigate('/income-tax/expenses')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

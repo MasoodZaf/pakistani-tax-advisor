@@ -3,6 +3,9 @@ const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const jwtAuth = require('../middleware/auth'); // JWT middleware for protected routes
+const { insertAudit } = require('../helpers/auditLog');
+const { validatePasswordPolicy, BCRYPT_ROUNDS } = require('../helpers/passwordPolicy');
 
 const router = express.Router();
 
@@ -14,11 +17,16 @@ router.post('/register', async (req, res) => {
     await client.query('BEGIN');
     
     const { email, name, password, user_type = 'individual' } = req.body;
-    
+
     if (!email || !name || !password) {
       return res.status(400).json({ error: 'Email, name, and password are required' });
     }
-    
+
+    const policy = validatePasswordPolicy(password, { email });
+    if (!policy.ok) {
+      return res.status(400).json({ error: 'Password does not meet policy', message: policy.message });
+    }
+
     // Check if user already exists by email
     const existingUser = await client.query(
       'SELECT id FROM users WHERE email = $1',
@@ -29,27 +37,29 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
-    // Check if user with same name already exists
+    // Check if user with same name already exists. Return a generic 409 —
+    // leaking the existing user's email is a PII enumeration vector (an
+    // attacker can iterate common names to harvest registered emails).
     const existingName = await client.query(
-      'SELECT id, email FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
+      'SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND is_active = true',
       [name]
     );
 
     if (existingName.rows.length > 0) {
       return res.status(409).json({
-        error: 'A user with this name already exists',
-        message: `A user named "${name}" already exists with email: ${existingName.rows[0].email}`,
-        suggestion: 'Please use a different name or contact support if this is you'
+        error: 'Name already in use',
+        message: 'Please choose a different name.'
       });
     }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Create user
+    // Create user. onboarding_completed defaults to false — flipped to true
+    // by the wizard's final step so returning users skip the flow.
     const userResult = await client.query(`
       INSERT INTO users (email, name, password_hash, user_type, role, is_active)
       VALUES ($1, $2, $3, $4, 'user', true)
-      RETURNING id, email, name, user_type, role
+      RETURNING id, email, name, user_type, role, onboarding_completed
     `, [email, name, passwordHash, user_type]);
     
     const newUser = userResult.rows[0];
@@ -78,7 +88,8 @@ router.post('/register', async (req, res) => {
       newUser.email,
       currentTaxYear.id,
       currentTaxYear.tax_year,
-      `TR-${newUser.id.slice(0, 8)}-${currentTaxYear.tax_year}`
+      // Full UUID — 8-char prefix has a ~77k-user birthday collision bound.
+      `TR-${newUser.id}-${currentTaxYear.tax_year}`
     ]);
     
     const taxReturnId = returnResult.rows[0].id;
@@ -94,25 +105,48 @@ router.post('/register', async (req, res) => {
       'capital_gain_forms',
       'expenses_forms',
       'wealth_forms',
+      'final_min_income_forms',
+      'wealth_reconciliation_forms',
+      'tax_computation_forms',
       'form_completion_status'
     ];
     
+    // Placeholder rows — concurrent registration retries can race here, so
+    // DO NOTHING on the (user_id, tax_year) unique constraint added in the
+    // phase-d migration. Avoids the duplicate-row pattern we saw in
+    // adjustable_tax_forms.
     for (const tableName of formTables) {
       await client.query(`
         INSERT INTO ${tableName} (
           tax_return_id, user_id, user_email,
           tax_year_id, tax_year
         ) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (user_id, tax_year) DO NOTHING
       `, [taxReturnId, newUser.id, newUser.email, currentTaxYear.id, currentTaxYear.tax_year]);
     }
     
     await client.query('COMMIT');
-    
+
+    // Issue JWT so the frontend can log the user in immediately after registration
+    const jwt = require('jsonwebtoken');
+    const jwtToken = jwt.sign(
+      {
+        userId: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role,
+        onboarding_completed: newUser.onboarding_completed
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     logger.info(`User registered successfully: ${email}`);
-    
+
     res.json({
       success: true,
       message: 'User registered successfully',
+      token: jwtToken,
       user: newUser,
       currentTaxYear: currentTaxYear.tax_year
     });
@@ -120,7 +154,9 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     logger.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed', message: error.message });
+    // Don't leak the raw DB/JS error to the client — prod sanitizer would strip
+    // it anyway, but being explicit here keeps dev behaviour generic too.
+    res.status(500).json({ error: 'Registration failed' });
   } finally {
     client.release();
   }
@@ -163,16 +199,14 @@ router.post('/login', async (req, res) => {
     }
     
     logger.info(`Login attempt for: ${email}`);
-    
+
     // Try to authenticate user (both regular and admin users are in users table)
     const user = await pool.query(`
-      SELECT id, email, name, password_hash, role, user_type, permissions
-      FROM users 
+      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed
+      FROM users
       WHERE email = $1 AND is_active = true
     `, [email]);
-    
-    logger.info(`User query returned ${user.rows.length} rows for ${email}`);
-    
+
     if (user.rows.length === 0) {
       logger.warn(`No user found for: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -182,23 +216,15 @@ router.post('/login', async (req, res) => {
     
     // Check password (skip for admin-assisted login)
     if (!isAdminAssisted) {
-      logger.info(`User found, checking password for: ${email}`);
-      logger.info(`Password provided length: ${password?.length}`);
-      logger.info(`Hash from DB: ${userData.password_hash?.substring(0, 20)}...`);
-      
       const passwordMatch = await bcrypt.compare(password, userData.password_hash);
-      logger.info(`Password match result: ${passwordMatch} for ${email}`);
-      
       if (!passwordMatch) {
         logger.warn(`Password mismatch for: ${email}`);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
-    } else {
-      logger.info(`Skipping password check for admin-assisted login: ${email}`);
     }
     
     const isAdmin = ['admin', 'super_admin'].includes(userData.role);
-    logger.info(`Authentication successful for: ${email} (isAdmin: ${isAdmin})`)
+    logger.info(`Authentication successful for: ${email}`);
     
     // Create session token
     const sessionToken = uuidv4();
@@ -210,12 +236,13 @@ router.post('/login', async (req, res) => {
         userId: userData.id,
         email: userData.email,
         name: userData.name,
-        role: userData.role
+        role: userData.role,
+        onboarding_completed: userData.onboarding_completed
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+
     // Store session for ALL users (both admin and regular)
     await pool.query(`
       INSERT INTO user_sessions (
@@ -231,31 +258,18 @@ router.post('/login', async (req, res) => {
       new Date(Date.now() + 24*60*60*1000)
     ]);
     
-    // Log audit trail for all users
-    try {
-      const loginAction = isAdminAssisted ? 'admin_assisted_login' : 'login';
-      const additionalInfo = isAdminAssisted ? 
-        JSON.stringify({ admin_email: adminInfo.admin_email }) : 
-        null;
-      
-      await pool.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action,
-          table_name, new_value, ip_address, user_agent
-        )
-        VALUES ($1, $2, $3, 'users', $4, $5, $6)
-      `, [
-        userData.id,
-        userData.email,
-        loginAction,
-        additionalInfo,
-        req.ip,
-        req.headers['user-agent']
-      ]);
-    } catch (auditError) {
-      // Don't fail login if audit log fails
-      logger.warn('Audit log failed:', auditError.message);
-    }
+    // Audit trail for login. Fail-OPEN: breaking login because audit is down
+    // is worse than a missing audit record. ERROR-level log so it paged.
+    await insertAudit(pool, {
+      userId: userData.id,
+      userEmail: userData.email,
+      action: isAdminAssisted ? 'admin_assisted_login' : 'login',
+      tableName: 'users',
+      newValue: isAdminAssisted ? { admin_email: adminInfo.admin_email } : null,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: false,
+    });
     
     // Get tax years summary for regular users
     let taxYearsSummary = [];
@@ -320,7 +334,8 @@ router.post('/login', async (req, res) => {
         name: userData.name,
         role: userData.role,
         user_type: userData.user_type,
-        permissions: userData.permissions || null
+        permissions: userData.permissions || null,
+        onboarding_completed: userData.onboarding_completed
       },
       taxYearsSummary: taxYearsSummary.rows || [],
       currentYearData: currentYearData,
@@ -411,172 +426,145 @@ router.post('/verify-session', async (req, res) => {
   }
 });
 
-// Debug endpoint to test admin user query
-router.get('/debug-admin/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
+// [REMOVED] /debug-admin/:email endpoint — security risk, not for production
 
-    logger.debug('Testing admin query', { email });
-
-    // First check database name and connection info
-    const dbInfo = await pool.query('SELECT current_database(), current_user, inet_server_addr(), inet_server_port()');
-    logger.debug('Database info', dbInfo.rows[0]);
-
-    // Check if admin_users table exists and has data
-    const tableCheck = await pool.query(`
-      SELECT COUNT(*) as count FROM admin_users
-    `);
-    logger.debug('Total admin_users count', { count: tableCheck.rows[0].count });
-
-    // Check specific admin user
-    const directCheck = await pool.query(`
-      SELECT id, email, username, is_active FROM admin_users WHERE email = $1
-    `, [email]);
-    logger.debug('Direct admin_users query', { rowCount: directCheck.rows.length });
-    if (directCheck.rows.length > 0) {
-      logger.debug('Direct admin data', directCheck.rows[0]);
-    }
-
-    // Now try the join query
-    const adminUser = await pool.query(`
-      SELECT
-        au.id,
-        au.email,
-        au.username as name,
-        au.password_hash,
-        r.name as role,
-        r.permissions,
-        'admin' as user_type
-      FROM admin_users au
-      JOIN roles r ON au.role_id = r.id
-      WHERE au.email = $1 AND au.is_active = true
-    `, [email]);
-
-    logger.debug('Join query result', { rowCount: adminUser.rows.length });
-    
-    res.json({
-      success: true,
-      database: dbInfo.rows[0],
-      totalAdminUsers: tableCheck.rows[0].count,
-      directQueryRows: directCheck.rows.length,
-      joinQueryRows: adminUser.rows.length,
-      directData: directCheck.rows[0] || null,
-      joinData: adminUser.rows.map(row => ({
-        id: row.id,
-        email: row.email,
-        name: row.name,
-        role: row.role,
-        user_type: row.user_type,
-        hasPasswordHash: !!row.password_hash
-      }))
-    });
-    
-  } catch (error) {
-    logger.error('Error in admin query', { error: error.message, stack: error.stack });
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Change Password endpoint
-router.post('/change-password', async (req, res) => {
+// Change Password endpoint — protected by JWT middleware
+router.post('/change-password', jwtAuth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    
+
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Current password and new password are required' 
+        message: 'Current password and new password are required'
       });
     }
-    
-    if (newPassword.length < 8) {
-      return res.status(400).json({ 
+
+    // req.user is already populated by jwtAuth middleware
+    const { id: userId, email: userEmail } = req.user;
+
+    const policy = validatePasswordPolicy(newPassword, { email: userEmail });
+    if (!policy.ok) {
+      return res.status(400).json({ success: false, message: policy.message });
+    }
+
+    if (newPassword === currentPassword) {
+      return res.status(400).json({
         success: false,
-        message: 'New password must be at least 8 characters long' 
+        message: 'New password must be different from your current password.',
       });
     }
-    
-    // Get user from session token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Authentication required' 
-      });
+
+    // Fetch current password hash for the authenticated user
+    const userResult = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1 AND is_active = true',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
-    
-    const sessionToken = authHeader.substring(7);
-    
-    // Verify session and get user
-    const sessionResult = await pool.query(`
-      SELECT us.user_id, us.user_email, u.password_hash, u.name
-      FROM user_sessions us
-      JOIN users u ON us.user_id = u.id
-      WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
-    `, [sessionToken]);
-    
-    if (sessionResult.rows.length === 0) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Invalid or expired session' 
-      });
-    }
-    
-    const user = sessionResult.rows[0];
-    
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
-    
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+
     if (!isCurrentPasswordValid) {
-      logger.info(`Failed password change attempt for ${user.user_email} - incorrect current password`);
-      return res.status(400).json({ 
+      logger.warn(`Failed password change attempt for ${userEmail} - incorrect current password`);
+      return res.status(400).json({
         success: false,
-        message: 'Current password is incorrect' 
+        message: 'Current password is incorrect'
       });
     }
-    
-    // Hash new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    
-    // Update password in database
-    await pool.query(`
-      UPDATE users 
-      SET password_hash = $1, updated_at = NOW()
-      WHERE id = $2
-    `, [hashedNewPassword, user.user_id]);
-    
-    // Log audit trail
-    try {
-      await pool.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action,
-          table_name, field_name, new_value,
-          ip_address, user_agent
-        )
-        VALUES ($1, $2, 'password_change', 'users', 'password_hash', 'Password changed', $3, $4)
-      `, [
-        user.user_id,
-        user.user_email,
-        req.ip,
-        req.headers['user-agent']
-      ]);
-    } catch (auditError) {
-      logger.warn('Audit log failed for password change:', auditError.message);
-    }
-    
-    logger.info(`Password changed successfully for user: ${user.user_email}`);
-    
-    res.json({
-      success: true,
-      message: 'Password changed successfully'
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [hashedNewPassword, userId]
+    );
+
+    // Audit trail — mandatory. Password change is security-sensitive; a silent
+    // audit failure would hide the event from operators.
+    await insertAudit(pool, {
+      userId,
+      userEmail,
+      action: 'password_change',
+      tableName: 'users',
+      changeSummary: 'Password changed',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
     });
-    
+
+    logger.info(`Password changed successfully for user: ${userEmail}`);
+
+    res.json({ success: true, message: 'Password changed successfully' });
+
   } catch (error) {
     logger.error('Change password error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'An error occurred while changing password'
     });
+  }
+});
+
+// Mark the onboarding wizard as complete. Issues a fresh JWT with the
+// updated flag so the client doesn't have to re-login to escape the wizard
+// guard. Idempotent — calling twice is harmless.
+router.post('/onboarding/complete', jwtAuth, async (req, res) => {
+  try {
+    const { id: userId, email: userEmail } = req.user;
+
+    const result = await pool.query(
+      `UPDATE users SET onboarding_completed = true, updated_at = NOW()
+        WHERE id = $1 AND is_active = true
+       RETURNING id, email, name, role, user_type, onboarding_completed`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const u = result.rows[0];
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      {
+        userId: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        onboarding_completed: u.onboarding_completed,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    await insertAudit(pool, {
+      userId,
+      userEmail,
+      action: 'onboarding_complete',
+      tableName: 'users',
+      mandatory: false,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        user_type: u.user_type,
+        onboarding_completed: u.onboarding_completed,
+      },
+    });
+  } catch (e) {
+    logger.error('onboarding complete failed', { message: e?.message });
+    res.status(500).json({ error: 'Failed to mark onboarding complete' });
   }
 });
 

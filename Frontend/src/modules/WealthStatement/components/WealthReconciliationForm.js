@@ -16,6 +16,8 @@ import {
   FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import HelpHint from '../../../components/Help/HelpHint';
+import wealthReconciliationHelp from '../../../help/wealthReconciliationHelp';
 
 const WealthReconciliationForm = () => {
   const navigate = useNavigate();
@@ -31,107 +33,101 @@ const WealthReconciliationForm = () => {
   const [unreconciledDifference, setUnreconciledDifference] = useState(0);
   const [loading, setLoading] = useState(true);
   
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
-    setValue
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset
   } = useForm({
     defaultValues: getStepData('wealth_reconciliation')
   });
 
+  // Sync form when saved data loads from API (handles page refresh / navigation back)
+  useEffect(() => {
+    const savedData = formData['wealth_reconciliation'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      reset(savedData);
+    }
+  }, [formData, reset]);
+
   // Watch all values for auto-calculation
   const watchedValues = watch();
+
+  // Auto-populate personal_expenses from Expenses form (total_expenses DB computed column).
+  // Always sync so stale cached values don't persist across saves.
+  useEffect(() => {
+    const expensesData = formData?.expenses || {};
+    const totalExpenses = parseFloat(expensesData.total_expenses);
+    if (totalExpenses > 0) {
+      setValue('personal_expenses', totalExpenses);
+    }
+  }, [formData, setValue]);
 
   // Calculate wealth reconciliation from existing form data
   useEffect(() => {
     const calculateReconciliation = () => {
       try {
         setLoading(true);
-        
-        // Get data from wealth statement
-        const wealthData = formData?.wealth || {};
-        const incomeData = formData?.income || {};
-        const deductionsData = formData?.deductions || {};
-        const creditsData = formData?.credits || {};
-        const expensesData = formData?.expenses || {};
-        
-        // Net Assets (from wealth statement)
-        const netAssetsCurrentYear = parseFloat(wealthData.total_assets_current_year || 0) - 
-                                   parseFloat(wealthData.total_liabilities_current_year || 0);
-        const netAssetsPreviousYear = parseFloat(wealthData.total_assets_previous_year || 0) - 
-                                    parseFloat(wealthData.total_liabilities_previous_year || 0);
-        const netAssetsIncrease = netAssetsCurrentYear - netAssetsPreviousYear;
-        
-        // Income declared
-        const incomeNormalTax = parseFloat(incomeData.total_taxable_income || 0);
-        const incomeExemptFromTax = parseFloat(incomeData.total_exempt_income || 0);
-        const incomeFinalTax = 0; // This would come from final tax forms if available
-        
-        // Adjustments and outflows
-        const personalExpenses = parseFloat(watchedValues.personal_expenses || 0);
-        const giftValue = parseFloat(watchedValues.gift_value || 0);
-        const assetDisposalGainLoss = parseFloat(watchedValues.asset_disposal_gain_loss || 0);
-        const foreignRemittance = parseFloat(watchedValues.foreign_remittance || 0);
-        const inheritance = parseFloat(watchedValues.inheritance || 0);
-        const otherInflows = parseFloat(watchedValues.other_inflows || 0);
-        
-        const adjustmentsInOutflows = parseFloat(watchedValues.adjustments_outflows || 0);
-        const lossOnDisposal = parseFloat(watchedValues.loss_on_disposal || 0);
-        
-        // Total inflows calculation
+
+        const wealthData   = formData?.wealth    || {};
+        const incomeData   = formData?.income    || {};
+        const expensesData = formData?.expenses  || {};
+        const finalTaxData = formData?.final_tax || {};
+
+        // Net Assets — prefer DB-computed net_worth columns; fall back to totals diff
+        const netAssetsCurrent  = parseFloat(wealthData.net_worth_current_year)
+          || (parseFloat(wealthData.total_assets_current_year  || 0) - parseFloat(wealthData.total_liabilities_current_year  || 0));
+        const netAssetsPrevious = parseFloat(wealthData.net_worth_previous_year)
+          || (parseFloat(wealthData.total_assets_previous_year || 0) - parseFloat(wealthData.total_liabilities_previous_year || 0));
+        const netAssetsIncrease = netAssetsCurrent - netAssetsPrevious;
+
+        // Inflows
+        const incomeNormalTax    = parseFloat(incomeData.total_employment_income || incomeData.total_taxable_income || 0);
+        const incomeExemptFromTax= parseFloat(incomeData.income_exempt_from_tax  || incomeData.total_exempt_income   || 0);
+        const incomeFinalTax     = parseFloat(finalTaxData.total_final_tax || 0);
+        const foreignRemittance  = parseFloat(watchedValues.foreign_remittance   || 0);
+        const inheritance        = parseFloat(watchedValues.inheritance          || 0);
+        const giftInflow         = parseFloat(watchedValues.gift_value           || 0); // gift RECEIVED
+        const assetGainLoss      = parseFloat(watchedValues.asset_disposal_gain_loss || 0);
+        const otherInflows       = parseFloat(watchedValues.other_inflows        || 0);
         const totalInflows = incomeNormalTax + incomeExemptFromTax + incomeFinalTax +
-                           foreignRemittance + inheritance + giftValue + 
-                           assetDisposalGainLoss + otherInflows;
-        
-        // Total outflows calculation  
-        const totalOutflows = personalExpenses + adjustmentsInOutflows + 
-                            giftValue + lossOnDisposal;
-        
-        // Net increase/decrease in assets calculation
+                             foreignRemittance + inheritance + giftInflow + assetGainLoss + otherInflows;
+
+        // Outflows — personal_expenses synced from expenses form; gift_outflow is gift GIVEN
+        const personalExpenses   = parseFloat(expensesData.total_expenses || watchedValues.personal_expenses || 0);
+        const adjustmentsOutflows= parseFloat(watchedValues.adjustments_outflows || 0);
+        const giftOutflow        = parseFloat(watchedValues.gift_outflow   || 0); // gift GIVEN
+        const lossOnDisposal     = parseFloat(watchedValues.loss_on_disposal    || 0);
+        const totalOutflows = personalExpenses + adjustmentsOutflows + giftOutflow + lossOnDisposal;
+
         const calculatedNetIncrease = totalInflows - totalOutflows;
-        
-        // Unreconciled difference (this MUST be zero for FBR compliance)
-        const unreconciledDiff = netAssetsIncrease - calculatedNetIncrease;
-        
+        const unreconciledDiff      = netAssetsIncrease - calculatedNetIncrease;
+
+        // Use snake_case keys matching DB column names
         const reconciliation = {
-          // Assets section
-          netAssetsCurrentYear,
-          netAssetsPreviousYear,
-          netAssetsIncrease,
-          
-          // Inflows section
-          incomeNormalTax,
-          incomeExemptFromTax,
-          incomeFinalTax,
-          foreignRemittance,
-          inheritance,
-          giftValue: giftValue,
-          assetDisposalGainLoss,
-          otherInflows,
-          totalInflows,
-          
-          // Outflows section
-          personalExpenses,
-          adjustmentsInOutflows,
-          lossOnDisposal,
-          totalOutflows,
-          
-          // Final calculation
-          calculatedNetIncrease,
-          unreconciledDifference: unreconciledDiff
+          net_assets_current_year:  netAssetsCurrent,
+          net_assets_previous_year: netAssetsPrevious,
+          net_assets_increase:      netAssetsIncrease,
+          income_normal_tax:        incomeNormalTax,
+          income_exempt_from_tax:   incomeExemptFromTax,
+          income_final_tax:         incomeFinalTax,
+          total_inflows:            totalInflows,
+          personal_expenses:        personalExpenses,
+          total_outflows:           totalOutflows,
+          calculated_net_increase:  calculatedNetIncrease,
+          unreconciled_difference:  unreconciledDiff,
         };
-        
+
         setReconciliationData(reconciliation);
         setUnreconciledDifference(unreconciledDiff);
-        
-        // Auto-populate form fields
-        Object.keys(reconciliation).forEach(key => {
-          setValue(key, reconciliation[key]);
+
+        // Sync only the DB-bound computed fields (not user-editable registered fields)
+        Object.entries(reconciliation).forEach(([key, value]) => {
+          setValue(key, value);
         });
-        
+
       } catch (error) {
-        console.error('Error calculating reconciliation:', error);
         toast.error('Error calculating wealth reconciliation');
       } finally {
         setLoading(false);
@@ -143,9 +139,10 @@ const WealthReconciliationForm = () => {
     } else {
       setLoading(false);
     }
-  }, [formData, watchedValues.personal_expenses, watchedValues.gift_value, 
-      watchedValues.asset_disposal_gain_loss, watchedValues.foreign_remittance, 
-      watchedValues.inheritance, watchedValues.other_inflows, 
+  }, [formData,
+      watchedValues.personal_expenses, watchedValues.gift_value, watchedValues.gift_outflow,
+      watchedValues.asset_disposal_gain_loss, watchedValues.foreign_remittance,
+      watchedValues.inheritance, watchedValues.other_inflows,
       watchedValues.adjustments_outflows, watchedValues.loss_on_disposal, setValue]);
 
   const onSubmit = async (data) => {
@@ -158,7 +155,7 @@ const WealthReconciliationForm = () => {
     const success = await saveFormStep('wealth_reconciliation', data, true);
     if (success) {
       toast.success('Wealth reconciliation completed successfully');
-      navigate('/tax-forms/tax-computation');
+      navigate('/income-tax/tax-computation');
     }
   };
 
@@ -167,6 +164,7 @@ const WealthReconciliationForm = () => {
     const success = await saveFormStep('wealth_reconciliation', data, false);
     if (success) {
       toast.success('Progress saved');
+      navigate('/income-tax/tax-computation');
     }
   };
 
@@ -289,9 +287,9 @@ const WealthReconciliationForm = () => {
                 <input
                   type="number"
                   step="0.01"
-                  {...register('netAssetsCurrentYear')}
+                  {...register('net_assets_current_year')}
                   className={readOnlyClasses}
-                  value={reconciliationData?.netAssetsCurrentYear || 0}
+                  value={reconciliationData?.net_assets_current_year || 0}
                   readOnly
                 />
               </div>
@@ -303,9 +301,9 @@ const WealthReconciliationForm = () => {
                 <input
                   type="number"
                   step="0.01"
-                  {...register('netAssetsPreviousYear')}
+                  {...register('net_assets_previous_year')}
                   className={readOnlyClasses}
-                  value={reconciliationData?.netAssetsPreviousYear || 0}
+                  value={reconciliationData?.net_assets_previous_year || 0}
                   readOnly
                 />
               </div>
@@ -315,9 +313,9 @@ const WealthReconciliationForm = () => {
               <div className="col-span-8 text-blue-900">Increase / (Decrease) in Assets</div>
               <div className="col-span-4">
                 <div className={`p-3 text-right font-bold text-lg ${
-                  (reconciliationData?.netAssetsIncrease || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
+                  (reconciliationData?.net_assets_increase || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
                 }`}>
-                  {formatCurrency(reconciliationData?.netAssetsIncrease || 0)}
+                  {formatCurrency(reconciliationData?.net_assets_increase || 0)}
                 </div>
               </div>
             </div>
@@ -333,9 +331,9 @@ const WealthReconciliationForm = () => {
                 <input
                   type="number"
                   step="0.01"
-                  {...register('incomeNormalTax')}
+                  {...register('income_normal_tax')}
                   className={readOnlyClasses}
-                  value={reconciliationData?.incomeNormalTax || 0}
+                  value={reconciliationData?.income_normal_tax || 0}
                   readOnly
                 />
               </div>
@@ -347,9 +345,9 @@ const WealthReconciliationForm = () => {
                 <input
                   type="number"
                   step="0.01"
-                  {...register('incomeExemptFromTax')}
+                  {...register('income_exempt_from_tax')}
                   className={readOnlyClasses}
-                  value={reconciliationData?.incomeExemptFromTax || 0}
+                  value={reconciliationData?.income_exempt_from_tax || 0}
                   readOnly
                 />
               </div>
@@ -361,15 +359,18 @@ const WealthReconciliationForm = () => {
                 <input
                   type="number"
                   step="0.01"
-                  {...register('incomeFinalTax')}
-                  className={inputClasses}
-                  placeholder="0"
+                  {...register('income_final_tax')}
+                  className={readOnlyClasses}
+                  readOnly
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Foreign Remittance</div>
+              <div className="col-span-8 text-gray-700">
+                Foreign Remittance
+                <HelpHint fieldId="foreign_remittance" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -382,7 +383,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Inheritance</div>
+              <div className="col-span-8 text-gray-700">
+                Inheritance
+                <HelpHint fieldId="inheritance" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -395,7 +399,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Gift (Value declard in gift deed)</div>
+              <div className="col-span-8 text-gray-700">
+                Gift (Value declard in gift deed)
+                <HelpHint fieldId="gift_value" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -408,7 +415,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Gain/(Loss) on Disposal of Assets (Excluding capital gain)</div>
+              <div className="col-span-8 text-gray-700">
+                Gain/(Loss) on Disposal of Assets (Excluding capital gain)
+                <HelpHint fieldId="asset_disposal_gain_loss" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -421,7 +431,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Others</div>
+              <div className="col-span-8 text-gray-700">
+                Others
+                <HelpHint fieldId="other_inflows" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -437,7 +450,7 @@ const WealthReconciliationForm = () => {
               <div className="col-span-8 text-green-900">Total Inflows</div>
               <div className="col-span-4">
                 <div className="p-3 text-right font-bold text-lg text-green-900">
-                  {formatCurrency(reconciliationData?.totalInflows || 0)}
+                  {formatCurrency(reconciliationData?.total_inflows || 0)}
                 </div>
               </div>
             </div>
@@ -448,7 +461,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Personal Expenses</div>
+              <div className="col-span-8 text-gray-700">
+                Personal Expenses
+                <HelpHint fieldId="personal_expenses" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -461,7 +477,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Adjustments in Outflows</div>
+              <div className="col-span-8 text-gray-700">
+                Adjustments in Outflows
+                <HelpHint fieldId="adjustments_outflows" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -474,7 +493,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Gift</div>
+              <div className="col-span-8 text-gray-700">
+                Gift
+                <HelpHint fieldId="gift_outflow" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -487,7 +509,10 @@ const WealthReconciliationForm = () => {
             </div>
             
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Loss on Disposal of Assets</div>
+              <div className="col-span-8 text-gray-700">
+                Loss on Disposal of Assets
+                <HelpHint fieldId="loss_on_disposal" source={wealthReconciliationHelp} />
+              </div>
               <div className="col-span-4">
                 <input
                   type="number"
@@ -503,7 +528,7 @@ const WealthReconciliationForm = () => {
               <div className="col-span-8 text-red-900">Total Outflows</div>
               <div className="col-span-4">
                 <div className="p-3 text-right font-bold text-lg text-red-900">
-                  {formatCurrency(reconciliationData?.totalOutflows || 0)}
+                  {formatCurrency(reconciliationData?.total_outflows || 0)}
                 </div>
               </div>
             </div>
@@ -513,9 +538,9 @@ const WealthReconciliationForm = () => {
               <div className="col-span-8 text-blue-900 text-lg">Net Increase/(Decrease) in Assets</div>
               <div className="col-span-4">
                 <div className={`p-3 text-right font-bold text-xl ${
-                  (reconciliationData?.calculatedNetIncrease || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
+                  (reconciliationData?.calculated_net_increase || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
                 }`}>
-                  {formatCurrency(reconciliationData?.calculatedNetIncrease || 0)}
+                  {formatCurrency(reconciliationData?.calculated_net_increase || 0)}
                 </div>
               </div>
             </div>
@@ -568,7 +593,7 @@ const WealthReconciliationForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/wealth')}
+            onClick={() => navigate('/wealth-statement/wealth-statement')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
+import { useTaxYear } from '../../../contexts/TaxYearContext';
+import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -10,28 +12,119 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePriorYearData } from '../../../hooks/usePriorYearData';
+import HelpHint from '../../../components/Help/HelpHint';
+import creditsHelp from '../../../help/creditsHelp';
 
 const CreditsForm = () => {
   const navigate = useNavigate();
-  const { 
-    saveFormStep, 
-    getStepData, 
-    saving 
+  const {
+    saveFormStep,
+    getStepData,
+    formData: contextFormData,
+    saving
   } = useTaxForm();
-  
+  const { currentTaxYear } = useTaxYear();
+  const { rates } = useTaxRates(currentTaxYear);
+
   const [showHelp, setShowHelp] = useState(false);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
-    formState: { errors } 
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors }
   } = useForm({
     defaultValues: getStepData('credits')
   });
 
+  // Sync form when saved data loads from API (handles page refresh / navigation back)
+  useEffect(() => {
+    const savedData = contextFormData['credits'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      reset(savedData);
+    }
+  }, [contextFormData, reset]);
+
   // Watch all values for auto-calculation
   const watchedValues = watch();
+
+  // Prior year pre-fill
+  const { hasPriorData: hasPriorCredits, applyPriorYear: applyPriorCredits, dismissPriorYear: dismissPriorCredits } = usePriorYearData('credits', setValue);
+
+  // ── Rebate-at-average-rate auto-calculation (u/s 61, 62, 63) ────────────────
+  // Formula (ITO 2001):
+  //   Credit = eligible_amount × (normal_income_tax / taxable_income)
+  //   eligible_amount = MIN(actual, cap% × taxable_income)
+  //
+  // Slabs and caps come from DB via useTaxRates — no hardcoded rate constants.
+
+  // Progressive tax walk over DB-sourced slabs. Same algorithm as the backend
+  // CalculationService.calculateProgressiveTax.
+  const calculateNormalTax = (income) => {
+    const taxable = parseFloat(income) || 0;
+    if (!rates?.slabs || taxable <= 0) return 0;
+    let total = 0;
+    for (const slab of rates.slabs) {
+      const minI = Number(slab.min_income);
+      const maxI = slab.max_income === null || slab.max_income === undefined
+        ? Number.POSITIVE_INFINITY
+        : Number(slab.max_income);
+      const rate = Number(slab.tax_rate);
+      const effectiveLower = minI > 0 ? minI - 1 : 0;
+      if (taxable <= effectiveLower) continue;
+      const ceiling = Math.min(taxable, maxI);
+      const taxableAtThisSlab = ceiling - effectiveLower;
+      if (taxableAtThisSlab > 0 && rate > 0) total += taxableAtThisSlab * rate;
+    }
+    return Math.round(total);
+  };
+
+  // Derive taxable income from income form context data
+  const incomeData = contextFormData['income'] || {};
+  const taxableIncome =
+    (parseFloat(incomeData.total_employment_income) || parseFloat(incomeData.annual_salary_wages_total) || 0)
+    + (parseFloat(incomeData.other_income_no_min_tax_total) || 0);
+  const normalTax = calculateNormalTax(taxableIncome);
+  const avgRate = taxableIncome > 0 ? normalTax / taxableIncome : 0;
+
+  const computeRebateCredit = (actualAmount, capPct) => {
+    if (!taxableIncome || !normalTax || !actualAmount || !capPct) return 0;
+    const eligible = Math.min(parseFloat(actualAmount) || 0, taxableIncome * capPct);
+    return eligible > 0 ? Math.round(eligible * avgRate) : 0;
+  };
+
+  // DB-sourced cap ratios (u/s 61: 30%, u/s 61 to associate: 15%, u/s 63: 20%).
+  const donationCap = rates?.creditCaps?.donation_u61?.rate;
+  const donationAssociateCap = rates?.creditCaps?.donation_u61_associate?.rate;
+  const pensionCap = rates?.creditCaps?.pension_u63?.rate;
+
+  useEffect(() => {
+    if (!donationCap) return;
+    const donation = parseFloat(watchedValues.charitable_donations_amount) || 0;
+    if (taxableIncome > 0) {
+      setValue('charitable_donations_tax_credit', computeRebateCredit(donation, donationCap));
+    }
+  }, [watchedValues.charitable_donations_amount, taxableIncome, normalTax, donationCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!donationAssociateCap) return;
+    const donation = parseFloat(watchedValues.charitable_donations_associate_amount) || 0;
+    if (taxableIncome > 0) {
+      setValue('charitable_donations_associate_tax_credit', computeRebateCredit(donation, donationAssociateCap));
+    }
+  }, [watchedValues.charitable_donations_associate_amount, taxableIncome, normalTax, donationAssociateCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pensionCap) return;
+    const contribution = parseFloat(watchedValues.pension_fund_amount) || 0;
+    if (taxableIncome > 0) {
+      setValue('pension_fund_tax_credit', computeRebateCredit(contribution, pensionCap));
+    }
+  }, [watchedValues.pension_fund_amount, taxableIncome, normalTax, pensionCap]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ────────────────────────────────────────────────────────────────────────────
 
   // Define comprehensive tax credits structure matching Excel
   const creditItems = [
@@ -41,7 +134,9 @@ const CreditsForm = () => {
       yesNo: 'Y',
       amount: 'charitable_donations_amount',
       taxReduction: 'charitable_donations_tax_credit',
-      limits: '30% of the taxable income'
+      limits: 'Rebate at avg rate. Eligible = MIN(donation, 30% of taxable income)',
+      autoCalc: true,
+      limitPct: 0.30
     },
     {
       id: 'charitable_donations_associate',
@@ -49,7 +144,9 @@ const CreditsForm = () => {
       yesNo: 'Y',
       amount: 'charitable_donations_associate_amount',
       taxReduction: 'charitable_donations_associate_tax_credit',
-      limits: '15% of the taxable income'
+      limits: 'Rebate at avg rate. Eligible = MIN(donation, 15% of taxable income)',
+      autoCalc: true,
+      limitPct: 0.15
     },
     {
       id: 'pension_fund_u63',
@@ -57,7 +154,9 @@ const CreditsForm = () => {
       yesNo: 'Y',
       amount: 'pension_fund_amount',
       taxReduction: 'pension_fund_tax_credit',
-      limits: '20% of the taxable income (2% per year for above 40 years if he joined at or above 41 years of age)'
+      limits: 'Rebate at avg rate. Eligible = MIN(contribution, 20% of taxable income)',
+      autoCalc: true,
+      limitPct: 0.20
     },
     {
       id: 'surrender_tax_credit_investments',
@@ -65,7 +164,9 @@ const CreditsForm = () => {
       yesNo: '-',
       amount: 'surrender_tax_credit_amount',
       taxReduction: 'surrender_tax_credit_reduction',
-      limits: '-'
+      limits: 'Manual entry — negative credit (reversal)',
+      autoCalc: false,
+      limitPct: null
     }
   ];
 
@@ -87,7 +188,7 @@ const CreditsForm = () => {
     const success = await saveFormStep('credits', formData, true);
     if (success) {
       toast.success('Tax credits information saved successfully');
-      navigate('/tax-forms/deductions');
+      navigate('/income-tax/deductions');
     }
   };
 
@@ -101,7 +202,7 @@ const CreditsForm = () => {
     const success = await saveFormStep('credits', formData, false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms/deductions');
+      navigate('/income-tax/deductions');
     }
   };
 
@@ -154,6 +255,33 @@ const CreditsForm = () => {
         )}
       </div>
 
+      {/* Auto-calc context banner */}
+      {taxableIncome > 0 ? (
+        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-center gap-2">
+          <Info className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Auto-calculating credits using taxable income of <strong>{formatCurrency(taxableIncome)}</strong> and
+            average tax rate of <strong>{(avgRate * 100).toFixed(2)}%</strong> (normal tax: {formatCurrency(normalTax)}).
+            Credits are editable — enter the donation amount and the credit is computed automatically.
+          </span>
+        </div>
+      ) : (
+        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
+          <Info className="w-4 h-4 flex-shrink-0" />
+          <span>Income form data not yet loaded. Save your Income form first for automatic credit calculation. You can also enter tax credits manually.</span>
+        </div>
+      )}
+
+      {hasPriorCredits && (
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <span className="text-sm text-indigo-800">Prior year donation/contribution data available — apply to pre-fill?</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={dismissPriorCredits} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
+            <button type="button" onClick={applyPriorCredits} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Column Headers */}
         <div className="bg-blue-600 text-white rounded-lg">
@@ -176,7 +304,10 @@ const CreditsForm = () => {
           {creditItems.map((item, index) => (
             <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-purple-200 last:border-b-0">
               <div className="col-span-5">
-                <p className="text-sm font-medium text-gray-700">{item.description}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  {item.description}
+                  <HelpHint fieldId={item.id} source={creditsHelp} />
+                </p>
               </div>
               <div className="col-span-1 text-center">
                 {item.yesNo === '-' ? (
@@ -215,9 +346,18 @@ const CreditsForm = () => {
                     min: { value: 0, message: 'Amount cannot be negative' },
                     valueAsNumber: true
                   })}
-                  className={inputClasses}
+                  className={`${inputClasses} ${item.autoCalc && taxableIncome > 0 ? 'bg-emerald-50 border-emerald-300' : ''}`}
                   placeholder="0"
                 />
+                {item.autoCalc && taxableIncome > 0 && (() => {
+                  const donated = parseFloat(watchedValues[item.amount]) || 0;
+                  const eligible = Math.min(donated, taxableIncome * item.limitPct);
+                  return donated > 0 ? (
+                    <p className="mt-1 text-xs text-emerald-700">
+                      Auto: eligible Rs {eligible.toLocaleString('en-PK')} × {(avgRate * 100).toFixed(2)}%
+                    </p>
+                  ) : null;
+                })()}
                 {errors[item.taxReduction] && (
                   <p className="mt-1 text-xs text-red-600">{errors[item.taxReduction].message}</p>
                 )}
@@ -246,7 +386,7 @@ const CreditsForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/reductions')}
+            onClick={() => navigate('/income-tax/reductions')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

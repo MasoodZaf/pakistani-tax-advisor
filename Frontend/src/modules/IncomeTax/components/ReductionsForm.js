@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
+import { useTaxYear } from '../../../contexts/TaxYearContext';
+import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  Save,
+  ArrowRight,
+  ArrowLeft,
   TrendingDown,
   GraduationCap,
   Building,
@@ -14,28 +16,94 @@ import {
   DollarSign
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePriorYearData } from '../../../hooks/usePriorYearData';
+import HelpHint from '../../../components/Help/HelpHint';
+import reductionsHelp from '../../../help/reductionsHelp';
 
 const ReductionsForm = () => {
   const navigate = useNavigate();
-  const { 
-    saveFormStep, 
-    getStepData, 
-    saving 
+  const {
+    saveFormStep,
+    getStepData,
+    formData: contextFormData,
+    saving
   } = useTaxForm();
-  
+
   const [showHelp, setShowHelp] = useState(false);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
-    formState: { errors } 
+  const { currentTaxYear } = useTaxYear();
+  const { rates } = useTaxRates(currentTaxYear);
+
+  // DB-sourced reduction rates (rate_type='reduction' in tax_rates_config).
+  const teacherReductionRate = rates?.reductions?.teacher_researcher?.rate;
+  const behboodMaxRate       = rates?.reductions?.behbood_certificate_max_rate?.rate;
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors }
   } = useForm({
     defaultValues: getStepData('reductions')
   });
 
+  // Sync form when saved data loads from API (handles page refresh / navigation back).
+  // Reverse-map DB column names → form field names for capital gain reductions,
+  // since buildReductionsPayload renamed them on save.
+  useEffect(() => {
+    const savedData = contextFormData['reductions'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      const normalized = {
+        ...savedData,
+        capital_gain_immovable_tax_reduction: savedData.capital_gain_immovable_50_reduction || 0,
+        capital_gain_clause9a_tax_reduction:  savedData.capital_gain_immovable_75_reduction  || 0,
+      };
+      reset(normalized);
+    }
+  }, [contextFormData, reset]);
+
   // Watch all values for auto-calculation
   const watchedValues = watch();
+
+  // Prior year pre-fill
+  const { hasPriorData: hasPriorRed, applyPriorYear: applyPriorRed, dismissPriorYear: dismissPriorRed } = usePriorYearData('reductions', setValue);
+
+  // Teacher/researcher reduction (u/s 100C). Rate sourced from DB
+  // (tax_rates_config.rate_type='reduction', rate_category='teacher_researcher').
+  useEffect(() => {
+    if (watchedValues.teacher_researcher_reduction_yn !== 'Y') return;
+    if (!teacherReductionRate) return; // wait for rates
+
+    const finalMinData = contextFormData['final_min_income'] || {};
+    const salaryTax = parseFloat(finalMinData.salary_u_s_12_7_tax_chargeable) ||
+                      parseFloat(finalMinData.salary_tax_chargeable) ||
+                      parseFloat(finalMinData.salary_employees_tax_chargeable) || 0;
+
+    if (salaryTax > 0) {
+      const reduction = Math.round(salaryTax * teacherReductionRate);
+      const current = parseFloat(watchedValues.teacher_researcher_tax_reduction) || 0;
+      if (Math.abs(current - reduction) > 0.5) {
+        setValue('teacher_researcher_tax_reduction', reduction);
+      }
+    }
+  }, [watchedValues.teacher_researcher_reduction_yn, contextFormData, teacherReductionRate, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Behbood certificate cap (2nd Sched Pt III cl.6) — tax not to exceed the
+  // DB-sourced rate × profit amount.
+  useEffect(() => {
+    if (watchedValues.behbood_certificates_reduction_yn !== 'Y') return;
+    if (!behboodMaxRate) return;
+
+    const profitAmount = parseFloat(watchedValues.behbood_certificates_amount) || 0;
+    if (profitAmount <= 0) return;
+
+    const maxTax = Math.round(profitAmount * behboodMaxRate);
+    const current = parseFloat(watchedValues.behbood_certificates_tax_reduction) || 0;
+    if (current === 0) {
+      setValue('behbood_certificates_tax_reduction', maxTax);
+    }
+  }, [watchedValues.behbood_certificates_reduction_yn, watchedValues.behbood_certificates_amount, behboodMaxRate, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Define comprehensive tax reduction structure matching Excel
   const reductionItems = [
@@ -45,7 +113,8 @@ const ReductionsForm = () => {
       yesNo: 'Y',
       amount: 'teacher_researcher_amount',
       taxReduction: 'teacher_researcher_tax_reduction',
-      limits: '25% of tax payable on his income from salary'
+      limits: '25% of tax payable on salary income — auto-calculated when Y selected',
+      autoCalc: true
     },
     {
       id: 'behbood_certificates_reduction',
@@ -53,7 +122,8 @@ const ReductionsForm = () => {
       yesNo: 'Y',
       amount: 'behbood_certificates_amount',
       taxReduction: 'behbood_certificates_tax_reduction',
-      limits: 'Tax shall not exceed 5% of such profit'
+      limits: 'Tax shall not exceed 5% of profit — auto-calculated when amount entered',
+      autoCalc: true
     },
     {
       id: 'capital_gain_immovable_reduction',
@@ -82,30 +152,41 @@ const ReductionsForm = () => {
 
   const totalReduction = calculateTotalReduction();
 
-  const onSubmit = async (data) => {
-    const formData = {
-      ...data,
-      total_tax_reduction: totalReduction
-    };
+  // Map frontend field names to DB column names and strip non-existent columns
+  const buildReductionsPayload = (data) => {
+    const {
+      // Strip fields not in DB schema
+      capital_gain_immovable_amount: _cgImmoAmt,
+      capital_gain_clause9a_amount: _cg9aAmt,
+      capital_gain_immovable_reduction_yn: _cgImmoYN,
+      capital_gain_clause9a_reduction_yn: _cg9aYN,
+      // Extract and rename to correct DB column names
+      capital_gain_immovable_tax_reduction,
+      capital_gain_clause9a_tax_reduction,
+      ...rest
+    } = data;
 
-    const success = await saveFormStep('reductions', formData, true);
+    return {
+      ...rest,
+      capital_gain_immovable_50_reduction: capital_gain_immovable_tax_reduction || 0,
+      capital_gain_immovable_75_reduction: capital_gain_clause9a_tax_reduction || 0,
+      total_tax_reductions: totalReduction,  // DB column is plural (total_tax_reductions)
+    };
+  };
+
+  const onSubmit = async (data) => {
+    const success = await saveFormStep('reductions', buildReductionsPayload(data), true);
     if (success) {
       toast.success('Tax reductions information saved successfully');
-      navigate('/tax-forms/credits');
+      navigate('/income-tax/credits');
     }
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
-    const formData = {
-      ...data,
-      total_tax_reduction: totalReduction
-    };
-
-    const success = await saveFormStep('reductions', formData, false);
+    const success = await saveFormStep('reductions', buildReductionsPayload(watchedValues), false);
     if (success) {
       toast.success('Progress saved');
-      navigate('/tax-forms/credits');
+      navigate('/income-tax/credits');
     }
   };
 
@@ -158,6 +239,16 @@ const ReductionsForm = () => {
         )}
       </div>
 
+      {hasPriorRed && (
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <span className="text-sm text-indigo-800">Prior year reduction data available — apply to pre-fill?</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={dismissPriorRed} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
+            <button type="button" onClick={applyPriorRed} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Column Headers */}
         <div className="bg-blue-600 text-white rounded-lg">
@@ -180,7 +271,10 @@ const ReductionsForm = () => {
           {reductionItems.map((item, index) => (
             <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-green-200 last:border-b-0">
               <div className="col-span-5">
-                <p className="text-sm font-medium text-gray-700">{item.description}</p>
+                <p className="text-sm font-medium text-gray-700">
+                  {item.description}
+                  <HelpHint fieldId={item.id} source={reductionsHelp} />
+                </p>
               </div>
               <div className="col-span-1 text-center">
                 <select
@@ -215,9 +309,13 @@ const ReductionsForm = () => {
                     min: { value: 0, message: 'Amount cannot be negative' },
                     valueAsNumber: true
                   })}
-                  className={inputClasses}
+                  className={`${inputClasses} ${item.autoCalc ? 'bg-green-50 border-green-300' : ''}`}
                   placeholder="0"
+                  title={item.autoCalc ? 'Auto-calculated — editable' : undefined}
                 />
+                {item.autoCalc && (parseFloat(watchedValues[item.taxReduction]) || 0) > 0 && (
+                  <p className="mt-0.5 text-xs text-green-700">Auto-calculated</p>
+                )}
                 {errors[item.taxReduction] && (
                   <p className="mt-1 text-xs text-red-600">{errors[item.taxReduction].message}</p>
                 )}
@@ -246,7 +344,7 @@ const ReductionsForm = () => {
         <div className="flex justify-between pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/tax-forms/adjustable_tax')}
+            onClick={() => navigate('/income-tax/adjustable-tax')}
             className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

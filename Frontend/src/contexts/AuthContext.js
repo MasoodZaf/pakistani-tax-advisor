@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -15,19 +15,101 @@ export const useAuth = () => {
   return context;
 };
 
+// Decode JWT payload without verification (client-side display only)
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch {
+    return null;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
+  const [sessionWarning, setSessionWarning] = useState(false); // true = <5 min left
+  // Pre-loaded data from the login API response — used to seed the dashboard instantly
+  const [loginPayload, setLoginPayload] = useState(null);
 
-  const logout = () => {
+  const warningTimerRef = useRef(null);
+  const expiryTimerRef = useRef(null);
+
+  const clearExpiryTimers = useCallback(() => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
+    warningTimerRef.current = null;
+    expiryTimerRef.current = null;
+    setSessionWarning(false);
+    setSessionExpiresAt(null);
+  }, []);
+
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
+    // Impersonation keys (legacy admin-assisted flow).
+    localStorage.removeItem('adminAssistedLogin');
+    localStorage.removeItem('isImpersonation');
+    localStorage.removeItem('impersonatedBy');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('user');
+    // Legacy prior-year sessionStorage keys (replaced by /tax-history archive).
+    sessionStorage.removeItem('priorYearData');
+    sessionStorage.removeItem('priorYearWarnings');
+    sessionStorage.removeItem('priorYearDismissed');
     setUser(null);
+    setLoginPayload(null);
+    clearExpiryTimers();
     toast.success('Logged out successfully');
-  };
+  }, [clearExpiryTimers]);
+
+  // Schedule warning toast and auto-logout based on JWT exp claim
+  const scheduleExpiryWarning = useCallback((token) => {
+    clearExpiryTimers();
+
+    const payload = decodeJwtPayload(token);
+    if (!payload?.exp) return;
+
+    const expiresAt = payload.exp * 1000; // convert to ms
+    const now = Date.now();
+    const msUntilExpiry = expiresAt - now;
+
+    if (msUntilExpiry <= 0) {
+      // Already expired
+      logout();
+      return;
+    }
+
+    setSessionExpiresAt(new Date(expiresAt));
+
+    const WARN_BEFORE_MS = 5 * 60 * 1000; // 5 minutes
+    const msUntilWarning = msUntilExpiry - WARN_BEFORE_MS;
+
+    if (msUntilWarning > 0) {
+      warningTimerRef.current = setTimeout(() => {
+        setSessionWarning(true);
+        toast(
+          '⏰ Your session expires in 5 minutes. Save your work.',
+          { duration: 10000, icon: '⚠️' }
+        );
+      }, msUntilWarning);
+    } else {
+      // Less than 5 min remaining on restore — warn immediately
+      setSessionWarning(true);
+    }
+
+    // Auto-logout at expiry
+    expiryTimerRef.current = setTimeout(() => {
+      setUser(null);
+      localStorage.removeItem('token');
+      clearExpiryTimers();
+      toast.error('Your session has expired. Please log in again.');
+    }, msUntilExpiry);
+  }, [clearExpiryTimers, logout]);
 
   // Set up axios interceptors
   useEffect(() => {
-    // Request interceptor to add auth token
     const requestInterceptor = axios.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
@@ -39,16 +121,18 @@ export const AuthProvider = ({ children }) => {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor to handle auth errors
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Only trigger logout for 401 errors that are NOT login attempts or register attempts
-        if (error.response?.status === 401 &&
-            !error.config?.url?.includes('/login') &&
-            !error.config?.url?.includes('/register')) {
-          console.log('axios interceptor: 401 detected, logging out');
-          logout();
+        if (
+          error.response?.status === 401 &&
+          !error.config?.url?.includes('/login') &&
+          !error.config?.url?.includes('/register') &&
+          localStorage.getItem('token') // only act if there was an active session
+        ) {
+          localStorage.removeItem('token');
+          setUser(null);
+          clearExpiryTimers();
           toast.error('Session expired. Please login again.');
         }
         return Promise.reject(error);
@@ -59,58 +143,48 @@ export const AuthProvider = ({ children }) => {
       axios.interceptors.request.eject(requestInterceptor);
       axios.interceptors.response.eject(responseInterceptor);
     };
-  }, [logout]);
+  }, [clearExpiryTimers]);
 
-  // Check if user is logged in on app start
+  // Restore session on app start
   useEffect(() => {
     checkAuthStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const checkAuthStatus = async () => {
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => clearExpiryTimers();
+  }, [clearExpiryTimers]);
+
+  const checkAuthStatus = () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+      if (!token) return;
 
-      // Simple JWT format validation
-      const jwtParts = token.split('.');
-      if (jwtParts.length !== 3) {
-        console.log('AuthContext: Invalid JWT format detected, clearing token');
+      const payload = decodeJwtPayload(token);
+      if (!payload) {
         localStorage.removeItem('token');
-        setLoading(false);
         return;
       }
 
-      // Try to use the JWT token with a protected endpoint
-      const response = await axios.get('/api/tax-forms/current-return', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // If we get here, the token is valid
-      if (response.data && response.data.taxReturn) {
-        // We need to get user info - let's extract it from the JWT
-        try {
-          const payload = JSON.parse(atob(jwtParts[1]));
-          setUser({
-            id: payload.userId,
-            email: payload.email,
-            name: payload.name,
-            role: payload.role
-          });
-        } catch (parseError) {
-          console.error('AuthContext: Error parsing JWT payload:', parseError);
-          localStorage.removeItem('token');
-        }
+      // Reject already-expired tokens
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('token');
+        return;
       }
-    } catch (error) {
-      console.log('AuthContext: JWT validation failed, clearing token');
+
+      // JWT is valid — restore user from payload.
+      // Every subsequent API call will re-validate server-side.
+      setUser({
+        id: payload.userId,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+        onboarding_completed: payload.onboarding_completed !== false,
+      });
+      scheduleExpiryWarning(token);
+    } catch {
       localStorage.removeItem('token');
-      console.error('Auth check failed:', error);
     } finally {
       setLoading(false);
     }
@@ -118,69 +192,37 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, adminBypassToken = null) => {
     try {
-      console.log('AuthContext: Attempting login for', email);
-      console.log('AuthContext: Password length:', password?.length);
-
-      const loginPayload = {
-        email,
-        password,
-      };
-
-      // Add admin bypass token if provided
-      if (adminBypassToken) {
-        loginPayload.adminBypassToken = adminBypassToken;
-        console.log('AuthContext: Using admin bypass token');
-      }
-
-      console.log('AuthContext: Making request to /api/login with payload:', {
-        ...loginPayload,
-        password: '[REDACTED]'
-      });
-
-      // Debug: Log password details for super admin accounts
-      if (email.includes('admin')) {
-        console.log('AuthContext: SUPER ADMIN DEBUG - Password char codes:',
-          Array.from(password).map(char => char.charCodeAt(0)));
-        console.log('AuthContext: SUPER ADMIN DEBUG - Password exact string:', JSON.stringify(password));
-        console.log('AuthContext: SUPER ADMIN DEBUG - Password length and trimmed:', password.length, JSON.stringify(password.trim()));
-      }
+      const loginPayload = { email, password };
+      if (adminBypassToken) loginPayload.adminBypassToken = adminBypassToken;
 
       const response = await axios.post('/api/login', loginPayload);
 
-      console.log('AuthContext: Login response received', response.status);
+      if (response.data?.success) {
+        const { token, user: userData, hasPersonalInfo, currentYearData, taxYearsSummary } = response.data;
 
-      if (response.data && response.data.success) {
-        const { token, sessionToken, user: userData, hasPersonalInfo } = response.data;
+        localStorage.setItem('token', token);
+        // Treat undefined as "completed" so legacy logins (pre-flag) don't get
+        // bounced into the wizard.
+        setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
+        scheduleExpiryWarning(token);
 
-        console.log('AuthContext: Login successful, storing JWT token');
-        localStorage.setItem('token', token);  // Store JWT token, not sessionToken
-        setUser(userData);
+        // Store pre-loaded data so the Dashboard can render immediately without a second fetch
+        if (!['admin', 'super_admin'].includes(userData.role)) {
+          setLoginPayload({ currentYearData: currentYearData || null, taxYearsSummary: taxYearsSummary || [] });
+        }
 
         toast.success(`Welcome back, ${userData.name}!`);
 
-        // Check if user needs to complete personal info
-        // Only for regular users (not admins)
         if (!['admin', 'super_admin'].includes(userData.role)) {
-          return {
-            success: true,
-            needsPersonalInfo: !hasPersonalInfo,
-            userData
-          };
+          return { success: true, needsPersonalInfo: !hasPersonalInfo, userData };
         }
-
         return { success: true, userData };
       } else {
-        console.log('AuthContext: Login response indicates failure', response.data);
         const message = response.data?.error || 'Login failed';
         toast.error(message);
         return { success: false, error: message };
       }
     } catch (error) {
-      console.error('AuthContext: Login error', error);
-      console.log('AuthContext: Error response status:', error.response?.status);
-      console.log('AuthContext: Error response data:', error.response?.data);
-      console.log('AuthContext: Error message:', error.message);
-
       const message = error.response?.data?.error || error.message || 'Login failed';
       toast.error(message);
       return { success: false, error: message };
@@ -190,12 +232,13 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await axios.post('/api/register', userData);
-
       const { token, user: newUser } = response.data;
-
       localStorage.setItem('token', token);
-      setUser(newUser);
-
+      // Backend returns onboarding_completed: false for fresh registrations.
+      // The Onboarding wizard relies on this flag to keep the user inside the
+      // flow until they hit "Done" — see App.js OnboardingRoute.
+      setUser({ ...newUser, onboarding_completed: !!newUser.onboarding_completed });
+      if (token) scheduleExpiryWarning(token);
       toast.success(`Welcome, ${newUser.name}!`);
       return { success: true };
     } catch (error) {
@@ -205,18 +248,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Called from the onboarding wizard's final step. Persists the flag, swaps
+  // the JWT, and updates the user state so route guards stop enforcing the
+  // wizard.
+  const completeOnboarding = async () => {
+    try {
+      const response = await axios.post('/api/onboarding/complete');
+      const { token, user: updated } = response.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        scheduleExpiryWarning(token);
+      }
+      setUser((prev) => ({ ...(prev || {}), ...updated, onboarding_completed: true }));
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Failed to finish onboarding';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   const updateUser = (userData) => {
     setUser(prev => ({ ...prev, ...userData }));
   };
+
+  const clearLoginPayload = () => setLoginPayload(null);
 
   const value = {
     user,
     loading,
     login,
     register,
+    completeOnboarding,
     logout,
     updateUser,
     checkAuthStatus,
+    sessionExpiresAt,
+    sessionWarning,
+    loginPayload,       // { currentYearData, taxYearsSummary } — available immediately after login
+    clearLoginPayload,  // call once TaxFormContext has loaded its own data
   };
 
   return (

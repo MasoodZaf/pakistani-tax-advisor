@@ -10,12 +10,19 @@ import {
   DollarSign,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Upload,
+  AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePriorYearData } from '../../../hooks/usePriorYearData';
+import { useTaxYear } from '../../../contexts/TaxYearContext';
+import HelpHint from '../../../components/Help/HelpHint';
+import incomeFormHelp from '../../../help/incomeFormHelp';
 
 const IncomeForm = () => {
   const navigate = useNavigate();
+  const { currentTaxYear } = useTaxYear();
   const {
     saveFormStep,
     getStepData,
@@ -70,7 +77,6 @@ const IncomeForm = () => {
       if (rawData[backend] !== undefined && rawData[backend] !== null) {
         const annualValue = parseFloat(rawData[backend]) || 0;
         const monthlyValue = Math.abs(Math.round(annualValue / 12));
-        console.log(`Processing ${frontend}: annual=${annualValue} -> monthly=${monthlyValue}`);
         processedData[frontend] = monthlyValue > 0 ? formatNumber(monthlyValue) : '';
       } else {
         processedData[frontend] = '';
@@ -99,14 +105,12 @@ const IncomeForm = () => {
       if (rawData[field] !== undefined && rawData[field] !== null) {
         const value = parseFloat(rawData[field]) || 0;
         const numericValue = Math.abs(Math.round(value));
-        console.log(`Processing ${field}: raw=${rawData[field]} -> parsed=${value} -> numeric=${numericValue}`);
         processedData[field] = numericValue > 0 ? formatNumber(numericValue) : '';
       } else {
         processedData[field] = '';
       }
     });
 
-    console.log('Final processedData:', processedData);
     return processedData;
   };
 
@@ -114,12 +118,16 @@ const IncomeForm = () => {
     register,
     handleSubmit,
     watch,
-    reset
+    reset,
+    setValue
   } = useForm({
     defaultValues: processIncomeData(incomeData)
   });
 
   const watchedValues = watch();
+
+  // Prior year pre-fill
+  const { hasPriorData, applyPriorYear, dismissPriorYear, isFlagged } = usePriorYearData('income', setValue);
 
   // Load income form data from API - use the same endpoint that handles saving
   useEffect(() => {
@@ -127,25 +135,16 @@ const IncomeForm = () => {
       try {
         setDataLoading(true);
         // Use the working income-form API directly
-        const response = await axios.get('/api/income-form/2025-26');
+        const response = await axios.get(`/api/income-form/${currentTaxYear || '2025-26'}`);
 
         // Extract income form data from the response
         const incomeFormData = response.data || {};
-        console.log('RAW API RESPONSE:', incomeFormData);
-        console.log('Allowances from API:', incomeFormData.allowances);
-        console.log('Bonus from API:', incomeFormData.bonus);
         setIncomeData(incomeFormData);
 
         // Reset form with the loaded data
         const formattedData = processIncomeData(incomeFormData);
-        console.log('PROCESSED FORM DATA:', formattedData);
-        console.log('Allowances processed:', formattedData.allowances);
-        console.log('Bonus processed:', formattedData.bonus);
         reset(formattedData);
-
-        console.log('Income data loaded successfully:', incomeFormData);
       } catch (error) {
-        console.error('Error loading income data:', error);
         toast.error('Failed to load income form data');
       } finally {
         setDataLoading(false);
@@ -245,7 +244,7 @@ const IncomeForm = () => {
     const success = await saveFormStep('income', structuredData, true);
     if (success) {
       toast.success('Income information saved successfully - Excel calculations applied');
-      navigate('/tax-forms/adjustable-tax');
+      navigate('/income-tax/adjustable-tax');
     }
   };
 
@@ -270,7 +269,7 @@ const IncomeForm = () => {
     const success = await saveFormStep('income', structuredData, false);
     if (success) {
       toast.success('Progress saved with Excel calculations');
-      navigate('/tax-forms/adjustable-tax');
+      navigate('/income-tax/adjustable-tax');
     }
   };
 
@@ -336,6 +335,26 @@ const IncomeForm = () => {
         )}
       </div>
 
+      {/* Prior Year Pre-fill Banner */}
+      {hasPriorData && (
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-indigo-800">
+            <Upload className="w-4 h-4 flex-shrink-0" />
+            <span>Prior year income data is available. Apply to pre-fill this form?</span>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={dismissPriorYear}
+              className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">
+              Dismiss
+            </button>
+            <button type="button" onClick={applyPriorYear}
+              className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">
+              Apply Prior Year Data
+            </button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)}>
         {/* Main Table */}
         <div className="border border-gray-800 rounded-lg overflow-hidden">
@@ -377,7 +396,10 @@ const IncomeForm = () => {
           {/* Monthly Basic Salary (will be multiplied by 12) */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Monthly Basic Salary (will be converted to annual)</label>
+              <label className="text-gray-800">
+                Monthly Basic Salary (will be converted to annual)
+                <HelpHint fieldId="monthly_basic_salary" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -401,7 +423,10 @@ const IncomeForm = () => {
           {/* Monthly Allowances (will be multiplied by 12) */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Monthly Allowances (excluding bonus and medical allowance)</label>
+              <label className="text-gray-800">
+                Monthly Allowances (excluding bonus and medical allowance)
+                <HelpHint fieldId="monthly_allowances" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -449,7 +474,10 @@ const IncomeForm = () => {
           {/* Bonus */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Bonus</label>
+              <label className="text-gray-800">
+                Bonus
+                <HelpHint fieldId="bonus" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -473,7 +501,10 @@ const IncomeForm = () => {
           {/* Medical allowance */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Medical allowance (Where medical facility not provided by employer)</label>
+              <label className="text-gray-800">
+                Medical allowance (Where medical facility not provided by employer)
+                <HelpHint fieldId="medical_allowance" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -497,7 +528,10 @@ const IncomeForm = () => {
           {/* Pension received from ex-employer */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Pension received from ex-employer</label>
+              <label className="text-gray-800">
+                Pension received from ex-employer
+                <HelpHint fieldId="pension_received" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -521,7 +555,10 @@ const IncomeForm = () => {
           {/* Employment Termination payment */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Employment Termination payment (Section 12 (2) e iii)</label>
+              <label className="text-gray-800">
+                Employment Termination payment (Section 12 (2) e iii)
+                <HelpHint fieldId="employment_termination_payment" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -545,7 +582,10 @@ const IncomeForm = () => {
           {/* Amount received on retirement - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Amount received on retirement from approved funds (Provident, pension, gratuity)</label>
+              <label className="text-gray-800">
+                Amount received on retirement from approved funds (Provident, pension, gratuity)
+                <HelpHint fieldId="amount_received_on_retirement" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -569,7 +609,10 @@ const IncomeForm = () => {
           {/* Directorship Fee - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Directorship Fee u/s 149(3)</label>
+              <label className="text-gray-800">
+                Directorship Fee u/s 149(3)
+                <HelpHint fieldId="directorship_fee" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -593,7 +636,10 @@ const IncomeForm = () => {
           {/* Other cash benefits */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Other cash benefits (LFA, Children education, etc.)</label>
+              <label className="text-gray-800">
+                Other cash benefits (LFA, Children education, etc.)
+                <HelpHint fieldId="other_cash_benefits" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -617,7 +663,10 @@ const IncomeForm = () => {
           {/* Income Exempt from tax - Calculated Field */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-gray-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Income Exempt from tax</label>
+              <label className="text-gray-800">
+                Income Exempt from tax
+                <HelpHint fieldId="income_exempt_from_tax" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <div className={`${displayClasses} bg-gray-100`}>
@@ -661,7 +710,10 @@ const IncomeForm = () => {
           {/* Employer Contribution to Approved Provident Funds */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Employer Contribution to Approved Provident Funds</label>
+              <label className="text-gray-800">
+                Employer Contribution to Approved Provident Funds
+                <HelpHint fieldId="employer_provident_fund_contribution" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -685,7 +737,10 @@ const IncomeForm = () => {
           {/* Taxable value of Car provided by employer */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Taxable value of Car provided by employer</label>
+              <label className="text-gray-800">
+                Taxable value of Car provided by employer
+                <HelpHint fieldId="taxable_value_of_car" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -709,7 +764,10 @@ const IncomeForm = () => {
           {/* Other taxable subsidies and non cash benefits */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Other taxable subsidies and non cash benefits</label>
+              <label className="text-gray-800">
+                Other taxable subsidies and non cash benefits
+                <HelpHint fieldId="other_taxable_subsidies" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -733,7 +791,10 @@ const IncomeForm = () => {
           {/* Non cash benefit exempt from tax - Calculated Field (Excel B22) */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-gray-50">
             <div className="col-span-8">
-              <label className="text-gray-800">Non cash benefit exempt from tax</label>
+              <label className="text-gray-800">
+                Non cash benefit exempt from tax
+                <HelpHint fieldId="non_cash_benefit_exempt" source={incomeFormHelp} />
+              </label>
               <div className="text-xs text-gray-600 mt-1">-MIN(Provident, 150,000) - Excel Formula B22</div>
             </div>
             <div className="col-span-4">
@@ -791,7 +852,10 @@ const IncomeForm = () => {
           {/* Profit on Debt u/s 151 @ 15% - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)</label>
+              <label className="text-gray-800">
+                Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)
+                <HelpHint fieldId="profit_on_debt_151" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -815,7 +879,10 @@ const IncomeForm = () => {
           {/* Profit on Debt u/s 151A @ 12.5% - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)</label>
+              <label className="text-gray-800">
+                Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)
+                <HelpHint fieldId="profit_on_debt_151A" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -870,7 +937,10 @@ const IncomeForm = () => {
           {/* Other taxable income - Rent income - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Other taxable income - Rent income</label>
+              <label className="text-gray-800">
+                Other taxable income - Rent income
+                <HelpHint fieldId="rent_income" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input
@@ -894,7 +964,10 @@ const IncomeForm = () => {
           {/* Other taxable income - Others - highlighted in yellow */}
           <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
             <div className="col-span-8">
-              <label className="text-gray-800">Other taxable income - Others</label>
+              <label className="text-gray-800">
+                Other taxable income - Others
+                <HelpHint fieldId="other_taxable_income_others" source={incomeFormHelp} />
+              </label>
             </div>
             <div className="col-span-4">
               <input

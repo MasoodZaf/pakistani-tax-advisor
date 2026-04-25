@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TaxFormProvider } from './contexts/TaxFormContext';
+import { TaxYearProvider } from './contexts/TaxYearContext';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
-import Register from './components/Auth/Register';
 import PersonalInfoForm from './components/PersonalInfo/PersonalInfoForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import TaxFormsFlow from './components/TaxForms/TaxFormsFlow';
@@ -15,13 +15,33 @@ import WealthStatementModule from './modules/WealthStatement';
 import AdminModule from './modules/Admin';
 import Reports from './components/Reports/Reports';
 import ExcelManager from './components/Excel/ExcelManager';
+import TaxArchiveView from './components/TaxHistory/TaxArchiveView';
 import Settings from './components/Settings/Settings';
+import Landing from './components/Landing/Landing';
+import Onboarding from './components/Onboarding/Onboarding';
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
+
+// A user is "needs onboarding" when authenticated as a non-admin and the
+// wizard hasn't been marked complete yet. Admins skip onboarding entirely.
+const needsOnboarding = (u) =>
+  !!u && !['admin', 'super_admin'].includes(u.role) && u.onboarding_completed === false;
+
+// Public home: Landing page for guests, dashboard redirect for authenticated users
+const PublicHome = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) {
+    if (['admin', 'super_admin'].includes(user.role)) return <Navigate to="/admin" replace />;
+    if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Landing />;
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -29,27 +49,75 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   if (adminOnly && !['admin', 'super_admin'].includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
+  if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
+
+  return children;
+};
+
+// Onboarding — keep authenticated mid-flow users INSIDE the wizard until
+// they finish. Previously this redirected anyone with a session to dashboard,
+// which silently skipped steps 2–4 of the wizard.
+const OnboardingRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) {
+    if (['admin', 'super_admin'].includes(user.role)) return <Navigate to="/admin" replace />;
+    // Already onboarded → home. Mid-flow → keep showing the wizard.
+    if (!needsOnboarding(user)) return <Navigate to="/dashboard" replace />;
+  }
+  return <Onboarding />;
+};
+
+// User-only routes — admins are redirected to the admin panel
+const UserOnlyRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (['admin', 'super_admin'].includes(user.role)) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
+
   return children;
 };
 
 // Layout Component
 const Layout = ({ children }) => {
-  
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: '#f5f4f0' }}>
       <Header />
-      <div className="flex pt-16">
-        <Sidebar />
-        <main className="flex-1 p-6 ml-64">
+      <div style={{ display: 'flex', paddingTop: 56 }}>
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+        <main
+          style={{
+            flex: 1,
+            padding: '28px 28px',
+            marginLeft: collapsed ? 60 : 220,
+            transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1)',
+            minWidth: 0,
+          }}
+        >
           {children}
         </main>
       </div>
@@ -60,6 +128,7 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <TaxYearProvider>
       <TaxFormProvider>
         <Router>
           <div className="App">
@@ -86,8 +155,11 @@ function App() {
             
             <Routes>
               {/* Public Routes */}
+              <Route path="/" element={<PublicHome />} />
+              <Route path="/onboarding" element={<OnboardingRoute />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              {/* /register redirects to the full onboarding flow */}
+              <Route path="/register" element={<Navigate to="/onboarding" replace />} />
 
               {/* Personal Info Route (Protected, no Layout) */}
               <Route
@@ -99,26 +171,26 @@ function App() {
                 }
               />
 
-              {/* Protected Routes */}
+              {/* Protected Routes — user-only pages redirect admins to /admin */}
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <Dashboard />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
-              
+
               <Route
                 path="/tax-forms/*"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <TaxFormsFlow />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
 
@@ -126,11 +198,11 @@ function App() {
               <Route
                 path="/income-tax/*"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <IncomeTaxModule />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
 
@@ -138,45 +210,56 @@ function App() {
               <Route
                 path="/wealth-statement/*"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <WealthStatementModule />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
-              
-              <Route 
-                path="/reports" 
+
+              <Route
+                path="/reports"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <Reports />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
-              
-              <Route 
-                path="/excel" 
+
+              <Route
+                path="/excel"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <ExcelManager />
                     </Layout>
-                  </ProtectedRoute>
-                } 
+                  </UserOnlyRoute>
+                }
               />
-              
-              <Route 
-                path="/settings" 
+
+              <Route
+                path="/tax-history"
+                element={
+                  <UserOnlyRoute>
+                    <Layout>
+                      <TaxArchiveView />
+                    </Layout>
+                  </UserOnlyRoute>
+                }
+              />
+
+              <Route
+                path="/settings"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <Settings />
                     </Layout>
                   </ProtectedRoute>
-                } 
+                }
               />
               
               {/* Admin Module Routes */}
@@ -191,8 +274,8 @@ function App() {
                 }
               />
               
-              {/* Default Route */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Default fallback */}
+              <Route path="/home" element={<Navigate to="/" replace />} />
               
               {/* 404 Route */}
               <Route 
@@ -213,6 +296,7 @@ function App() {
           </div>
         </Router>
       </TaxFormProvider>
+      </TaxYearProvider>
     </AuthProvider>
   );
 }
