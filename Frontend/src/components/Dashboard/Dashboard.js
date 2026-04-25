@@ -1,12 +1,27 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
+import { useTaxYear } from '../../contexts/TaxYearContext';
+import { useTaxPreview } from '../../hooks/useTaxPreview';
 import { Link } from 'react-router-dom';
 import {
   FileText, BarChart3, TrendingUp, Calendar,
   CheckCircle, Clock, ArrowRight, AlertCircle,
-  Zap, Settings, ChevronRight
+  Zap, Settings, ChevronRight, Scale, Loader2
 } from 'lucide-react';
+
+// Map step id → router path. Mirrors getRoutePath() in TaxFormsOverview.
+const ROUTE_OVERRIDES = {
+  final_min_income:      '/income-tax/final-min-income',
+  adjustable_tax:        '/income-tax/adjustable-tax',
+  capital_gain:          '/income-tax/capital-gains',
+  tax_computation:       '/income-tax/tax-computation',
+  wealth:                '/wealth-statement/wealth',
+  wealth_reconciliation: '/wealth-statement/wealth-reconciliation',
+};
+const WEALTH_STEP_IDS = new Set(['wealth', 'wealth_reconciliation']);
+const stepRoute = (id) =>
+  ROUTE_OVERRIDES[id] || (WEALTH_STEP_IDS.has(id) ? `/wealth-statement/${id}` : `/income-tax/${id}`);
 
 const Styles = () => (
   <style>{`
@@ -22,8 +37,20 @@ const Styles = () => (
       transition: border-color 0.2s, background 0.2s, transform 0.15s;
     }
     .dash-link-card:hover { border-color: #a8c890; background: #f5f8ea; transform: translateX(2px); }
-    .form-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #f0efeb; }
-    .form-row:last-child { border-bottom: none; }
+    .form-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 10px; border-radius: 10px;
+      text-decoration: none; color: inherit;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .form-row + .form-row { margin-top: 2px; }
+    .form-row:hover { background: #f5f7fb; transform: translateX(2px); }
+    .form-row.is-next { background: #F0FFC2; border: 1px solid #c0da94; }
+    .form-row.is-next:hover { background: #e6f5b3; }
+    .status-pill {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+    }
     .progress-track { width: 100%; height: 8px; background: #EAE6BC; border-radius: 100px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, #28396C, #3d5a90); border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
     .cta-btn {
@@ -36,6 +63,8 @@ const Styles = () => (
     .cta-btn:hover { background: #1e2d5a; transform: translateY(-1px); }
     @keyframes countRing { from { stroke-dashoffset: 251; } }
     .progress-ring-fill { animation: countRing 1.2s ease-out forwards; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 0.9s linear infinite; }
   `}</style>
 );
 
@@ -74,11 +103,50 @@ function getDaysRemaining() {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { taxReturn, getCompletionPercentage, FORM_STEPS, completedSteps, taxCalculation } = useTaxForm();
+  const { currentTaxYear } = useTaxYear();
+  const {
+    taxReturn,
+    getCompletionPercentage,
+    activeSteps,
+    completedSteps,
+    taxCalculation,
+    formData,
+  } = useTaxForm();
+
+  // Live preview: keep the input set stable so the debounced hook doesn't
+  // refire on every unrelated formData write (e.g. wealth statement edits).
+  const previewInputs = useMemo(() => ({
+    income:          formData?.income          || {},
+    adjustable_tax:  formData?.adjustable_tax  || {},
+    capital_gain:    formData?.capital_gain    || {},
+    reductions:      formData?.reductions      || {},
+    credits:         formData?.credits         || {},
+    deductions:      formData?.deductions      || {},
+  }), [formData]);
+
+  // Only call the backend once income data exists — sending an empty preview
+  // wastes a request and just returns zeros.
+  const hasPreviewableData = !!(
+    previewInputs.income?.annual_salary_wages_total ||
+    previewInputs.income?.b16_annual_salary_wages_total ||
+    previewInputs.income?.monthly_basic_salary ||
+    previewInputs.income?.other_income_min_tax_total ||
+    previewInputs.income?.other_income_no_min_tax_total ||
+    previewInputs.capital_gain?.total_capital_gain
+  );
+
+  const { preview: livePreview, loading: previewLoading } = useTaxPreview(
+    hasPreviewableData ? currentTaxYear : null,
+    hasPreviewableData ? previewInputs : null,
+    { debounceMs: 800 }
+  );
 
   const pct          = getCompletionPercentage();
-  const completedCount = completedSteps.size;
-  const totalSteps   = FORM_STEPS.length;
+  // activeSteps reflects the user's income profile (capital_gain / final_tax
+  // are conditional). Counts must match getCompletionPercentage(), which
+  // already filters by activeSteps.
+  const completedCount = activeSteps.filter(s => completedSteps.has(s.id)).length;
+  const totalSteps   = activeSteps.length;
   const daysLeft     = getDaysRemaining();
   const firstName    = user?.name?.split(' ')[0] || 'there';
   const filingStatus = taxReturn?.filing_status || 'draft';
@@ -86,17 +154,30 @@ const Dashboard = () => {
   const deadlineColor = daysLeft < 30 ? '#c0392b' : daysLeft < 90 ? '#4a7a2a' : '#4a7a2a';
 
   const taxDue = useMemo(() => {
+    // Saved/explicit calculation always wins — it's been persisted.
     if (taxCalculation) {
       const due    = taxCalculation.additional_tax_due || 0;
       const refund = taxCalculation.refund_due || 0;
-      if (due > 0)    return { label: `Rs ${due.toLocaleString()}`,    note: 'Additional tax due',   color: '#c0392b' };
-      if (refund > 0) return { label: `Rs ${refund.toLocaleString()}`, note: 'Refund expected',      color: '#4a7a2a' };
-      return { label: 'Rs 0', note: 'No additional tax', color: '#4a7a2a' };
+      if (due > 0)    return { label: `Rs ${due.toLocaleString()}`,    note: 'Additional tax due',                color: '#c0392b', live: false };
+      if (refund > 0) return { label: `Rs ${refund.toLocaleString()}`, note: 'Refund expected',                   color: '#4a7a2a', live: false };
+      return { label: 'Rs 0', note: 'No additional tax', color: '#4a7a2a', live: false };
     }
-    return { label: '—', note: pct > 0 ? 'Fill all forms to compute' : 'Start your return', color: '#7a8890' };
-  }, [taxCalculation, pct]);
+    // Otherwise fall back to the live preview computed from in-flight form data.
+    if (livePreview?.payments) {
+      const balance = Math.round(livePreview.payments.balancePayableRefundable || 0);
+      if (balance > 0) return { label: `Rs ${balance.toLocaleString()}`,            note: 'Estimated tax payable',  color: '#c0392b', live: true };
+      if (balance < 0) return { label: `Rs ${Math.abs(balance).toLocaleString()}`,  note: 'Estimated refund due',   color: '#4a7a2a', live: true };
+      return { label: 'Rs 0', note: 'Estimated balance is zero', color: '#4a7a2a', live: true };
+    }
+    return { label: '—', note: pct > 0 ? 'Fill all forms to compute' : 'Start your return', color: '#7a8890', live: false };
+  }, [taxCalculation, livePreview, pct]);
 
-  const nextIncomplete = FORM_STEPS.find(s => !completedSteps.has(s.id));
+  const nextIncomplete = activeSteps.find(s => !completedSteps.has(s.id));
+
+  // Wealth reconciliation: unreconciled_difference must be zero or FBR
+  // rejects the return. Surface non-zero values as a dashboard alert.
+  const reconDiff = Number(formData?.wealth_reconciliation?.unreconciled_difference || 0);
+  const reconBreached = Math.abs(reconDiff) >= 1;
 
   const quickLinks = [
     { to: '/income-tax',       icon: FileText,   color: '#28396C', bg: '#EAE6BC', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
@@ -176,31 +257,38 @@ const Dashboard = () => {
           </div>
 
           <div>
-            {FORM_STEPS.slice(0, 6).map(step => {
-              const done = completedSteps.has(step.id);
+            {activeSteps.map(step => {
+              const done   = completedSteps.has(step.id);
+              const isNext = !done && nextIncomplete?.id === step.id;
+              const pillStyle = done
+                ? { background: '#dcfce7', color: '#166534' }
+                : isNext
+                ? { background: '#28396C', color: '#fff' }
+                : { background: '#f1f5f9', color: '#64748b' };
+              const pillLabel = done ? 'Done' : isNext ? 'Up next' : 'Pending';
               return (
-                <div key={step.id} className="form-row">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Link
+                  key={step.id}
+                  to={stepRoute(step.id)}
+                  className={`form-row ${isNext ? 'is-next' : ''}`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                     <span style={{ fontSize: 16, lineHeight: 1 }}>{step.icon}</span>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a' }}>{step.title}</p>
-                      <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500 }}>{step.description}</p>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.title}</p>
+                      <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.description}</p>
                     </div>
                   </div>
-                  {done
-                    ? <CheckCircle size={16} color="#4a7a2a" />
-                    : <Clock size={15} color="#d1d5db" />
-                  }
-                </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span className="status-pill" style={pillStyle}>{pillLabel}</span>
+                    {done
+                      ? <CheckCircle size={16} color="#4a7a2a" />
+                      : <Clock size={15} color={isNext ? '#28396C' : '#d1d5db'} />
+                    }
+                  </div>
+                </Link>
               );
             })}
-            {FORM_STEPS.length > 6 && (
-              <div style={{ paddingTop: 10, textAlign: 'center' }}>
-                <Link to="/income-tax" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textDecoration: 'none' }}>
-                  + {FORM_STEPS.length - 6} more forms →
-                </Link>
-              </div>
-            )}
           </div>
 
           <div style={{ marginTop: 20 }}>
@@ -216,7 +304,25 @@ const Dashboard = () => {
 
           {/* Tax estimate */}
           <div className="dash-card" style={{ padding: '20px 22px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Estimated tax</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Estimated tax</p>
+              {taxDue.live && (
+                <span
+                  title="Live preview — recalculates as you fill the forms"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: 9, fontWeight: 800, color: '#28396C',
+                    background: '#eef2ff', borderRadius: 999,
+                    padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}
+                >
+                  {previewLoading
+                    ? <Loader2 size={9} className="spin" />
+                    : <span style={{ width: 5, height: 5, background: '#4a7a2a', borderRadius: 999 }} />}
+                  Live
+                </span>
+              )}
+            </div>
             <p className="dash-display" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: taxDue.color, marginBottom: 4 }}>{taxDue.label}</p>
             <p style={{ fontSize: 13, color: '#4a5575', fontWeight: 500 }}>{taxDue.note}</p>
           </div>
@@ -240,6 +346,29 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+
+          {/* Wealth reconciliation alert — must be zero or FBR rejects */}
+          {reconBreached && (
+            <Link
+              to={stepRoute('wealth_reconciliation')}
+              style={{
+                display: 'block', textDecoration: 'none',
+                background: '#fdf2f2', border: '1.5px solid #f3b4b4',
+                borderRadius: 16, padding: '16px 20px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                <Scale size={13} color="#c0392b" />
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#c0392b', textTransform: 'uppercase', letterSpacing: '0.07em' }}>FBR compliance — action needed</p>
+              </div>
+              <p className="dash-display" style={{ fontSize: 18, fontWeight: 800, color: '#7a1c1c', letterSpacing: '-0.02em', marginBottom: 4 }}>
+                Rs {Math.abs(reconDiff).toLocaleString()}
+              </p>
+              <p style={{ fontSize: 12, color: '#5b1e1e', fontWeight: 500, lineHeight: 1.5 }}>
+                Your wealth statement is unreconciled by this amount. FBR will reject the return until it is zero. Open the form to fix.
+              </p>
+            </Link>
+          )}
 
           {/* Next step */}
           {nextIncomplete && (
