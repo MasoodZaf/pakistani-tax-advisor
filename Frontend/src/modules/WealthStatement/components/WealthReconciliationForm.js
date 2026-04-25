@@ -232,8 +232,8 @@ const WealthReconciliationForm = () => {
 
         {/* FBR Compliance Alert */}
         <div className={`mt-4 p-4 rounded-lg border ${
-          Math.abs(unreconciledDifference) < 0.01 
-            ? 'bg-green-50 border-green-200' 
+          Math.abs(unreconciledDifference) < 0.01
+            ? 'bg-green-50 border-green-200'
             : 'bg-red-50 border-red-200'
         }`}>
           <div className="flex items-center space-x-3">
@@ -257,6 +257,56 @@ const WealthReconciliationForm = () => {
             </div>
           </div>
         </div>
+
+        {/* Auto-balance helper — shows when reconciliation is broken. The
+            user picks a likely bucket and we plug the difference into that
+            field. Doesn't auto-submit; the user can review and edit. */}
+        {Math.abs(unreconciledDifference) >= 0.01 && (
+          <div className="mt-3 p-4 rounded-lg border border-amber-200 bg-amber-50">
+            <h4 className="font-semibold text-amber-900 text-sm mb-1">Quick balance</h4>
+            <p className="text-xs text-amber-800 mb-3">
+              {unreconciledDifference > 0
+                ? `Your asset increase exceeds declared inflows by ${formatCurrency(unreconciledDifference)}. The most likely sources are below — pick one and we'll add the difference to it.`
+                : `Your declared inflows exceed your asset increase by ${formatCurrency(Math.abs(unreconciledDifference))}. Either reduce an inflow or add to outflows below.`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(unreconciledDifference > 0
+                ? [
+                    { field: 'foreign_remittance',       label: 'Foreign Remittance' },
+                    { field: 'inheritance',              label: 'Inheritance' },
+                    { field: 'gift_value',               label: 'Gift Received' },
+                    { field: 'other_inflows',            label: 'Other Inflows' },
+                  ]
+                : [
+                    { field: 'gift_outflow',             label: 'Gift Given' },
+                    { field: 'adjustments_outflows',     label: 'Other Adjustments' },
+                    { field: 'loss_on_disposal',         label: 'Loss on Disposal' },
+                  ]
+              ).map(({ field, label }) => {
+                const current = parseFloat(watchedValues[field] || 0);
+                const next    = unreconciledDifference > 0
+                  ? current + unreconciledDifference
+                  : current + Math.abs(unreconciledDifference);
+                return (
+                  <button
+                    key={field}
+                    type="button"
+                    onClick={() => setValue(field, Math.round(next * 100) / 100)}
+                    className="text-xs font-semibold px-3 py-2 rounded-md border border-amber-300 bg-white text-amber-900 hover:bg-amber-100 transition-colors"
+                  >
+                    Add to {label}
+                    <span className="block text-[11px] font-normal text-amber-700 mt-0.5">
+                      {formatCurrency(current)} → {formatCurrency(next)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-amber-700 mt-3 italic">
+              Only use a category that reflects your actual financial activity. Picking the wrong bucket here is worse than leaving it unbalanced — FBR can audit-flag inflated remittances or inheritances.
+            </p>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
