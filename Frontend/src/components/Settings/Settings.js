@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
-import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle } from 'lucide-react';
+import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 /* ─── Income stream definitions (mirrors Onboarding) ─────────────────────── */
@@ -19,6 +19,124 @@ const INCOME_STREAMS = [
   { id: 'pension',        icon: '🏛️', title: 'Pension from Former Employer',   desc: 'Pension from a previous employer (taxable above Rs. 10M — Finance Act 2025)' },
   { id: 'agriculture',    icon: '🌾', title: 'Agriculture Income',             desc: 'Income from agricultural land (federally exempt; declaration required by FBR)' },
 ];
+
+// ─── RecentActivity ─────────────────────────────────────────────────────────
+// Renders the current user's audit-log entries. Calls /api/my-activity which
+// is filtered server-side to user_id = req.user.id, so a user can only ever
+// see their own history.
+function formatRelative(iso) {
+  const d = new Date(iso);
+  const ms = Date.now() - d.getTime();
+  if (ms < 60_000)        return 'Just now';
+  if (ms < 3_600_000)     return Math.floor(ms / 60_000) + ' min ago';
+  if (ms < 86_400_000)    return Math.floor(ms / 3_600_000) + ' hr ago';
+  if (ms < 86_400_000 * 7) return Math.floor(ms / 86_400_000) + ' day' + (Math.floor(ms / 86_400_000) === 1 ? '' : 's') + ' ago';
+  return d.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const ACTIVITY_LABELS = {
+  login:                 'Signed in',
+  logout:                'Signed out',
+  register:              'Account created',
+  password_change:       'Password changed',
+  onboarding_complete:   'Completed onboarding',
+  impersonate_start:     'Admin started impersonating',
+  impersonate_end:       'Admin ended impersonation',
+  form_save:             'Saved a form',
+  form_submit:           'Submitted tax return',
+  rate_change:           'Tax rate changed',
+};
+
+const RecentActivity = () => {
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('/api/my-activity?limit=50');
+      setItems(res?.data?.data || []);
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const visible = showAll ? items : items.slice(0, 10);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <Activity className="w-6 h-6 text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+          title="Reload"
+        >
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          Reload
+        </button>
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-600 mb-2">Couldn&apos;t load activity: {error}</p>
+      )}
+
+      {!loading && items.length === 0 && !error && (
+        <p className="text-sm text-gray-500">No activity recorded yet.</p>
+      )}
+
+      {visible.length > 0 && (
+        <ul className="divide-y divide-gray-100">
+          {visible.map((it) => (
+            <li key={it.id} className="py-3 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900">
+                  {ACTIVITY_LABELS[it.action] || it.action}
+                </p>
+                {(it.change_summary || it.field_name) && (
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {it.change_summary || `Updated ${it.field_name}`}
+                  </p>
+                )}
+                {it.ip_address && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    From {it.ip_address}
+                  </p>
+                )}
+              </div>
+              <time
+                className="text-xs text-gray-500 whitespace-nowrap"
+                title={new Date(it.created_at).toLocaleString('en-PK')}
+              >
+                {formatRelative(it.created_at)}
+              </time>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {items.length > 10 && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-800"
+        >
+          {showAll ? 'Show less' : `Show all ${items.length} entries`}
+        </button>
+      )}
+    </div>
+  );
+};
 
 const Settings = () => {
   const { user } = useAuth();
@@ -349,6 +467,11 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Recent Activity — surfaces the user's audit trail (logins, form
+          saves, password changes, impersonation events). Especially useful
+          when a tax consultant has been operating on the user's behalf. */}
+      <RecentActivity />
 
       {/* Help & Support */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">

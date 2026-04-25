@@ -568,4 +568,51 @@ router.post('/onboarding/complete', jwtAuth, async (req, res) => {
   }
 });
 
+// ──────────────────────────────────────────────────────────────────────────
+// GET /api/my-activity — user-facing audit log
+//
+// Returns the current user's own audit_log entries (most recent first).
+// Used by the Settings → Recent Activity panel so a user can see what
+// changed and when, especially when a consultant has been impersonating.
+// Pagination defaults are deliberately small to keep the panel scannable.
+// ──────────────────────────────────────────────────────────────────────────
+router.get('/my-activity', jwtAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit  = Math.min(parseInt(req.query.limit, 10)  || 50, 200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0,  0);
+
+    const result = await pool.query(
+      `SELECT id, action, table_name, record_id, field_name,
+              change_summary, severity, category,
+              old_value, new_value,
+              ip_address, created_at
+         FROM audit_log
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3`,
+      [userId, limit, offset]
+    );
+
+    const totalRow = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM audit_log WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        total:   totalRow.rows[0].n,
+        limit,
+        offset,
+        hasMore: offset + result.rows.length < totalRow.rows[0].n,
+      },
+    });
+  } catch (e) {
+    logger.error('my-activity failed', { message: e?.message });
+    res.status(500).json({ success: false, message: 'Failed to load activity' });
+  }
+});
+
 module.exports = router;
