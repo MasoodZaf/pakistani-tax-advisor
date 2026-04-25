@@ -2378,4 +2378,71 @@ router.post('/wealth_reconciliation_forms', auth, (req, res) =>
   saveFormData('wealth_reconciliation_forms', 'wealth_reconciliation', req, res)
 );
 
+// ──────────────────────────────────────────────────────────────────────────
+// Filing readiness — pre-submit gate
+// ──────────────────────────────────────────────────────────────────────────
+
+const { checkReadiness } = require('../../../services/readinessService');
+
+// GET /api/tax-forms/readiness/:taxYear
+// Returns the structured pre-submit punch list. The frontend uses this to
+// render the "Before you submit" panel; the submit endpoint enforces it
+// server-side regardless.
+router.get('/readiness/:taxYear', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { taxYear } = req.params;
+    const report = await checkReadiness(userId, taxYear);
+    res.json({ success: true, data: report });
+  } catch (error) {
+    logger.error('Readiness check failed:', error);
+    res.status(500).json({ success: false, message: 'Readiness check failed', error: error.message });
+  }
+});
+
+// POST /api/tax-forms/submit
+// Body: { taxReturnId, taxYear }. Runs readiness; refuses if not ready.
+// Otherwise marks the return as submitted (filing_status='submitted',
+// submission_date=NOW()). Returns 422 with the issue list on failure.
+router.post('/submit', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const taxYear = req.body.taxYear || req.query.taxYear || await getCurrentTaxYear();
+    const taxReturnId = req.body.taxReturnId;
+
+    const report = await checkReadiness(userId, taxYear);
+    if (!report.ready) {
+      return res.status(422).json({
+        success: false,
+        message: `Cannot submit — ${report.issues.length} blocking issue(s). Fix and try again.`,
+        readiness: report,
+      });
+    }
+
+    const update = await pool.query(
+      `UPDATE tax_returns
+          SET filing_status = 'submitted',
+              submission_date = NOW(),
+              updated_at = NOW()
+        WHERE user_id = $1 AND tax_year = $2 AND ($3::uuid IS NULL OR id = $3)
+        RETURNING *`,
+      [userId, taxYear, taxReturnId || null]
+    );
+
+    if (update.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Tax return not found for this user and year.' });
+    }
+
+    res.json({
+      success: true,
+      taxReturn: update.rows[0],
+      readiness: report,
+      message: 'Tax return submitted successfully.',
+    });
+  } catch (error) {
+    logger.error('Submit failed:', error);
+    res.status(500).json({ success: false, message: 'Submit failed', error: error.message });
+  }
+});
+
 module.exports = router;

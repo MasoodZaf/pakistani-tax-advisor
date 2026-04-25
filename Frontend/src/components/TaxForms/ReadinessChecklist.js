@@ -1,0 +1,185 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle, AlertTriangle, AlertOctagon, RefreshCw } from 'lucide-react';
+import { useTaxForm } from '../../contexts/TaxFormContext';
+
+// Map step id → router path. Same overrides as Dashboard.
+const ROUTE_OVERRIDES = {
+  final_min_income:      '/income-tax/final-min-income',
+  adjustable_tax:        '/income-tax/adjustable-tax',
+  capital_gain:          '/income-tax/capital-gains',
+  tax_computation:       '/income-tax/tax-computation',
+  wealth:                '/wealth-statement/wealth',
+  wealth_reconciliation: '/wealth-statement/wealth-reconciliation',
+  profile:               '/settings',
+};
+const WEALTH = new Set(['wealth', 'wealth_reconciliation']);
+const stepRoute = (id) =>
+  ROUTE_OVERRIDES[id] || (WEALTH.has(id) ? `/wealth-statement/${id}` : `/income-tax/${id}`);
+
+/**
+ * ReadinessChecklist — surfaces the pre-submit punch list from
+ * GET /api/tax-forms/readiness/:year. Auto-loads on mount and refreshes
+ * when the parent passes a `refreshKey` change.
+ *
+ * Compact mode: 1-line summary + a "Show details" toggle, suitable for
+ * the Dashboard. Expanded mode (default): always-visible itemised list,
+ * suitable for the Tax Computation Summary page.
+ */
+const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
+  const { getReadinessReport, taxReturn } = useTaxForm();
+  const [report, setReport]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showAll, setShowAll] = useState(!compact);
+  const navigate = useNavigate();
+
+  const load = async () => {
+    if (!taxReturn?.tax_year) return;
+    setLoading(true);
+    const r = await getReadinessReport(taxReturn.tax_year);
+    setReport(r);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxReturn?.tax_year, refreshKey]);
+
+  if (!report && !loading) return null;
+
+  const issues   = report?.issues   || [];
+  const warnings = report?.warnings || [];
+  const ready    = !!report?.ready;
+
+  // ── Compact: single-line status banner ───────────────────────────────────
+  if (compact && !showAll) {
+    return (
+      <div
+        onClick={() => setShowAll(true)}
+        style={{
+          background:    ready ? '#F0FFC2' : issues.length > 0 ? '#fef2f2' : '#fffbeb',
+          border:        `1px solid ${ready ? '#c0da94' : issues.length > 0 ? '#fecaca' : '#fde68a'}`,
+          borderRadius:  12, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+        }}
+      >
+        {ready
+          ? <CheckCircle size={18} color="#3d6020" />
+          : issues.length > 0
+            ? <AlertOctagon size={18} color="#b91c1c" />
+            : <AlertTriangle size={18} color="#b45309" />}
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a' }}>
+          {ready
+            ? 'Ready to submit — no blocking issues'
+            : `${issues.length} blocker${issues.length !== 1 ? 's' : ''}, ${warnings.length} warning${warnings.length !== 1 ? 's' : ''} — click to review`}
+        </p>
+      </div>
+    );
+  }
+
+  // ── Full list ─────────────────────────────────────────────────────────────
+  const tone = ready
+    ? { bg: '#F0FFC2', border: '#c0da94', accent: '#3d6020' }
+    : issues.length > 0
+      ? { bg: '#fef2f2', border: '#fecaca', accent: '#b91c1c' }
+      : { bg: '#fffbeb', border: '#fde68a', accent: '#b45309' };
+
+  const renderIssue = (it, severity, idx) => {
+    const colour = severity === 'error' ? '#b91c1c' : '#b45309';
+    const Icon   = severity === 'error' ? AlertOctagon : AlertTriangle;
+    return (
+      <div
+        key={`${it.code}-${idx}`}
+        style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          padding: '12px 14px',
+          background: severity === 'error' ? '#fef2f2' : '#fffbeb',
+          border: `1px solid ${severity === 'error' ? '#fecaca' : '#fde68a'}`,
+          borderRadius: 10, marginBottom: 8,
+        }}
+      >
+        <Icon size={16} color={colour} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a', marginBottom: 4 }}>
+            {it.message}
+          </p>
+          {it.fix && (
+            <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 6, lineHeight: 1.5 }}>
+              {it.fix}
+            </p>
+          )}
+          {it.formStep && (
+            <button
+              type="button"
+              onClick={() => navigate(stepRoute(it.formStep))}
+              style={{
+                fontSize: 12, fontWeight: 700, color: colour,
+                background: 'transparent', border: `1px solid ${colour}`,
+                borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+              }}
+            >
+              Open form to fix →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        background: tone.bg, border: `1.5px solid ${tone.border}`,
+        borderRadius: 14, padding: '18px 20px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          {ready
+            ? <CheckCircle size={20} color={tone.accent} />
+            : issues.length > 0
+              ? <AlertOctagon size={20} color={tone.accent} />
+              : <AlertTriangle size={20} color={tone.accent} />}
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1e2a4a' }}>
+            {ready
+              ? 'Ready to submit'
+              : `${issues.length} blocking issue${issues.length !== 1 ? 's' : ''} • ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={load}
+          disabled={loading}
+          title="Re-run readiness check"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontSize: 12, fontWeight: 600, color: '#4a5575',
+            background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: 6, padding: '4px 10px', cursor: loading ? 'wait' : 'pointer',
+          }}
+        >
+          <RefreshCw size={11} style={loading ? { animation: 'spin 0.9s linear infinite' } : {}} />
+          Re-check
+        </button>
+      </div>
+
+      {!ready && (
+        <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 14, lineHeight: 1.5 }}>
+          Fix all blocking issues before submitting. Warnings are advisory — they won&apos;t prevent submission but FBR may flag the return for review.
+        </p>
+      )}
+
+      {issues.map((i, idx) => renderIssue(i, 'error', idx))}
+      {warnings.map((w, idx) => renderIssue(w, 'warning', idx))}
+
+      {ready && (
+        <p style={{ fontSize: 13, color: tone.accent, fontWeight: 600 }}>
+          Every pre-submit check passed. Click "Submit Return" on the Tax Forms page when ready.
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default ReadinessChecklist;

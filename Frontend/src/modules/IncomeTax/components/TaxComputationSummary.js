@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import taxComputationHelp from '../../../help/taxComputationHelp';
+import ReadinessChecklist from '../../../components/TaxForms/ReadinessChecklist';
 
 const TaxComputationSummary = () => {
   const navigate = useNavigate();
@@ -427,6 +428,13 @@ const TaxComputationSummary = () => {
               Export
             </button>
           </div>
+        </div>
+
+        {/* Pre-submit readiness checklist — surfaces blocking issues
+            before the user wastes a click on Submit. Server enforces
+            again at submit time. */}
+        <div className="mt-6">
+          <ReadinessChecklist />
         </div>
 
         {/* Help Panel */}

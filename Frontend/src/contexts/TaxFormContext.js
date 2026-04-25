@@ -320,35 +320,47 @@ export const TaxFormProvider = ({ children }) => {
     }
   };
 
+  // Pulls the structured readiness punch list from the backend. The server
+  // re-runs the same checks at submit time, so this call is purely advisory.
+  const getReadinessReport = async (taxYear) => {
+    try {
+      const year = taxYear || taxReturn?.tax_year;
+      if (!year) return null;
+      const res = await axios.get(`/api/tax-forms/readiness/${encodeURIComponent(year)}`);
+      return res?.data?.data || null;
+    } catch (err) {
+      // Don't fail the submit flow over a readiness fetch error — server
+      // will enforce regardless.
+      return null;
+    }
+  };
+
   const submitTaxReturn = async () => {
     if (!taxReturn) {
       toast.error('No tax return found');
-      return false;
+      return { ok: false };
     }
 
     try {
       setLoading(true);
-      
-      // Check if all required steps are completed
-      const requiredSteps = ['income', 'wealth']; // Minimum required steps
-      const missingSteps = requiredSteps.filter(step => !completedSteps.has(step));
-      
-      if (missingSteps.length > 0) {
-        toast.error(`Please complete the following steps: ${missingSteps.join(', ')}`);
-        return false;
-      }
-
       const response = await axios.post('/api/tax-forms/submit', {
-        taxReturnId: taxReturn.id
+        taxReturnId: taxReturn.id,
+        taxYear: taxReturn.tax_year,
       });
-
       setTaxReturn(response.data.taxReturn);
       toast.success('Tax return submitted successfully');
-      return true;
+      return { ok: true, readiness: response.data.readiness };
     } catch (error) {
+      // 422 = readiness blocked the submit; surface the structured punch
+      // list so the UI can render it inline. Anything else is a real
+      // server error.
+      if (error.response?.status === 422 && error.response.data?.readiness) {
+        toast.error(error.response.data.message || 'Cannot submit — fix issues first');
+        return { ok: false, readiness: error.response.data.readiness };
+      }
       const message = error.response?.data?.message || 'Submission failed';
       toast.error(message);
-      return false;
+      return { ok: false };
     } finally {
       setLoading(false);
     }
@@ -419,6 +431,7 @@ export const TaxFormProvider = ({ children }) => {
     // Tax operations
     calculateTax,
     submitTaxReturn,
+    getReadinessReport,
     loadTaxReturn,
     createNewTaxReturn,
   };
