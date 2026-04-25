@@ -196,7 +196,7 @@ export async function generateIrisPdf(ctx) {
   renderTabularSection({
     title: 'Income',
     rows:  sections.income,
-    head:  ['Code', 'Total Amount', 'Subject to Normal Tax', 'Description', 'Exempt / Final Tax'],
+    head:  ['Code', 'Total Amount', 'Exempt / Fixed / Final Tax', 'Description', 'Subject to Normal Tax'],
     columnStyles: {
       0: { cellWidth: 60 },
       1: { cellWidth: 90, halign: 'right' },
@@ -204,7 +204,7 @@ export async function generateIrisPdf(ctx) {
       3: { cellWidth: 'auto' },
       4: { cellWidth: 90, halign: 'right' },
     },
-    formatRow: (r) => [r.code, fmt(r.total), fmt(r.normal), r.label, fmt(r.exempt)],
+    formatRow: (r) => [r.code, fmt(r.total), fmt(r.exempt), r.label, fmt(r.normal)],
   });
 
   // ── Tax Reductions ────────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export async function generateIrisPdf(ctx) {
   renderTabularSection({
     title: 'Computations',
     rows:  sections.computations,
-    head:  ['Code', 'Total Amount', 'Subject to Normal Tax', 'Description', 'Exempt / Final Tax'],
+    head:  ['Code', 'Total Amount', 'Exempt / Fixed / Final Tax', 'Description', 'Subject to Normal Tax'],
     totalCodes: ['9000', '9100', '9200', '9210'],
     columnStyles: {
       0: { cellWidth: 60 },
@@ -281,7 +281,7 @@ export async function generateIrisPdf(ctx) {
       3: { cellWidth: 'auto' },
       4: { cellWidth: 90,  halign: 'right' },
     },
-    formatRow: (r) => [r.code, fmt(r.total), fmt(r.normal), r.label, fmt(r.exempt)],
+    formatRow: (r) => [r.code, fmt(r.total), fmt(r.exempt), r.label, fmt(r.normal)],
   });
 
   // ── Personal Assets / Liabilities ─────────────────────────────────────────

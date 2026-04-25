@@ -52,9 +52,12 @@ export const TOP_SUMMARY_FIELDS = [
   { code: '9000',   label: 'Total Income',             computeFrom: (ctx) => num(ctx.computation?.income?.totalIncome) },
 ];
 
-// ── Income (Code | Total Amount | Normal Tax | Description | Exempt/Final) ─
-// Layout: 4 numeric columns. `total` = sum, `normal` = subject to normal tax,
-// `exempt` = exempt from tax / subject to fixed/final tax.
+// ── Income (Code | Total | Exempt/Final | Description | Normal Tax) ─────────
+// Column order verified against the IRIS 2.0 Employment → Salary screen:
+//   Description | Code | Total Amount | Amount Exempt from Tax / Subject to
+//   Fixed/Final Tax | Amount Subject to Normal Tax
+// `total` = sum, `exempt` = subject to fixed/final tax (off-form),
+// `normal` = subject to normal-tax slabs.
 export const INCOME_FIELDS = [
   {
     code: '1000', label: 'Income from Salary',
@@ -68,8 +71,60 @@ export const INCOME_FIELDS = [
     code: '1009', label: 'Pay, Wages or Other Remuneration (including Arrears of Salary)',
     computeFrom: (ctx) => {
       const inc = ctx.income || {};
-      const wages = num(inc.annual_basic_salary) + num(inc.allowances) + num(inc.bonus);
+      const wages = num(inc.annual_basic_salary) + num(inc.bonus);
       return { total: wages, normal: wages, exempt: 0 };
+    },
+  },
+  {
+    // Allowances proper — separated from "Pay/Wages" in IRIS.
+    code: '1049', label: 'Allowances',
+    computeFrom: (ctx) => {
+      const inc = ctx.income || {};
+      const allow = num(inc.allowances) + num(inc.medical_allowance) + num(inc.other_cash_benefits);
+      if (allow === 0) return null;
+      return { total: allow, normal: allow, exempt: 0 };
+    },
+  },
+  {
+    code: '1008', label: 'Pension / Annuity u/s 12(2)(f)',
+    computeFrom: (ctx) => {
+      const inc = ctx.income || {};
+      const pension = num(inc.pension_from_ex_employer);
+      if (pension === 0) return null;
+      // FA 2025: pension < Rs 10m exempt; we surface the gross here and
+      // let normal-tax buckets reflect the taxable portion above.
+      const exempt = Math.min(pension, 10000000);
+      const normal = Math.max(0, pension - 10000000);
+      return { total: pension, normal, exempt };
+    },
+  },
+  {
+    code: '1059', label: 'Expenditure Reimbursement',
+    // No dedicated DB column today — left for future capture; render only
+    // when present so the PDF doesn't print zero rows.
+    computeFrom: (ctx) => {
+      const inc = ctx.income || {};
+      const v = num(inc.expenditure_reimbursement);
+      if (v === 0) return null;
+      return { total: v, normal: v, exempt: 0 };
+    },
+  },
+  {
+    code: '1089', label: 'Value of Perquisites (including Transport Monetization for Government Servants)',
+    computeFrom: (ctx) => {
+      const inc = ctx.income || {};
+      const perks = num(inc.taxable_car_value) + num(inc.other_taxable_subsidies) + num(inc.employer_contribution_provident);
+      if (perks === 0) return null;
+      return { total: perks, normal: perks, exempt: 0 };
+    },
+  },
+  {
+    code: '1099', label: 'Profits in Lieu of or in Addition to Pay, Wages or Other Remuneration (including Employment Termination Benefits)',
+    computeFrom: (ctx) => {
+      const inc = ctx.income || {};
+      const profits = num(inc.employment_termination_payment) + num(inc.retirement_from_approved_funds) + num(inc.directorship_fee);
+      if (profits === 0) return null;
+      return { total: profits, normal: profits, exempt: 0 };
     },
   },
 ];
