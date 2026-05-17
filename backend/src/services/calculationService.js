@@ -217,6 +217,13 @@ class CalculationService {
         // DB seeds min_income as "starts-at" (e.g. 600,001), while the FBR semantic
         // treats the break-point (600,000) as the exclusive lower bound of the next
         // slab. Normalize: effectiveLower = min - 1 for non-zero mins.
+        //
+        // ⚠️  This assumes slab rows are seeded as a **contiguous** sequence
+        // (i.e. row N+1's min_income == row N's max_income, or +1 of it).
+        // If a future seed gaps the slabs the bracket walker will silently
+        // miscalculate by a rupee × rate. The active 2025-26 seed is
+        // contiguous (600k → 1.2M → 2.2M → 3.2M → 4.1M → ∞) so this is
+        // safe today; revisit if slab seeds ever ship with gaps.
         const effectiveLower = minIncome > 0 ? minIncome - 1 : 0;
         if (taxableIncome <= effectiveLower) continue;
         const ceiling = maxIncome === null ? taxableIncome : Math.min(taxableIncome, maxIncome);

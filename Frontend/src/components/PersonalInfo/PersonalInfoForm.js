@@ -38,9 +38,15 @@ const PersonalInfoForm = () => {
 
   const [errors, setErrors] = useState({});
 
+  // Wait for the TaxYearContext to resolve before hitting the API —
+  // otherwise the request fires as `/api/personal-info/null` and the
+  // server treats the literal string as a tax year, returning empty
+  // data and falsely pre-filling the form as if fresh.
   useEffect(() => {
+    if (!currentTaxYear) return;
     fetchPersonalInfo();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTaxYear]);
 
   const fetchPersonalInfo = async () => {
     try {
@@ -129,6 +135,11 @@ const PersonalInfoForm = () => {
 
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
+      return;
+    }
+
+    if (!currentTaxYear) {
+      toast.error('Loading current tax year — please retry in a moment.');
       return;
     }
 

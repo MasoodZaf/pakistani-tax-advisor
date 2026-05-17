@@ -24,9 +24,16 @@ const AdminModule = () => {
       <Route path="users" element={<UserManagement />} />
       <Route path="system-settings" element={<SystemSettings />} />
       <Route path="user-tax-records" element={<UserTaxRecords />} />
-      <Route path="audit-logs" element={<AuditLogs />} />
 
       {/* Super Admin only routes */}
+      <Route
+        path="audit-logs"
+        element={
+          <SuperAdminRoute>
+            <AuditLogs />
+          </SuperAdminRoute>
+        }
+      />
       <Route
         path="tax-rates"
         element={

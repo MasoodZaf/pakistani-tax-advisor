@@ -221,11 +221,11 @@ function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <Reports />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
 
@@ -254,11 +254,11 @@ function App() {
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute>
+                  <UserOnlyRoute>
                     <Layout>
                       <Settings />
                     </Layout>
-                  </ProtectedRoute>
+                  </UserOnlyRoute>
                 }
               />
               

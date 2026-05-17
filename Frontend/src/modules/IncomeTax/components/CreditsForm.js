@@ -83,11 +83,21 @@ const CreditsForm = () => {
     return Math.round(total);
   };
 
-  // Derive taxable income from income form context data
+  // Derive taxable income from income form context data — and subtract
+  // deductible allowances (zakat, POS, education) before computing credit
+  // caps. The s.61/s.63 statutory base is "taxable income" which is
+  // post-deductions; using the pre-deduction figure makes the caps too
+  // generous when the filer has deductions.
   const incomeData = contextFormData['income'] || {};
-  const taxableIncome =
+  const deductionsData = contextFormData['deductions'] || {};
+  const grossTaxable =
     (parseFloat(incomeData.total_employment_income) || parseFloat(incomeData.annual_salary_wages_total) || 0)
     + (parseFloat(incomeData.other_income_no_min_tax_total) || 0);
+  const totalDeductions =
+    parseFloat(deductionsData.total_deductions)
+    || parseFloat(deductionsData.total_deduction_from_income)
+    || 0;
+  const taxableIncome = Math.max(0, grossTaxable - totalDeductions);
   const normalTax = calculateNormalTax(taxableIncome);
   const avgRate = taxableIncome > 0 ? normalTax / taxableIncome : 0;
 

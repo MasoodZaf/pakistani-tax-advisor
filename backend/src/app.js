@@ -156,10 +156,14 @@ app.use('/api/income-form', apiWriteLimiter, incomeFormRoutes);
 const taxFormsRoutes = require('./modules/IncomeTax/routes/taxForms');
 app.use('/api/tax-forms', apiWriteLimiter, taxFormsRoutes);
 
-// Tax Computation routes (Inter-form data linking)
+// Tax Computation routes (Inter-form data linking).
+// `apiWriteLimiter` is applied even on the read endpoints — the
+// computation runs are CPU-heavy (slab walks, surcharge math, super-tax
+// brackets) so the same throttle the other write surfaces use is the
+// right one here too.
 try {
   const taxComputationRoutes = require('./routes/taxComputation');
-  app.use('/api/tax-computation', taxComputationRoutes); // Tax computation with Excel linking
+  app.use('/api/tax-computation', apiWriteLimiter, taxComputationRoutes);
 } catch (error) {
   logger.warn('Tax computation routes not loaded:', error.message);
 }
