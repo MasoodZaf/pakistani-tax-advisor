@@ -1,4 +1,16 @@
-# 📱 Pakistani Tax Advisor - Mobile App
+# 📱 Pakistani Tax Advisor — Mobile App
+
+> **⚠️ PROTOTYPE — NOT PRODUCTION.**
+> The mobile app is a **scaffold / work-in-progress**. It currently:
+> - has no tax-calculation logic (the local calculator was deleted in April 2026
+>   because the math was wrong — mobile must call the backend compute API,
+>   which is not yet wired)
+> - points at `http://localhost:3001` by default
+> - has no automated tests and is not covered by CI
+> - is **not** expected to produce correct tax numbers
+>
+> Do not distribute this build to end users. Treat the features listed below as
+> *intended scope*, not implemented state. Use the web app for real filing.
 
 A React Native mobile application for Pakistani taxpayers to manage their tax returns efficiently and comply with FBR regulations.
 
