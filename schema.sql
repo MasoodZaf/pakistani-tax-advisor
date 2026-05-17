@@ -734,6 +734,11 @@ CREATE TABLE form_completion_status (
     ) STORED,
     last_form_updated VARCHAR(50),
     last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- `created_at` / `updated_at` mirror the other form_* tables so the shared
+    -- phase-d dedup migration (and any audit query that joins across forms by
+    -- timestamp) works uniformly. `last_updated_at` is kept for back-compat.
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_email FOREIGN KEY (user_id, user_email) REFERENCES users(id, email),
     CONSTRAINT fk_tax_year FOREIGN KEY (tax_year_id, tax_year) REFERENCES tax_years(id, tax_year)
 );
