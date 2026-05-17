@@ -1198,3 +1198,196 @@ INSERT INTO tax_slabs (
     ((SELECT id FROM tax_year), 'Slab 4', 4, 2200001,  3200000,  0.2500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
     ((SELECT id FROM tax_year), 'Slab 5', 5, 3200001,  4100000,  0.3000, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'),
     ((SELECT id FROM tax_year), 'Slab 6', 6, 4100001,  NULL,     0.3500, 'individual', '{"individual": true}', '2025-07-01', '2026-06-30'); 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Tables added 2026-05-17 to fix deployment: prior schema.sql missed 5 tables
+-- the backend code expects. DDL derived from backend/prisma/migrations/0_init,
+-- with the DEFAULT-with-column-ref columns rewritten as GENERATED ALWAYS AS
+-- STORED so PostgreSQL will actually accept them.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Rate configuration (slabs, surcharge, super tax, WHT, CGT, final tax).
+-- Populated by backend/database/migrations/phase-{b,g,h,j,s}-*.sql.
+CREATE TABLE IF NOT EXISTS tax_rates_config (
+    id              UUID NOT NULL DEFAULT uuid_generate_v4(),
+    tax_year        VARCHAR(10) NOT NULL,
+    rate_type       VARCHAR(50) NOT NULL,
+    rate_category   VARCHAR(100) NOT NULL,
+    min_amount      DECIMAL(15,2) DEFAULT 0,
+    max_amount      DECIMAL(15,2) DEFAULT 999999999999.99,
+    tax_rate        DECIMAL(8,6) NOT NULL,
+    fixed_amount    DECIMAL(15,2) DEFAULT 0,
+    description     TEXT,
+    fbr_reference   VARCHAR(100),
+    effective_date  DATE,
+    end_date        DATE,
+    is_active       BOOLEAN DEFAULT true,
+    created_at      TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT tax_rates_config_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_tax_rates_config_year_type ON tax_rates_config (tax_year, rate_type) WHERE is_active = true;
+
+-- Per-(cnic, tax_year) personal information snapshot — IRIS pre-fill source.
+CREATE TABLE IF NOT EXISTS personal_information (
+    tax_year                 VARCHAR(10) NOT NULL,
+    full_name                VARCHAR(255),
+    father_name              VARCHAR(255),
+    cnic                     VARCHAR(20) NOT NULL,
+    ntn                      VARCHAR(20),
+    passport_number          VARCHAR(20),
+    residential_address      TEXT,
+    mailing_address          TEXT,
+    city                     VARCHAR(100),
+    province                 VARCHAR(100),
+    postal_code              VARCHAR(10),
+    country                  VARCHAR(100) DEFAULT 'Pakistan',
+    mobile_number            VARCHAR(20),
+    landline_number          VARCHAR(20),
+    email_address            VARCHAR(255),
+    profession               VARCHAR(255),
+    employer_name            VARCHAR(255),
+    employer_address         TEXT,
+    employer_ntn             VARCHAR(20),
+    fbr_registration_number  VARCHAR(50),
+    tax_circle               VARCHAR(100),
+    zone                     VARCHAR(100),
+    created_at               TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    taxpayer_type            VARCHAR(20) DEFAULT 'salaried',
+    id                       SERIAL NOT NULL,
+    user_id                  UUID,
+    CONSTRAINT personal_information_pkey PRIMARY KEY (cnic, tax_year)
+);
+CREATE INDEX IF NOT EXISTS idx_personal_information_user_id ON personal_information (user_id);
+
+-- Key/value app settings (categorised), editable by admins.
+CREATE TABLE IF NOT EXISTS system_settings (
+    id                UUID NOT NULL DEFAULT uuid_generate_v4(),
+    category          VARCHAR(100) NOT NULL,
+    setting_key       VARCHAR(255) NOT NULL,
+    setting_value     TEXT NOT NULL,
+    data_type         VARCHAR(50) DEFAULT 'string',
+    description       TEXT,
+    is_public         BOOLEAN DEFAULT false,
+    created_at        TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    created_by_email  VARCHAR(255),
+    updated_by_email  VARCHAR(255),
+    CONSTRAINT system_settings_pkey PRIMARY KEY (id),
+    CONSTRAINT system_settings_category_key_unique UNIQUE (category, setting_key)
+);
+
+-- User-uploaded supporting documents stored as BYTEA.
+CREATE TABLE IF NOT EXISTS document_vault (
+    id             UUID NOT NULL DEFAULT uuid_generate_v4(),
+    user_id        UUID NOT NULL,
+    file_name      VARCHAR(255) NOT NULL,
+    original_name  VARCHAR(500) NOT NULL,
+    mime_type      VARCHAR(127) NOT NULL,
+    file_size      INTEGER NOT NULL,
+    category       VARCHAR(50) NOT NULL,
+    description    TEXT,
+    tax_year       VARCHAR(10),
+    file_data      BYTEA NOT NULL,
+    uploaded_at    TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT document_vault_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_document_vault_user_year ON document_vault (user_id, tax_year);
+
+-- Wealth Statement (Form 116) — totals are GENERATED ALWAYS AS STORED.
+-- The Prisma migration generates these as DEFAULT (col_a + col_b) which is
+-- syntactically valid Prisma but PostgreSQL rejects ("cannot use column
+-- reference in DEFAULT expression"). Using STORED generated columns is the
+-- semantically equivalent — and actually applyable — form.
+CREATE TABLE IF NOT EXISTS wealth_statement_forms (
+    id                          UUID NOT NULL DEFAULT uuid_generate_v4(),
+    tax_return_id               UUID NOT NULL,
+    user_id                     UUID NOT NULL,
+    user_email                  VARCHAR(255) NOT NULL,
+    tax_year_id                 UUID NOT NULL,
+    tax_year                    VARCHAR(10) NOT NULL DEFAULT '2025-26',
+
+    -- Prior-year asset balances
+    agricultural_property_prev  DECIMAL(15,2) DEFAULT 0,
+    commercial_property_prev    DECIMAL(15,2) DEFAULT 0,
+    equipment_prev              DECIMAL(15,2) DEFAULT 0,
+    animals_prev                DECIMAL(15,2) DEFAULT 0,
+    investments_prev            DECIMAL(15,2) DEFAULT 0,
+    debt_receivable_prev        DECIMAL(15,2) DEFAULT 0,
+    motor_vehicles_prev         DECIMAL(15,2) DEFAULT 0,
+    precious_possessions_prev   DECIMAL(15,2) DEFAULT 0,
+    household_effects_prev      DECIMAL(15,2) DEFAULT 0,
+    personal_items_prev         DECIMAL(15,2) DEFAULT 0,
+    cash_prev                   DECIMAL(15,2) DEFAULT 0,
+    other_assets_prev           DECIMAL(15,2) DEFAULT 0,
+
+    -- Current-year asset balances
+    agricultural_property_curr  DECIMAL(15,2) DEFAULT 0,
+    commercial_property_curr    DECIMAL(15,2) DEFAULT 0,
+    equipment_curr              DECIMAL(15,2) DEFAULT 0,
+    animals_curr                DECIMAL(15,2) DEFAULT 0,
+    investments_curr            DECIMAL(15,2) DEFAULT 0,
+    debt_receivable_curr        DECIMAL(15,2) DEFAULT 0,
+    motor_vehicles_curr         DECIMAL(15,2) DEFAULT 0,
+    precious_possessions_curr   DECIMAL(15,2) DEFAULT 0,
+    household_effects_curr      DECIMAL(15,2) DEFAULT 0,
+    personal_items_curr         DECIMAL(15,2) DEFAULT 0,
+    cash_curr                   DECIMAL(15,2) DEFAULT 0,
+    other_assets_curr           DECIMAL(15,2) DEFAULT 0,
+
+    -- Liabilities
+    business_liabilities_prev   DECIMAL(15,2) DEFAULT 0,
+    personal_liabilities_prev   DECIMAL(15,2) DEFAULT 0,
+    business_liabilities_curr   DECIMAL(15,2) DEFAULT 0,
+    personal_liabilities_curr   DECIMAL(15,2) DEFAULT 0,
+
+    -- Derived totals (STORED generated columns — auto-recompute on row update)
+    total_assets_prev DECIMAL(15,2) GENERATED ALWAYS AS (
+        COALESCE(agricultural_property_prev, 0) + COALESCE(commercial_property_prev, 0)
+      + COALESCE(equipment_prev, 0)             + COALESCE(animals_prev, 0)
+      + COALESCE(investments_prev, 0)           + COALESCE(debt_receivable_prev, 0)
+      + COALESCE(motor_vehicles_prev, 0)        + COALESCE(precious_possessions_prev, 0)
+      + COALESCE(household_effects_prev, 0)     + COALESCE(personal_items_prev, 0)
+      + COALESCE(cash_prev, 0)                  + COALESCE(other_assets_prev, 0)
+    ) STORED,
+    total_assets_curr DECIMAL(15,2) GENERATED ALWAYS AS (
+        COALESCE(agricultural_property_curr, 0) + COALESCE(commercial_property_curr, 0)
+      + COALESCE(equipment_curr, 0)             + COALESCE(animals_curr, 0)
+      + COALESCE(investments_curr, 0)           + COALESCE(debt_receivable_curr, 0)
+      + COALESCE(motor_vehicles_curr, 0)        + COALESCE(precious_possessions_curr, 0)
+      + COALESCE(household_effects_curr, 0)     + COALESCE(personal_items_curr, 0)
+      + COALESCE(cash_curr, 0)                  + COALESCE(other_assets_curr, 0)
+    ) STORED,
+    total_liabilities_prev DECIMAL(15,2) GENERATED ALWAYS AS (
+        COALESCE(business_liabilities_prev, 0) + COALESCE(personal_liabilities_prev, 0)
+    ) STORED,
+    total_liabilities_curr DECIMAL(15,2) GENERATED ALWAYS AS (
+        COALESCE(business_liabilities_curr, 0) + COALESCE(personal_liabilities_curr, 0)
+    ) STORED,
+    net_wealth_prev DECIMAL(15,2) GENERATED ALWAYS AS (
+        (COALESCE(agricultural_property_prev, 0) + COALESCE(commercial_property_prev, 0)
+         + COALESCE(equipment_prev, 0)           + COALESCE(animals_prev, 0)
+         + COALESCE(investments_prev, 0)         + COALESCE(debt_receivable_prev, 0)
+         + COALESCE(motor_vehicles_prev, 0)      + COALESCE(precious_possessions_prev, 0)
+         + COALESCE(household_effects_prev, 0)   + COALESCE(personal_items_prev, 0)
+         + COALESCE(cash_prev, 0)                + COALESCE(other_assets_prev, 0))
+      - (COALESCE(business_liabilities_prev, 0) + COALESCE(personal_liabilities_prev, 0))
+    ) STORED,
+    net_wealth_curr DECIMAL(15,2) GENERATED ALWAYS AS (
+        (COALESCE(agricultural_property_curr, 0) + COALESCE(commercial_property_curr, 0)
+         + COALESCE(equipment_curr, 0)           + COALESCE(animals_curr, 0)
+         + COALESCE(investments_curr, 0)         + COALESCE(debt_receivable_curr, 0)
+         + COALESCE(motor_vehicles_curr, 0)      + COALESCE(precious_possessions_curr, 0)
+         + COALESCE(household_effects_curr, 0)   + COALESCE(personal_items_curr, 0)
+         + COALESCE(cash_curr, 0)                + COALESCE(other_assets_curr, 0))
+      - (COALESCE(business_liabilities_curr, 0) + COALESCE(personal_liabilities_curr, 0))
+    ) STORED,
+
+    is_complete       BOOLEAN DEFAULT false,
+    last_updated_by   UUID,
+    created_at        TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT wealth_statement_forms_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_wealth_statement_user_year ON wealth_statement_forms (user_id, tax_year);

@@ -20,7 +20,13 @@ services:
       - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrate-2025-26.sql:/docker-entrypoint-initdb.d/01-init.sql
+      # First-boot init scripts. Postgres runs files in /docker-entrypoint-initdb.d/
+      # in alphabetical order, then NEVER again (subsequent boots skip them).
+      # 01-schema.sql — base schema + 2024-25 / 2025-26 tax year seed.
+      # 02-migrations.sh — applies every .sql in /db-migrations/ (see below).
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./scripts/db-init-migrations.sh:/docker-entrypoint-initdb.d/02-migrations.sh:ro
+      - ./backend/database/migrations:/db-migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -41,8 +47,19 @@ services:
       DB_NAME: ${DB_NAME:-tax_advisor}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
+      # Prisma also needs DATABASE_URL — built from the parts above so .env
+      # stays the single source of truth for credentials.
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@database:5432/${DB_NAME:-tax_advisor}?schema=public
+      # The internal docker-network Postgres doesn't negotiate SSL; the default
+      # NODE_ENV=production codepath would try and fail. Override to disabled.
+      DB_SSL: "false"
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET}
+      # Browser-facing origin(s) → must be in the CORS allowlist.
+      # Set both in .env for production. FRONTEND_URL is a single origin;
+      # CORS_ORIGINS is a comma-separated list (for staging + prod, www + apex, etc).
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     depends_on:
       database:
         condition: service_healthy

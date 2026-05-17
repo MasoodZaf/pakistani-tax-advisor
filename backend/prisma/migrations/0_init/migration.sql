@@ -1,3 +1,20 @@
+-- ⚠️ DO NOT RUN THIS MIGRATION DIRECTLY ⚠️
+--
+-- This file was emitted by `prisma migrate` but PostgreSQL will REJECT it:
+-- Prisma generates `DEFAULT (col_a + col_b)` for fields that should be
+-- generated columns, which is invalid SQL ("cannot use column reference in
+-- DEFAULT expression"). Affected tables: adjustable_tax_forms, income_forms,
+-- final_min_income_forms, wealth_statement_forms, etc.
+--
+-- Canonical schema is `schema.sql` at the repo root (uses
+-- `GENERATED ALWAYS AS (...) STORED` instead). docker-compose.prod.yml
+-- loads schema.sql + backend/database/migrations/*.sql on first boot.
+--
+-- The Prisma *client* still uses the matching `schema.prisma` for typed
+-- query building — that part is fine. Only the generated migration SQL is
+-- broken. Keep this file for `prisma generate` to read the schema graph,
+-- but never apply it.
+
 -- CreateTable
 CREATE TABLE "adjustable_tax_forms" (
     "id" UUID NOT NULL DEFAULT uuid_generate_v4(),

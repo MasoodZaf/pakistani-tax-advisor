@@ -22,7 +22,13 @@ const pool = new Pool({
   // Enable SSL in production (Render / Railway / most managed providers).
   // Local / containerized Postgres usually doesn't have a cert we can verify,
   // so keep rejectUnauthorized:false here. Prefer a real CA in hardened envs.
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Set DB_SSL=false to force SSL off (containerized Postgres on a private
+  // docker network — the default prod cluster — doesn't negotiate SSL).
+  ssl: process.env.DB_SSL === 'false'
+    ? false
+    : process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
 pool.on('connect', () => {
