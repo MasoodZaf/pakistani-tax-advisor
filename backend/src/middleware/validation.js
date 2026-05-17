@@ -86,7 +86,7 @@ class ValidationMiddleware {
     });
 
     if (errors.length > 0) {
-      logger.warn('Income form validation errors:', { errors, userId: req.userId });
+      logger.warn('Income form validation errors:', { errors, userId: req.user?.id });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
@@ -139,7 +139,7 @@ class ValidationMiddleware {
     });
 
     if (errors.length > 0) {
-      logger.warn('Adjustable tax form validation errors:', { errors, userId: req.userId });
+      logger.warn('Adjustable tax form validation errors:', { errors, userId: req.user?.id });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
@@ -183,7 +183,7 @@ class ValidationMiddleware {
     });
 
     if (errors.length > 0) {
-      logger.warn('Credits form validation errors:', { errors, userId: req.userId });
+      logger.warn('Credits form validation errors:', { errors, userId: req.user?.id });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
@@ -226,7 +226,7 @@ class ValidationMiddleware {
     });
 
     if (errors.length > 0) {
-      logger.warn('Deductions form validation errors:', { errors, userId: req.userId });
+      logger.warn('Deductions form validation errors:', { errors, userId: req.user?.id });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
@@ -277,7 +277,7 @@ class ValidationMiddleware {
     });
 
     if (errors.length > 0) {
-      logger.warn('Capital gains form validation errors:', { errors, userId: req.userId });
+      logger.warn('Capital gains form validation errors:', { errors, userId: req.user?.id });
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,

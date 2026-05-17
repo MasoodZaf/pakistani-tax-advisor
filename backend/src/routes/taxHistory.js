@@ -101,7 +101,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     }
 
     const { tax_year = '2024-25', notes = '' } = req.body;
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
 
     let rawData = {};
@@ -190,7 +190,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
 // ── GET /archive — list archive records (summary only) ──────────────────────
 router.get('/archive', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const result = await pool.query(
       `SELECT id, tax_year, source_format, source_filename, totals,
               upload_date, updated_at, is_verified, notes
@@ -209,7 +209,7 @@ router.get('/archive', authenticateToken, async (req, res) => {
 // ── GET /archive/:taxYear — full archive detail ─────────────────────────────
 router.get('/archive/:taxYear', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const result = await pool.query(
       `SELECT id, tax_year, source_format, source_filename,
               raw_data, mapped_data, rate_flags, totals,
@@ -241,7 +241,7 @@ router.get('/archive/:taxYear', authenticateToken, async (req, res) => {
 // server side automatically applies these to the current return.
 router.post('/archive/:taxYear/copy-forward', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const { step, fields } = req.body || {};
     if (!step) {
       return res.status(400).json({ success: false, message: 'step is required' });
@@ -291,7 +291,7 @@ router.post('/archive/:taxYear/copy-forward', authenticateToken, async (req, res
 // ── GET /latest — most recent archive (legacy) ──────────────────────────────
 router.get('/latest', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const result = await pool.query(
       `SELECT id, tax_year, source_format, mapped_data, rate_flags, totals,
               upload_date, is_verified, notes
@@ -328,7 +328,7 @@ router.get('/latest', authenticateToken, async (req, res) => {
 // ── GET /list — legacy alias of /archive ────────────────────────────────────
 router.get('/list', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const result = await pool.query(
       `SELECT id, tax_year, source_format, upload_date, is_verified, notes
          FROM tax_return_history
@@ -346,7 +346,7 @@ router.get('/list', authenticateToken, async (req, res) => {
 // ── POST /pre-populate (legacy) ─────────────────────────────────────────────
 router.post('/pre-populate', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const { id } = req.body;
     const query = id
       ? `SELECT mapped_data, rate_flags FROM tax_return_history WHERE id=$1 AND user_id=$2`
@@ -378,7 +378,7 @@ router.post('/pre-populate', authenticateToken, async (req, res) => {
 // ── DELETE /:id ──────────────────────────────────────────────────────────────
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    const userId = req.user.id;
     const result = await pool.query(
       `DELETE FROM tax_return_history WHERE id=$1 AND user_id=$2 RETURNING id`,
       [req.params.id, userId]

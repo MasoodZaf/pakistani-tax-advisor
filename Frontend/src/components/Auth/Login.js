@@ -290,10 +290,12 @@ const Login = () => {
           localStorage.removeItem('adminAssistedLogin');
           toast.success(`Logged in as ${adminAssistedLogin.userName}`, { duration: 4000 });
         }
-        if (result.needsPersonalInfo) {
-          toast.info('Please complete your personal information');
-          navigate('/personal-info');
-        } else if (['admin', 'super_admin'].includes(result.userData?.role)) {
+        // Routing: admins → /admin, everyone else → /dashboard. The
+        // previous `needsPersonalInfo` branch routed users to /personal-info
+        // but UserOnlyRoute then bounces unboarded users to /onboarding,
+        // so that branch was effectively dead. Onboarding redirect is now
+        // handled exclusively by the route guards.
+        if (['admin', 'super_admin'].includes(result.userData?.role)) {
           navigate('/admin');
         } else {
           navigate('/dashboard');

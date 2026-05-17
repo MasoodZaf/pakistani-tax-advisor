@@ -30,17 +30,22 @@ All other fields are user-editable.
 
 | Final/Min Income Field | Source (Capital Gain Form Field) | Excel Ref |
 |---|---|---|
-| `capital_gain_amount` **[AUTO]** | `total_capital_gain` | `B19 = 'Capital Gain'!E19` |
-| `capital_gain_tax_deducted` **[AUTO]** | `total_capital_gain_tax_deducted` | `C19 = 'Capital Gain'!F19` |
-| `capital_gain_tax_chargeable` **[CALC]** | `total_capital_gain_tax_chargeable` | `D19 = 'Capital Gain'!G19` |
+| `capital_gain` **[AUTO]** | `total_capital_gain` | `B19 = 'Capital Gain'!E19` |
+| `capital_gain_tax_deducted` **[AUTO]** | `total_tax_deducted` | `C19 = 'Capital Gain'!F19` |
+| `capital_gain_tax_chargeable` **[CALC]** | `capital_gains_tax_chargeable` | `D19 = 'Capital Gain'!G19` |
 
 **Status:** ✅ Implemented — auto-fetched via `useEffect` in `FinalMinIncomeForm.js`, all three Capital Gain row fields are read-only.
 
+> **Note (2026-05-17):** Source column names corrected to match live DB. Previously
+> the doc listed `total_capital_gain_amount` / `total_capital_gain_tax_deducted` /
+> `total_capital_gain_tax_chargeable` — these don't exist; the consumer code
+> reads `total_capital_gain`, `total_tax_deducted`, `capital_gains_tax_chargeable`.
+
 ### Saved totals from CapitalGainsForm
-The Capital Gain form now saves these aggregate fields on submit:
-- `total_capital_gain` — sum of all `*_taxable` fields
-- `total_capital_gain_tax_deducted` — sum of all `*_deducted` fields
-- `total_capital_gain_tax_chargeable` — sum of all `*_carryable` fields
+The Capital Gain form saves these aggregate fields on submit:
+- `total_capital_gain` — Postgres-generated sum of all `*_taxable` fields
+- `total_tax_deducted`  — Postgres-generated sum of all `*_deducted` fields
+- `capital_gains_tax_chargeable` — user-editable aggregate (saved directly)
 
 ### Grand Total saved from FinalMinIncomeForm
 - `grand_total_tax_chargeable` — `subtotal + capital_gain_tax_chargeable` (saved on submit)
@@ -74,7 +79,11 @@ The Capital Gain form now saves these aggregate fields on submit:
 | Normal taxable income | `income.total_gross_income - income.total_exempt_income` | `B10 = Income!B16 - Income!B15` |
 | Personal expenses | `expenses.total_personal_expenses` | `B23 = 'Detail of Expenses'!B25` |
 
-**Status:** ⚠️ Not yet implemented in frontend — Wealth Reconciliation form needs auto-population from Wealth Statement and Expenses forms.
+**Status:** ✅ Implemented — `WealthReconciliationForm.js` auto-syncs `personal_expenses`
+from `expenses.total_expenses`, and recomputes the full reconciliation pulling
+`wealth.net_worth_current_year/previous_year`, `income.total_employment_income`,
+and `final_tax.total_final_tax`. Read-only display via `readOnlyClasses`. (Spec
+previously marked this "not yet implemented" — corrected 2026-05-17.)
 
 ---
 

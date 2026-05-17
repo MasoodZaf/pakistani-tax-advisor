@@ -311,7 +311,10 @@ const FinalMinIncomeForm = () => {
     if (lastSyncedCGRef.current === signature) return;
     lastSyncedCGRef.current = signature;
 
-    setValue('capital_gain_amount', amount);
+    // DB column is `capital_gain` (not `capital_gain_amount`). The legacy
+    // key was being dropped server-side by the allow-list filter, producing
+    // a noisy "Dropped unknown keys" warning on every save.
+    setValue('capital_gain', amount);
     setValue('capital_gain_tax_deducted', taxDeducted);
     setValue('capital_gain_tax_chargeable', taxChargeable);
   }, [formData['capital_gain'], setValue]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -812,10 +815,10 @@ const FinalMinIncomeForm = () => {
             </div>
             <div className="col-span-2">
               <input
-                key={`capital_gain_amount-${refreshKey}`}
+                key={`capital_gain-${refreshKey}`}
                 type="text"
                 className={readOnlyInputClasses}
-                value={formatNumber(watchedValues.capital_gain_amount)}
+                value={formatNumber(watchedValues.capital_gain)}
                 readOnly
                 placeholder="0"
               />

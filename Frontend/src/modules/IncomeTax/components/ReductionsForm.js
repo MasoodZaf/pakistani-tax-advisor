@@ -72,14 +72,42 @@ const ReductionsForm = () => {
 
   // Teacher/researcher reduction (u/s 100C). Rate sourced from DB
   // (tax_rates_config.rate_type='reduction', rate_category='teacher_researcher').
+  //
+  // Prefer the explicit `salary_u_s_12_7_tax_chargeable` from the Final/Min
+  // form (matches what FBR records). When that form hasn't been visited yet,
+  // fall back to the slab-walk × (salary / total taxable income) share so
+  // the rebate isn't silently dropped to zero for a salaried teacher who
+  // never opens the Final/Min form.
   useEffect(() => {
     if (watchedValues.teacher_researcher_reduction_yn !== 'Y') return;
     if (!teacherReductionRate) return; // wait for rates
 
     const finalMinData = contextFormData['final_min_income'] || {};
-    const salaryTax = parseFloat(finalMinData.salary_u_s_12_7_tax_chargeable) ||
-                      parseFloat(finalMinData.salary_tax_chargeable) ||
-                      parseFloat(finalMinData.salary_employees_tax_chargeable) || 0;
+    let salaryTax = parseFloat(finalMinData.salary_u_s_12_7_tax_chargeable) ||
+                    parseFloat(finalMinData.salary_tax_chargeable) ||
+                    parseFloat(finalMinData.salary_employees_tax_chargeable) || 0;
+
+    // Fallback: derive salary tax from income context + slab walk.
+    if (salaryTax === 0) {
+      const incomeData = contextFormData['income'] || {};
+      const salary = parseFloat(incomeData.total_employment_income) ||
+                     parseFloat(incomeData.annual_salary_wages_total) || 0;
+      const otherTaxable = parseFloat(incomeData.other_income_no_min_tax_total) || 0;
+      const totalTaxable = salary + otherTaxable;
+      if (totalTaxable > 0 && rates?.slabs?.length) {
+        let totalTax = 0;
+        for (const s of rates.slabs) {
+          const minI = Number(s.min_income), maxI = s.max_income == null ? Infinity : Number(s.max_income);
+          const rate = Number(s.tax_rate);
+          const lower = minI > 0 ? minI - 1 : 0;
+          if (totalTaxable <= lower) continue;
+          const ceil = Math.min(totalTaxable, maxI);
+          if (ceil - lower > 0 && rate > 0) totalTax += (ceil - lower) * rate;
+        }
+        const salaryShare = salary / totalTaxable;
+        salaryTax = Math.round(totalTax * salaryShare);
+      }
+    }
 
     if (salaryTax > 0) {
       const reduction = Math.round(salaryTax * teacherReductionRate);
@@ -88,7 +116,7 @@ const ReductionsForm = () => {
         setValue('teacher_researcher_tax_reduction', reduction);
       }
     }
-  }, [watchedValues.teacher_researcher_reduction_yn, contextFormData, teacherReductionRate, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [watchedValues.teacher_researcher_reduction_yn, contextFormData, teacherReductionRate, rates, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Behbood certificate cap (2nd Sched Pt III cl.6) — tax not to exceed the
   // DB-sourced rate × profit amount.
