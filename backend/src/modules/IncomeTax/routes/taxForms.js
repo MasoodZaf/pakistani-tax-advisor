@@ -570,25 +570,30 @@ router.get('/current-return', auth, async (req, res) => {
 router.post('/create-return', auth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const userEmail = req.user.email;
     const taxYear = req.body.taxYear || await getCurrentTaxYear();
 
     logger.info(`Creating new tax return for user ${userId}, tax year ${taxYear}`);
 
-    const taxReturn = {
-      id: `${userId}-${taxYear}`,
-      user_id: userId,
-      tax_year: taxYear,
-      status: 'draft',
-      income_profile: { primary: 'salaried', addons: [] },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    // Persist via the shared helper used by every save endpoint, so the
+    // returned `id` is the real DB UUID and matches what subsequent saves
+    // will resolve. Previously this returned a synthetic `${userId}-${year}`
+    // string that never appeared in the DB — harmless but misleading.
+    const taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
 
-    logger.info(`New tax return created for user ${userId}, tax year ${taxYear}`);
+    const taxReturnRow = await pool.query(
+      `SELECT id, user_id, tax_year, filing_status AS status, created_at, updated_at
+         FROM tax_returns WHERE id = $1`,
+      [taxReturnId]
+    );
+
     res.json({
       success: true,
-      message: 'Tax return created successfully',
-      taxReturn: taxReturn,
+      message: 'Tax return ready',
+      taxReturn: {
+        ...taxReturnRow.rows[0],
+        income_profile: { primary: 'salaried', addons: [] },
+      },
     });
   } catch (error) {
     logger.error('Error creating tax return:', error);
@@ -1465,8 +1470,19 @@ const saveFormData = async (tableName, formKey, req, res) => {
     }
     const taxYearId = taxYearRow.rows[0].id;
 
-    // Strip request-envelope fields (not DB columns).
-    const { taxYear: _, taxReturnId: _taxReturnId, isComplete, ...cleanFormData } = formData;
+    // Strip request-envelope fields (not DB columns) and any auto-managed
+    // columns the client might echo back (`updated_at` would otherwise collide
+    // with the server-managed `updated_at = CURRENT_TIMESTAMP` in the UPDATE
+    // set, producing a "multiple assignments to same column" error).
+    const {
+      taxYear: _,
+      taxReturnId: _taxReturnId,
+      isComplete,
+      id: _id,
+      created_at: _createdAt,
+      updated_at: _updatedAt,
+      ...cleanFormData
+    } = formData;
 
     // Server-controlled fields: overwrite any matching request-body keys.
     const serverFields = {
@@ -2127,10 +2143,25 @@ router.get('/deductions', auth, async (req, res) => {
   }
 });
 
-// POST /api/tax-forms/deductions - Save deductions data
-router.post('/deductions', auth, (req, res) =>
-  saveFormData('deductions_forms', 'deductions', req, res)
-);
+// POST /api/tax-forms/deductions - Save deductions data.
+// Server-side guard: education-expense deduction (s.60D) is capped at
+// 2 children — the client form enforces this via `max=2` on the input, but
+// a crafted POST could persist a higher count. Reject anything > 2 before
+// the row hits the DB.
+router.post('/deductions', auth, (req, res, next) => {
+  const count = Number(
+    req.body?.educational_expenses_children_count ??
+    req.body?.education_expense_children ??
+    0
+  );
+  if (count > 2) {
+    return res.status(400).json({
+      success: false,
+      message: 'Educational expense deduction u/s 60D is capped at 2 children.',
+    });
+  }
+  next();
+}, (req, res) => saveFormData('deductions_forms', 'deductions', req, res));
 
 // GET /api/tax-forms/final-tax - Get final tax data
 router.get('/final-tax', auth, async (req, res) => {

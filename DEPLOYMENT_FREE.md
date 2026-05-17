@@ -150,13 +150,15 @@
 - **API Health**: `https://your-api-url.onrender.com/api/health`
 - **Frontend**: Should load the login page
 
-### Admin Login:
-- Email: `superadmin@paktaxadvisor.com`  
-- Password: `admin123`
+### Bootstrap accounts:
+The deployment ships **without** default admin or user accounts. After the API is healthy:
 
-### User Login:
-- Email: `testuser@paktaxadvisor.com`
-- Password: `testuser123`
+1. Open a backend shell on the host and run the super-admin bootstrap script with
+   env-supplied credentials (see README → "Creating the first Super Admin"). The
+   script enforces a password policy and refuses to run without `SUPER_ADMIN_EMAIL`
+   + `SUPER_ADMIN_PASSWORD`.
+2. Sign up regular filers through the onboarding wizard at `/onboarding` or
+   `POST /api/register`.
 
 ---
 

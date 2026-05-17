@@ -27,7 +27,8 @@ async function getAllowedColumns(tableName) {
 
   const result = await pool.query(
     `SELECT column_name FROM information_schema.columns
-     WHERE table_schema = 'public' AND table_name = $1`,
+     WHERE table_schema = 'public' AND table_name = $1
+       AND is_generated = 'NEVER'`,
     [tableName]
   );
   const cols = new Set(result.rows.map((r) => r.column_name));

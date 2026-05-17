@@ -20,15 +20,24 @@ chmod +x setup.sh
 - **Admin Panel**: http://localhost:3000/admin
 - **API**: http://localhost:3001
 
-### 👥 Ready-to-Use Admin Accounts
+### 👥 Creating the first Super Admin
 
-**Super Admin** (Full Access + User Impersonation):
-- **Email**: `superadmin@paktaxadvisor.com`
-- **Password**: `admin123`
+The repo ships with **no default admin credentials**. Create your first super-admin
+locally with env-supplied values (the script refuses to run without them):
 
-**Regular Admin**:
-- **Email**: `admin@test.com`
-- **Password**: `admin123`
+```bash
+cd backend
+SUPER_ADMIN_EMAIL=you@example.com \
+SUPER_ADMIN_PASSWORD="$(node -e 'console.log(require(\"crypto\").randomBytes(18).toString(\"base64\"))')" \
+node create-super-admin.js
+```
+
+The script enforces a password policy (length + complexity + not equal to the email).
+Once you log in, change the password and create any additional admins through
+**Admin Panel → Admin Accounts** instead of re-running the script.
+
+> If you lock yourself out of the admin panel, see `backend/setup-super-admin.js` —
+> recovery script that demotes all existing admins. Requires `CONFIRM_DEMOTE_ALL_ADMINS=YES`.
 
 ## ✨ Key Features for Tax Consultants
 

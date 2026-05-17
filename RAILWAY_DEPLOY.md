@@ -53,9 +53,10 @@ git push origin main
 
 ### 7. Test Your App
 1. Visit your frontend URL
-2. **Login with:**
-   - **Admin:** `superadmin@paktaxadvisor.com` / `admin123`
-   - **User:** `testuser@paktaxadvisor.com` / `testuser123`
+2. **Create the first super-admin** (see README → "Creating the first Super Admin"). The
+   deployment ships without default credentials; the bootstrap script requires env-supplied
+   `SUPER_ADMIN_EMAIL` + `SUPER_ADMIN_PASSWORD`.
+3. Sign up a regular filer through the onboarding wizard, or `POST /api/register`.
 
 ## 💡 Pro Tips
 

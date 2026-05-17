@@ -336,28 +336,41 @@ class TaxCalculationService {
     const userRow = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
     const userEmail = userRow.rows[0]?.email || null;
 
+    // adjustable_tax_forms.tax_return_id is NOT NULL — resolve the active
+    // return for this user/year before writing.
+    const returnRow = await pool.query(
+      'SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year = $2 LIMIT 1',
+      [userId, taxYear]
+    );
+    const taxReturnId = returnRow.rows[0]?.id;
+    if (!taxReturnId) {
+      logger.warn('No tax_return found for adjustable tax linking', { userId, taxYear });
+      return;
+    }
+
     await pool.query(
       `INSERT INTO adjustable_tax_forms (
-         user_id, user_email, tax_year, tax_year_id,
+         tax_return_id, user_id, user_email, tax_year, tax_year_id,
          salary_employees_149_gross_receipt,
          directorship_fee_149_3_gross_receipt,
-         profit_debt_15_percent_gross_receipt,
-         sukook_12_5_percent_gross_receipt,
-         rent_section_155_gross_receipt
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         profit_debt_151_15_gross_receipt,
+         profit_debt_sukook_151a_gross_receipt,
+         tax_deducted_rent_section_155_gross_receipt
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (user_id, tax_year) DO UPDATE SET
-         salary_employees_149_gross_receipt   = EXCLUDED.salary_employees_149_gross_receipt,
-         directorship_fee_149_3_gross_receipt = EXCLUDED.directorship_fee_149_3_gross_receipt,
-         profit_debt_15_percent_gross_receipt = EXCLUDED.profit_debt_15_percent_gross_receipt,
-         sukook_12_5_percent_gross_receipt    = EXCLUDED.sukook_12_5_percent_gross_receipt,
-         rent_section_155_gross_receipt       = EXCLUDED.rent_section_155_gross_receipt,
+         salary_employees_149_gross_receipt          = EXCLUDED.salary_employees_149_gross_receipt,
+         directorship_fee_149_3_gross_receipt        = EXCLUDED.directorship_fee_149_3_gross_receipt,
+         profit_debt_151_15_gross_receipt            = EXCLUDED.profit_debt_151_15_gross_receipt,
+         profit_debt_sukook_151a_gross_receipt       = EXCLUDED.profit_debt_sukook_151a_gross_receipt,
+         tax_deducted_rent_section_155_gross_receipt = EXCLUDED.tax_deducted_rent_section_155_gross_receipt,
          updated_at = CURRENT_TIMESTAMP`,
       [
+        taxReturnId,
         userId,
         userEmail,
         taxYear,
         taxYearId,
-        incomeData.b16_annual_salary_wages_total || 0,
+        incomeData.annual_salary_wages_total || incomeData.b16_annual_salary_wages_total || 0,
         incomeData.directorship_fee || 0,
         incomeData.profit_on_debt_15_percent || 0,
         incomeData.profit_on_debt_12_5_percent || 0,

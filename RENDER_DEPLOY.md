@@ -70,9 +70,9 @@
 ### 5. Test Your Deployment
 1. Visit your frontend URL (e.g., `https://pakistani-tax-advisor-web.onrender.com`)
 2. **Test API Health:** Visit `[your-api-url]/api/health`
-3. **Login with default accounts:**
-   - **Admin:** `superadmin@paktaxadvisor.com` / `admin123`
-   - **User:** `testuser@paktaxadvisor.com` / `testuser123`
+3. **Bootstrap the first super-admin** (see README → "Creating the first Super Admin").
+   The deployment ships without default credentials.
+4. Sign up a regular filer through the onboarding wizard.
 
 ## 🎉 Success URLs
 After deployment, you'll have:

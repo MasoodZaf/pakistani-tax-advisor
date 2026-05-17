@@ -14,7 +14,7 @@ Two administrative accounts have been created for the Pakistani Tax Advisor syst
 - **CNIC:** 35202-ADMIN01-1
 - **Email:** admin@paktaxadvisory.com
 - **Phone:** +92-300-ADMIN01
-- **Password:** `Admin123!@#`
+- **Password:** *(set during admin creation — not shipped in this repo)*
 - **Role:** admin
 - **User Type:** admin
 
@@ -54,7 +54,7 @@ Two administrative accounts have been created for the Pakistani Tax Advisor syst
 - **CNIC:** 35202-SUPER01-1
 - **Email:** superadmin@paktaxadvisor.com
 - **Phone:** +92-300-SUPER01
-- **Password:** `SuperAdmin123!@#`
+- **Password:** *(set via `SUPER_ADMIN_PASSWORD` env var during bootstrap — not shipped)*
 - **Role:** super_admin
 - **User Type:** super_admin
 
@@ -167,19 +167,10 @@ Two administrative accounts have been created for the Pakistani Tax Advisor syst
 
 ## 🔑 **LOGIN CREDENTIALS**
 
-### **Admin Account**
-```
-Email: admin@paktaxadvisory.com
-Password: Admin123!@#
-Role: admin
-```
-
-### **Super Admin Account**
-```
-Email: superadmin@paktaxadvisor.com
-Password: SuperAdmin123!@#
-Role: super_admin
-```
+> This repo does **not** ship with default admin credentials. Create the first
+> super-admin locally with env-supplied values — see README → "Creating the
+> first Super Admin". Once logged in, create any additional admins through
+> **Admin Panel → Admin Accounts**.
 
 ---
 

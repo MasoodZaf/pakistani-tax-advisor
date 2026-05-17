@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
-const TaxCalculator = require('../utils/taxCalculator');
+const TaxCalculationService = require('../services/taxCalculationService');
 const auth = require('../middleware/auth'); // Use standard auth middleware
 
 const router = express.Router();
@@ -78,18 +78,81 @@ router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
       };
     }
 
-    // Prepare response data
+    // Canonical breakdown — reuses the same code path the Tax Computation
+    // page and PDF builders depend on, so totals match across surfaces.
+    // Falls back to a zero shape if compute throws (e.g. missing rate seed)
+    // so the report still renders rather than 500-ing the whole tab.
+    let breakdown = null;
+    try {
+      breakdown = await TaxCalculationService.calculateTaxComputation(userId, taxYear);
+    } catch (err) {
+      logger.warn('Tax computation failed for summary endpoint', { error: err.message, userId, taxYear });
+    }
+
+    const grossIncome    = breakdown ? breakdown.income.totalIncome           : summary.totalIncome;
+    const exemptIncome   = parseFloat(incomeData?.income_exempt_from_tax || 0) +
+                           parseFloat(incomeData?.non_cash_benefit_exempt || 0);
+    const balance        = breakdown ? breakdown.payments.balancePayableRefundable : 0;
+    const finalTax       = breakdown ? parseFloat(breakdown.finalTax || 0)       : 0;
+
+    const calculations = breakdown
+      ? {
+          // Canonical keys (used by the on-screen Reports panel + new code).
+          grossIncome,
+          exemptIncome,
+          taxableIncome:        breakdown.income.taxableIncomeIncludingCG,
+          capitalGain:          breakdown.income.incomeFromCapitalGains,
+          normalIncomeTax:      breakdown.tax.normalIncomeTax,
+          surcharge:            breakdown.tax.surcharge,
+          capitalGainsTax:      breakdown.tax.capitalGainsTax,
+          totalReductions:      breakdown.tax.totalReductions,
+          totalCredits:         breakdown.tax.totalCredits,
+          netTaxPayable:        breakdown.tax.netTaxPayable,
+          superTax:             breakdown.tax.superTax,
+          taxChargeable:        breakdown.tax.totalTaxChargeable,
+          withholdingTax:       breakdown.payments.withholdingTax,
+          advanceTax:           breakdown.payments.advanceTax,
+          totalTaxPaid:         breakdown.payments.withholdingTax + breakdown.payments.advanceTax,
+          balancePayable:       Math.max(0,  balance),
+          refundDue:            Math.max(0, -balance),
+          taxDemanded:          Math.max(0,  balance),
+          additionalTaxDue:     Math.max(0,  balance),
+          // Aliases for legacy callers (generateFBRHTML lines 501-517 read
+          // `taxReductions`, `taxCredits`, `capitalGainTax`, etc).
+          taxReductions:        breakdown.tax.totalReductions,
+          taxCredits:           breakdown.tax.totalCredits,
+          capitalGainTax:       breakdown.tax.capitalGainsTax,
+          adjustableTax:        breakdown.payments.withholdingTax,
+          finalTax,
+          totalIncome:          summary.totalIncome,
+          totalWithholdingTax:  breakdown.payments.withholdingTax,
+          netTaxPosition:       balance,
+        }
+      : {
+          // Fallback — same shape, zeros throughout.
+          grossIncome, exemptIncome, taxableIncome: 0, capitalGain: 0,
+          normalIncomeTax: 0, surcharge: 0, capitalGainsTax: 0,
+          totalReductions: 0, totalCredits: 0, netTaxPayable: 0, superTax: 0,
+          taxChargeable: 0, withholdingTax: summary.totalWithholdingTax,
+          advanceTax: 0, totalTaxPaid: summary.totalWithholdingTax,
+          balancePayable: 0, refundDue: 0, taxDemanded: 0, additionalTaxDue: 0,
+          taxReductions: 0, taxCredits: 0, capitalGainTax: 0,
+          adjustableTax: summary.totalWithholdingTax, finalTax: 0,
+          totalIncome: summary.totalIncome,
+          totalWithholdingTax: summary.totalWithholdingTax,
+          netTaxPosition: summary.totalWithholdingTax,
+        };
+
     const reportData = {
-      summary: summary,
+      summary,
       rawData: {
         income: incomeData,
-        adjustableTax: adjustableTaxData
+        adjustableTax: adjustableTaxData,
       },
-      calculations: {
-        totalIncome: summary.totalIncome,
-        totalWithholdingTax: summary.totalWithholdingTax,
-        netTaxPosition: summary.totalWithholdingTax // Simplified calculation
-      }
+      calculations,
+      // Surface the full breakdown so the on-screen panel can show the same
+      // numbers without re-fetching /api/tax-computation/:taxYear.
+      breakdown,
     };
 
     logger.info(`Tax calculation summary completed for user ${userId}, tax year ${taxYear}`, {
@@ -135,26 +198,29 @@ router.get('/income-analysis/:taxYear', auth, async (req, res) => {
 
     const taxReturnId = taxReturnResult.rows[0].id;
 
-    // Get detailed income data
+    // Get detailed income data (canonical post-refactor column names — the
+    // old `monthly_salary` / `car_allowance` / etc. were replaced by annual-
+    // basis columns and several generated totals).
     const incomeData = await pool.query(`
       SELECT
-        monthly_salary,
+        annual_basic_salary,
+        allowances,
         bonus,
-        car_allowance,
-        other_taxable,
         medical_allowance,
-        employer_contribution,
-        other_exempt,
-        other_sources,
-        subtotal_calculated,
-        (COALESCE(monthly_salary::numeric, 0) + COALESCE(bonus::numeric, 0) + COALESCE(car_allowance::numeric, 0) +
-         COALESCE(other_taxable::numeric, 0) + COALESCE(medical_allowance::numeric, 0) +
-         COALESCE(employer_contribution::numeric, 0) + COALESCE(other_exempt::numeric, 0) +
-         COALESCE(other_sources::numeric, 0)) as total_gross_income,
-        (COALESCE(medical_allowance::numeric, 0) + COALESCE(employer_contribution::numeric, 0) +
-         COALESCE(other_exempt::numeric, 0)) as total_exempt_income,
-        (COALESCE(monthly_salary::numeric, 0) + COALESCE(bonus::numeric, 0) + COALESCE(car_allowance::numeric, 0) +
-         COALESCE(other_taxable::numeric, 0) + COALESCE(other_sources::numeric, 0)) as total_taxable_income
+        taxable_car_value           AS car_allowance,
+        other_taxable_subsidies     AS other_taxable,
+        employer_contribution_provident AS employer_contribution,
+        income_exempt_from_tax      AS other_exempt,
+        other_income_min_tax_total + other_income_no_min_tax_total AS other_sources,
+        annual_salary_wages_total   AS subtotal_calculated,
+        (COALESCE(annual_salary_wages_total::numeric, 0)
+          + COALESCE(other_income_min_tax_total::numeric, 0)
+          + COALESCE(other_income_no_min_tax_total::numeric, 0)
+          + COALESCE(income_exempt_from_tax::numeric, 0)
+          + COALESCE(total_non_cash_benefits::numeric, 0))   AS total_gross_income,
+        (COALESCE(income_exempt_from_tax::numeric, 0)
+          + COALESCE(non_cash_benefit_exempt::numeric, 0))   AS total_exempt_income,
+        COALESCE(total_employment_income::numeric, 0)        AS total_taxable_income
       FROM income_forms
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
@@ -323,11 +389,12 @@ router.get('/wealth-reconciliation/:taxYear', auth, async (req, res) => {
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 
-    // Get income data for reconciliation
+    // Get income data for reconciliation (post-refactor column names — old
+    // `monthly_salary` / `car_allowance` / `other_taxable` / `other_sources`
+    // were renamed during the salary-form rewrite).
     const incomeResult = await pool.query(`
       SELECT
-        (COALESCE(monthly_salary::numeric, 0) + COALESCE(bonus::numeric, 0) + COALESCE(car_allowance::numeric, 0) +
-         COALESCE(other_taxable::numeric, 0) + COALESCE(other_sources::numeric, 0)) as total_taxable_income
+        COALESCE(total_employment_income::numeric, 0) AS total_taxable_income
       FROM income_forms
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
@@ -393,7 +460,8 @@ router.get('/available-years', auth, async (req, res) => {
 // Generate Tax Return PDF in FBR format
 router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
   try {
-    const { userId, userEmail } = req;
+    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     const { taxReturnId } = req.params;
 
     logger.debug('FBR PDF generation', { taxReturnId, userId, userEmail });
@@ -402,11 +470,13 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
     const axios = require('axios');
     const puppeteer = require('puppeteer');
 
-    // First, get the tax return data using return_number instead of id
+    // Accept either the UUID `id` or the human-readable `return_number` so
+    // callers from different surfaces (dashboard vs. tax-computation page)
+    // both work.
     const taxReturnResult = await pool.query(`
       SELECT tr.*, ty.tax_year FROM tax_returns tr
       JOIN tax_years ty ON tr.tax_year_id = ty.id
-      WHERE tr.return_number = $1 AND tr.user_id = $2
+      WHERE (tr.return_number = $1 OR tr.id::text = $1) AND tr.user_id = $2
     `, [taxReturnId, userId]);
 
     if (taxReturnResult.rows.length === 0) {
@@ -418,7 +488,8 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
 
     const taxYear = taxReturnResult.rows[0].tax_year;
 
-    // Get the corrected tax calculation summary using TaxCalculator
+    // Fetch the canonical calculations from /tax-calculation-summary (which
+    // now delegates to TaxCalculationService.calculateTaxComputation).
     const summaryResponse = await axios.get(`http://localhost:${process.env.PORT || 3001}/api/reports/tax-calculation-summary/${taxYear}`, {
       headers: {
         Authorization: req.headers.authorization
@@ -449,7 +520,7 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
       taxYear: apiResponse.taxYear || '',
       filingStatus: apiResponse.filingStatus || '',
 
-      // Tax calculations from the corrected TaxCalculator
+      // Tax calculations from TaxCalculationService (via tax-calculation-summary).
       grossIncome: apiResponse.calculations?.grossIncome || 0,
       exemptIncome: apiResponse.calculations?.exemptIncome || 0,
       taxableIncome: apiResponse.calculations?.taxableIncome || 0,
@@ -544,12 +615,16 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
 
     await browser.close();
 
-    // Set response headers for PDF download
+    // Newer Puppeteer returns a Uint8Array; Express's res.send serializes
+    // typed-arrays as JSON ("{0:37,1:80,...}"). Wrap in a real Buffer so the
+    // browser receives raw PDF bytes.
+    const pdfBytes = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Tax_Return_${taxData.returnNumber || taxReturnId}_FBR.pdf`);
-    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Length', pdfBytes.length);
 
-    res.send(pdfBuffer);
+    res.end(pdfBytes);
 
   } catch (error) {
     logger.error('PDF generation error:', error);

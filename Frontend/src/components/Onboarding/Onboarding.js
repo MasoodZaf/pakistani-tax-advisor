@@ -435,21 +435,33 @@ function StepDone({ name, addonCount, onGo }) {
 /* ─── Main ──────────────────────────────────────────────────────────────────── */
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { register, completeOnboarding } = useAuth();
+  const { register, completeOnboarding, user } = useAuth();
 
-  const [step, setStep]           = useState(0);
+  // Already-authenticated users (e.g., registered via API) must skip the
+  // account-creation step — re-running /register here 409s on the existing
+  // email and traps them in a loop.
+  const isAuthed = !!user;
+  const [step, setStep]           = useState(isAuthed ? 1 : 0);
   const [loading, setLoading]     = useState(false);
   const [errors, setErrors]       = useState({});
-  const [currentTaxYear, setCurrentTaxYear] = useState('2025-26');
+  // Initialize as null so we can tell "still loading" apart from a stale
+  // hardcoded default. handlePersonalNext refuses to fire until the API
+  // resolves — prevents writing personal-info against a wrong tax year if
+  // the user races through step 2 before the network resolves.
+  const [currentTaxYear, setCurrentTaxYear] = useState(null);
 
-  // Fetch the active tax year so personal-info is saved against the right year
   useEffect(() => {
     axios.get('/api/tax-year/current')
-      .then(r => { if (r.data?.currentTaxYear) setCurrentTaxYear(r.data.currentTaxYear); })
-      .catch(() => {}); // fallback stays '2025-26'
+      .then(r => { setCurrentTaxYear(r.data?.currentTaxYear || '2025-26'); })
+      .catch(() => { setCurrentTaxYear('2025-26'); }); // fallback on network failure
   }, []);
 
-  const [accountForm, setAccountForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [accountForm, setAccountForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    password: '',
+    confirmPassword: '',
+  });
   const [personalForm, setPersonalForm] = useState({ cnic: '', mobile: '', father_name: '', ntn: '', address: '', city: '', province: '', postal_code: '' });
   const [selectedAddons, setSelectedAddons] = useState([]);
 
@@ -462,6 +474,10 @@ export default function Onboarding() {
   };
 
   const handlePersonalNext = async () => {
+    if (!currentTaxYear) {
+      toast.error('Loading current tax year — please retry in a moment.');
+      return;
+    }
     setLoading(true);
     try {
       await axios.post(`/api/personal-info/${currentTaxYear}`, {
@@ -539,7 +555,7 @@ export default function Onboarding() {
             )}
 
             {step === 0 && <StepAccount form={accountForm} setForm={setAccountForm} errors={errors} setErrors={setErrors} onNext={handleAccountNext} loading={loading} />}
-            {step === 1 && <StepPersonal form={personalForm} setForm={setPersonalForm} errors={errors} setErrors={setErrors} onNext={handlePersonalNext} onBack={() => setStep(0)} loading={loading} />}
+            {step === 1 && <StepPersonal form={personalForm} setForm={setPersonalForm} errors={errors} setErrors={setErrors} onNext={handlePersonalNext} onBack={isAuthed ? undefined : () => setStep(0)} loading={loading} />}
             {step === 2 && <StepIncomeStreams selected={selectedAddons} setSelected={setSelectedAddons} onNext={handleIncomeStreamsNext} onBack={() => setStep(1)} loading={loading} />}
             {step === 3 && (
               <StepDone

@@ -149,10 +149,13 @@ const TaxComputationSummary = () => {
     // Tax Chargeable — progressive slabs sourced from DB (useTaxRates).
     const normalIncomeTax = calculateNormalIncomeTax(taxableIncomeBeforeCapitalGains);
 
-    // Surcharge — rate + threshold sourced from DB, not hardcoded.
+    // Surcharge — rate + threshold sourced from DB. Statutorily applies to
+    // income tax on regular (non-CGT) income, so the threshold test uses
+    // taxable income BEFORE capital gains. Backend (taxCalculationService)
+    // does the same — keeping the two in sync.
     const surchargeRate = rates?.surcharge?.rate ?? 0;
     const surchargeThreshold = rates?.surcharge?.threshold ?? Infinity;
-    const surcharge = taxableIncomeIncludingCapitalGains > surchargeThreshold
+    const surcharge = taxableIncomeBeforeCapitalGains > surchargeThreshold
       ? Math.round(normalIncomeTax * surchargeRate)
       : 0;
     
@@ -162,8 +165,13 @@ const TaxComputationSummary = () => {
     // Total tax including surcharge and CGT
     const normalIncomeTaxIncludingSurchargeAndCGT = normalIncomeTax + surcharge + capitalGainTax;
     
-    // Tax Reductions - Handle both field name variations
-    const taxReductions = parseFloat(reductionsData.total_tax_reduction || reductionsData.total_reductions) || 0;
+    // Tax Reductions — ReductionsForm saves `total_tax_reductions` (plural);
+    // the DB also exposes the generated column `total_reductions`. Read both
+    // so the live preview is correct even before the user saves.
+    const taxReductions = parseFloat(
+      reductionsData.total_tax_reductions
+        || reductionsData.total_reductions
+    ) || 0;
     
     // Tax Credits — prefer total_credits (DB-computed column) over plain total_tax_credits field
     const taxCredits = parseFloat(creditsData.total_credits || creditsData.total_tax_credits) || 0;

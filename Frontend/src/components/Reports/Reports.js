@@ -59,6 +59,24 @@ const Reports = () => {
     return () => { cancelled = true; };
   }, [selectedYear]);
 
+  // Auto-load the active tab's report as soon as we know the tax year so the
+  // page isn't blank on first paint. Re-fires when the user switches year or
+  // tab (the tab-click handler already calls loadReport too, but kicking it
+  // off here covers the initial render and year-picker changes).
+  useEffect(() => {
+    if (!selectedYear) return;
+    const endpointForTab = {
+      summary:    'tax-calculation-summary',
+      income:     'income-analysis',
+      adjustable: 'adjustable-tax-report',
+      wealth:     'wealth-reconciliation',
+    };
+    const endpoint = endpointForTab[activeTab];
+    if (endpoint) loadReport(endpoint);
+    // loadReport reads selectedYear from closure; intentionally not in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, activeTab]);
+
   const loadAvailableYears = async () => {
     try {
       const response = await axios.get('/api/reports/available-years');

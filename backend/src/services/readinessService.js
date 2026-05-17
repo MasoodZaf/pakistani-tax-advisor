@@ -38,7 +38,16 @@ const NTN_RE  = /^\d{6,7}-?\d$/;
 // rows (return null rather than throwing) so a half-filled return still
 // produces useful diagnostics.
 async function fetchUser(userId) {
-  const r = await pool.query('SELECT id, email, name, cnic, ntn FROM users WHERE id = $1', [userId]);
+  // NTN lives on personal_information, not users — left-join so a user
+  // without a personal_info row still resolves (ntn just becomes null and
+  // the readiness check downgrades to a warning instead of crashing).
+  const r = await pool.query(
+    `SELECT u.id, u.email, u.name, u.cnic, p.ntn
+       FROM users u
+       LEFT JOIN personal_information p ON p.user_id = u.id
+      WHERE u.id = $1`,
+    [userId]
+  );
   return r.rows[0] || null;
 }
 async function fetchIncome(userId, taxYear) {
