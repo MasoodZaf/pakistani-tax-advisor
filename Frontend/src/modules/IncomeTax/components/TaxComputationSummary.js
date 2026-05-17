@@ -120,28 +120,46 @@ const TaxComputationSummary = () => {
       finalTaxData = {}
     } = data;
 
-    // Income Calculation — IncomeForm saves: total_employment_income, annual_salary_wages_total
-    const incomeFromSalary = parseFloat(
-      incomeData.total_employment_income ||
-      incomeData.annual_salary_wages_total ||
-      incomeData.total_gross_income ||
-      incomeData.total_taxable_income
-    ) || 0;
-    const incomeFromOtherSources = parseFloat(
-      incomeData.other_income_no_min_tax_total ||
-      incomeData.other_sources ||
-      incomeData.income_from_other_sources
-    ) || 0;
+    // Income Calculation — IncomeForm saves: total_employment_income, annual_salary_wages_total.
+    // `parseFloat || fallback` is the right pattern here (NOT `a || b || …`):
+    // backend values come back as numeric strings like "0.00" which are
+    // truthy in JS, so `"0.00" || "75000.00"` resolves to "0.00" — drops
+    // the real value to 0. parseFloat first, then OR.
+    const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+    const incomeFromSalary =
+      num(incomeData.total_employment_income) ||
+      num(incomeData.annual_salary_wages_total) ||
+      num(incomeData.total_gross_income) ||
+      num(incomeData.total_taxable_income);
+    // Other Income = min-tax bucket (profit-on-debt, sukuk WHT) + no-min-tax
+    // bucket (rent, other taxable). Excel's Tax Computation pools both into
+    // "Other Income / Income from Other Sources"; previously the UI only
+    // showed the no-min-tax portion, under-reporting Total Income.
+    const incomeFromOtherMinTax    = num(incomeData.other_income_min_tax_total);
+    const incomeFromOtherNoMinTax  =
+      num(incomeData.other_income_no_min_tax_total) ||
+      num(incomeData.other_sources) ||
+      num(incomeData.income_from_other_sources);
+    const incomeFromOtherSources = incomeFromOtherMinTax + incomeFromOtherNoMinTax;
     const totalIncome = incomeFromSalary + incomeFromOtherSources;
-    
-    // Deductible Allowances - Handle missing deductions form gracefully
-    const deductibleAllowances = parseFloat(deductionsData.total_deduction_from_income || deductionsData.total_deductions) || 0;
+
+    // Deductible Allowances - prefer DB-generated `total_deductions`
+    // (sums zakat + ushr + POS + education + advance + other), then the
+    // legacy `total_deduction_from_income`, then component sum.
+    const deductibleAllowances =
+      num(deductionsData.total_deductions) ||
+      num(deductionsData.total_deduction_from_income) ||
+      (num(deductionsData.zakat_paid_amount) || num(deductionsData.zakat)) +
+       num(deductionsData.ushr) +
+       num(deductionsData.professional_expenses_amount) +
+       num(deductionsData.educational_expenses_amount) +
+       num(deductionsData.other_deductions);
     
     // Taxable Income before Capital Gains
     const taxableIncomeBeforeCapitalGains = Math.max(0, totalIncome - deductibleAllowances);
     
-    // Capital Gains/Loss
-    const capitalGainsLoss = parseFloat(capitalGainData.total_capital_gain || capitalGainData.total_capital_gains) || 0;
+    // Capital Gains/Loss — string-truthiness-safe via `num()`.
+    const capitalGainsLoss = num(capitalGainData.total_capital_gain) || num(capitalGainData.total_capital_gains);
     
     // Final Taxable Income including Capital Gains
     const taxableIncomeIncludingCapitalGains = taxableIncomeBeforeCapitalGains + capitalGainsLoss;
@@ -168,23 +186,24 @@ const TaxComputationSummary = () => {
     // Tax Reductions — ReductionsForm saves `total_tax_reductions` (plural);
     // the DB also exposes the generated column `total_reductions`. Read both
     // so the live preview is correct even before the user saves.
-    const taxReductions = parseFloat(
-      reductionsData.total_tax_reductions
-        || reductionsData.total_reductions
-    ) || 0;
-    
+    const taxReductions = num(reductionsData.total_tax_reductions) || num(reductionsData.total_reductions);
+
     // Tax Credits — prefer total_credits (DB-computed column) over plain total_tax_credits field
-    const taxCredits = parseFloat(creditsData.total_credits || creditsData.total_tax_credits) || 0;
+    const taxCredits = num(creditsData.total_credits) || num(creditsData.total_tax_credits);
     
     // Tax after reductions and credits
     const normalIncomeTaxAfterReductionCredit = Math.max(0, 
       normalIncomeTaxIncludingSurchargeAndCGT - taxReductions - taxCredits
     );
     
-    // Final/Min tax from Final/Min Income form (D20 in Excel = grand total tax chargeable)
-    const finalMinTax = parseFloat(finalMinIncomeData.grand_total_tax_chargeable) || 0;
-    // Total tax is the higher of computed normal tax or final/min tax (FBR minimum tax rules)
-    const finalIncomeTax = Math.max(normalIncomeTaxAfterReductionCredit, finalMinTax);
+    // Final/Min tax from Final/Min Income form (D20 in Excel = grand total tax chargeable).
+    // For salaried scope this captures dividends (s.150), sukuk/profit-on-debt
+    // (s.151(1A), s.7B), prize bonds (s.156), bonus shares (s.236Z) and salary
+    // arrears at relevant rate (s.12(7)) — all FINAL tax streams under their
+    // own sections, NOT min-tax variants of normal income. So the doctrine is
+    // "in addition to normal tax", not "higher of" — Excel adds them too.
+    const finalMinTax = num(finalMinIncomeData.grand_total_tax_chargeable);
+    const finalIncomeTax = normalIncomeTaxAfterReductionCredit + finalMinTax;
 
     // Super Tax u/s 4C (Finance Act 2025) — charged on persons with income > Rs 150M
     // Flat rate on total income (not just the excess) per Division IIA, Part I, First Schedule
@@ -193,8 +212,22 @@ const TaxComputationSummary = () => {
     // Total Tax Chargeable = income tax (after reductions/credits) + super tax
     const totalTaxChargeable = finalIncomeTax + superTax;
     
-    // Final Tax (Sukuk, bonds etc.) — already paid at source, reduces balance
-    const finalTaxPaid = parseFloat(finalTaxData.total_final_tax) || 0;
+    // Final Tax already deducted at source — reduces the balance owed.
+    // Two streams pool in here:
+    //   1. `final_tax_forms.total_final_tax` (legacy table for sukuk/debt rows)
+    //   2. The sum of every `*_tax_deducted` field on `final_min_income_forms`
+    //      (the canonical final-min table for salaried scope: dividends,
+    //      sukuk profit, prize bonds, salary arrears at relevant rate, etc.).
+    // Without (2) the on-screen demand over-states by the finalMin WHT amount.
+    const finalTaxPaidLegacy = num(finalTaxData.total_final_tax);
+    // Sum all `*_tax_deducted` columns on final_min_income_forms, except for
+    // `salary_u_s_12_7_tax_deducted` — that row auto-populates from the
+    // salary WHT (s.149) which is already pooled under adjustable WHT, so
+    // including it would double-count by ~the entire salary WHT amount.
+    const finalMinTaxDeducted = Object.entries(finalMinIncomeData)
+      .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
+      .reduce((s, [, v]) => s + num(v), 0);
+    const finalTaxPaid = finalTaxPaidLegacy + finalMinTaxDeducted;
 
     // Taxes Paid/Adjusted — total_adjustable_tax is a DB-computed column returned in formData
     const adjustableTax = parseFloat(adjustableTaxData.total_adjustable_tax) || 0;
@@ -237,6 +270,9 @@ const TaxComputationSummary = () => {
       tax_reductions: taxReductions,
       tax_credits: taxCredits,
       normal_income_tax_after_reduction_credit: normalIncomeTaxAfterReductionCredit,
+      // Final/Fixed/Min row in the slip — actual final-min tax (separate
+      // stream), NOT the combined normal+final figure.
+      final_min_tax: finalMinTax,
       final_income_tax: finalIncomeTax,
       super_tax: superTax,
       total_tax_chargeable: totalTaxChargeable,
@@ -280,18 +316,16 @@ const TaxComputationSummary = () => {
     return 0;
   };
 
-  // Gross CGT lookup — three-tier fallback:
-  // 1. total_capital_gain_tax  — persisted after migration add-capital-gain-tax-column.sql is run
-  // 2. total_capital_gains_tax — DB legacy computed column (old aggregate fields, usually 0 with new form)
-  // 3. Reconstruct: net CGT (capital_gains_tax_chargeable) + total WHT deducted (total_tax_deducted)
-  //    Works because: gross = net + total_tax_deducted (by definition, assuming no negative CGT)
+  // CGT lookup — `capital_gains_tax_chargeable` is the gross tax chargeable
+  // (sum of per-row `*_carryable` fields, i.e. rate × amount for every CG
+  // row). It is NOT a "net of WHT" figure — earlier code added
+  // `total_tax_deducted` on top, doubling the value for filers whose CG WHT
+  // matches the tax due. WHT belongs on the payments side, not here.
   const calculateCapitalGainTax = (_capitalGains) => {
-    const direct = parseFloat(capitalGainData.total_capital_gain_tax) ||
+    const direct = parseFloat(capitalGainData.capital_gains_tax_chargeable) ||
+                   parseFloat(capitalGainData.total_capital_gain_tax) ||
                    parseFloat(capitalGainData.total_capital_gains_tax);
-    if (direct) return Math.round(direct);
-    const net     = parseFloat(capitalGainData.capital_gains_tax_chargeable) || 0;
-    const deducted= parseFloat(capitalGainData.total_tax_deducted)            || 0;
-    return Math.round(net + deducted);
+    return Math.round(direct || 0);
   };
 
   // Build a payload containing ONLY snake_case fields that exist in tax_computation_forms DB schema.
@@ -645,7 +679,7 @@ const TaxComputationSummary = () => {
             <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
               <div className="col-span-8 text-gray-700">Final / Fixed / Minimum / Average / Relevant / Reduced Income Tax</div>
               <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.final_income_tax)}
+                {formatCurrency(computationData?.final_min_tax)}
               </div>
             </div>
 

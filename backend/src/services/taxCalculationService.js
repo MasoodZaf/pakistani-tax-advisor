@@ -105,6 +105,14 @@ class TaxCalculationService {
     return r.rows[0] || null;
   }
 
+  static async getFinalMinIncomeData(userId, taxYear) {
+    const r = await pool.query(
+      `SELECT * FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    return r.rows[0] || null;
+  }
+
   // ──────── Core compute ────────
 
   /**
@@ -114,7 +122,7 @@ class TaxCalculationService {
   static async calculateTaxComputation(userId, taxYear) {
     logger.info(`Tax computation run: user=${userId} year=${taxYear}`);
 
-    const [incomeData, adjustableData, capitalGainsData, reductionsData, creditsData, deductionsData, rates] =
+    const [incomeData, adjustableData, capitalGainsData, reductionsData, creditsData, deductionsData, finalMinData, rates] =
       await Promise.all([
         this.getIncomeFormData(userId, taxYear),
         this.getAdjustableFormData(userId, taxYear),
@@ -122,6 +130,7 @@ class TaxCalculationService {
         this.getReductionsData(userId, taxYear),
         this.getCreditsData(userId, taxYear),
         this.getDeductionsData(userId, taxYear),
+        this.getFinalMinIncomeData(userId, taxYear),
         TaxRateService.getAllRates(taxYear),
       ]);
 
@@ -136,6 +145,7 @@ class TaxCalculationService {
       reductionsData,
       creditsData,
       deductionsData,
+      finalMinData,
       rates,
       taxYear,
     });
@@ -177,6 +187,7 @@ class TaxCalculationService {
       reductionsData,
       creditsData,
       deductionsData,
+      finalMinData: inputs.final_min_income || {},
       rates,
       taxYear,
       preview: true,
@@ -194,6 +205,7 @@ class TaxCalculationService {
     reductionsData,
     creditsData,
     deductionsData,
+    finalMinData = {},
     rates,
     taxYear,
     preview = false,
@@ -236,8 +248,16 @@ class TaxCalculationService {
       surcharge = Math.round(normalIncomeTax * rates.surcharge.rate);
     }
 
-    // ── CGT: use the per-form computed value (CGT rules vary by asset class) ──
-    const capitalGainsTax = toNum(capitalGainsData?.total_capital_gain_tax);
+    // ── CGT: use the per-form computed value (CGT rules vary by asset class).
+    // The form saves `capital_gains_tax_chargeable` directly (matches the
+    // CGT column on the Capital Gains form's row totals); DB also has the
+    // older `total_capital_gains_tax` generated column for legacy schema
+    // writes. The singular `total_capital_gain_tax` was a non-existent
+    // column ref — previously returned 0 silently. ──
+    const capitalGainsTax =
+      toNum(capitalGainsData?.capital_gains_tax_chargeable) ||
+      toNum(capitalGainsData?.total_capital_gains_tax) ||
+      toNum(capitalGainsData?.total_capital_gain_tax);
 
     const totalTaxBeforeAdjustments = normalIncomeTax + surcharge + capitalGainsTax;
 
@@ -264,11 +284,28 @@ class TaxCalculationService {
       return 0;
     })();
 
-    const totalTaxChargeable = netTaxPayable + superTax;
+    // ── Final / fixed / min income tax — separate stream (dividends s.150,
+    //   sukuk s.151(1A), profit-on-debt s.7B, prize bonds s.156, bonus
+    //   shares s.236Z, salary arrears 12(7) at relevant rate, CG s.37A).
+    //   For salaried scope these are final tax under their own sections,
+    //   not minimum-tax variants of normal income — so they are ADDED to
+    //   total tax chargeable, with the matching `*_tax_deducted` rows
+    //   netting against the payments side.
+    //   The `salary_u_s_12_7_*` row auto-populates from the salary WHT
+    //   (s.149) and is already in adjustableData.total_tax_collected — so
+    //   it's excluded from the final-min deducted sum to avoid a double-
+    //   count of ~the whole salary WHT.
+    const finalMinTaxChargeable = toNum(finalMinData?.grand_total_tax_chargeable);
+    const finalMinTaxDeducted = Object.entries(finalMinData || {})
+      .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
+      .reduce((s, [, v]) => s + toNum(v), 0);
 
-    // ── Advance / withholding tax paid ──
-    const withholdingTax = toNum(adjustableData?.total_tax_collected) || toNum(adjustableData?.total_adjustable_tax);
+    const totalTaxChargeable = netTaxPayable + superTax + finalMinTaxChargeable;
+
+    // ── Advance / withholding tax paid (pool every stream) ──
+    const adjustableWHT = toNum(adjustableData?.total_tax_collected) || toNum(adjustableData?.total_adjustable_tax);
     const advanceTax = toNum(adjustableData?.advance_tax_u_s_147);
+    const withholdingTax = adjustableWHT + finalMinTaxDeducted;
     const balancePayableRefundable = totalTaxChargeable - withholdingTax - advanceTax;
 
     const breakdown = {
@@ -292,9 +329,12 @@ class TaxCalculationService {
         totalCredits,
         netTaxPayable,
         superTax,
+        finalMinTaxChargeable,
         totalTaxChargeable,
       },
       payments: {
+        adjustableWHT,
+        finalMinTaxDeducted,
         withholdingTax,
         advanceTax,
         balancePayableRefundable,
