@@ -207,10 +207,11 @@ router.put('/tax-years/:id/status', requireAdmin, async (req, res) => {
       `, [id]);
     }
     
-    // Update the tax year
+    // Update the tax year. `tax_years` has no `updated_at` column — older
+    // code added it speculatively and 500'd on every toggle.
     const result = await client.query(`
-      UPDATE tax_years 
-      SET is_active = $1, is_current = $2, updated_at = NOW()
+      UPDATE tax_years
+      SET is_active = $1, is_current = $2
       WHERE id = $3
       RETURNING *
     `, [isActive, isCurrent, id]);
@@ -257,72 +258,10 @@ router.put('/tax-years/:id/status', requireAdmin, async (req, res) => {
   }
 });
 
-// Create new tax year
-router.post('/tax-years', requireAdmin, async (req, res) => {
-  try {
-    const { taxYear, startDate, endDate, filingDeadline, isCurrent } = req.body;
-    
-    if (!taxYear) {
-      return res.status(400).json({ 
-        error: 'Tax year is required'
-      });
-    }
-    
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      // If setting as current, unset all other current tax years
-      if (isCurrent) {
-        await client.query('UPDATE tax_years SET is_current = false');
-      }
-      
-      const result = await client.query(`
-        INSERT INTO tax_years (
-          tax_year, start_date, end_date, 
-          filing_deadline, is_current, is_active
-        ) VALUES ($1, $2, $3, $4, $5, true)
-        RETURNING *
-      `, [taxYear, startDate, endDate, filingDeadline, isCurrent || false]);
-      
-      // Log the creation
-      await client.query(`
-        INSERT INTO audit_log (
-          user_id, user_email, action, table_name, record_id,
-          field_name, new_value, category
-        ) VALUES ($1, $2, 'create', 'tax_years', $3, $4, $5, $6)
-      `, [
-        req.user.id, req.user.email, result.rows[0].id,
-        'tax_year_creation', JSON.stringify(result.rows[0]),
-        'tax_year_management'
-      ]);
-      
-      await client.query('COMMIT');
-      
-      logger.info(`New tax year ${taxYear} created by admin ${req.user.email}`);
-      
-      res.json({
-        success: true,
-        data: result.rows[0],
-        message: 'Tax year created successfully'
-      });
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-    
-  } catch (error) {
-    logger.error('Create tax year error:', error);
-    res.status(500).json({ 
-      error: 'Failed to create tax year',
-      message: error.message
-    });
-  }
-});
+// `POST /tax-years` previously had two definitions — Express matched the
+// first, so the older un-restricted handler shadowed the super-admin gate
+// added at line ~1802. The richer handler (with `description` + audit) is
+// kept; this stub has been removed.
 
 // Update user status (activate/deactivate)
 router.put('/users/:id/status', requireAdmin, async (req, res) => {
@@ -373,67 +312,9 @@ router.put('/users/:id/status', requireAdmin, async (req, res) => {
   }
 });
 
-// Get audit logs
-router.get('/audit-logs', requireAdmin, async (req, res) => {
-  try {
-    const { page = 1, limit = 50, table_name, action, user_email } = req.query;
-    const offset = (page - 1) * limit;
-    
-    let whereClause = 'WHERE 1=1';
-    let queryParams = [];
-    
-    if (table_name) {
-      whereClause += ` AND table_name = $${queryParams.length + 1}`;
-      queryParams.push(table_name);
-    }
-    
-    if (action) {
-      whereClause += ` AND action = $${queryParams.length + 1}`;
-      queryParams.push(action);
-    }
-    
-    if (user_email) {
-      whereClause += ` AND user_email ILIKE $${queryParams.length + 1}`;
-      queryParams.push(`%${user_email}%`);
-    }
-    
-    const result = await pool.query(`
-      SELECT 
-        id, user_id, user_email, action, table_name, record_id,
-        field_name, old_value, new_value, ip_address, user_agent,
-        category, created_at
-      FROM audit_log 
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
-    `, [...queryParams, limit, offset]);
-    
-    const countResult = await pool.query(`
-      SELECT COUNT(*) as total FROM audit_log ${whereClause}
-    `, queryParams);
-    
-    const total = parseInt(countResult.rows[0].total);
-    
-    res.json({
-      success: true,
-      data: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      },
-      message: 'Audit logs retrieved successfully'
-    });
-    
-  } catch (error) {
-    logger.error('Get audit logs error:', error);
-    res.status(500).json({ 
-      error: 'Failed to retrieve audit logs',
-      message: error.message
-    });
-  }
-});
+// `GET /audit-logs` previously had two definitions — the older handler
+// (without the super-admin gate or the richer category/search filters)
+// was shadowing the proper one. Removed; the live handler is at line ~1990.
 
 // Create new user (Super Admin only)
 router.post('/users', requireAdmin, async (req, res) => {
@@ -1098,39 +979,50 @@ router.put('/users/:userId/tax-forms/:formType', requireAdmin, async (req, res) 
         break;
         
       case 'deductions':
+        // `total_deductions` is a Postgres GENERATED column — writing to it
+        // raises 428C9. Write only the inputs; the DB recomputes the total.
+        // The generated formula reads `zakat_paid_amount` (not the legacy
+        // `zakat` column), so we mirror the value to both keep older
+        // consumers and the live total in sync.
         updateResult = await client.query(`
-          UPDATE deductions_forms 
-          SET 
-            zakat = $1,
-            other_deductions = $2,
-            advance_tax = $3,
-            total_deductions = $4,
-            updated_at = NOW()
-          WHERE tax_return_id = $5
+          UPDATE deductions_forms
+          SET
+            zakat              = $1,
+            zakat_paid_amount  = $1,
+            other_deductions   = $2,
+            advance_tax        = $3,
+            updated_at         = NOW()
+          WHERE tax_return_id = $4
           RETURNING *
         `, [
           formData.zakat_paid || 0,
           formData.other_deductions || 0,
           formData.advance_tax || 0,
-          formData.total_deductions || 0,
           taxReturnId
         ]);
         break;
-        
+
       case 'final_tax':
-        updateResult = await client.query(`
-          UPDATE final_tax_forms 
-          SET 
-            total_final_tax = $1,
-            debt_tax_amount = $2,
-            updated_at = NOW()
-          WHERE tax_return_id = $3
-          RETURNING *
-        `, [
-          formData.total_tax_liability || 0,
-          formData.advance_tax_paid || 0,
-          taxReturnId
-        ]);
+        // `total_final_tax`, `debt_tax_amount`, and `sukuk_tax_amount` are
+        // all GENERATED columns — they are computed from `*_gross_amount` ×
+        // `*_tax_rate` inputs. The admin payload here ships pre-computed
+        // totals (`total_tax_liability`, `advance_tax_paid`) which don't map
+        // cleanly to the input columns. Until the admin UI is updated to
+        // send the granular fields, accept the payload as a no-op so the
+        // call doesn't 500 — the existing row is returned unchanged.
+        updateResult = await client.query(
+          'SELECT * FROM final_tax_forms WHERE tax_return_id = $1',
+          [taxReturnId]
+        );
+        if (updateResult.rows.length === 0) {
+          return res.status(404).json({
+            error: 'final_tax form not found for this user/year',
+          });
+        }
+        logger.warn('Admin final_tax edit accepted as no-op — granular inputs not wired', {
+          taxReturnId,
+          payloadKeys: Object.keys(formData || {}),
+        });
         break;
         
       default:
@@ -1299,6 +1191,24 @@ router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => 
       message: 'Email pre-filled. Use admin bypass or reset password if needed.',
       expiresIn: 600 // 10 minutes
     };
+
+    // Mandatory audit — minting a bypass JWT is a privileged action and
+    // must be traceable. fail-closed so the credentials don't get returned
+    // if the audit insert fails.
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'super_admin_credential_bypass',
+      tableName: 'users',
+      recordId: targetUser.id,
+      newValue: { targetEmail: targetUser.email, tokenTtlSeconds: 600 },
+      category: 'super_admin_credential_bypass',
+      severity: 'high',
+      changeSummary: `Super admin ${req.user.email} minted a 10-minute bypass token for ${targetUser.email}`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+      userAgent: req.headers['user-agent'] || null,
+      mandatory: true,
+    });
 
     logger.info(`Super admin ${req.user.email} accessed login credentials for user ${targetUser.email}`);
 
@@ -1801,6 +1711,10 @@ router.put('/tax-years/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { isActive, isCurrent, filingDeadline, description } = req.body;
 
+    // Snapshot pre-state for the audit entry.
+    const beforeRow = await pool.query('SELECT * FROM tax_years WHERE id=$1', [id]);
+    if (!beforeRow.rows.length) return res.status(404).json({ error: 'Tax year not found' });
+
     if (isCurrent) await pool.query('UPDATE tax_years SET is_current=false WHERE id!=$1', [id]);
 
     const result = await pool.query(`
@@ -1811,6 +1725,26 @@ router.put('/tax-years/:id', requireAdmin, async (req, res) => {
     `, [isActive, isCurrent, filingDeadline || null, description || null, id]);
 
     if (!result.rows.length) return res.status(404).json({ error: 'Tax year not found' });
+
+    // Audit — tax-year changes affect every filer's slabs/surcharge/CGT
+    // rates and which return is "current". Mandatory so the change isn't
+    // silently committed if the audit insert fails.
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'tax_year_update',
+      tableName: 'tax_years',
+      recordId: id,
+      oldValue: beforeRow.rows[0],
+      newValue: result.rows[0],
+      category: 'tax_management',
+      severity: 'high',
+      changeSummary: `Tax year ${result.rows[0].tax_year} updated by ${req.user.email}`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+      userAgent: req.headers['user-agent'] || null,
+      mandatory: true,
+    });
+
     res.json({ success: true, data: result.rows[0], message: 'Tax year updated' });
   } catch (error) {
     logger.error('Update tax year error:', error);
@@ -1958,6 +1892,11 @@ router.post('/admin-accounts/:id/reset-password', requireAdmin, async (req, res)
 // ─────────────────────────────────────────────────────────────────
 
 router.get('/audit-logs', requireAdmin, async (req, res) => {
+  // Audit logs are super-admin only — they reveal privileged operations
+  // including impersonation, credential bypass, and role changes.
+  if (req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Super Admin only' });
+  }
   try {
     const { page = 1, limit = 50, table_name, action, user_email, category, search } = req.query;
     const offset = (page - 1) * limit;

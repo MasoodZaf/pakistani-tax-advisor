@@ -223,6 +223,21 @@ export async function generateIrisPdf(ctx) {
     formatRow: (r) => [r.code, fmt(r.total), fmt(r.exempt), r.label, fmt(r.normal)],
   });
 
+  // ── Deductible Allowances (u/s 60 / 60C / 60D) ────────────────────────────
+  // Rows are dropped when zero (irisFieldMap), so the section only shows up
+  // when at least one allowance applies — typical IRIS slip behaviour.
+  renderTabularSection({
+    title: 'Deductible Allowances',
+    rows:  sections.deductible_allowances,
+    head:  ['Code', 'Amount', 'Description'],
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 110, halign: 'right' },
+      2: { cellWidth: 'auto' },
+    },
+    formatRow: (r) => [r.code, fmt(r.amount), r.label],
+  });
+
   // ── Tax Reductions ────────────────────────────────────────────────────────
   renderTabularSection({
     title: 'Tax Reductions',
@@ -236,6 +251,23 @@ export async function generateIrisPdf(ctx) {
       4: { cellWidth: 90, halign: 'right' },
     },
     formatRow: (r) => [r.code, fmt(r.total), fmt(r.tax_reducted), r.label, fmt(r.tax_chargeable)],
+  });
+
+  // ── Tax Credits (s.61 charitable, s.63 pension fund) ──────────────────────
+  // Same column shape as Tax Reductions — IRIS treats credits and reductions
+  // identically once they're applied; only the underlying rule differs.
+  renderTabularSection({
+    title: 'Tax Credits',
+    rows:  sections.tax_credits,
+    head:  ['Code', 'Eligible Amount', 'Tax Credit', 'Description', 'Tax Chargeable'],
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 90, halign: 'right' },
+      2: { cellWidth: 90, halign: 'right' },
+      3: { cellWidth: 'auto' },
+      4: { cellWidth: 90, halign: 'right' },
+    },
+    formatRow: (r) => [r.code, fmt(r.total), fmt(r.tax_credit), r.label, fmt(r.tax_chargeable)],
   });
 
   // ── Capital Assets u/s 7E ─────────────────────────────────────────────────
@@ -289,7 +321,7 @@ export async function generateIrisPdf(ctx) {
     title: 'Computations',
     rows:  sections.computations,
     head:  ['Code', 'Total Amount', 'Exempt / Fixed / Final Tax', 'Description', 'Subject to Normal Tax'],
-    totalCodes: ['9000', '9100', '9200', '9210'],
+    totalCodes: ['9000', '9100', '9200', '9203', '9210'],
     columnStyles: {
       0: { cellWidth: 60 },
       1: { cellWidth: 100, halign: 'right' },

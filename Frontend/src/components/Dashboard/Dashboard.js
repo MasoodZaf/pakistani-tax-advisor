@@ -16,7 +16,7 @@ const ROUTE_OVERRIDES = {
   adjustable_tax:        '/income-tax/adjustable-tax',
   capital_gain:          '/income-tax/capital-gains',
   tax_computation:       '/income-tax/tax-computation',
-  wealth:                '/wealth-statement/wealth',
+  wealth:                '/wealth-statement/wealth-statement',
   wealth_reconciliation: '/wealth-statement/wealth-reconciliation',
 };
 const WEALTH_STEP_IDS = new Set(['wealth', 'wealth_reconciliation']);

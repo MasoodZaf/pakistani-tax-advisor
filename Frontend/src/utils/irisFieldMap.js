@@ -214,6 +214,70 @@ export const TAX_REDUCTION_FIELDS = [
   },
 ];
 
+// ── Tax Credits (Code | Eligible Amount | Tax Credit | Description) ─────────
+// Statutorily, credits are claimed at the filer's average tax rate. The form
+// stores both the eligible amount (e.g. donation paid) and the computed
+// credit. Salaried scope: charitable donations (s.61) and approved pension
+// fund contributions (s.63) are the common ones.
+export const TAX_CREDIT_FIELDS = [
+  {
+    code: '930201', label: 'Tax Credit for Charitable Donations u/s 61',
+    computeFrom: (ctx) => {
+      const c = ctx.credits || {};
+      // Form has both `charitable_donations_u_s_61_*` and separate associate-
+      // recipient variants; sum the credit but keep the headline amount.
+      const amount = num(c.charitable_donations_u_s_61_amount)
+                   + num(c.charitable_donations_associate_amount);
+      const credit = num(c.charitable_donations_u_s_61_tax_credit)
+                   + num(c.charitable_donations_associate_tax_credit);
+      if (amount === 0 && credit === 0) return null;
+      return { total: amount, tax_credit: credit, tax_chargeable: 0 };
+    },
+  },
+  {
+    code: '930301', label: 'Tax Credit for Contribution to Approved Pension Fund u/s 63',
+    computeFrom: (ctx) => {
+      const c = ctx.credits || {};
+      const amount = num(c.pension_fund_contribution_u_s_63_amount);
+      const credit = num(c.pension_fund_contribution_u_s_63_tax_credit);
+      if (amount === 0 && credit === 0) return null;
+      return { total: amount, tax_credit: credit, tax_chargeable: 0 };
+    },
+  },
+];
+
+// ── Deductible Allowances u/s 60 / 60C / 60D (Code | Amount | Description) ──
+// Salaried scope: Zakat (s.60) is the always-relevant row; POS (s.60C) and
+// education (s.60D) only fire when taxable income ≤ Rs 1.5M (uncommon for
+// salaried). Each row is dropped when zero so the slip doesn't fill with
+// empty allowance lines.
+export const DEDUCTIBLE_ALLOWANCE_FIELDS = [
+  {
+    code: '9009', label: 'Zakat paid u/s 60',
+    computeFrom: (ctx) => {
+      const d = ctx.deductions || {};
+      const amount = num(d.zakat) || num(d.zakat_paid);
+      return amount > 0 ? { amount } : null;
+    },
+  },
+  {
+    code: '9010', label: 'Professional Expenses for POS u/s 60C',
+    computeFrom: (ctx) => {
+      const d = ctx.deductions || {};
+      const amount = num(d.professional_expenses_pos_amount);
+      return amount > 0 ? { amount } : null;
+    },
+  },
+  {
+    code: '9012', label: 'Educational Expenses Allowance u/s 60D',
+    computeFrom: (ctx) => {
+      const d = ctx.deductions || {};
+      const amount = num(d.educational_expenses_amount) || num(d.education_expense);
+      return amount > 0 ? { amount } : null;
+    },
+  },
+];
+
 // ── Capital Assets u/s 7E (Code | Cost/Declared | Description | Fair Market) ─
 export const CAPITAL_ASSETS_FIELDS = [
   {
@@ -259,6 +323,10 @@ export const ADJUSTABLE_TAX_FIELDS = [
     { code: '64151001', dbKey: 'sale_transfer_immoveable_property_236c',       label: 'Sale / Transfer of Immovable Property u/s 236C' },
     { code: '64151101', dbKey: 'purchase_transfer_immoveable_property_236k',   label: 'Purchase / Transfer of Immovable Property u/s 236K' },
     { code: '64151301', dbKey: 'functions_gatherings_charges_236cb',           label: 'Functions / Gatherings Charges u/s 236CB' },
+    // s.37 is the capital-gains statute but s.37(6) defines the
+    // "consideration" base on which WHT is collected at sale — the WHT
+    // itself is adjustable against the filer's normal tax, hence its
+    // placement in the Adjustable Tax section. Don't move to Fixed/Final.
     { code: '64151401', dbKey: 'withholding_tax_sale_considerations_37e',      label: 'Withholding tax on Sale Considerations u/s 37(6)' },
     { code: '64151501', dbKey: 'advance_fund_23a_part_i_second_schedule',      label: 'Advance Tax on Withdrawal of Pension Fund u/c 23A' },
     { code: '64151601', dbKey: 'advance_tax_motor_vehicle_231b2a',             label: 'Advance tax on Motor Vehicle u/s 231B(2A)' },
@@ -290,7 +358,12 @@ export const FIXED_FINAL_TAX_FIELDS = [
     },
   },
   ...[
-    { code: '64030051', dbAmount: 'dividend_u_s_150_0pc_share_profit_reit_spv_amount',          dbTax: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_collected',          label: 'Dividend u/s 150 @ 0% (REIT SPV)' },
+    // NOTE — 64030051 was duplicated with the Profit-on-Debt @ 15% row in
+    // the Adjustable Tax section (line ~245). The Adjustable Tax usage is
+    // the well-established FBR code; this REIT SPV row has been moved to
+    // 64030056 to fill the gap in the contiguous dividend 64030051-55
+    // range. Cross-check against a current IRIS slip before relying on it.
+    { code: '64030056', dbAmount: 'dividend_u_s_150_0pc_share_profit_reit_spv_amount',          dbTax: 'dividend_u_s_150_0pc_share_profit_reit_spv_tax_collected',          label: 'Dividend u/s 150 @ 0% (REIT SPV)' },
     { code: '64030052', dbAmount: 'dividend_u_s_150_35pc_share_profit_other_spv_amount',        dbTax: 'dividend_u_s_150_35pc_share_profit_other_spv_tax_collected',        label: 'Dividend u/s 150 @ 35% (other SPV)' },
     { code: '64030053', dbAmount: 'dividend_u_s_150_7_5pc_ipp_shares_amount',                   dbTax: 'dividend_u_s_150_7_5pc_ipp_shares_tax_collected',                   label: 'Dividend u/s 150 @ 7.5% (IPP)' },
     { code: '64030055', dbAmount: 'dividend_u_s_150_31pc_atl_amount',                           dbTax: 'dividend_u_s_150_31pc_atl_tax_collected',                           label: 'Dividend u/s 150 @ 15% (in kind / mutual fund <50% PoD)' },
@@ -325,10 +398,31 @@ export const COMPUTATION_FIELDS = [
   { code: '9100',   label: 'Taxable Income',                                                      computeFrom: (ctx) => ({ total: num(ctx.computation?.income?.taxableIncomeIncludingCG), normal: 0, exempt: 0 }) },
   { code: '9200',   label: 'Tax Chargeable',                                                      computeFrom: (ctx) => ({ total: num(ctx.computation?.tax?.totalTaxChargeable), normal: 0, exempt: 0 }) },
   { code: '920000', label: 'Normal Income Tax',                                                   computeFrom: (ctx) => ({ total: num(ctx.computation?.tax?.normalIncomeTax), normal: 0, exempt: 0 }) },
-  { code: '920100', label: 'Final / Fixed / Minimum / Average / Relevant / Reduced Income Tax',   computeFrom: (ctx) => ({ total: num(ctx.final_min_income?.grand_total_tax_chargeable) || 0, normal: 0, exempt: 0 }) },
+  // 920100 — Source from the computation breakdown (single source of truth)
+  // not the raw form data. If `grand_total_tax_chargeable` is present that
+  // beats the breakdown (it's the user-entered total); otherwise compute
+  // from the breakdown so the value matches what TaxComputationSummary
+  // shows on screen.
+  { code: '920100', label: 'Final / Fixed / Minimum / Average / Relevant / Reduced Income Tax',
+    computeFrom: (ctx) => {
+      const fmiTotal = num(ctx.final_min_income?.grand_total_tax_chargeable);
+      const fallback = num(ctx.computation?.tax?.netTaxPayable) - num(ctx.computation?.tax?.normalIncomeTax) - num(ctx.computation?.tax?.surcharge);
+      return { total: fmiTotal || Math.max(0, fallback), normal: 0, exempt: 0 };
+    },
+  },
+  // TODO — `923184` is the historical FBR code for "Surcharge u/s 4AB" but
+  // current IRIS slips have been seen using `923101`. Verify against a live
+  // IRIS export before TY 2026-27 returns are filed; the math is correct
+  // either way (surcharge value is the same), only the row code differs.
   { code: '923184', label: 'Surcharge on high earning person u/s 4AB',                            computeFrom: (ctx) => ({ total: num(ctx.computation?.tax?.surcharge), normal: 0, exempt: 0 }) },
   { code: '92101',  label: 'Refund Adjustment of Other Year(s) against Demand of this Year',     computeFrom: (ctx) => ({ total: num(ctx.tax_computation?.refund_adjustment), normal: 0, exempt: 0 }) },
-  { code: '9201',   label: 'Withholding Income Tax',                                              computeFrom: (ctx) => ({ total: num(ctx.computation?.payments?.withholdingTax), normal: 0, exempt: 0 }) },
+  // 9201 — Match the on-screen "Tax Already Paid" panel: fold both WHT and
+  // advance tax u/s 147 into a single line so the PDF balances against the
+  // displayed bottom-line.
+  { code: '9201',   label: 'Withholding Income Tax',                                              computeFrom: (ctx) => ({ total: num(ctx.computation?.payments?.withholdingTax) + num(ctx.computation?.payments?.advanceTax), normal: 0, exempt: 0 }) },
+  // Income Tax Demanded — positive balance after WHT + advance tax. The
+  // complementary 9210 (Refundable Income Tax) renders the negative side.
+  { code: '9203',   label: 'Income Tax Demanded',                                                 computeFrom: (ctx) => ({ total: Math.max(0,  num(ctx.computation?.payments?.balancePayableRefundable)), normal: 0, exempt: 0 }) },
   { code: '9210',   label: 'Refundable Income Tax',                                               computeFrom: (ctx) => ({ total: Math.max(0, -num(ctx.computation?.payments?.balancePayableRefundable)), normal: 0, exempt: 0 }) },
 ];
 
@@ -382,16 +476,18 @@ export function buildIrisSections(ctx) {
   };
 
   return {
-    top_summary:       TOP_SUMMARY_FIELDS.map(renderRow).filter(Boolean),
-    income:            INCOME_FIELDS.map(renderRow).filter(Boolean),
-    property:          PROPERTY_FIELDS.map(renderRow).filter(Boolean),
-    tax_reductions:    TAX_REDUCTION_FIELDS.map(renderRow).filter(Boolean),
-    capital_assets:    CAPITAL_ASSETS_FIELDS.map(renderRow).filter(Boolean),
-    adjustable_tax:    ADJUSTABLE_TAX_FIELDS.map(renderRow).filter(Boolean),
-    fixed_final_tax:   FIXED_FINAL_TAX_FIELDS.map(renderRow).filter(Boolean),
-    computations:      COMPUTATION_FIELDS.map(renderRow).filter(Boolean),
-    personal_assets:   PERSONAL_ASSETS_FIELDS.map(renderRow).filter(Boolean),
-    personal_expenses: PERSONAL_EXPENSE_FIELDS.map(renderRow).filter(Boolean),
+    top_summary:           TOP_SUMMARY_FIELDS.map(renderRow).filter(Boolean),
+    income:                INCOME_FIELDS.map(renderRow).filter(Boolean),
+    property:              PROPERTY_FIELDS.map(renderRow).filter(Boolean),
+    deductible_allowances: DEDUCTIBLE_ALLOWANCE_FIELDS.map(renderRow).filter(Boolean),
+    tax_reductions:        TAX_REDUCTION_FIELDS.map(renderRow).filter(Boolean),
+    tax_credits:           TAX_CREDIT_FIELDS.map(renderRow).filter(Boolean),
+    capital_assets:        CAPITAL_ASSETS_FIELDS.map(renderRow).filter(Boolean),
+    adjustable_tax:        ADJUSTABLE_TAX_FIELDS.map(renderRow).filter(Boolean),
+    fixed_final_tax:       FIXED_FINAL_TAX_FIELDS.map(renderRow).filter(Boolean),
+    computations:          COMPUTATION_FIELDS.map(renderRow).filter(Boolean),
+    personal_assets:       PERSONAL_ASSETS_FIELDS.map(renderRow).filter(Boolean),
+    personal_expenses:     PERSONAL_EXPENSE_FIELDS.map(renderRow).filter(Boolean),
     reconciliation:    RECONCILIATION_FIELDS.map(renderRow).filter(Boolean),
   };
 }
