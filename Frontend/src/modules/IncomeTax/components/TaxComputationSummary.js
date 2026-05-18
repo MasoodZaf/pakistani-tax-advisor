@@ -220,12 +220,21 @@ const TaxComputationSummary = () => {
     //      sukuk profit, prize bonds, salary arrears at relevant rate, etc.).
     // Without (2) the on-screen demand over-states by the finalMin WHT amount.
     const finalTaxPaidLegacy = num(finalTaxData.total_final_tax);
-    // Sum all `*_tax_deducted` columns on final_min_income_forms, except for
-    // `salary_u_s_12_7_tax_deducted` — that row auto-populates from the
-    // salary WHT (s.149) which is already pooled under adjustable WHT, so
-    // including it would double-count by ~the entire salary WHT amount.
+    // Sum every per-row `*_tax_deducted` column on final_min_income_forms,
+    // EXCLUDING:
+    //   - the generated rollups `subtotal_tax_deducted`/`grand_total_tax_deducted`
+    //     (they're the same numbers summed at the DB level — a naive
+    //     `endsWith('_tax_deducted')` filter triples the total)
+    //   - `salary_u_s_12_7_tax_deducted` — auto-populates from the salary
+    //     WHT (s.149), already pooled under adjustable WHT; including it
+    //     would double-count by ~the entire salary WHT amount.
+    const EXCLUDE_FROM_FINAL_MIN_WHT_SUM = new Set([
+      'salary_u_s_12_7_tax_deducted',
+      'subtotal_tax_deducted',
+      'grand_total_tax_deducted',
+    ]);
     const finalMinTaxDeducted = Object.entries(finalMinIncomeData)
-      .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
+      .filter(([k]) => k.endsWith('_tax_deducted') && !EXCLUDE_FROM_FINAL_MIN_WHT_SUM.has(k))
       .reduce((s, [, v]) => s + num(v), 0);
     const finalTaxPaid = finalTaxPaidLegacy + finalMinTaxDeducted;
 
@@ -328,34 +337,34 @@ const TaxComputationSummary = () => {
     return Math.round(direct || 0);
   };
 
-  // Build a payload containing ONLY snake_case fields that exist in tax_computation_forms DB schema.
-  // computationData uses frontend field names that don't always match DB column names.
-  const buildComputationPayload = () => {
-    const netPaid  = (computationData?.base_net_tax_paid   || 0) + refundAdjustment;
-    const demanded = (computationData?.total_tax_chargeable || 0) - netPaid;
-    return {
-      // Income section
-      income_from_salary:        computationData?.income_from_salary        || 0,
-      income_from_other_sources: computationData?.income_from_other_sources || 0,
-      total_income:              (computationData?.income_from_salary || 0) + (computationData?.income_from_other_sources || 0),
-      deductible_allowances:     computationData?.deductible_allowances     || 0,
-      capital_gains_loss:        computationData?.capital_gains_loss        || 0,
-      // Tax chargeable section — surcharge has two DB columns (surcharge + surcharge_amount)
-      normal_income_tax:  computationData?.normal_income_tax  || 0,
-      surcharge:          computationData?.surcharge          || 0,
-      surcharge_amount:   computationData?.surcharge          || 0,
-      capital_gain_tax:   computationData?.capital_gain_tax   || 0,
-      capital_gains_tax:  computationData?.capital_gain_tax   || 0,
-      tax_reductions:     computationData?.tax_reductions     || 0,
-      tax_credits:        computationData?.tax_credits        || 0,
-      super_tax:          computationData?.super_tax          || 0,
-      // Taxes paid
-      advance_tax_paid:            computationData?.withholding_income_tax || 0,
-      total_tax_paid:              netPaid,
-      total_tax_paid_with_advance: netPaid,
-      tax_payable_refundable:      demanded,
-    };
-  };
+  // Build a payload that writes ONLY to the input columns of
+  // `tax_computation_forms`. The DB has GENERATED columns
+  // (`total_income`, `taxable_income_excluding_cg`, `net_tax_payable`,
+  // `total_tax_liability`, `balance_payable`, etc.) that derive everything
+  // else from these inputs — so we don't send the derived values, and they
+  // can never drift from the inputs. The previous payload sent the derived
+  // values to plain zombie columns (`surcharge`, `capital_gain_tax`,
+  // `total_tax_paid`, `tax_payable_refundable`) that shadowed the generated
+  // ones; those columns are being dropped (phase-w migration).
+  const buildComputationPayload = () => ({
+    // Income section (inputs)
+    income_from_salary:              computationData?.income_from_salary        || 0,
+    other_income_subject_to_min_tax: computationData?.income_from_other_sources || 0,
+    income_loss_other_sources:       0,
+    deductible_allowances:           computationData?.deductible_allowances     || 0,
+    capital_gains_loss:              computationData?.capital_gains_loss        || 0,
+    // Tax chargeable inputs
+    normal_income_tax:  computationData?.normal_income_tax  || 0,
+    surcharge_amount:   computationData?.surcharge          || 0,
+    capital_gains_tax:  computationData?.capital_gain_tax   || 0,
+    tax_reductions:     computationData?.tax_reductions     || 0,
+    tax_credits:        computationData?.tax_credits        || 0,
+    // Final/fixed minimum tax (input — separate from normal tax stream)
+    final_fixed_tax:             computationData?.final_min_tax || 0,
+    minimum_tax_on_other_income: 0,
+    // Taxes paid input
+    advance_tax_paid: computationData?.withholding_income_tax || 0,
+  });
 
   const onSubmit = async () => {
     const success = await saveFormStep('tax_computation', buildComputationPayload(), true);
