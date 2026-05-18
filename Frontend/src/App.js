@@ -19,6 +19,8 @@ import TaxArchiveView from './components/TaxHistory/TaxArchiveView';
 import Settings from './components/Settings/Settings';
 import Landing from './components/Landing/Landing';
 import Onboarding from './components/Onboarding/Onboarding';
+import ConsultantPage from './components/AIConsultant/ConsultantPage';
+import FloatingChatWidget from './components/AIConsultant/FloatingChatWidget';
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // A user is "needs onboarding" when authenticated as a non-admin and the
@@ -261,6 +263,18 @@ function App() {
                   </UserOnlyRoute>
                 }
               />
+
+              {/* AI Tax Consultant — full-page chat with conversation history */}
+              <Route
+                path="/consultant"
+                element={
+                  <UserOnlyRoute>
+                    <Layout>
+                      <ConsultantPage />
+                    </Layout>
+                  </UserOnlyRoute>
+                }
+              />
               
               {/* Admin Module Routes */}
               <Route
@@ -293,6 +307,10 @@ function App() {
                 } 
               />
             </Routes>
+
+            {/* Floating tax-consultant bubble — self-renders only for
+                authenticated non-admin users when the server is configured. */}
+            <FloatingChatWidget />
           </div>
         </Router>
       </TaxFormProvider>

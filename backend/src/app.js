@@ -13,6 +13,8 @@ const personalInfoRoutes = require('./routes/personalInfo');
 const testDataRoutes = require('./routes/testData');
 const taxHistoryRoutes = require('./routes/taxHistory');
 const taxYearRoutes = require('./routes/taxYear');
+const aiConsultantRoutes = require('./routes/aiConsultant');
+const aiKnowledgeBase = require('./services/aiConsultant/knowledgeBase');
 
 // Module imports
 const incomeTaxModule = require('./modules/IncomeTax');
@@ -159,6 +161,11 @@ app.use('/api/income-form', apiWriteLimiter, incomeFormRoutes);
 const taxFormsRoutes = require('./modules/IncomeTax/routes/taxForms');
 app.use('/api/tax-forms', apiWriteLimiter, taxFormsRoutes);
 
+// AI tax consultant — DeepSeek-backed chat + form helper.
+// Same write limiter; the route module short-circuits when DEEPSEEK_API_KEY
+// isn't set so the rest of the app keeps working without it.
+app.use('/api/ai-consultant', apiWriteLimiter, aiConsultantRoutes);
+
 // Tax Computation routes (Inter-form data linking).
 // `apiWriteLimiter` is applied even on the read endpoints — the
 // computation runs are CPU-heavy (slab walks, surcharge math, super-tax
@@ -247,6 +254,13 @@ const server = app.listen(PORT, HOST, () => {
   logger.info('Try accessing:');
   logger.info(`1. http://${HOST}:${PORT}`);
   logger.info(`2. http://${HOST}:${PORT}/api/health`);
+
+  // Warm up the AI consultant knowledge base in the background. Failure
+  // is non-fatal — the chat routes degrade to "no KB context" rather than
+  // 500ing the rest of the server.
+  aiKnowledgeBase.loadAll().catch((e) =>
+    logger.warn('AI knowledge base initial load failed', { message: e.message })
+  );
 });
 
 function gracefulShutdown(signal) {

@@ -1,0 +1,6 @@
+Drop FBR / Income Tax Ordinance / Finance Act PDFs, MDs, or XLSX files
+into this directory. The AI consultant ingests them on startup (or when
+an admin POSTs /api/ai-consultant/knowledge-base/reload).
+
+In production this path is mounted as a Docker volume (ai_kb_data) so
+uploaded docs survive container rebuilds.

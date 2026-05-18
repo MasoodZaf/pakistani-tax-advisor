@@ -60,6 +60,17 @@ services:
       # CORS_ORIGINS is a comma-separated list (for staging + prod, www + apex, etc).
       FRONTEND_URL: ${FRONTEND_URL:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # AI Tax Consultant (DeepSeek). Empty key disables the feature gracefully.
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      # Tells the knowledge-base service where to look for uploaded docs.
+      # Matches the mounted volume below — admin uploads land here and
+      # survive container rebuilds.
+      AI_KB_DIR: /app/data/knowledge-base
+    volumes:
+      # Persist admin-uploaded knowledge-base docs across rebuilds.
+      - ai_kb_data:/app/data/knowledge-base
     depends_on:
       database:
         condition: service_healthy
@@ -89,6 +100,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  ai_kb_data:
     driver: local
 
 networks:

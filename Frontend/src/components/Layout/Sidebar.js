@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import {
   Home, FileText, BarChart3, Settings,
-  Users, Shield, FileSpreadsheet, TrendingUp,
+  Users, Shield, FileSpreadsheet, TrendingUp, MessageCircle,
   ChevronLeft, ChevronRight, LogOut,
   Percent, UserCog, Activity
 } from 'lucide-react';
@@ -170,6 +170,7 @@ const MAIN_NAV = [
   { name: 'Wealth Statement', href: '/wealth-statement', icon: TrendingUp     },
 ];
 const TOOLS_NAV = [
+  { name: 'AI Tax Consultant', href: '/consultant',       icon: MessageCircle  },
   { name: 'Reports',          href: '/reports',          icon: BarChart3      },
   { name: 'Excel Tools',      href: '/excel',            icon: FileSpreadsheet },
   { name: 'Settings',         href: '/settings',         icon: Settings       },
