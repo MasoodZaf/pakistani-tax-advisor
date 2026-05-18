@@ -17,7 +17,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrate-2025-26.sql:/docker-entrypoint-initdb.d/01-init.sql
+      # Init order matches docker-entrypoint-initdb.d (lex sort):
+      # 01-schema.sql creates the canonical schema; the corrective migrations
+      # in backend/database/migrations/ are NOT auto-applied here — for a fresh
+      # dev DB run them manually after first boot (see README/AGENTS.md).
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
