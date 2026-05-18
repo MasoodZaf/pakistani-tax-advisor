@@ -155,22 +155,23 @@ const IncomeForm = () => {
   }, [reset]);
 
   // Calculate totals based on Excel formula logic - EXACTLY matching XlCal.md
-  const calculateTotals = () => {
+  const calculateTotals = (sourceValues = watchedValues) => {
+    const src = sourceValues || {};
     // Parse all input values - converting monthly to annual where needed
-    const monthlyBasicSalary = parseToInteger(watchedValues.monthly_basic_salary) || 0;
-    const monthlyAllowances = parseToInteger(watchedValues.monthly_allowances) || 0;
+    const monthlyBasicSalary = parseToInteger(src.monthly_basic_salary) || 0;
+    const monthlyAllowances = parseToInteger(src.monthly_allowances) || 0;
 
     // Excel formulas: B6: 600000*12, B7: 500000*12
     const annualBasicSalary = monthlyBasicSalary * 12;
     const allowances = monthlyAllowances * 12;
 
-    const bonus = parseToInteger(watchedValues.bonus) || 0;
-    const medicalAllowance = parseToInteger(watchedValues.medical_allowance) || 0;
-    const pensionFromExEmployer = parseToInteger(watchedValues.pension_from_ex_employer) || 0;
-    const employmentTerminationPayment = parseToInteger(watchedValues.employment_termination_payment) || 0;
-    const retirementAmount = parseToInteger(watchedValues.retirement_from_approved_funds) || 0;
-    const directorshipFee = parseToInteger(watchedValues.directorship_fee) || 0;
-    const otherCashBenefits = parseToInteger(watchedValues.other_cash_benefits) || 0;
+    const bonus = parseToInteger(src.bonus) || 0;
+    const medicalAllowance = parseToInteger(src.medical_allowance) || 0;
+    const pensionFromExEmployer = parseToInteger(src.pension_from_ex_employer) || 0;
+    const employmentTerminationPayment = parseToInteger(src.employment_termination_payment) || 0;
+    const retirementAmount = parseToInteger(src.retirement_from_approved_funds) || 0;
+    const directorshipFee = parseToInteger(src.directorship_fee) || 0;
+    const otherCashBenefits = parseToInteger(src.other_cash_benefits) || 0;
 
     // Excel formula B15: -B12-B11-B9 = -(retirement + termination + medical)
     const incomeExemptFromTax = -(retirementAmount + employmentTerminationPayment + medicalAllowance);
@@ -181,9 +182,9 @@ const IncomeForm = () => {
                                    directorshipFee + otherCashBenefits + incomeExemptFromTax;
 
     // Non Cash Benefits
-    const employerContributionFunds = parseToInteger(watchedValues.employer_contribution_provident) || 0;
-    const taxableCarValue = parseToInteger(watchedValues.taxable_car_value) || 0;
-    const otherTaxableSubsidies = parseToInteger(watchedValues.other_taxable_subsidies) || 0;
+    const employerContributionFunds = parseToInteger(src.employer_contribution_provident) || 0;
+    const taxableCarValue = parseToInteger(src.taxable_car_value) || 0;
+    const otherTaxableSubsidies = parseToInteger(src.other_taxable_subsidies) || 0;
 
     // Excel formula B22: -(MIN(B19,150000)) = -150,000 max exemption
     const providentExemption = -Math.min(employerContributionFunds, 150000);
@@ -195,15 +196,15 @@ const IncomeForm = () => {
     const totalEmploymentIncome = annualSalaryWagesTotal + totalNonCashBenefits;
 
     // Other Income (Subject to minimum tax)
-    const profitOnDebt15 = parseToInteger(watchedValues.profit_on_debt_15_percent) || 0;
-    const profitOnDebt125 = parseToInteger(watchedValues.profit_on_debt_12_5_percent) || 0;
+    const profitOnDebt15 = parseToInteger(src.profit_on_debt_15_percent) || 0;
+    const profitOnDebt125 = parseToInteger(src.profit_on_debt_12_5_percent) || 0;
 
     // Excel formula B28: B26+B27
     const totalOtherIncomeMinTax = profitOnDebt15 + profitOnDebt125;
 
     // Other Income (Not Subject to minimum tax)
-    const rentIncome = parseToInteger(watchedValues.other_taxable_income_rent) || 0;
-    const otherTaxableIncomeOthers = parseToInteger(watchedValues.other_taxable_income_others) || 0;
+    const rentIncome = parseToInteger(src.other_taxable_income_rent) || 0;
+    const otherTaxableIncomeOthers = parseToInteger(src.other_taxable_income_others) || 0;
 
     // Excel formula B33: B31+B32
     const totalOtherIncomeNoMinTax = rentIncome + otherTaxableIncomeOthers;
@@ -225,19 +226,20 @@ const IncomeForm = () => {
   const totals = calculateTotals();
 
   const onSubmit = async (data) => {
+    const liveTotals = calculateTotals(data);
     const structuredData = {
       ...data,
       // Convert monthly to annual values for database storage
-      annual_basic_salary: totals.annualBasicSalary,
-      allowances: totals.allowances,
+      annual_basic_salary: liveTotals.annualBasicSalary,
+      allowances: liveTotals.allowances,
       // Calculated fields matching database schema
-      income_exempt_from_tax: totals.incomeExemptFromTax,
-      annual_salary_wages_total: totals.annualSalaryWagesTotal,
-      total_employment_income: totals.totalEmploymentIncome,
-      non_cash_benefit_exempt: totals.providentExemption,
-      total_non_cash_benefits: totals.totalNonCashBenefits,
-      other_income_min_tax_total: totals.totalOtherIncomeMinTax,
-      other_income_no_min_tax_total: totals.totalOtherIncomeNoMinTax,
+      income_exempt_from_tax: liveTotals.incomeExemptFromTax,
+      annual_salary_wages_total: liveTotals.annualSalaryWagesTotal,
+      total_employment_income: liveTotals.totalEmploymentIncome,
+      non_cash_benefit_exempt: liveTotals.providentExemption,
+      total_non_cash_benefits: liveTotals.totalNonCashBenefits,
+      other_income_min_tax_total: liveTotals.totalOtherIncomeMinTax,
+      other_income_no_min_tax_total: liveTotals.totalOtherIncomeNoMinTax,
       isComplete: true
     };
 
@@ -249,20 +251,21 @@ const IncomeForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
+    const data = watch();
+    const liveTotals = calculateTotals(data);
     const structuredData = {
       ...data,
       // Convert monthly to annual values for database storage
-      annual_basic_salary: totals.annualBasicSalary,
-      allowances: totals.allowances,
+      annual_basic_salary: liveTotals.annualBasicSalary,
+      allowances: liveTotals.allowances,
       // Calculated fields matching database schema
-      income_exempt_from_tax: totals.incomeExemptFromTax,
-      annual_salary_wages_total: totals.annualSalaryWagesTotal,
-      total_employment_income: totals.totalEmploymentIncome,
-      non_cash_benefit_exempt: totals.providentExemption,
-      total_non_cash_benefits: totals.totalNonCashBenefits,
-      other_income_min_tax_total: totals.totalOtherIncomeMinTax,
-      other_income_no_min_tax_total: totals.totalOtherIncomeNoMinTax,
+      income_exempt_from_tax: liveTotals.incomeExemptFromTax,
+      annual_salary_wages_total: liveTotals.annualSalaryWagesTotal,
+      total_employment_income: liveTotals.totalEmploymentIncome,
+      non_cash_benefit_exempt: liveTotals.providentExemption,
+      total_non_cash_benefits: liveTotals.totalNonCashBenefits,
+      other_income_min_tax_total: liveTotals.totalOtherIncomeMinTax,
+      other_income_no_min_tax_total: liveTotals.totalOtherIncomeNoMinTax,
       isComplete: false
     };
 
@@ -406,15 +409,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('monthly_basic_salary', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input Monthly</div>
             </div>
@@ -433,15 +436,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('monthly_allowances', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input Monthly</div>
             </div>
@@ -484,15 +487,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('bonus', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -511,15 +514,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('medical_allowance', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -538,15 +541,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('pension_from_ex_employer', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -565,15 +568,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('employment_termination_payment', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -592,15 +595,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('retirement_from_approved_funds', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -619,15 +622,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('directorship_fee', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -646,15 +649,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('other_cash_benefits', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -720,15 +723,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('employer_contribution_provident', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -747,15 +750,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('taxable_car_value', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -774,15 +777,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('other_taxable_subsidies', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -862,15 +865,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('profit_on_debt_15_percent', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -889,15 +892,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('profit_on_debt_12_5_percent', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -947,15 +950,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('other_taxable_income_rent', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>
@@ -974,15 +977,15 @@ const IncomeForm = () => {
                 type="text"
                 {...register('other_taxable_income_others', {
                   setValueAs: parseToInteger,
+                  onChange: (e) => {
+                    const numericValue = e.target.value.replace(/,/g, '');
+                    if (!isNaN(numericValue) && numericValue !== '') {
+                      e.target.value = formatNumber(numericValue);
+                    }
+                  },
                 })}
                 className={inputClasses}
                 placeholder="0"
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/,/g, '');
-                  if (!isNaN(numericValue) && numericValue !== '') {
-                    e.target.value = formatNumber(numericValue);
-                  }
-                }}
               />
               <div className={inputLabelClasses}>Please Input</div>
             </div>

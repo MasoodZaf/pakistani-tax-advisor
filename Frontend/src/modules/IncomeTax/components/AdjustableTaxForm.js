@@ -1011,7 +1011,10 @@ const AdjustableTaxForm = () => {
     event.target.select();
   };
 
-  // Handle input change - sanitize value, don't update React Hook Form yet
+  // Handle input change - sanitize value AND push the parsed number into RHF
+  // immediately so `watch()` stays current. Used to only commit on blur, but
+  // submit can fire before blur (programmatic fills, autosave), leaving stale
+  // values in the payload.
   const handleNumberInput = (fieldName, event) => {
     const rawValue = event.target.value;
     const cleaned = rawValue.replace(/,/g, '');
@@ -1020,6 +1023,8 @@ const AdjustableTaxForm = () => {
     if (sanitized !== rawValue) {
       event.target.value = sanitized;
     }
+    const numericValue = parseFormattedNumber(sanitized);
+    setValue(fieldName, numericValue);
   };
 
   // Handle input blur - parse value and update React Hook Form, then format for display
