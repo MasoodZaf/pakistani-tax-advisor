@@ -101,3 +101,8 @@ backend/prisma.config.ts
 
 # e2e round-trip test output
 e2e/artifacts/
+
+# Excel test fixtures — local only, distributed to testers manually.
+# The generator script and the generated workbooks both stay out of git.
+test-excel-scenarios/
+scripts/generate-test-excel.js
