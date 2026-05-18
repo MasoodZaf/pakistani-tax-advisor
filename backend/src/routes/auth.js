@@ -202,7 +202,7 @@ router.post('/login', async (req, res) => {
 
     // Try to authenticate user (both regular and admin users are in users table)
     const user = await pool.query(`
-      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed
+      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone
       FROM users
       WHERE email = $1 AND is_active = true
     `, [email]);
@@ -335,7 +335,9 @@ router.post('/login', async (req, res) => {
         role: userData.role,
         user_type: userData.user_type,
         permissions: userData.permissions || null,
-        onboarding_completed: userData.onboarding_completed
+        onboarding_completed: userData.onboarding_completed,
+        cnic: userData.cnic,
+        phone: userData.phone
       },
       taxYearsSummary: taxYearsSummary.rows || [],
       currentYearData: currentYearData,
@@ -390,7 +392,7 @@ router.post('/verify-session', async (req, res) => {
     }
 
     const session = await pool.query(`
-      SELECT us.*, u.email, u.name, u.role, u.user_type
+      SELECT us.*, u.email, u.name, u.role, u.user_type, u.cnic, u.phone
       FROM user_sessions us
       JOIN users u ON us.user_id = u.id
       WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
@@ -416,7 +418,9 @@ router.post('/verify-session', async (req, res) => {
         email: sessionData.email,
         name: sessionData.name,
         role: sessionData.role,
-        user_type: sessionData.user_type
+        user_type: sessionData.user_type,
+        cnic: sessionData.cnic,
+        phone: sessionData.phone
       }
     });
 

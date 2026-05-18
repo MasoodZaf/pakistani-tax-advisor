@@ -486,7 +486,11 @@ export default function Onboarding() {
         mobile_number: personalForm.mobile,
         father_name: personalForm.father_name,
         ntn: personalForm.ntn,
-        address: personalForm.address,
+        // Backend expects residential_address / mailing_address. We collect one
+        // address in onboarding and use it for both (user can split them later
+        // in Settings if they need to).
+        residential_address: personalForm.address,
+        mailing_address: personalForm.address,
         city: personalForm.city,
         province: personalForm.province,
         postal_code: personalForm.postal_code,

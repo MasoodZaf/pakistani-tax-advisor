@@ -133,6 +133,22 @@ router.post('/:taxYear', auth, async (req, res) => {
       ]);
     }
 
+    // Mirror CNIC + phone onto the users table so they're available in the
+    // login payload (Settings reads `user?.cnic` / `user?.phone`). The
+    // year-scoped `personal_information` table is still the source of truth
+    // for tax-return-specific fields; this just keeps the account-level view
+    // populated. NULLs are tolerated.
+    if (cnic || mobile_number) {
+      await client.query(
+        `UPDATE users
+            SET cnic  = COALESCE($2, cnic),
+                phone = COALESCE($3, phone),
+                updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1`,
+        [userId, cnic || null, mobile_number || null]
+      );
+    }
+
     await client.query('COMMIT');
 
     res.json({
