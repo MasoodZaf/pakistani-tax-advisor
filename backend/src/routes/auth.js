@@ -1,11 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 const jwtAuth = require('../middleware/auth'); // JWT middleware for protected routes
 const { insertAudit } = require('../helpers/auditLog');
 const { validatePasswordPolicy, BCRYPT_ROUNDS } = require('../helpers/passwordPolicy');
+const oidc = require('../services/oidcVerifier');
 
 const router = express.Router();
 
@@ -618,5 +620,160 @@ router.get('/my-activity', jwtAuth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to load activity' });
   }
 });
+
+// ─── Single Sign-On ─────────────────────────────────────────────────────────
+// Backend bridge for OAuth/OIDC: client (web or mobile) does the user-facing
+// OAuth dance, gets an ID token, hands it to us. We verify it against the
+// provider's JWKS, look up / create / link a user row, issue our own session.
+//
+// Coexists with email+password. Existing users who SSO with their account
+// email get linked automatically (Google and Apple both verify ownership).
+
+async function loginViaSso(provider, claims, req) {
+  // 1. Try matching by SSO identity first — the strongest signal.
+  let result = await pool.query(
+    `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active
+     FROM users
+     WHERE sso_provider = $1 AND sso_subject = $2`,
+    [provider, claims.sub]
+  );
+
+  let userData = result.rows[0];
+
+  // 2. Fall back to email match. If an existing row uses email+password and
+  //    the verified SSO email matches, link the two so subsequent SSO logins
+  //    are direct hits.
+  if (!userData) {
+    result = await pool.query(
+      `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active
+       FROM users
+       WHERE email = $1`,
+      [claims.email]
+    );
+    userData = result.rows[0];
+
+    if (userData) {
+      await pool.query(
+        `UPDATE users
+         SET sso_provider = $1, sso_subject = $2, email_verified = TRUE, updated_at = NOW()
+         WHERE id = $3 AND sso_provider IS NULL`,
+        [provider, claims.sub, userData.id]
+      );
+      logger.info(`SSO identity linked to existing user`, { provider, userId: userData.id });
+    }
+  }
+
+  // 3. Brand new user — create the row. SSO-only signup, no password_hash.
+  if (!userData) {
+    const insertResult = await pool.query(
+      `INSERT INTO users (
+        email, name, user_type, password_hash,
+        sso_provider, sso_subject, email_verified,
+        is_active, created_at, updated_at
+       ) VALUES ($1, $2, $3, NULL, $4, $5, TRUE, TRUE, NOW(), NOW())
+       RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active`,
+      [claims.email, claims.name || claims.email.split('@')[0], 'individual', provider, claims.sub]
+    );
+    userData = insertResult.rows[0];
+    logger.info(`SSO new-user signup`, { provider, userId: userData.id, email: userData.email });
+  }
+
+  if (!userData.is_active) {
+    const err = new Error('account_disabled');
+    err.status = 403;
+    throw err;
+  }
+
+  const isAdmin = ['admin', 'super_admin'].includes(userData.role);
+
+  // Session + JWT — same shape login produces, so client code doesn't fork.
+  const sessionToken = uuidv4();
+  const jwtToken = jwt.sign(
+    {
+      userId: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      onboarding_completed: userData.onboarding_completed,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  await pool.query(
+    `INSERT INTO user_sessions (user_id, user_email, session_token, ip_address, expires_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      userData.id,
+      userData.email,
+      sessionToken,
+      req.ip,
+      new Date(Date.now() + 24 * 60 * 60 * 1000),
+    ]
+  );
+
+  await insertAudit(pool, {
+    userId: userData.id,
+    userEmail: userData.email,
+    action: 'sso_login',
+    tableName: 'users',
+    newValue: { provider },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    mandatory: false,
+  });
+
+  return {
+    success: true,
+    user: {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      user_type: userData.user_type,
+      permissions: userData.permissions || null,
+      onboarding_completed: userData.onboarding_completed,
+      cnic: userData.cnic,
+      phone: userData.phone,
+    },
+    sessionToken,
+    token: jwtToken,
+    isAdmin,
+    sso: { provider },
+  };
+}
+
+// Validation + dispatch wrapper. Errors thrown by verifyIdToken bubble up
+// as the user-visible reason (`token_expired`, `invalid_claims`, etc.).
+async function handleSsoLogin(provider, req, res) {
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'idToken_required' });
+    }
+
+    const claims = await oidc.verify(provider, idToken);
+    const payload = await loginViaSso(provider, claims, req);
+    res.json(payload);
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    // Verifier errors are short strings; treat as 401 (auth failed).
+    const VERIFIER_ERRORS = new Set([
+      'token_expired', 'invalid_claims', 'invalid_token',
+      'missing_sub', 'missing_email', 'email_not_verified',
+      'unsupported_provider', 'provider_not_configured',
+    ]);
+    if (VERIFIER_ERRORS.has(err.message)) {
+      return res.status(401).json({ error: err.message });
+    }
+    logger.error(`SSO login failed (${provider})`, { message: err.message, stack: err.stack });
+    res.status(500).json({ error: 'sso_login_failed' });
+  }
+}
+
+router.post('/sso/google', (req, res) => handleSsoLogin('google', req, res));
+router.post('/sso/apple', (req, res) => handleSsoLogin('apple', req, res));
 
 module.exports = router;

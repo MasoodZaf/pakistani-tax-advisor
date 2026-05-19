@@ -3,6 +3,7 @@ import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { GoogleLogin } from '@react-oauth/google';
 
 /* ─── Styles ─────────────────────────────────────────────────────────────────── */
 const Styles = () => (
@@ -228,7 +229,7 @@ function Field({ label, error, children }) {
 /* ─── Main Login ─────────────────────────────────────────────────────────────── */
 const Login = () => {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, login, ssoLogin } = useAuth();
 
   const [formData, setFormData]             = useState({ email: '', password: '' });
   const [showPassword, setShowPassword]     = useState(false);
@@ -302,6 +303,29 @@ const Login = () => {
         }
       }
     } catch (err) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google Sign-In success: the credential is the ID token (a JWT). Hand it
+  // to the backend bridge; the same post-login routing applies.
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const idToken = credentialResponse?.credential;
+    if (!idToken) {
+      toast.error('Google sign-in: missing credential');
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await ssoLogin('google', idToken);
+      if (result.success) {
+        if (['admin', 'super_admin'].includes(result.userData?.role)) {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -412,6 +436,23 @@ const Login = () => {
               {loading ? <><div className="ln-spinner" /> Signing in…</> : <>Sign in <ArrowRight size={16} /></>}
             </button>
           </form>
+
+          {/* SSO providers */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <span style={{ fontSize: 12, color: '#7a8890', fontWeight: 500 }}>or continue with</span>
+            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => toast.error('Google sign-in failed')}
+              useOneTap={false}
+              theme="outline"
+              size="large"
+              width="320"
+            />
+          </div>
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: 13, color: '#7a8890', fontWeight: 500, marginTop: 24 }}>

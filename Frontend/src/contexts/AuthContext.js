@@ -229,6 +229,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // SSO bridge: client (here, the Google button) hands us an idToken from
+  // the OAuth round-trip; backend verifies it, returns the same { token, user }
+  // shape /api/login uses. Coexists with password login.
+  const ssoLogin = async (provider, idToken) => {
+    try {
+      const response = await axios.post(`/api/sso/${provider}`, { idToken });
+      if (!response.data?.success) {
+        const message = response.data?.error || 'SSO sign-in failed';
+        toast.error(message);
+        return { success: false, error: message };
+      }
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
+      scheduleExpiryWarning(token);
+      toast.success(`Welcome, ${userData.name || userData.email}!`);
+      // The SSO endpoint doesn't fetch hasPersonalInfo / taxYearsSummary —
+      // dashboard/onboarding routes will fetch on mount.
+      return { success: true, needsPersonalInfo: !userData.onboarding_completed, userData };
+    } catch (error) {
+      const message = error.response?.data?.error || error.message || 'SSO sign-in failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   const register = async (userData) => {
     try {
       const response = await axios.post('/api/register', userData);
@@ -278,6 +304,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    ssoLogin,
     register,
     completeOnboarding,
     logout,
