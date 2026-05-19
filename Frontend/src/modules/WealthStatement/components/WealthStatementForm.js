@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  Save,
+  ArrowRight,
+  ArrowLeft,
   Gem,
   Home,
   TrendingUp,
@@ -13,8 +13,7 @@ import {
   DollarSign,
   Briefcase,
   CreditCard,
-  Info,
-  CheckCircle
+  Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
@@ -135,7 +134,6 @@ const WealthStatementForm = () => {
     }
   };
   const inputClasses = "form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right";
-  const labelClasses = "block text-sm font-medium text-gray-700 mb-2";
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-sm">

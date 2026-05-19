@@ -32,20 +32,25 @@ const ProfileScreen = () => {
     );
   };
 
-  const ProfileItem = ({ icon, title, subtitle, onPress, showArrow = true }) => (
-    <TouchableOpacity style={styles.profileItem} onPress={onPress}>
+  const InfoRow = ({ icon, title, subtitle }) => (
+    <View style={styles.profileItem}>
       <View style={styles.profileItemLeft}>
         <MaterialIcons name={icon} size={24} color="#4f46e5" />
         <View style={styles.profileItemText}>
           <Text style={styles.profileItemTitle}>{title}</Text>
-          {subtitle && <Text style={styles.profileItemSubtitle}>{subtitle}</Text>}
+          {subtitle ? <Text style={styles.profileItemSubtitle}>{subtitle}</Text> : null}
         </View>
       </View>
-      {showArrow && (
-        <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
-      )}
-    </TouchableOpacity>
+    </View>
   );
+
+  const showAbout = () => {
+    Alert.alert(
+      'Pakistani Tax Advisor',
+      'Mobile companion app for the Pakistani Tax Advisor web app.\n\nThe full feature set — including Wealth Statement, Capital Gains, Adjustable Tax, AI Consultant, and submission — is available on the web at tax.aurmak.com.',
+      [{ text: 'OK' }]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,80 +69,27 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Profile Items */}
+        {/* Account info — display only on mobile. Editing happens on the web app. */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
-          <ProfileItem
-            icon="person"
-            title="Personal Information"
-            subtitle="Update your personal details"
-            onPress={() => {}}
-          />
 
-          <ProfileItem
-            icon="security"
-            title="Change Password"
-            subtitle="Update your password"
-            onPress={() => {}}
-          />
-
-          <ProfileItem
-            icon="notifications"
-            title="Notifications"
-            subtitle="Manage your notification preferences"
-            onPress={() => {}}
-          />
+          <InfoRow icon="email" title="Email" subtitle={user?.email || '—'} />
+          {user?.cnic ? <InfoRow icon="credit-card" title="CNIC" subtitle={user.cnic} /> : null}
+          {user?.phone ? <InfoRow icon="phone" title="Phone" subtitle={user.phone} /> : null}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tax Information</Text>
-          
-          <ProfileItem
-            icon="history"
-            title="Tax History"
-            subtitle="View previous tax returns"
-            onPress={() => {}}
-          />
-
-          <ProfileItem
-            icon="download"
-            title="Download Documents"
-            subtitle="Export your tax documents"
-            onPress={() => {}}
-          />
-
-          <ProfileItem
-            icon="backup"
-            title="Backup Data"
-            subtitle="Backup your tax information"
-            onPress={() => {}}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          
-          <ProfileItem
-            icon="help"
-            title="Help & Support"
-            subtitle="Get help with tax forms"
-            onPress={() => {}}
-          />
-
-          <ProfileItem
-            icon="feedback"
-            title="Send Feedback"
-            subtitle="Help us improve the app"
-            onPress={() => {}}
-          />
-
-          <ProfileItem
-            icon="info"
-            title="About"
-            subtitle="App version and information"
-            onPress={() => {}}
-          />
+          <Text style={styles.sectionTitle}>About</Text>
+          <TouchableOpacity style={styles.profileItem} onPress={showAbout}>
+            <View style={styles.profileItemLeft}>
+              <MaterialIcons name="info" size={24} color="#4f46e5" />
+              <View style={styles.profileItemText}>
+                <Text style={styles.profileItemTitle}>About this app</Text>
+                <Text style={styles.profileItemSubtitle}>Version 1.0.0</Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* Logout Button */}

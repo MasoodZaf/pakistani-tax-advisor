@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps -- bootstrap effects intentionally fire once on mount; loader callbacks are stable but not memoized */
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';

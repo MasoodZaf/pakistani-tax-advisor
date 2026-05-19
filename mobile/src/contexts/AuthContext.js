@@ -82,15 +82,18 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-      
+
       const token = await AsyncStorage.getItem('sessionToken');
-      if (token) {
-        const user = await authAPI.getCurrentUser();
-        if (user) {
-          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
-        } else {
-          dispatch({ type: AUTH_ACTIONS.LOGOUT });
-        }
+      if (!token) {
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        return;
+      }
+
+      // Validate against the server. The verify-session call updates the
+      // cached user record and clears storage if the session was revoked.
+      const verifiedUser = await authAPI.verifySession();
+      if (verifiedUser) {
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: verifiedUser });
       } else {
         dispatch({ type: AUTH_ACTIONS.LOGOUT });
       }
@@ -119,6 +122,29 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
+      return { success: false, error: errorMessage };
+    } finally {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+    }
+  };
+
+  const ssoLogin = async (provider, idToken) => {
+    try {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+      dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
+
+      const response = await authAPI.ssoLogin(provider, idToken);
+
+      if (response.success) {
+        dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: response.user });
+        return { success: true, user: response.user };
+      }
+      const errorMessage = response.error || 'SSO sign-in failed';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
+      return { success: false, error: errorMessage };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.message || 'SSO sign-in failed';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
       return { success: false, error: errorMessage };
     } finally {
@@ -170,6 +196,7 @@ export const AuthProvider = ({ children }) => {
     loading: state.loading,
     error: state.error,
     login,
+    ssoLogin,
     register,
     logout,
     clearError,

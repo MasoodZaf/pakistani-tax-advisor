@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps -- auto-calc effect uses a spread of watched values; adding watchedValues/cgtRate to deps would loop */
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
@@ -176,7 +177,6 @@ const CapitalGainsForm = () => {
         <div className={`px-4 py-2 font-semibold text-sm border-b ${headerClass}`}>{title}</div>
         {items.map(item => {
           const gain = parseFloat(watchedValues[item.taxableAmount]) || 0;
-          const cgt  = parseFloat(watchedValues[item.taxField])      || 0;
           return (
             <div key={item.id} className={`grid grid-cols-12 gap-2 items-center py-3 px-4 border-b ${rowBorderClass} last:border-b-0 bg-white hover:bg-gray-50`}>
               <div className="col-span-4">

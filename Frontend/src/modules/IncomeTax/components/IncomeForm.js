@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps -- data load fires on tax-year change; processIncomeData is stable inside this component */
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
@@ -11,8 +12,7 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-  Upload,
-  AlertTriangle
+  Upload
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
@@ -25,7 +25,6 @@ const IncomeForm = () => {
   const { currentTaxYear } = useTaxYear();
   const {
     saveFormStep,
-    getStepData,
     saving
   } = useTaxForm();
 
@@ -127,7 +126,7 @@ const IncomeForm = () => {
   const watchedValues = watch();
 
   // Prior year pre-fill
-  const { hasPriorData, applyPriorYear, dismissPriorYear, isFlagged } = usePriorYearData('income', setValue);
+  const { hasPriorData, applyPriorYear, dismissPriorYear } = usePriorYearData('income', setValue);
 
   // Load income form data from API - use the same endpoint that handles saving
   useEffect(() => {

@@ -4,6 +4,7 @@
     "slug": "pakistani-tax-advisor",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "paktaxadvisor",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -28,7 +29,17 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": "http://localhost:3001/api"
-    }
+      "apiUrl": "https://tax.aurmak.com/api",
+      "google": {
+        "iosClientId": "",
+        "androidClientId": "",
+        "webClientId": ""
+      }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-sqlite",
+      "expo-web-browser"
+    ]
   }
 }

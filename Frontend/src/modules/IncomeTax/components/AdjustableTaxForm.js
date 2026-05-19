@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps -- auto-calc effects intentionally watch specific field values; adding watchedValues/whtRate to deps would cause re-render loops */
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
@@ -74,7 +75,6 @@ const AdjustableTaxForm = () => {
 
   const [showHelp, setShowHelp] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
-  const [editingFields, setEditingFields] = useState({}); // Track raw values during editing
   const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
 
   // Ref to suppress auto-calc effects while form is being loaded/reset from DB.

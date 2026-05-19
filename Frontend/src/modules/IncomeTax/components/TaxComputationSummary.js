@@ -4,10 +4,9 @@ import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  Save,
+  ArrowLeft,
   Calculator,
   FileText,
   CheckCircle,
@@ -39,16 +38,11 @@ const TaxComputationSummary = () => {
   // Component-level capital gain data derived from context formData
   const capitalGainData = formData?.capital_gain || {};
   
-  const { 
- 
-    watch, 
+  const {
     setValue
   } = useForm({
     defaultValues: {}
   });
-
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
 
   // Fetch all tax computation data from database
   useEffect(() => {
@@ -249,15 +243,6 @@ const TaxComputationSummary = () => {
       parseFloat(adjustableTaxData.tax_deducted_rent_section_155_tax_collected || 0)
     );
     const withholdingIncomeTax = adjustableTaxFallback || parseFloat(incomeData.salary_tax_deducted) || 0;
-    
-    // Refund Adjustment — populated from saved data or user input; not computed here
-    const refundAdjustmentValue = 0; // placeholder; actual value handled via refundAdjustment state
-
-    // Net Tax Paid/Adjusted (adjustable WHT + final tax already paid at source)
-    const netTaxPaidAdjusted = withholdingIncomeTax + finalTaxPaid + refundAdjustmentValue;
-
-    // Income Tax Demanded/(Refundable)
-    const incomeTaxDemandedRefundable = totalTaxChargeable - netTaxPaidAdjusted;
 
     return {
       // Income Section

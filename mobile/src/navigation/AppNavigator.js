@@ -12,7 +12,8 @@ import TaxFormsScreen from '../screens/TaxFormsScreen';
 import IncomeFormScreen from '../screens/IncomeFormScreen';
 import DeductionsFormScreen from '../screens/DeductionsFormScreen';
 import FinalTaxFormScreen from '../screens/FinalTaxFormScreen';
-import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import ExpensesListScreen from '../screens/ExpensesListScreen';
+import ExpenseCaptureScreen from '../screens/ExpenseCaptureScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
@@ -88,82 +89,69 @@ const TaxFormsStackNavigator = () => {
   );
 };
 
-// Admin Stack Navigator
-const AdminStackNavigator = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#4f46e5',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      <Stack.Screen 
-        name="AdminDashboard" 
-        component={AdminDashboardScreen}
-        options={{ title: 'Admin Panel' }}
-      />
-    </Stack.Navigator>
-  );
-};
+// Expenses Stack — list of captured expenses + the capture/edit form.
+const ExpensesStackNavigator = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: '#4f46e5' },
+      headerTintColor: '#fff',
+      headerTitleStyle: { fontWeight: 'bold' },
+    }}
+  >
+    <Stack.Screen
+      name="ExpensesList"
+      component={ExpensesListScreen}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="ExpenseCapture"
+      component={ExpenseCaptureScreen}
+      options={({ route }) => ({
+        title: route?.params?.clientId ? 'Edit expense' : 'New expense',
+      })}
+    />
+  </Stack.Navigator>
+);
 
-// Main Tab Navigator (for authenticated users)
+// Main Tab Navigator (for authenticated users). The Admin tab is hidden on
+// mobile until the admin screens are actually built — leaving it in routed
+// admin users to a placeholder.
 const MainTabNavigator = () => {
-  const { user } = useAuth();
-  const isAdmin = user && ['admin', 'super_admin'].includes(user.role);
-
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ color, size }) => {
           let iconName;
-
-          if (route.name === 'Dashboard') {
-            iconName = 'dashboard';
-          } else if (route.name === 'TaxForms') {
-            iconName = 'description';
-          } else if (route.name === 'Admin') {
-            iconName = 'admin-panel-settings';
-          } else if (route.name === 'Profile') {
-            iconName = 'person';
-          }
-
+          if (route.name === 'Dashboard') iconName = 'dashboard';
+          else if (route.name === 'TaxForms') iconName = 'description';
+          else if (route.name === 'Expenses') iconName = 'receipt-long';
+          else if (route.name === 'Profile') iconName = 'person';
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#4f46e5',
         tabBarInactiveTintColor: 'gray',
-        headerStyle: {
-          backgroundColor: '#4f46e5',
-        },
+        headerStyle: { backgroundColor: '#4f46e5' },
         headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
+        headerTitleStyle: { fontWeight: 'bold' },
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={DashboardScreen}
         options={{ title: 'Dashboard' }}
       />
-      <Tab.Screen 
-        name="TaxForms" 
+      <Tab.Screen
+        name="Expenses"
+        component={ExpensesStackNavigator}
+        options={{ title: 'Expenses', headerShown: false }}
+      />
+      <Tab.Screen
+        name="TaxForms"
         component={TaxFormsStackNavigator}
         options={{ title: 'Tax Forms', headerShown: false }}
       />
-      {isAdmin && (
-        <Tab.Screen 
-          name="Admin" 
-          component={AdminStackNavigator}
-          options={{ title: 'Admin', headerShown: false }}
-        />
-      )}
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
       />

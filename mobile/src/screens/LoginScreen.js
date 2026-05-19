@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,49 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import Constants from 'expo-constants';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+
+// Required so the OAuth dance can come back to the app after the browser
+// redirect. Idempotent — safe to call at module load.
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  const { login, loading, error } = useAuth();
+  const { login, ssoLogin, loading, error } = useAuth();
+
+  // Google OAuth client IDs come from app.json -> extra.google.* or env.
+  // Three distinct credentials (iOS / Android / web fallback) are normal —
+  // they map to Google Cloud Console OAuth clients per platform.
+  const googleExtra = Constants.expoConfig?.extra?.google || {};
+  const [, googleResponse, promptGoogle] = Google.useIdTokenAuthRequest({
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleExtra.iosClientId,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleExtra.androidClientId,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || googleExtra.webClientId,
+  });
+
+  // When the OAuth flow returns with a successful response, hand the ID
+  // token to the backend bridge.
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+    const idToken = googleResponse.params?.id_token;
+    if (!idToken) {
+      Alert.alert('Google sign-in', 'No ID token returned by Google');
+      return;
+    }
+    (async () => {
+      const result = await ssoLogin('google', idToken);
+      if (!result.success) {
+        Alert.alert('Google sign-in failed', result.error);
+      }
+    })();
+  }, [googleResponse, ssoLogin]);
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -120,6 +154,15 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
             </View>
+
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={() => promptGoogle()}
+              disabled={loading}
+            >
+              <MaterialIcons name="login" size={18} color="#1f2937" />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.registerButton}
@@ -258,6 +301,23 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     paddingHorizontal: 16,
     fontSize: 14,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+  },
+  googleButtonText: {
+    color: '#1f2937',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   registerButton: {
     borderWidth: 1,

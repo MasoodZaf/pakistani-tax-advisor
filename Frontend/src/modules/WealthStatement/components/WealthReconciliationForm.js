@@ -2,16 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  Save,
+  ArrowRight,
+  ArrowLeft,
   Scale,
   AlertTriangle,
   CheckCircle,
   Info,
-  TrendingUp,
-  TrendingDown,
   Calculator,
   FileText
 } from 'lucide-react';

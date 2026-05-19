@@ -7,18 +7,15 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
 
-const { width } = Dimensions.get('window');
-
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -28,7 +25,7 @@ const DashboardScreen = ({ navigation }) => {
   const loadDashboardData = async () => {
     try {
       const response = await dashboardAPI.getDashboardData();
-      if (response.success) {
+      if (response?.success) {
         setDashboardData(response.data);
       }
     } catch (error) {
@@ -38,19 +35,23 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
+  // Tax-year filing deadline. For Pakistan, returns for tax year YYYY-YY
+  // (ending 30 June YYYY) are due 30 September of that calendar year.
+  const FILING_DEADLINE = new Date(2026, 8, 30); // 30 Sept 2026
+  const daysUntilDeadline = Math.max(
+    0,
+    Math.ceil((FILING_DEADLINE.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+  const deadlineLabel = FILING_DEADLINE.toLocaleDateString('en-PK', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadDashboardData();
     setRefreshing(false);
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
   };
 
   const QuickActionCard = ({ title, subtitle, icon, color, onPress, badge }) => (
@@ -110,86 +111,48 @@ const DashboardScreen = ({ navigation }) => {
           <MaterialIcons name="notifications" size={24} color="#6b7280" />
         </View>
 
-        {/* Stats Cards */}
+        {/* Stats Card — only show what we have a real data source for */}
         <View style={styles.statsContainer}>
           <StatsCard
             title="Tax Year Progress"
-            value={dashboardData?.completion_percentage ? `${dashboardData.completion_percentage}%` : '0%'}
+            value={`${dashboardData?.completion_percentage || 0}%`}
             icon="assessment"
             color="#4f46e5"
           />
-          <StatsCard
-            title="Estimated Tax"
-            value={formatCurrency(dashboardData?.estimated_tax || 0)}
-            icon="account-balance-wallet"
-            color="#059669"
-          />
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick Action — only the action we can actually perform */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          
+          <Text style={styles.sectionTitle}>Quick Action</Text>
           <QuickActionCard
             title="Complete Tax Forms"
             subtitle="Fill out your income and deduction details"
             icon="description"
             color="#4f46e5"
             onPress={() => navigation.navigate('TaxForms')}
-            badge={dashboardData?.incomplete_forms || null}
-          />
-
-          <QuickActionCard
-            title="Tax Calculator"
-            subtitle="Calculate your estimated tax liability"
-            icon="calculate"
-            color="#059669"
-            onPress={() => {
-              // Navigate to tax calculator
-            }}
-          />
-
-          <QuickActionCard
-            title="Upload Documents"
-            subtitle="Scan and upload tax documents"
-            icon="camera-alt"
-            color="#dc2626"
-            onPress={() => {
-              // Navigate to document upload
-            }}
-          />
-
-          <QuickActionCard
-            title="Tax History"
-            subtitle="View previous years' tax returns"
-            icon="history"
-            color="#7c3aed"
-            onPress={() => {
-              // Navigate to tax history
-            }}
           />
         </View>
 
         {/* Current Tax Year Status */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tax Year 2025-26 Status</Text>
-          
+
           <View style={styles.statusCard}>
             <View style={styles.statusHeader}>
               <MaterialIcons name="event" size={20} color="#4f46e5" />
               <Text style={styles.statusTitle}>Filing Deadline</Text>
             </View>
-            <Text style={styles.statusDeadline}>September 30, 2026</Text>
-            <Text style={styles.statusDays}>234 days remaining</Text>
-            
+            <Text style={styles.statusDeadline}>{deadlineLabel}</Text>
+            <Text style={styles.statusDays}>{daysUntilDeadline} days remaining</Text>
+
             <View style={styles.progressContainer}>
               <Text style={styles.progressLabel}>Forms Completion</Text>
               <View style={styles.progressBar}>
-                <View 
+                <View
                   style={[
-                    styles.progressFill, 
+                    styles.progressFill,
                     { width: `${dashboardData?.completion_percentage || 0}%` }
-                  ]} 
+                  ]}
                 />
               </View>
               <Text style={styles.progressText}>
@@ -199,26 +162,22 @@ const DashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          
-          <View style={styles.activityCard}>
-            <MaterialIcons name="check-circle" size={20} color="#059669" />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Income form saved</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
-            </View>
+        {/* Recent Activity — derived from real completed steps */}
+        {dashboardData?.completed_steps?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Completed Forms</Text>
+            {dashboardData.completed_steps.map((step) => (
+              <View key={step} style={styles.activityCard}>
+                <MaterialIcons name="check-circle" size={20} color="#059669" />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>
+                    {step.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
-
-          <View style={styles.activityCard}>
-            <MaterialIcons name="info" size={20} color="#f59e0b" />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Tax year 2025-26 opened</Text>
-              <Text style={styles.activityTime}>1 week ago</Text>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* Footer */}
         <View style={styles.footer}>

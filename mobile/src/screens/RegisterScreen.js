@@ -66,8 +66,15 @@ const RegisterScreen = ({ navigation }) => {
       return false;
     }
 
-    if (!formData.cnic.trim()) {
+    const cnic = formData.cnic.trim();
+    if (!cnic) {
       Alert.alert('Error', 'Please enter your CNIC');
+      return false;
+    }
+    // Accept either the dashed form 12345-1234567-1 or 13 digits with no dashes.
+    const cnicPattern = /^\d{5}-\d{7}-\d{1}$|^\d{13}$/;
+    if (!cnicPattern.test(cnic)) {
+      Alert.alert('Error', 'CNIC must be in the format 12345-1234567-1 (or 13 digits without dashes)');
       return false;
     }
 

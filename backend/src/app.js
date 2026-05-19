@@ -15,6 +15,7 @@ const taxHistoryRoutes = require('./routes/taxHistory');
 const taxYearRoutes = require('./routes/taxYear');
 const aiConsultantRoutes = require('./routes/aiConsultant');
 const aiKnowledgeBase = require('./services/aiConsultant/knowledgeBase');
+const mobileApiRoutes = require('./routes/mobileApi');
 
 // Module imports
 const incomeTaxModule = require('./modules/IncomeTax');
@@ -160,6 +161,12 @@ app.use('/api/income-form', apiWriteLimiter, incomeFormRoutes);
 // Tax forms module routes
 const taxFormsRoutes = require('./modules/IncomeTax/routes/taxForms');
 app.use('/api/tax-forms', apiWriteLimiter, taxFormsRoutes);
+
+// Mobile-specific API surface. Offline-first sync, batched expense writes,
+// receipt uploads. See docs/mobile-expenses-design.md.
+// Same write limiter as the rest; receipt upload is throttled separately
+// inside the route via uploadLimiter when wired up.
+app.use('/api/mobile/v1', apiWriteLimiter, mobileApiRoutes);
 
 // AI tax consultant — DeepSeek-backed chat + form helper.
 // Same write limiter; the route module short-circuits when DEEPSEEK_API_KEY

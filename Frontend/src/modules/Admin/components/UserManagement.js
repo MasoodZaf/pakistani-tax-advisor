@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Search, Filter, Edit, Trash2, Check, FileText, Calculator } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, FileText } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';

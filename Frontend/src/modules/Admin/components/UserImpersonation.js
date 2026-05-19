@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { 
-  Users, 
-  LogIn, 
-  Eye, 
-  AlertTriangle, 
+import {
+  LogIn,
+  AlertTriangle,
   Search,
-  Filter,
   RefreshCw,
   Clock,
   Shield,
@@ -17,7 +14,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const UserImpersonation = ({ onClose }) => {
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [impersonating, setImpersonating] = useState(false);

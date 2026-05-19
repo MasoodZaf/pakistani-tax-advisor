@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps -- auto-calc effect uses a spread of watched values; adding watchedValues/finalTaxRate to deps would loop */
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
@@ -9,8 +10,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Building2,
-  Trophy,
-  DollarSign,
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -64,8 +63,7 @@ const FinalTaxForm = () => {
     handleSubmit,
     watch,
     reset,
-    setValue,
-    formState: { errors }
+    setValue
   } = useForm({
     defaultValues: getStepData('final_tax')
   });

@@ -1,51 +1,55 @@
-// Mobile tax calculation utilities
+// Mobile tax calculation utilities.
+//
+// Slabs are the authoritative ones from the backend tax_slabs seed for the
+// salaried-individual schedule. The server remains the source of truth — these
+// are an offline fallback for the in-app calculator only. Keep in sync with
+// database/schema.sql or fetch via /api/tax-year when online.
 export class MobileTaxCalculator {
-  
-  // Pakistani tax slabs for 2025-26 (cached for offline use)
+
+  // Slabs are stored as (min, max, rate) only. We compute marginal tax in a
+  // single pass — no precomputed "fixed" base, which avoids the double-count
+  // bug that earlier shipped here.
   static TAX_SLABS_2025_26 = [
-    { min: 0, max: 600000, rate: 0, fixed: 0 },
-    { min: 600000, max: 1200000, rate: 0.05, fixed: 0 },
-    { min: 1200000, max: 2200000, rate: 0.125, fixed: 30000 },
-    { min: 2200000, max: 3200000, rate: 0.20, fixed: 155000 },
-    { min: 3200000, max: 4100000, rate: 0.25, fixed: 355000 },
-    { min: 4100000, max: null, rate: 0.35, fixed: 580000 }
+    { min: 0,       max: 600000,  rate: 0.00 },
+    { min: 600000,  max: 1200000, rate: 0.05 },
+    { min: 1200000, max: 2200000, rate: 0.15 },
+    { min: 2200000, max: 3200000, rate: 0.25 },
+    { min: 3200000, max: 4100000, rate: 0.30 },
+    { min: 4100000, max: null,    rate: 0.35 }
   ];
 
-  // Calculate progressive tax (offline capable)
-  static calculateProgressiveTax(taxableIncome, taxYear = '2025-26') {
+  // Calculate progressive (marginal) tax. Offline-capable.
+  static calculateProgressiveTax(taxableIncome /* , taxYear */) {
     if (taxableIncome <= 0) {
       return {
         totalTax: 0,
         effectiveRate: 0,
         breakdown: [],
-        taxableIncome: 0
+        taxableIncome: 0,
+        netIncome: 0
       };
     }
 
     const slabs = this.TAX_SLABS_2025_26;
     let totalTax = 0;
-    let breakdown = [];
+    const breakdown = [];
 
     for (const slab of slabs) {
-      const slabMin = slab.min;
-      const slabMax = slab.max || Infinity;
+      const slabMax = slab.max ?? Infinity;
+      if (taxableIncome <= slab.min) break;
 
-      if (taxableIncome > slabMin) {
-        const taxableAtThisSlab = Math.min(taxableIncome, slabMax) - slabMin;
-        
-        if (taxableAtThisSlab > 0) {
-          const taxAtThisSlab = (taxableAtThisSlab * slab.rate) + slab.fixed;
-          totalTax += taxAtThisSlab;
-          
-          breakdown.push({
-            range: `${this.formatCurrency(slabMin)} - ${slab.max ? this.formatCurrency(slabMax) : 'Above'}`,
-            rate: `${(slab.rate * 100).toFixed(1)}%`,
-            taxableAmount: taxableAtThisSlab,
-            taxAmount: taxAtThisSlab,
-            fixedAmount: slab.fixed
-          });
-        }
-      }
+      const taxableAtThisSlab = Math.min(taxableIncome, slabMax) - slab.min;
+      if (taxableAtThisSlab <= 0) continue;
+
+      const taxAtThisSlab = taxableAtThisSlab * slab.rate;
+      totalTax += taxAtThisSlab;
+
+      breakdown.push({
+        range: `${this.formatCurrency(slab.min)} - ${slab.max ? this.formatCurrency(slabMax) : 'Above'}`,
+        rate: `${(slab.rate * 100).toFixed(1)}%`,
+        taxableAmount: taxableAtThisSlab,
+        taxAmount: taxAtThisSlab
+      });
     }
 
     const effectiveRate = (totalTax / taxableIncome) * 100;

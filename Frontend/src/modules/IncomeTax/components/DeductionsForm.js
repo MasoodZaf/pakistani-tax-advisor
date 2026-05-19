@@ -4,22 +4,20 @@ import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  Save,
+  ArrowRight,
+  ArrowLeft,
   CreditCard,
-  Calculator,
   FileText,
-  Info,
-  Users,
-  DollarSign
+  Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import deductionsHelp from '../../../help/deductionsHelp';
 import { formatCurrency } from '../../../utils/currency';
+import MobileExpensesWidget from '../../../components/MobileExpenses/MobileExpensesWidget';
 
 const DeductionsForm = () => {
   const navigate = useNavigate();
@@ -262,6 +260,17 @@ const DeductionsForm = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile-captured expenses for this tax year. Zakat is the only direct
+          deduction field; the rest are surfaced so the user knows about them
+          and can copy to the right form (credits, etc.). */}
+      <MobileExpensesWidget
+        taxYear={currentTaxYear || '2025-26'}
+        setValue={setValue}
+        fieldMap={{
+          zakat: { field: 'zakat_paid_amount', yn: 'zakat_paid_yn' },
+        }}
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Column Headers */}

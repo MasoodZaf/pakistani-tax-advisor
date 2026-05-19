@@ -1,3 +1,6 @@
+// Gesture handler must be imported at the top of the entry file to ensure
+// native gesture handlers are registered before any navigator mounts.
+import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

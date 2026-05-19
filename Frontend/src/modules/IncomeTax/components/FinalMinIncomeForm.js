@@ -228,13 +228,11 @@ const FinalMinIncomeForm = () => {
   const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
 
   const {
-    register,
     handleSubmit,
     watch,
     setValue,
     getValues,
-    reset,
-    formState: { errors }
+    reset
   } = useForm({
     defaultValues: getStepData('final_min_income')
   });
@@ -388,9 +386,6 @@ const FinalMinIncomeForm = () => {
     setTimeout(() => setRefreshKey((k) => k + 1), 0);
   }, [formData['income'], rates, setValue, getStepData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Get current form data from context for rendering inputs
-  const currentFormData = formData['final_min_income'] || {};
-
   // fieldDefinitions lives at module scope (see FIELD_DEFINITIONS) — no longer
   // reallocated per render. Alias kept so existing references compile.
   const fieldDefinitions = FIELD_DEFINITIONS;
@@ -440,7 +435,7 @@ const FinalMinIncomeForm = () => {
     return { subtotal, capitalGainTaxChargeable, grandTotal };
   };
 
-  const { subtotal, capitalGainTaxChargeable, grandTotal } = calculateTotals();
+  const { subtotal, grandTotal } = calculateTotals();
 
   // Helper to sync uncontrolled input values to React Hook Form before saving
   const syncInputsToForm = async () => {

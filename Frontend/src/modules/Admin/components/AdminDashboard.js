@@ -15,8 +15,7 @@ import {
   CheckCircle,
   Clock,
   Percent,
-  Key,
-  LogIn
+  Key
 } from 'lucide-react';
 import axios from 'axios';
 import TaxCalculator from './TaxCalculator';

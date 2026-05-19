@@ -9,11 +9,7 @@ import {
   ArrowRight,
   ArrowLeft,
   TrendingDown,
-  GraduationCap,
-  Building,
-  Info,
-  Users,
-  DollarSign
+  Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';

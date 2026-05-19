@@ -22,10 +22,9 @@ const TaxFormsScreen = ({ navigation }) => {
 
   const loadFormsData = async () => {
     try {
+      // Returns { taxReturn, formData, completedSteps, completionPercentage }
       const response = await taxFormsAPI.getTaxForms();
-      if (response.success) {
-        setFormsData(response.data);
-      }
+      setFormsData(response || null);
     } catch (error) {
       console.error('Forms data error:', error);
     } finally {
@@ -131,14 +130,20 @@ const TaxFormsScreen = ({ navigation }) => {
     );
   };
 
+  // Only forms backed by a real screen on mobile. Wealth Statement and
+  // Capital Gains are intentionally omitted until the screens are built —
+  // navigating to a missing screen would throw a navigation error.
+  const completedSteps = formsData?.completedSteps || [];
+  const statusFor = (key) => (completedSteps.includes(key) ? 'completed' : 'pending');
+
   const forms = [
     {
       id: 'income',
       title: 'Income Information',
       description: 'Enter your salary, bonuses, and other income sources',
       icon: 'attach-money',
-      status: formsData?.income?.status || 'pending',
-      completionPercentage: formsData?.income?.completion_percentage || 0,
+      status: statusFor('income'),
+      completionPercentage: completedSteps.includes('income') ? 100 : 0,
       required: true,
       screen: 'IncomeForm',
     },
@@ -147,38 +152,18 @@ const TaxFormsScreen = ({ navigation }) => {
       title: 'Deductions & Allowances',
       description: 'Claim eligible deductions and tax allowances',
       icon: 'receipt',
-      status: formsData?.deductions?.status || 'pending',
-      completionPercentage: formsData?.deductions?.completion_percentage || 0,
+      status: statusFor('deductions'),
+      completionPercentage: completedSteps.includes('deductions') ? 100 : 0,
       required: true,
       screen: 'DeductionsForm',
-    },
-    {
-      id: 'wealth',
-      title: 'Wealth Statement',
-      description: 'Declare your assets and investments',
-      icon: 'account-balance',
-      status: formsData?.wealth?.status || 'pending',
-      completionPercentage: formsData?.wealth?.completion_percentage || 0,
-      required: false,
-      screen: 'WealthForm',
-    },
-    {
-      id: 'capital_gains',
-      title: 'Capital Gains',
-      description: 'Report capital gains from property and securities',
-      icon: 'trending-up',
-      status: formsData?.capital_gains?.status || 'pending',
-      completionPercentage: formsData?.capital_gains?.completion_percentage || 0,
-      required: false,
-      screen: 'CapitalGainsForm',
     },
     {
       id: 'final_tax',
       title: 'Final Tax Calculation',
       description: 'Review and finalize your tax calculation',
       icon: 'calculate',
-      status: formsData?.final_tax?.status || 'pending',
-      completionPercentage: formsData?.final_tax?.completion_percentage || 0,
+      status: statusFor('final_tax'),
+      completionPercentage: completedSteps.includes('final_tax') ? 100 : 0,
       required: true,
       screen: 'FinalTaxForm',
     },

@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps -- fetchUserTaxRecords is stable; re-fetch only when userId changes */
 import React, { useState, useEffect } from 'react';
-import { FileText, Edit, Save, X, User, Calendar, TrendingUp, DollarSign, CheckCircle } from 'lucide-react';
+import { FileText, Edit, Save, X, User, TrendingUp, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../../utils/currency';
