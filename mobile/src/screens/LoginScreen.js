@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -54,6 +55,40 @@ const LoginScreen = ({ navigation }) => {
       }
     })();
   }, [googleResponse, ssoLogin]);
+
+  // Apple Sign-In is iOS-only on mobile (App Store requirement). On Android
+  // the native sheet doesn't exist; we hide the button entirely rather than
+  // fall back to the web flow, which is awkward on Android.
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
+
+  const onApplePress = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential?.identityToken) {
+        Alert.alert('Apple sign-in', 'No identity token returned');
+        return;
+      }
+      const result = await ssoLogin('apple', credential.identityToken);
+      if (!result.success) {
+        Alert.alert('Apple sign-in failed', result.error);
+      }
+    } catch (err) {
+      // ERR_CANCELED is the user dismissing the sheet — silent.
+      if (err.code === 'ERR_REQUEST_CANCELED' || err.code === 'ERR_CANCELED') return;
+      Alert.alert('Apple sign-in failed', err.message || 'Unknown error');
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -163,6 +198,16 @@ const LoginScreen = ({ navigation }) => {
               <MaterialIcons name="login" size={18} color="#1f2937" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
+
+            {appleAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={onApplePress}
+              />
+            )}
 
             <TouchableOpacity
               style={styles.registerButton}
@@ -318,6 +363,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  appleButton: {
+    width: '100%',
+    height: 50,
+    marginBottom: 12,
   },
   registerButton: {
     borderWidth: 1,

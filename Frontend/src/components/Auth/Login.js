@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
+import AppleSignInButton from './AppleSignInButton';
 
 /* ─── Styles ─────────────────────────────────────────────────────────────────── */
 const Styles = () => (
@@ -308,6 +309,16 @@ const Login = () => {
     }
   };
 
+  // Generic post-SSO routing — used by both providers.
+  const afterSsoSuccess = (result) => {
+    if (!result?.success) return;
+    if (['admin', 'super_admin'].includes(result.userData?.role)) {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   // Google Sign-In success: the credential is the ID token (a JWT). Hand it
   // to the backend bridge; the same post-login routing applies.
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -318,14 +329,16 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      const result = await ssoLogin('google', idToken);
-      if (result.success) {
-        if (['admin', 'super_admin'].includes(result.userData?.role)) {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      }
+      afterSsoSuccess(await ssoLogin('google', idToken));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSuccess = async ({ identityToken }) => {
+    setLoading(true);
+    try {
+      afterSsoSuccess(await ssoLogin('apple', identityToken));
     } finally {
       setLoading(false);
     }
@@ -443,7 +456,7 @@ const Login = () => {
             <span style={{ fontSize: 12, color: '#7a8890', fontWeight: 500 }}>or continue with</span>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={() => toast.error('Google sign-in failed')}
@@ -451,6 +464,11 @@ const Login = () => {
               theme="outline"
               size="large"
               width="320"
+            />
+            <AppleSignInButton
+              onSuccess={handleAppleSuccess}
+              onError={(err) => toast.error(err.message || 'Apple sign-in failed')}
+              disabled={loading}
             />
           </div>
 
