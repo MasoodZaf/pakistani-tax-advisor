@@ -106,3 +106,11 @@ e2e/artifacts/
 # The generator script and the generated workbooks both stay out of git.
 test-excel-scenarios/
 scripts/generate-test-excel.js
+
+# AI consultant knowledge-base PDFs — too large for git (Rules 2002 is 116 MB,
+# over GitHub's 100 MB hard limit). Copy locally into backend/data/knowledge-base/
+# and `docker cp` into the ai_kb_data volume on prod. Source FBR PDF downloads
+# live in repo-root "FBR Docs/" as a staging area, also untracked.
+FBR Docs/
+backend/data/knowledge-base/*.pdf
+backend/data/knowledge-base/*.xlsx
