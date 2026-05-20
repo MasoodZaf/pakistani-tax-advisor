@@ -49,7 +49,12 @@ async function migrate(d) {
 
       -- mobile-only sync state: 'pending' | 'synced' | 'conflict' | 'error'
       sync_status      TEXT NOT NULL DEFAULT 'pending',
-      last_sync_error  TEXT
+      last_sync_error  TEXT,
+
+      -- When sync_status='conflict', the server's competing version is stashed
+      -- here as JSON so the resolution screen can show a side-by-side diff
+      -- without another network round-trip. Cleared once resolved.
+      conflict_server_data TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_expenses_sync ON expenses(sync_status);
@@ -61,6 +66,14 @@ async function migrate(d) {
       value TEXT
     );
   `);
+
+  // Additive migration: conflict_server_data was added after the first
+  // release. CREATE TABLE IF NOT EXISTS won't touch an existing table, so
+  // ALTER it in — guarded against the "duplicate column" error on re-run.
+  const cols = await d.getAllAsync('PRAGMA table_info(expenses)');
+  if (!cols.some((c) => c.name === 'conflict_server_data')) {
+    await d.execAsync('ALTER TABLE expenses ADD COLUMN conflict_server_data TEXT');
+  }
 }
 
 // Pakistan tax year (1 July YYYY – 30 June YYYY+1 → 'YYYY-YY').
@@ -224,9 +237,65 @@ export async function markSynced(clientId, serverRecord) {
 export async function markConflict(clientId, serverRecord) {
   const d = await db();
   await d.runAsync(
-    `UPDATE expenses SET sync_status = 'conflict', last_sync_error = ?
+    `UPDATE expenses
+     SET sync_status = 'conflict',
+         last_sync_error = ?,
+         conflict_server_data = ?
      WHERE client_id = ?`,
-    [`conflict: server updated_at=${serverRecord?.updated_at || 'unknown'}`, clientId]
+    [
+      `conflict: server updated_at=${serverRecord?.updated_at || 'unknown'}`,
+      serverRecord ? JSON.stringify(serverRecord) : null,
+      clientId,
+    ]
+  );
+}
+
+// Rows currently in conflict. Each row's conflict_server_data holds the
+// server's competing version (JSON) for the resolution UI.
+export async function listConflicts() {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT * FROM expenses WHERE sync_status = 'conflict' ORDER BY updated_at DESC`
+  );
+}
+
+// Resolve a conflict by keeping the local version. We re-stamp updated_at to
+// NOW so the next push beats the server's timestamp, and re-queue it.
+export async function resolveConflictKeepMine(clientId) {
+  const d = await db();
+  await d.runAsync(
+    `UPDATE expenses
+     SET updated_at = ?, sync_status = 'pending',
+         last_sync_error = NULL, conflict_server_data = NULL
+     WHERE client_id = ?`,
+    [nowIso(), clientId]
+  );
+}
+
+// Resolve a conflict by taking the server's version. Applies the stashed
+// server record over the local row and marks it synced.
+export async function resolveConflictKeepServer(clientId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT conflict_server_data FROM expenses WHERE client_id = ?',
+    [clientId]
+  );
+  if (!row?.conflict_server_data) {
+    // No stashed server data — fall back to marking synced so the row
+    // doesn't stay stuck. The next pull will reconcile it.
+    await d.runAsync(
+      `UPDATE expenses SET sync_status = 'synced', last_sync_error = NULL,
+              conflict_server_data = NULL WHERE client_id = ?`,
+      [clientId]
+    );
+    return;
+  }
+  const serverRow = JSON.parse(row.conflict_server_data);
+  await applyServerRow(serverRow);
+  // applyServerRow sets sync_status='synced'; just clear the stash.
+  await d.runAsync(
+    'UPDATE expenses SET conflict_server_data = NULL WHERE client_id = ?',
+    [clientId]
   );
 }
 

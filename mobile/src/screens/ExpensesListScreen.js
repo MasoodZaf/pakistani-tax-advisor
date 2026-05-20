@@ -84,7 +84,11 @@ const ExpensesListScreen = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={styles.row}
-        onPress={() => navigation.navigate('ExpenseCapture', { clientId: item.client_id })}
+        onPress={() =>
+          item.sync_status === 'conflict'
+            ? navigation.navigate('ConflictResolution', { clientId: item.client_id })
+            : navigation.navigate('ExpenseCapture', { clientId: item.client_id })
+        }
       >
         <View style={styles.rowLeft}>
           <Text style={styles.rowAmount}>{displayAmount}</Text>

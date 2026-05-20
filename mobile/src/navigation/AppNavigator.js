@@ -14,6 +14,7 @@ import DeductionsFormScreen from '../screens/DeductionsFormScreen';
 import FinalTaxFormScreen from '../screens/FinalTaxFormScreen';
 import ExpensesListScreen from '../screens/ExpensesListScreen';
 import ExpenseCaptureScreen from '../screens/ExpenseCaptureScreen';
+import ConflictResolutionScreen from '../screens/ConflictResolutionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
@@ -109,6 +110,11 @@ const ExpensesStackNavigator = () => (
       options={({ route }) => ({
         title: route?.params?.clientId ? 'Edit expense' : 'New expense',
       })}
+    />
+    <Stack.Screen
+      name="ConflictResolution"
+      component={ConflictResolutionScreen}
+      options={{ title: 'Resolve conflict' }}
     />
   </Stack.Navigator>
 );
