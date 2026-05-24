@@ -102,12 +102,18 @@ router.post('/start', async (req, res) => {
     if (!firstStep) {
       return res.status(500).json({ error: 'no_steps_for_profile' });
     }
+    // Pre-fill from the most recent abandoned/completed session so a re-run
+    // (where /reset just archived the prior session) starts with the user's
+    // prior answers as editable defaults. First-time users get {} and an
+    // empty form. This is the load-bearing piece of the "should have the
+    // data which user can modify on rerun" requirement.
+    const seedCapturedData = await sessions.lastArchivedSeed(req.user.id, taxYear);
+
     const created = await sessions.create({
       userId: req.user.id,
       taxYear,
       currentStep: firstStep,
-      // No seed on a fresh start. /reset seeds from the prior completed run.
-      seedCapturedData: {},
+      seedCapturedData,
     });
 
     await insertAudit(pool, {
@@ -126,7 +132,9 @@ router.post('/start', async (req, res) => {
       current_step: firstStep,
       prompt: engine.promptSchema(firstStep),
       progress: engine.progress(firstStep, addons),
-      captured_data: {},
+      // Surface the seed so the client can pre-fill each step's widgets
+      // from the prior run. Empty {} on first-time users.
+      captured_data: created.captured_data || seedCapturedData,
       resumed: false,
     });
   } catch (err) {

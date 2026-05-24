@@ -56,6 +56,28 @@ async function create({ userId, taxYear, currentStep, seedCapturedData = {} }) {
   }
 }
 
+// Most recent archived (abandoned/completed) session's captured_data for this
+// user-year, or {} if none. Used by /start to seed a fresh session from the
+// prior run so a re-run pre-fills the user's prior answers — the "should
+// have the data which user can modify on rerun" requirement. Returns the
+// most recent abandoned first (post-reset path), then completed (defensive
+// — completed shouldn't coexist with a missing in_progress in normal flow).
+async function lastArchivedSeed(userId, taxYear) {
+  const taxYearId = await TaxRateService.resolveTaxYearId(taxYear);
+  const { rows } = await pool.query(
+    `SELECT captured_data
+       FROM wizard_sessions
+      WHERE user_id = $1 AND tax_year_id = $2
+        AND status IN ('abandoned', 'completed')
+      ORDER BY
+        CASE status WHEN 'abandoned' THEN 0 WHEN 'completed' THEN 1 ELSE 2 END,
+        COALESCE(completed_at, started_at) DESC
+      LIMIT 1`,
+    [userId, taxYearId]
+  );
+  return rows[0]?.captured_data || {};
+}
+
 async function getById(sessionId, userId) {
   const { rows } = await pool.query(
     `SELECT id, user_id, tax_year_id, tax_year, status, current_step,
@@ -145,4 +167,5 @@ module.exports = {
   recordTurn,
   markCompleted,
   reset,
+  lastArchivedSeed,
 };

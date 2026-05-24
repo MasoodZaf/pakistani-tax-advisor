@@ -135,7 +135,9 @@ describe('POST /api/wizard/start', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     // 3. loadAddons (no income_profile)
     mockQuery.mockResolvedValueOnce({ rows: [] });
-    // 4. sessions.create
+    // 4. lastArchivedSeed: no prior session → returns {}
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 5. sessions.create
     mockQuery.mockResolvedValueOnce({
       rows: [{
         id: SESSION_ID,
@@ -197,6 +199,8 @@ describe('POST /api/wizard/start', () => {
     mockQuery.mockResolvedValueOnce({
       rows: [{ income_profile: { addons: ['rental'] } }],
     });
+    // lastArchivedSeed: no prior session
+    mockQuery.mockResolvedValueOnce({ rows: [] });
     mockQuery.mockResolvedValueOnce({
       rows: [{ id: SESSION_ID, status: 'in_progress', current_step: 'salary_basics', captured_data: {}, started_at: new Date() }],
     });
@@ -204,6 +208,42 @@ describe('POST /api/wizard/start', () => {
     const res = await request(buildApp()).post('/api/wizard/start').send({});
     // 3 baseline + rental = 4 input steps
     expect(res.body.progress).toEqual({ current: 1, total: 4 });
+  });
+
+  test('re-run: pre-fills captured_data from the most recent abandoned session', async () => {
+    const priorSeed = {
+      salary_basics: { annual_basic_salary: 1500000, allowances: 200000, bonus: 0 },
+      salary_wht: { salary_tax_deducted: 75000 },
+    };
+    // 1. currentTaxYear
+    mockQuery.mockResolvedValueOnce({ rows: [{ tax_year: '2025-26' }] });
+    // 2. getStatus → no completed/in_progress (the prior session is abandoned)
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 3. loadAddons (none)
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 4. lastArchivedSeed → returns the prior session's captured_data
+    mockQuery.mockResolvedValueOnce({ rows: [{ captured_data: priorSeed }] });
+    // 5. sessions.create — echoes back the seed it was given
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: SESSION_ID,
+        status: 'in_progress',
+        current_step: 'salary_basics',
+        captured_data: priorSeed,
+        started_at: new Date(),
+      }],
+    });
+
+    const res = await request(buildApp()).post('/api/wizard/start').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.captured_data.salary_basics.annual_basic_salary).toBe(1500000);
+    expect(res.body.captured_data.salary_wht.salary_tax_deducted).toBe(75000);
+
+    // The INSERT call passed the seed as the 5th param (captured_data column).
+    const insertCall = mockQuery.mock.calls[4];
+    expect(insertCall[0]).toMatch(/INSERT INTO wizard_sessions/);
+    expect(JSON.parse(insertCall[1][4])).toEqual(priorSeed);
   });
 
 });
