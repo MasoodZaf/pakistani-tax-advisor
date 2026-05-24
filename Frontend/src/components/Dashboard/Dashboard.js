@@ -4,6 +4,7 @@ import { useTaxForm } from '../../contexts/TaxFormContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
 import { useTaxPreview } from '../../hooks/useTaxPreview';
 import { Link } from 'react-router-dom';
+import WizardCTABanner from '../Wizard/WizardCTABanner';
 import {
   FileText, BarChart3, TrendingUp, Calendar,
   CheckCircle, Clock, ArrowRight, AlertCircle,
@@ -231,6 +232,11 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Quick-start wizard banner — self-hides once completed or
+          dismissed. Lives between the greeting and the main grid so
+          first-time users see it but it stays out of the way otherwise. */}
+      <WizardCTABanner />
 
       {/* ── Main grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 20, marginBottom: 20 }}>

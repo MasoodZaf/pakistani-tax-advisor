@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
-import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw } from 'lucide-react';
+import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import ConnectedAccounts from './ConnectedAccounts';
+import { wizardAPI } from '../../services/wizardAPI';
 
 /* ─── Income stream definitions (mirrors Onboarding) ─────────────────────── */
 const INCOME_STREAMS = [
@@ -134,6 +136,147 @@ const RecentActivity = () => {
         >
           {showAll ? 'Show less' : `Show all ${items.length} entries`}
         </button>
+      )}
+    </div>
+  );
+};
+
+// ── WizardRerunControl ───────────────────────────────────────────────────
+// Shows the quick-start wizard's current state (completed/in-progress/none)
+// and a button to re-run. Re-run calls /api/wizard/reset (which archives
+// the prior session and returns the prior captured_data as a seed) and
+// then routes to /wizard — where /start picks it up and renders the first
+// step pre-filled from the saved answers.
+const WizardRerunControl = () => {
+  const navigate = useNavigate();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const s = await wizardAPI.status();
+      setStatus(s);
+    } catch (err) {
+      console.warn('wizard/status fetch failed', err);
+      setStatus(null);
+    }
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const rerun = async () => {
+    setLoading(true);
+    try {
+      await wizardAPI.reset();
+      navigate('/wizard');
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Could not reset wizard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!status) {
+    return <p className="text-sm text-gray-500">Loading…</p>;
+  }
+
+  if (status.in_progress) {
+    return (
+      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <div>
+            <div className="font-medium text-gray-900">Wizard is in progress</div>
+            <div className="text-sm text-gray-600">Resume where you left off.</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/wizard')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          Resume
+        </button>
+      </div>
+    );
+  }
+
+  if (!status.completed) {
+    return (
+      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-gray-500" />
+          <div>
+            <div className="font-medium text-gray-900">You haven't run the wizard yet</div>
+            <div className="text-sm text-gray-600">
+              Get a rough tax estimate in about 90 seconds.
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/wizard')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          Start
+        </button>
+      </div>
+    );
+  }
+
+  // status.completed === true
+  return (
+    <div>
+      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Check className="w-5 h-5 text-green-600" />
+          <div>
+            <div className="font-medium text-gray-900">Wizard completed for this year</div>
+            <div className="text-sm text-gray-600">
+              {status.last_completed_at
+                ? `Finished ${new Date(status.last_completed_at).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}.`
+                : ''}{' '}
+              You can re-run to update your answers.
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className="w-4 h-4" /> Run again
+        </button>
+      </div>
+
+      {confirming && (
+        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+          <p className="text-amber-900 font-medium mb-2">Run the wizard again?</p>
+          <p className="text-amber-800 mb-3">
+            Your previous answers will be pre-filled — you'll edit them in place. The new run will replace
+            the prior estimate when you finish.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={rerun}
+              disabled={loading}
+              className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              Yes, run again
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={loading}
+              className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -467,6 +610,14 @@ const Settings = () => {
             <div>
               <h3 className="font-medium text-gray-900 mb-3">Connected accounts</h3>
               <ConnectedAccounts />
+            </div>
+
+            {/* Re-run the quick-start wizard. Archives the prior session
+                and pre-fills the new one from the saved answers — see
+                project-design wizard memory. */}
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Quick-start wizard</h3>
+              <WizardRerunControl />
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ import Landing from './components/Landing/Landing';
 import Onboarding from './components/Onboarding/Onboarding';
 import ConsultantPage from './components/AIConsultant/ConsultantPage';
 import FloatingChatWidget from './components/AIConsultant/FloatingChatWidget';
+import Wizard from './components/Wizard/Wizard';
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // A user is "needs onboarding" when authenticated as a non-admin and the
@@ -272,6 +273,18 @@ function App() {
                     <Layout>
                       <ConsultantPage />
                     </Layout>
+                  </UserOnlyRoute>
+                }
+              />
+
+              {/* AI quick-start wizard — full-page chat, no sidebar/header
+                  chrome around it because the wizard is a focused
+                  task-flow that benefits from a clean view. */}
+              <Route
+                path="/wizard"
+                element={
+                  <UserOnlyRoute>
+                    <Wizard />
                   </UserOnlyRoute>
                 }
               />
