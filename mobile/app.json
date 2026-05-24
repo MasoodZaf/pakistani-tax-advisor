@@ -41,7 +41,14 @@
       "expo-font",
       "expo-sqlite",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pakistani Tax Advisor needs access to your photo library so you can attach receipt images to expense records.",
+          "cameraPermission": "Pakistani Tax Advisor needs access to your camera so you can photograph receipts for expense records."
+        }
+      ]
     ]
   }
 }

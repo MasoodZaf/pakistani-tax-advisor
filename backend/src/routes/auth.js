@@ -14,19 +14,28 @@ const router = express.Router();
 // User Registration
 router.post('/register', async (req, res) => {
   const client = await pool.connect();
-  
+
+  // ROLLBACK + return helper. Early returns inside the BEGIN block must NOT
+  // skip the rollback — relying on `client.release()` to clear the txn is a
+  // landmine if anyone later moves the release point or adds work after the
+  // early return. Use this for every non-error early exit below.
+  const abort = async (status, body) => {
+    try { await client.query('ROLLBACK'); } catch { /* already aborted */ }
+    return res.status(status).json(body);
+  };
+
   try {
     await client.query('BEGIN');
-    
+
     const { email, name, password, user_type = 'individual' } = req.body;
 
     if (!email || !name || !password) {
-      return res.status(400).json({ error: 'Email, name, and password are required' });
+      return abort(400, { error: 'Email, name, and password are required' });
     }
 
     const policy = validatePasswordPolicy(password, { email });
     if (!policy.ok) {
-      return res.status(400).json({ error: 'Password does not meet policy', message: policy.message });
+      return abort(400, { error: 'Password does not meet policy', message: policy.message });
     }
 
     // Check if user already exists by email
@@ -36,7 +45,7 @@ router.post('/register', async (req, res) => {
     );
 
     if (existingUser.rows.length > 0) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+      return abort(409, { error: 'User with this email already exists' });
     }
 
     // Check if user with same name already exists. Return a generic 409 —
@@ -48,7 +57,7 @@ router.post('/register', async (req, res) => {
     );
 
     if (existingName.rows.length > 0) {
-      return res.status(409).json({
+      return abort(409, {
         error: 'Name already in use',
         message: 'Please choose a different name.'
       });
