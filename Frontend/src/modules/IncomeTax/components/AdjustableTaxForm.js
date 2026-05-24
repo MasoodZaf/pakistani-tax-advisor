@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps -- auto-calc effects intentionally watch specific field values; adding watchedValues/whtRate to deps would cause re-render loops */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Save,
   ArrowRight,
@@ -21,7 +22,8 @@ import {
   DollarSign,
   ChevronDown,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
@@ -36,8 +38,25 @@ const AdjustableTaxForm = () => {
     saveFormStep,
     getStepData,
     formData,
-    saving
+    saving,
+    incomeProfile,
   } = useTaxForm();
+
+  // Field-level visibility — pulled from the shared manifest so the same
+  // declarations work across web + (eventually) mobile. Pure salaried
+  // users see ~10 WHT lines instead of all 54. Advanced toggle reveals
+  // the rest in one click for the rare cases.
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: showAdvanced }),
+    [addons, showAdvanced]
+  );
+  const visibleFieldsWithAdvanced = useMemo(
+    () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: true }),
+    [addons]
+  );
+  const advancedExtraCount = visibleFieldsWithAdvanced.size - visibleFieldsFor('adjustable_tax_forms', addons).size;
   const { currentTaxYear } = useTaxYear();
   const { rates } = useTaxRates(currentTaxYear);
 
@@ -1262,19 +1281,55 @@ const AdjustableTaxForm = () => {
           </div>
         </div>
 
-        {/* Dynamic Sections - All 27 fields from Excel */}
-        {Object.entries(fieldGroups).map(([key, group]) => (
-          <SectionComponent 
-            key={key} 
-            groupKey={key} 
-            group={group}
-            register={register}
-            errors={errors}
-            expandedSections={expandedSections}
-            toggleSection={toggleSection}
-            getColorClasses={getColorClasses}
-          />
-        ))}
+        {/* Dynamic Sections — filtered by the income-profile addons via
+            shared/formFieldVisibility.js. Pure-salaried users see ~10
+            lines; addons unlock the rest; advanced-toggle reveals the
+            remaining seldom-used WHT items. */}
+        {(() => {
+          const visibleGroups = Object.entries(fieldGroups)
+            .map(([key, group]) => {
+              const fields = group.fields.filter((f) => visibleFields.has(f.taxField));
+              return { key, group: { ...group, fields }, count: fields.length };
+            })
+            .filter((g) => g.count > 0);
+
+          return visibleGroups.map(({ key, group }) => (
+            <SectionComponent
+              key={key}
+              groupKey={key}
+              group={group}
+              register={register}
+              errors={errors}
+              expandedSections={expandedSections}
+              toggleSection={toggleSection}
+              getColorClasses={getColorClasses}
+            />
+          ));
+        })()}
+
+        {/* Advanced-fields toggle: surfaces the rarely-needed WHT lines
+            (vehicle transfer, landline phone, internet, gatherings,
+            provident-fund) only when the user opts in. Hides when all
+            available fields are already shown. */}
+        {advancedExtraCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+          >
+            {showAdvanced ? (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Hide advanced fields
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Show {advancedExtraCount} advanced WHT field{advancedExtraCount === 1 ? '' : 's'}
+              </>
+            )}
+          </button>
+        )}
 
         {/* Totals Section */}
         <div className="bg-gray-800 text-white rounded-xl p-5">

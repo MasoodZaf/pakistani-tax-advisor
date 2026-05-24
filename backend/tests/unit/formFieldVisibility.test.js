@@ -121,3 +121,27 @@ describe('computeUserField()', () => {
     expect(computeUserField('income_forms', 'fake_column_xyz')).toBe('unknown');
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────
+// Drift guard: the canonical manifest at /shared/formFieldVisibility.js
+// is also mirrored at /Frontend/src/shared/ because CRA's
+// ModuleScopePlugin blocks imports outside src/. The two files MUST stay
+// identical — this test fails fast if they drift. To resync, run:
+//   cp shared/formFieldVisibility.js Frontend/src/shared/
+// ───────────────────────────────────────────────────────────────────────
+const fs = require('fs');
+const path = require('path');
+
+describe('formFieldVisibility — sync between repo /shared/ and Frontend/src/shared/', () => {
+  test('canonical and Frontend mirror are byte-identical', () => {
+    const canonical = fs.readFileSync(
+      path.resolve(__dirname, '../../../shared/formFieldVisibility.js'),
+      'utf8'
+    );
+    const mirror = fs.readFileSync(
+      path.resolve(__dirname, '../../../Frontend/src/shared/formFieldVisibility.js'),
+      'utf8'
+    );
+    expect(mirror).toBe(canonical);
+  });
+});
