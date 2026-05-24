@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Save,
   ArrowRight,
   ArrowLeft,
   TrendingDown,
-  Info
+  Info,
+  ChevronDown,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
@@ -23,7 +26,8 @@ const ReductionsForm = () => {
     saveFormStep,
     getStepData,
     formData: contextFormData,
-    saving
+    saving,
+    incomeProfile,
   } = useTaxForm();
 
   const [showHelp, setShowHelp] = useState(false);
@@ -168,6 +172,30 @@ const ReductionsForm = () => {
     }
   ];
 
+  // Field-level visibility — driven by income-profile addons. The form's
+  // local field names don't match DB column names for capital-gain rows
+  // (buildReductionsPayload renames them at save time), so we map each
+  // item to its canonical DB column for the visibility check.
+  const ITEM_DB_COLUMN = {
+    teacher_researcher_reduction:        'teacher_researcher_tax_reduction',
+    behbood_certificates_reduction:      'behbood_certificates_tax_reduction',
+    capital_gain_immovable_reduction:    'capital_gain_immovable_50_reduction',
+    capital_gain_clause9a_reduction:     'capital_gain_immovable_75_reduction',
+  };
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('reductions_forms', addons, { advanced: showAdvanced }),
+    [addons, showAdvanced]
+  );
+  const advancedExtraCount =
+    visibleFieldsFor('reductions_forms', addons, { advanced: true }).size -
+    visibleFieldsFor('reductions_forms', addons).size;
+  const visibleReductionItems = useMemo(
+    () => reductionItems.filter((item) => visibleFields.has(ITEM_DB_COLUMN[item.id])),
+    [reductionItems, visibleFields] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   // Calculate total tax reduction
   const calculateTotalReduction = () => {
     return reductionItems.reduce((total, item) => {
@@ -283,7 +311,20 @@ const ReductionsForm = () => {
             Tax Reduction
           </h2>
 
-          {reductionItems.map((item, index) => (
+          {visibleReductionItems.length === 0 && (
+            <div className="text-center py-6 px-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <p className="text-sm text-blue-900 font-medium">
+                No tax reductions apply to your income profile.
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                Capital-gain reductions on immovable property appear when you add
+                <strong> Property Sale</strong> in Settings → Income Streams. Click
+                "Show advanced" below to see teacher/Behbood reductions.
+              </p>
+            </div>
+          )}
+
+          {visibleReductionItems.map((item, index) => (
             <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-green-200 last:border-b-0">
               <div className="col-span-5">
                 <p className="text-sm font-medium text-gray-700">
@@ -340,6 +381,28 @@ const ReductionsForm = () => {
               </div>
             </div>
           ))}
+
+          {/* Advanced toggle: reveals teacher/researcher + Behbood
+              certificate reductions (both ADVANCED in the manifest). */}
+          {advancedExtraCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 text-sm font-medium text-green-700 bg-green-100 border border-green-200 rounded-lg hover:bg-green-200 transition-colors"
+            >
+              {showAdvanced ? (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Hide advanced reduction fields
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Show {advancedExtraCount} advanced reduction field{advancedExtraCount === 1 ? '' : 's'}
+                </>
+              )}
+            </button>
+          )}
 
           {/* Total Tax Reduction */}
           <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-green-100 rounded-lg px-4 font-semibold">

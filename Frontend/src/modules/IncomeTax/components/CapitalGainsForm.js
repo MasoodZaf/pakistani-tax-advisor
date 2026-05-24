@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps -- auto-calc effect uses a spread of watched values; adding watchedValues/cgtRate to deps would loop */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Save,
   ArrowRight,
@@ -48,7 +49,8 @@ const CapitalGainsForm = () => {
     saveFormStep,
     getStepData,
     formData: contextFormData,
-    saving
+    saving,
+    incomeProfile,
   } = useTaxForm();
   const { currentTaxYear } = useTaxYear();
   const { rates } = useTaxRates(currentTaxYear);
@@ -161,9 +163,22 @@ const CapitalGainsForm = () => {
   };
   const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
-  // Group for display
-  const propertyItems  = capitalGainItems.filter(i => i.id.startsWith('immovable_property'));
-  const securitiesItems= capitalGainItems.filter(i => i.id.startsWith('securities'));
+  // Field-level visibility — driven by income-profile addons. The
+  // property group needs property_gain; the securities group needs
+  // securities. Pure salaried sees nothing on this form.
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('capital_gain_forms', addons),
+    [addons]
+  );
+
+  // Group for display, filtered by addon visibility.
+  const propertyItems = capitalGainItems
+    .filter(i => i.id.startsWith('immovable_property'))
+    .filter(i => visibleFields.has(i.taxableAmount));
+  const securitiesItems = capitalGainItems
+    .filter(i => i.id.startsWith('securities'))
+    .filter(i => visibleFields.has(i.taxableAmount));
 
   const renderGroup = (title, items, color) => {
     const borderClass = color === 'orange' ? 'border-orange-200' : 'border-blue-200';
@@ -311,8 +326,19 @@ const CapitalGainsForm = () => {
           </div>
         </div>
 
-        {renderGroup('Immovable Property — u/s 37(1A) Finance Act 2025', propertyItems, 'orange')}
-        {renderGroup('Securities & Mutual Funds — u/s 37A Finance Act 2025', securitiesItems, 'blue')}
+        {propertyItems.length === 0 && securitiesItems.length === 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <p className="text-sm text-blue-900 font-medium">
+              No capital-gain categories apply to your income profile.
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              Add <strong>Property Sale</strong> or <strong>Listed Shares / Mutual Funds</strong> in
+              Settings → Income Streams to enable the relevant CGT brackets.
+            </p>
+          </div>
+        )}
+        {propertyItems.length > 0 && renderGroup('Immovable Property — u/s 37(1A) Finance Act 2025', propertyItems, 'orange')}
+        {securitiesItems.length > 0 && renderGroup('Securities & Mutual Funds — u/s 37A Finance Act 2025', securitiesItems, 'blue')}
 
         {/* Totals */}
         <div className="grid grid-cols-12 gap-2 items-center py-4 px-4 bg-teal-100 border-2 border-teal-300 rounded-lg font-bold">

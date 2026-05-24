@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Save,
   ArrowRight,
@@ -17,7 +18,8 @@ import {
   PiggyBank,
   Award,
   RotateCcw,
-  FileCheck
+  FileCheck,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
@@ -216,7 +218,8 @@ const FinalMinIncomeForm = () => {
     saveFormStep,
     getStepData,
     formData,
-    saving
+    saving,
+    incomeProfile,
   } = useTaxForm();
   const { currentTaxYear } = useTaxYear();
   const { rates } = useTaxRates(currentTaxYear);
@@ -389,6 +392,34 @@ const FinalMinIncomeForm = () => {
   // fieldDefinitions lives at module scope (see FIELD_DEFINITIONS) — no longer
   // reallocated per render. Alias kept so existing references compile.
   const fieldDefinitions = FIELD_DEFINITIONS;
+
+  // Field-level visibility — driven by the user's income-profile addons via
+  // shared/formFieldVisibility.js. Pure salaried sees 0 of the 60 buckets
+  // (form essentially empty); each addon (bank_profit / dividends / sukuk /
+  // prizes / securities) unlocks the relevant ones. Match on
+  // `taxDeductedField` because that's the canonical DB column name
+  // (`amountField` carries an `_amount` suffix the schema doesn't have).
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('final_min_income_forms', addons, { advanced: showAdvanced }),
+    [addons, showAdvanced]
+  );
+  const advancedExtraCount =
+    visibleFieldsFor('final_min_income_forms', addons, { advanced: true }).size -
+    visibleFieldsFor('final_min_income_forms', addons).size;
+
+  // Apply the visibility filter once per render and reuse below. Empty
+  // sections (zero visible fields) are dropped entirely so the user
+  // doesn't see "Dividend Income" headers with nothing underneath.
+  const visibleSections = useMemo(() => {
+    return fieldDefinitions
+      .map((sectionDef) => ({
+        ...sectionDef,
+        fields: sectionDef.fields.filter((f) => visibleFields.has(f.taxDeductedField)),
+      }))
+      .filter((s) => s.fields.length > 0);
+  }, [fieldDefinitions, visibleFields]);
 
   // Auto-calculate tax chargeable AND tax deducted when amount changes
   // (fixed-rate fields only). Rate resolved via resolveFinalTaxRate which
@@ -610,8 +641,22 @@ const FinalMinIncomeForm = () => {
           </div>
         </div>
 
-        {/* Dynamic Sections */}
-        {fieldDefinitions.map((sectionDef, sectionIdx) => {
+        {/* Dynamic Sections — filtered by the income-profile addons via
+            shared/formFieldVisibility.js. A pure salaried user with no
+            addons sees zero sections; selecting bank_profit / dividends /
+            sukuk / prizes unlocks the relevant rows. */}
+        {visibleSections.length === 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <p className="text-sm text-blue-900 font-medium">
+              No final-tax income to declare based on your income profile.
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              If you have bank profit, dividends, sukuk, or prize winnings,
+              add the matching income stream in <strong>Settings → Income Streams</strong>.
+            </p>
+          </div>
+        )}
+        {visibleSections.map((sectionDef, sectionIdx) => {
           const colors = getColorClasses(sectionDef.sectionColor);
           const IconComponent = sectionDef.sectionIcon;
           const isExpanded = expandedSections[sectionDef.section];
@@ -798,7 +843,33 @@ const FinalMinIncomeForm = () => {
           );
         })}
 
-        {/* Capital Gain Row - auto-populated from Capital Gain form (read-only per FBR Excel) */}
+        {/* Advanced-fields toggle: surfaces seldom-needed final-tax buckets
+            (declared in ADVANCED on the manifest). Hidden when there's
+            nothing extra to reveal. */}
+        {advancedExtraCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+          >
+            {showAdvanced ? (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Hide advanced final-tax fields
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Show {advancedExtraCount} advanced final-tax field{advancedExtraCount === 1 ? '' : 's'}
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Capital Gain Row — auto-populated from Capital Gain form. Only
+            shown if the user has the securities addon (which is also what
+            populates capital_gain on the upstream form). */}
+        {visibleFields.has('capital_gain_tax_deducted') && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
           <div className="grid grid-cols-12 gap-3 items-center">
             <div className="col-span-6">
@@ -840,6 +911,7 @@ const FinalMinIncomeForm = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Totals Section */}
         <div className="bg-gray-800 text-white rounded-xl p-5 space-y-3">

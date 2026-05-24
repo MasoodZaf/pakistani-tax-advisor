@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Save,
   ArrowRight,
   ArrowLeft,
   Gift,
-  Info
+  Info,
+  ChevronDown,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
@@ -23,7 +26,8 @@ const CreditsForm = () => {
     saveFormStep,
     getStepData,
     formData: contextFormData,
-    saving
+    saving,
+    incomeProfile,
   } = useTaxForm();
   const { currentTaxYear } = useTaxYear();
   const { rates } = useTaxRates(currentTaxYear);
@@ -137,8 +141,9 @@ const CreditsForm = () => {
   }, [watchedValues.pension_fund_amount, taxableIncome, normalTax, pensionCap]); // eslint-disable-line react-hooks/exhaustive-deps
   // ────────────────────────────────────────────────────────────────────────────
 
-  // Define comprehensive tax credits structure matching Excel
-  const creditItems = [
+  // Define comprehensive tax credits structure matching Excel. Memoised
+  // so the visibility-filter useMemo below has a stable dependency.
+  const creditItems = useMemo(() => [
     {
       id: 'charitable_donations_u61',
       description: 'Tax Credit for Charitable Donations u/s 61',
@@ -179,7 +184,25 @@ const CreditsForm = () => {
       autoCalc: false,
       limitPct: null
     }
-  ];
+  ], []);
+
+  // Field-level visibility — driven by income profile. Pure salaried sees
+  // only charitable-donations row (3 fields). Pension addon unlocks
+  // pension-fund credit. Advanced reveals charitable-to-associate and
+  // surrender-of-tax-credit (both ADVANCED in the manifest).
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('credits_forms', addons, { advanced: showAdvanced }),
+    [addons, showAdvanced]
+  );
+  const advancedExtraCount =
+    visibleFieldsFor('credits_forms', addons, { advanced: true }).size -
+    visibleFieldsFor('credits_forms', addons).size;
+  const visibleCreditItems = useMemo(
+    () => creditItems.filter((item) => visibleFields.has(item.amount)),
+    [creditItems, visibleFields]
+  );
 
   // Calculate total tax credit
   const calculateTotalCredit = () => {
@@ -302,7 +325,7 @@ const CreditsForm = () => {
             Tax Credits
           </h2>
 
-          {creditItems.map((item, index) => (
+          {visibleCreditItems.map((item, index) => (
             <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-purple-200 last:border-b-0">
               <div className="col-span-5">
                 <p className="text-sm font-medium text-gray-700">
@@ -368,6 +391,30 @@ const CreditsForm = () => {
               </div>
             </div>
           ))}
+
+          {/* Advanced toggle: reveals less-common credit lines (donations
+              to associate, surrender of tax credit). Only shown when
+              there's an extra to reveal — pension / charitable already in
+              the always-or-addon set are filtered above. */}
+          {advancedExtraCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-200 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              {showAdvanced ? (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Hide advanced credit fields
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Show {advancedExtraCount} advanced credit field{advancedExtraCount === 1 ? '' : 's'}
+                </>
+              )}
+            </button>
+          )}
 
           {/* Total Tax Credits */}
           <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-purple-100 rounded-lg px-4 font-semibold">
