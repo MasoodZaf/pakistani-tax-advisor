@@ -225,6 +225,189 @@ describe('POST /expenses/sync', () => {
     expect(mockQuery).toHaveBeenCalledTimes(1); // SELECT only, no write
   });
 
+  test('strict-mode no-conflict: base matches prior → applies upsert', async () => {
+    // Client says "I last saw the server at 15:00:00Z"; server also has
+    // prior.updated_at = 15:00:00Z → no conflict, apply the upsert.
+    const baseIso = '2026-05-18T15:00:00.000Z';
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: SERVER_ID,
+        client_id: CLIENT_ID,
+        amount: '1000.00',
+        currency: 'PKR',
+        amount_pkr: '1000.00',
+        occurred_on: '2026-05-18',
+        category: 'medical',
+        updated_at: new Date(baseIso),
+        created_at: new Date('2026-05-18T14:00:00Z'),
+        deleted_at: null,
+      }],
+    });
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: SERVER_ID,
+        client_id: CLIENT_ID,
+        amount: '1500.00',
+        currency: 'PKR',
+        amount_pkr: '1500.00',
+        occurred_on: '2026-05-18',
+        category: 'medical',
+        updated_at: new Date('2026-05-18T15:01:00Z'),
+        created_at: new Date('2026-05-18T14:00:00Z'),
+        deleted_at: null,
+      }],
+    });
+
+    const res = await request(buildApp())
+      .post('/api/mobile/v1/expenses/sync')
+      .set('X-App-Version', APP_VERSION_OK)
+      .send({
+        changes: [{
+          op: 'upsert',
+          client_id: CLIENT_ID,
+          amount: 1500,
+          currency: 'PKR',
+          occurred_on: '2026-05-18',
+          category: 'medical',
+          client_updated_at: '2026-05-18T15:01:00Z',
+          base_updated_at: baseIso,
+        }],
+      });
+
+    expect(res.body.results[0].status).toBe('ok');
+    expect(res.body.results[0].server_record.amount).toBe(1500);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+  });
+
+  test('strict-mode conflict: prior moved past base → status=conflict, no write', async () => {
+    // Client says "I last saw the server at 15:00:00Z" but the server has
+    // since been updated to 15:05:00Z (e.g. by the web app) → conflict.
+    // This is the case the old clock-based check silently overwrote when the
+    // client's later edit timestamp was the most recent one.
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: SERVER_ID,
+        client_id: CLIENT_ID,
+        amount: '3000.00',
+        currency: 'PKR',
+        amount_pkr: '3000.00',
+        occurred_on: '2026-05-18',
+        category: 'medical',
+        updated_at: new Date('2026-05-18T15:05:00Z'),
+        created_at: new Date('2026-05-18T14:00:00Z'),
+        deleted_at: null,
+      }],
+    });
+
+    const res = await request(buildApp())
+      .post('/api/mobile/v1/expenses/sync')
+      .set('X-App-Version', APP_VERSION_OK)
+      .send({
+        changes: [{
+          op: 'upsert',
+          client_id: CLIENT_ID,
+          amount: 1500,
+          currency: 'PKR',
+          occurred_on: '2026-05-18',
+          category: 'medical',
+          client_updated_at: '2026-05-18T16:00:00Z',  // newer than server!
+          base_updated_at: '2026-05-18T15:00:00Z',     // but stale base
+        }],
+      });
+
+    expect(res.body.results[0].status).toBe('conflict');
+    expect(res.body.results[0].reason).toBe('newer_on_server');
+    expect(res.body.results[0].server_record.amount).toBe(3000);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
+  test('strict-mode conflict: deleted_on_server when prior is gone but client has base', async () => {
+    // Client thinks the row exists on the server (has a base) but it was
+    // deleted there. Surface as conflict with server_record=null so the UI
+    // can ask the user what to do.
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(buildApp())
+      .post('/api/mobile/v1/expenses/sync')
+      .set('X-App-Version', APP_VERSION_OK)
+      .send({
+        changes: [{
+          op: 'upsert',
+          client_id: CLIENT_ID,
+          amount: 500,
+          currency: 'PKR',
+          occurred_on: '2026-05-18',
+          category: 'medical',
+          client_updated_at: '2026-05-18T16:00:00Z',
+          base_updated_at: '2026-05-18T15:00:00Z',
+        }],
+      });
+
+    expect(res.body.results[0].status).toBe('conflict');
+    expect(res.body.results[0].reason).toBe('deleted_on_server');
+    expect(res.body.results[0].server_record).toBeNull();
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
+  test('strict-mode new row: base=null + no prior → insert', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: SERVER_ID,
+        client_id: CLIENT_ID,
+        amount: '750.00',
+        currency: 'PKR',
+        amount_pkr: '750.00',
+        occurred_on: '2026-05-18',
+        category: 'medical',
+        updated_at: new Date('2026-05-18T17:00:00Z'),
+        created_at: new Date('2026-05-18T17:00:00Z'),
+        deleted_at: null,
+      }],
+    });
+
+    const res = await request(buildApp())
+      .post('/api/mobile/v1/expenses/sync')
+      .set('X-App-Version', APP_VERSION_OK)
+      .send({
+        changes: [{
+          op: 'upsert',
+          client_id: CLIENT_ID,
+          amount: 750,
+          currency: 'PKR',
+          occurred_on: '2026-05-18',
+          category: 'medical',
+          client_updated_at: '2026-05-18T17:00:00Z',
+          base_updated_at: null,
+        }],
+      });
+
+    expect(res.body.results[0].status).toBe('ok');
+    expect(res.body.results[0].server_record.amount).toBe(750);
+  });
+
+  test('invalid base_updated_at format → 400-style error in result', async () => {
+    const res = await request(buildApp())
+      .post('/api/mobile/v1/expenses/sync')
+      .set('X-App-Version', APP_VERSION_OK)
+      .send({
+        changes: [{
+          op: 'upsert',
+          client_id: CLIENT_ID,
+          amount: 1,
+          currency: 'PKR',
+          occurred_on: '2026-05-18',
+          category: 'medical',
+          client_updated_at: '2026-05-18T17:00:00Z',
+          base_updated_at: 'not-a-date',
+        }],
+      });
+
+    expect(res.body.results[0].status).toBe('error');
+    expect(res.body.results[0].reason).toBe('invalid_base_updated_at');
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
   test('validation failure does not stop the batch', async () => {
     // First change is invalid → no DB calls for it.
     // Second change is a valid delete with no prior row → 1 DB call (SELECT).

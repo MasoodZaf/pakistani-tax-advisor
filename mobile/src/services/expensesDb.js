@@ -7,6 +7,9 @@
 
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
+import { deriveTaxYear } from '../../../shared/expenseSchema';
+
+export { deriveTaxYear };
 
 // expo-sqlite (>= SDK 50) is async. The connection is cached.
 let _db = null;
@@ -47,6 +50,12 @@ async function migrate(d) {
       updated_at       TEXT NOT NULL,
       deleted_at       TEXT,
 
+      -- The server's updated_at value the last time we saw this row from the
+      -- server (either via push response or pull). Sent back as
+      -- base_updated_at on the next push so the server can detect concurrent
+      -- edits without comparing clocks. Null for rows never synced.
+      server_updated_at TEXT,
+
       -- mobile-only sync state: 'pending' | 'synced' | 'conflict' | 'error'
       sync_status      TEXT NOT NULL DEFAULT 'pending',
       last_sync_error  TEXT,
@@ -67,22 +76,17 @@ async function migrate(d) {
     );
   `);
 
-  // Additive migration: conflict_server_data was added after the first
-  // release. CREATE TABLE IF NOT EXISTS won't touch an existing table, so
-  // ALTER it in — guarded against the "duplicate column" error on re-run.
+  // Additive migrations. CREATE TABLE IF NOT EXISTS won't touch an existing
+  // table, so ALTER columns in individually — guarded against the duplicate-
+  // column error on re-run.
   const cols = await d.getAllAsync('PRAGMA table_info(expenses)');
-  if (!cols.some((c) => c.name === 'conflict_server_data')) {
+  const colNames = new Set(cols.map((c) => c.name));
+  if (!colNames.has('conflict_server_data')) {
     await d.execAsync('ALTER TABLE expenses ADD COLUMN conflict_server_data TEXT');
   }
-}
-
-// Pakistan tax year (1 July YYYY – 30 June YYYY+1 → 'YYYY-YY').
-// Duplicated from the backend helper because mobile is offline-first.
-export function deriveTaxYear(occurredOn) {
-  const [y, m] = String(occurredOn).split('-').map(Number);
-  const startYear = m >= 7 ? y : y - 1;
-  const endTwo = String((startYear + 1) % 100).padStart(2, '0');
-  return `${startYear}-${endTwo}`;
+  if (!colNames.has('server_updated_at')) {
+    await d.execAsync('ALTER TABLE expenses ADD COLUMN server_updated_at TEXT');
+  }
 }
 
 export function newClientId() {
@@ -221,17 +225,30 @@ export async function listPending() {
 }
 
 // Mark a row synced after the server returned ok.
-export async function markSynced(clientId, serverRecord) {
+//
+// `expectedUpdatedAt` is the row's local `updated_at` at the moment we
+// queued it for push. If the user edited the row between listPending() and
+// this call, the local `updated_at` has moved on; the WHERE guard skips the
+// update so we don't downgrade an in-flight edit to 'synced' (which would
+// silently lose it on the next push). The row stays 'pending' and the next
+// sync picks it up.
+//
+// Returns the number of rows actually updated so callers can detect the race.
+export async function markSynced(clientId, serverRecord, expectedUpdatedAt) {
   const d = await db();
-  await d.runAsync(
+  const newUpdatedAt = serverRecord?.updated_at || nowIso();
+  const serverUpdatedAt = serverRecord?.updated_at || null;
+  const result = await d.runAsync(
     `UPDATE expenses SET
-       server_id = ?,
+       server_id = COALESCE(?, server_id),
        sync_status = 'synced',
        last_sync_error = NULL,
-       updated_at = ?
-     WHERE client_id = ?`,
-    [serverRecord?.id || null, serverRecord?.updated_at || nowIso(), clientId]
+       updated_at = ?,
+       server_updated_at = ?
+     WHERE client_id = ? AND updated_at = ?`,
+    [serverRecord?.id || null, newUpdatedAt, serverUpdatedAt, clientId, expectedUpdatedAt]
   );
+  return result.changes || 0;
 }
 
 export async function markConflict(clientId, serverRecord) {
@@ -259,16 +276,36 @@ export async function listConflicts() {
   );
 }
 
-// Resolve a conflict by keeping the local version. We re-stamp updated_at to
-// NOW so the next push beats the server's timestamp, and re-queue it.
+// Resolve a conflict by keeping the local version. We adopt the server's
+// `updated_at` as the new base — that way, when we push the local payload
+// again, the server sees base == prior.updated_at and accepts the upsert
+// (instead of flagging a re-conflict). Also re-stamp local updated_at to
+// NOW so the row's pending order is current.
 export async function resolveConflictKeepMine(clientId) {
   const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT conflict_server_data FROM expenses WHERE client_id = ?',
+    [clientId]
+  );
+  let serverUpdatedAt = null;
+  if (row?.conflict_server_data) {
+    try {
+      const parsed = JSON.parse(row.conflict_server_data);
+      serverUpdatedAt = parsed?.updated_at || null;
+    } catch {
+      // Stash corrupt — leave server_updated_at unchanged; the next sync
+      // will resurface the conflict, which is the safe outcome.
+    }
+  }
   await d.runAsync(
     `UPDATE expenses
-     SET updated_at = ?, sync_status = 'pending',
-         last_sync_error = NULL, conflict_server_data = NULL
+     SET updated_at = ?,
+         server_updated_at = COALESCE(?, server_updated_at),
+         sync_status = 'pending',
+         last_sync_error = NULL,
+         conflict_server_data = NULL
      WHERE client_id = ?`,
-    [nowIso(), clientId]
+    [nowIso(), serverUpdatedAt, clientId]
   );
 }
 
@@ -282,7 +319,12 @@ export async function resolveConflictKeepServer(clientId) {
   );
   if (!row?.conflict_server_data) {
     // No stashed server data — fall back to marking synced so the row
-    // doesn't stay stuck. The next pull will reconcile it.
+    // doesn't stay stuck. The next pull will reconcile it. Surface the
+    // anomaly so we can investigate (this means the conflict was recorded
+    // without a server_record, which shouldn't happen with the current
+    // server contract).
+    // eslint-disable-next-line no-console
+    console.warn('[expensesDb] resolveConflictKeepServer: missing conflict_server_data for', clientId);
     await d.runAsync(
       `UPDATE expenses SET sync_status = 'synced', last_sync_error = NULL,
               conflict_server_data = NULL WHERE client_id = ?`,
@@ -310,6 +352,8 @@ export async function markError(clientId, reason) {
 
 // Apply a row pulled from the server. Inserts or updates by client_id;
 // preserves local sync_status='synced' (the server's view is authoritative).
+// Records `server_updated_at` so the next push can echo it back as
+// `base_updated_at` for conflict detection.
 export async function applyServerRow(serverRow) {
   if (!serverRow?.client_id) return;
   const d = await db();
@@ -318,8 +362,8 @@ export async function applyServerRow(serverRow) {
        client_id, server_id, amount, currency, fx_rate_to_pkr, amount_pkr,
        occurred_on, category, description, payee, payment_method,
        tax_year, tax_treatment, tax_section, included_in_return, receipt_id,
-       created_at, updated_at, deleted_at, sync_status
-     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       created_at, updated_at, deleted_at, sync_status, server_updated_at
+     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(client_id) DO UPDATE SET
        server_id=excluded.server_id,
        amount=excluded.amount,
@@ -339,7 +383,8 @@ export async function applyServerRow(serverRow) {
        updated_at=excluded.updated_at,
        deleted_at=excluded.deleted_at,
        sync_status='synced',
-       last_sync_error=NULL`,
+       last_sync_error=NULL,
+       server_updated_at=excluded.server_updated_at`,
     [
       serverRow.client_id, serverRow.id, serverRow.amount, serverRow.currency,
       serverRow.fx_rate_to_pkr, serverRow.amount_pkr,
@@ -348,7 +393,7 @@ export async function applyServerRow(serverRow) {
       serverRow.tax_year, serverRow.tax_treatment, serverRow.tax_section,
       serverRow.included_in_return ? 1 : 0, serverRow.receipt_id,
       serverRow.created_at, serverRow.updated_at, serverRow.deleted_at || null,
-      'synced',
+      'synced', serverRow.updated_at,
     ]
   );
 }

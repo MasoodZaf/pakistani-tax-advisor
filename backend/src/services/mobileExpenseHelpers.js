@@ -1,47 +1,36 @@
 // Pure helpers for /api/mobile/v1/expenses — validation, tax-year derivation,
 // cursor codec. Kept side-effect-free so they're easy to unit test without
 // spinning up the DB.
+//
+// Categories, payment methods, tax treatments, and deriveTaxYear live in
+// shared/expenseSchema.js so backend and mobile can't drift. See that file
+// for the canonical list.
+
+const {
+  CATEGORIES_SET: CATEGORIES,
+  PAYMENT_METHODS_SET: PAYMENT_METHODS,
+  TAX_TREATMENTS_SET: TAX_TREATMENTS,
+  deriveTaxYear,
+} = require('../../../shared/expenseSchema');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const CATEGORIES = new Set([
-  'groceries', 'food_dining', 'transport', 'fuel', 'utilities', 'rent',
-  'mortgage', 'medical', 'education', 'insurance', 'zakat', 'charity',
-  'family_support', 'repairs', 'communication', 'entertainment',
-  'business_supplies', 'professional_fees', 'taxes_paid', 'asset_purchase',
-  'other',
-]);
-
-const PAYMENT_METHODS = new Set(['cash', 'bank', 'card', 'wallet', 'other']);
-
-const TAX_TREATMENTS = new Set([
-  'zakat', 'donation', 'medical', 'advance_tax', 'business_expense',
-  'asset_purchase', 'personal', 'unknown',
-]);
-
-// Pakistan tax year runs 1 July YYYY to 30 June YYYY+1, labelled
-// 'YYYY-YY' (e.g. '2025-26' covers 1 Jul 2025 – 30 Jun 2026).
-function deriveTaxYear(occurredOn) {
-  if (typeof occurredOn !== 'string' || !DATE_RE.test(occurredOn)) {
-    throw new Error('occurred_on must be YYYY-MM-DD');
-  }
-  const [y, m] = occurredOn.split('-').map(Number);
-  if (Number.isNaN(y) || Number.isNaN(m) || m < 1 || m > 12) {
-    throw new Error('occurred_on is not a real date');
-  }
-  const startYear = m >= 7 ? y : y - 1;
-  const endTwoDigit = String((startYear + 1) % 100).padStart(2, '0');
-  return `${startYear}-${endTwoDigit}`;
-}
-
 // Validate one change from a /sync batch. Returns { ok: true, normalized }
 // or { ok: false, error }. Doesn't touch the DB.
+//
+// `base_updated_at` is the server's `updated_at` value the client last knew
+// for this row (echoed back unchanged). Null means "the client has never
+// seen a server version" — i.e. this is a brand-new row created offline.
+// The server uses it to detect concurrent edits: if the row on the server
+// has moved past `base_updated_at`, the push is rejected as a conflict.
+// Omitting it puts the change in legacy mode (clock comparison) — kept for
+// transitional builds; new clients should always send it.
 function validateChange(change) {
   if (!change || typeof change !== 'object') {
     return { ok: false, error: 'change_not_an_object' };
   }
-  const { op, client_id, client_updated_at } = change;
+  const { op, client_id, client_updated_at, base_updated_at } = change;
 
   if (op !== 'upsert' && op !== 'delete') {
     return { ok: false, error: 'invalid_op' };
@@ -52,9 +41,25 @@ function validateChange(change) {
   if (!isParseableIso(client_updated_at)) {
     return { ok: false, error: 'invalid_client_updated_at' };
   }
+  // base_updated_at must be either omitted/null or a parseable ISO string.
+  // Empty string explicitly invalid — protects against accidental "" sent
+  // from a client that didn't initialise the field properly.
+  let normalizedBase;
+  if (base_updated_at === undefined) {
+    normalizedBase = undefined; // legacy mode
+  } else if (base_updated_at === null) {
+    normalizedBase = null;
+  } else if (isParseableIso(base_updated_at)) {
+    normalizedBase = base_updated_at;
+  } else {
+    return { ok: false, error: 'invalid_base_updated_at' };
+  }
 
   if (op === 'delete') {
-    return { ok: true, normalized: { op, client_id, client_updated_at } };
+    return {
+      ok: true,
+      normalized: { op, client_id, client_updated_at, base_updated_at: normalizedBase },
+    };
   }
 
   // Upsert: full field validation.
@@ -119,6 +124,7 @@ function validateChange(change) {
       op: 'upsert',
       client_id,
       client_updated_at,
+      base_updated_at: normalizedBase,
       amount,
       currency,
       fx_rate_to_pkr: normalizedFxRate,

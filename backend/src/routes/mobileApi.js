@@ -99,9 +99,23 @@ function rowToServerRecord(row) {
 
 // Process one validated change. Returns a result object suitable for the
 // /sync response (status: 'ok' | 'conflict' | 'error').
+//
+// Conflict detection uses `base_updated_at`: the value of `updated_at` the
+// client last knew the server had for this row (or null if the client thinks
+// this is a brand-new row). The server flags a conflict whenever its current
+// `prior.updated_at` doesn't match the client's claimed base — that's the
+// signal that another device (or the web app) wrote to the row in between.
+//
+// This is the textbook optimistic-concurrency check: comparing server-known
+// values, not clock timestamps from two different devices. Two devices with
+// skewed clocks can no longer create false positives or silently overwrite
+// each other.
+//
+// `client_updated_at` is still required (for ordering pending pushes and as
+// the new `updated_at` value the client will record back) but is no longer
+// load-bearing for conflict detection.
 async function applyChange(userId, change) {
-  const { op, client_id, client_updated_at } = change;
-  const clientTs = new Date(client_updated_at);
+  const { op, client_id, client_updated_at, base_updated_at } = change;
 
   // Find existing row (any state — including soft-deleted) to decide between
   // insert / update / conflict.
@@ -113,13 +127,34 @@ async function applyChange(userId, change) {
   );
   const prior = existing.rows[0];
 
-  if (prior && new Date(prior.updated_at) > clientTs) {
-    return {
-      client_id,
-      status: 'conflict',
-      reason: 'newer_on_server',
-      server_record: rowToServerRecord(prior),
-    };
+  // Legacy clients that don't send base_updated_at (undefined in the
+  // normalized payload) fall back to the old clock-based comparison so a
+  // partially-rolled-out app keeps working. New clients always set the field
+  // (null for new rows, ISO for known rows).
+  const legacyMode = base_updated_at === undefined;
+
+  if (legacyMode) {
+    if (prior && new Date(prior.updated_at) > new Date(client_updated_at)) {
+      return {
+        client_id,
+        status: 'conflict',
+        reason: 'newer_on_server',
+        server_record: rowToServerRecord(prior),
+      };
+    }
+  } else {
+    // Strict mode: base must match prior exactly (both null for new rows, or
+    // both equal to the same ISO timestamp for known rows).
+    const priorTs = prior ? new Date(prior.updated_at).toISOString() : null;
+    const baseTs = base_updated_at ? new Date(base_updated_at).toISOString() : null;
+    if (priorTs !== baseTs) {
+      return {
+        client_id,
+        status: 'conflict',
+        reason: priorTs === null ? 'deleted_on_server' : 'newer_on_server',
+        server_record: rowToServerRecord(prior), // null when server has no row
+      };
+    }
   }
 
   if (op === 'delete') {
@@ -399,8 +434,11 @@ router.get('/receipts/:id', async (req, res) => {
   const userId = req.user.id;
   const receiptId = req.params.id;
 
-  // Cheap UUID guard before hitting the DB.
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(receiptId)) {
+  // Cheap UUID guard before hitting the DB. Accepts any RFC 4122 version
+  // (1–8) — the previous [1-5] restriction would reject v7 IDs the moment
+  // anything starts emitting them, and the DB's uuid type will catch bad
+  // formats regardless.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receiptId)) {
     return res.status(400).json({ error: 'invalid_receipt_id' });
   }
 

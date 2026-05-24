@@ -17,16 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { upsertExpense, deleteExpense, getExpense } from '../services/expensesDb';
 import { syncAll } from '../services/expensesSync';
 import { pickReceiptImage, uploadReceipt, getReceiptUrl } from '../services/receipts';
-
-const CATEGORIES = [
-  'groceries', 'food_dining', 'transport', 'fuel', 'utilities', 'rent',
-  'mortgage', 'medical', 'education', 'insurance', 'zakat', 'charity',
-  'family_support', 'repairs', 'communication', 'entertainment',
-  'business_supplies', 'professional_fees', 'taxes_paid', 'asset_purchase',
-  'other',
-];
-
-const PAYMENT_METHODS = ['cash', 'bank', 'card', 'wallet', 'other'];
+import { CATEGORIES, PAYMENT_METHODS } from '../../../shared/expenseSchema';
 
 // YYYY-MM-DD for today, in the user's local time zone (not UTC — they don't
 // want a midnight-UTC bug to file an expense in the wrong day).
