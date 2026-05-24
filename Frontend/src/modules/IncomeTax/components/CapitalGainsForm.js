@@ -18,6 +18,7 @@ import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import capitalGainsHelp from '../../../help/capitalGainsHelp';
 import { formatCurrency } from '../../../utils/currency';
+import FormEmptyState from './FormEmptyState';
 
 // Capital-gain category definitions. Rates are NOT in this array any more —
 // they come from tax_rates_config via useTaxRates() (rate_type='capital_gains',
@@ -326,29 +327,28 @@ const CapitalGainsForm = () => {
           </div>
         </div>
 
-        {propertyItems.length === 0 && securitiesItems.length === 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-900 font-medium">
-              No capital-gain categories apply to your income profile.
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              Add <strong>Property Sale</strong> or <strong>Listed Shares / Mutual Funds</strong> in
-              Settings → Income Streams to enable the relevant CGT brackets.
-            </p>
-          </div>
-        )}
-        {propertyItems.length > 0 && renderGroup('Immovable Property — u/s 37(1A) Finance Act 2025', propertyItems, 'orange')}
-        {securitiesItems.length > 0 && renderGroup('Securities & Mutual Funds — u/s 37A Finance Act 2025', securitiesItems, 'blue')}
+        {propertyItems.length === 0 && securitiesItems.length === 0 ? (
+          <FormEmptyState
+            title="No capital-gain categories apply to your income profile yet."
+            addons={['Property Sale', 'Listed Shares / Mutual Funds']}
+            note="CGT brackets are very specific to the asset class and holding period — we only show the ones that match your declared streams."
+          />
+        ) : (
+          <>
+            {propertyItems.length > 0 && renderGroup('Immovable Property — u/s 37(1A) Finance Act 2025', propertyItems, 'orange')}
+            {securitiesItems.length > 0 && renderGroup('Securities & Mutual Funds — u/s 37A Finance Act 2025', securitiesItems, 'blue')}
 
-        {/* Totals */}
-        <div className="grid grid-cols-12 gap-2 items-center py-4 px-4 bg-teal-100 border-2 border-teal-300 rounded-lg font-bold">
-          <div className="col-span-4 text-teal-900">Total Capital Gain</div>
-          <div className="col-span-1"></div>
-          <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxable)}</div>
-          <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.cgt)}</div>
-          <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxDeducted)}</div>
-          <div className="col-span-1 text-right text-teal-900">{formatCurrency(totals.taxCarryable)}</div>
-        </div>
+            {/* Totals — hidden in empty-state because there's nothing to sum. */}
+            <div className="grid grid-cols-12 gap-2 items-center py-4 px-4 bg-teal-100 border-2 border-teal-300 rounded-lg font-bold">
+              <div className="col-span-4 text-teal-900">Total Capital Gain</div>
+              <div className="col-span-1"></div>
+              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxable)}</div>
+              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.cgt)}</div>
+              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxDeducted)}</div>
+              <div className="col-span-1 text-right text-teal-900">{formatCurrency(totals.taxCarryable)}</div>
+            </div>
+          </>
+        )}
 
         {/* Net CGT payable banner */}
         {totals.cgt > 0 && (

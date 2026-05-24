@@ -19,6 +19,7 @@ import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import reductionsHelp from '../../../help/reductionsHelp';
 import { formatCurrency } from '../../../utils/currency';
+import FormEmptyState from './FormEmptyState';
 
 const ReductionsForm = () => {
   const navigate = useNavigate();
@@ -315,15 +316,12 @@ const ReductionsForm = () => {
           </h2>
 
           {visibleReductionItems.length === 0 && (
-            <div className="text-center py-6 px-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
-              <p className="text-sm text-blue-900 font-medium">
-                No tax reductions apply to your income profile.
-              </p>
-              <p className="text-xs text-blue-700 mt-1">
-                Capital-gain reductions on immovable property appear when you add
-                <strong> Property Sale</strong> in Settings → Income Streams. Click
-                "Show advanced" below to see teacher/Behbood reductions.
-              </p>
+            <div className="mb-4">
+              <FormEmptyState
+                title="No tax reductions apply to your income profile yet."
+                addons={['Property Sale']}
+                note='Capital-gain reductions on immovable property appear when you add Property Sale. Click "Show advanced" below to reveal teacher/researcher and Behbood-certificate reductions.'
+              />
             </div>
           )}
 

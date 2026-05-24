@@ -25,6 +25,7 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalMinIncomeHelp from '../../../help/finalMinIncomeHelp';
 import { formatCurrency } from '../../../utils/currency';
+import FormEmptyState from './FormEmptyState';
 
 // Static field definitions — kept at module scope so they aren't rebuilt on
 // every render (the component has ~30 inputs; each keystroke was previously
@@ -653,15 +654,11 @@ const FinalMinIncomeForm = () => {
             addons sees zero sections; selecting bank_profit / dividends /
             sukuk / prizes unlocks the relevant rows. */}
         {visibleSections.length === 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-900 font-medium">
-              No final-tax income to declare based on your income profile.
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              If you have bank profit, dividends, sukuk, or prize winnings,
-              add the matching income stream in <strong>Settings → Income Streams</strong>.
-            </p>
-          </div>
+          <FormEmptyState
+            title="No final-tax income to declare based on your income profile yet."
+            addons={['Bank / Savings Profit', 'Dividends from Shares', 'Sukuk / Bond Income', 'Prize Bonds / Winnings']}
+            note="Final-tax income (s.150 / s.151 / s.156) only shows up if you have one of these streams. We hide the buckets otherwise so you don't have to scan past 30 rows of zeros."
+          />
         )}
         {visibleSections.map((sectionDef, sectionIdx) => {
           const colors = getColorClasses(sectionDef.sectionColor);
