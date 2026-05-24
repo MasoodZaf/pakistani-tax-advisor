@@ -66,9 +66,11 @@ const WizardScreen = ({ navigation }) => {
   const [values, setValues] = useState({});
   const [rawText, setRawText] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldErrorBanner, setFieldErrorBanner] = useState(null);
   const [rawReply, setRawReply] = useState('');
   const [lastEcho, setLastEcho] = useState(null);
   const [showFreeText, setShowFreeText] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [review, setReview] = useState(null);
 
@@ -127,6 +129,7 @@ const WizardScreen = ({ navigation }) => {
   const submitTurn = useCallback(async () => {
     if (submitLockRef.current || !session || !step) return;
     submitLockRef.current = true;
+    setSubmitting(true);
     try {
       const turn = await wizardAPI.turn({
         sessionId: session.id,
@@ -163,26 +166,37 @@ const WizardScreen = ({ navigation }) => {
       setValues(seed.values);
       setRawText(seed.rawText);
       setFieldErrors({});
+      setFieldErrorBanner(null);
       setRawReply('');
       setShowFreeText(false);
       setLastEcho(turn.echo || null);
     } catch (e) {
       const data = e?.response?.data;
       if (e?.response?.status === 422 && data?.field_errors) {
+        // Inline banner instead of a blocking Alert so the user can
+        // immediately see which fields are highlighted in red below.
         setFieldErrors(data.field_errors);
         setLastEcho(data.echo || null);
-        Alert.alert('Check the highlighted fields', 'A couple of values need adjustment.');
+        setFieldErrorBanner('Please check the highlighted field(s) below and try again.');
       } else {
         Alert.alert('Could not save', data?.error || e?.message || 'Try again.');
       }
     } finally {
       submitLockRef.current = false;
+      setSubmitting(false);
     }
   }, [session, step, values, rawReply]);
 
   const setValueAt = useCallback((key, v) => {
     setValues((prev) => ({ ...prev, [key]: v }));
-    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev, [key]: undefined };
+      // Hide the banner once every flagged field has been touched.
+      const anyLeft = Object.entries(next).some(([, code]) => !!code);
+      if (!anyLeft) setFieldErrorBanner(null);
+      return next;
+    });
   }, []);
   const setRawTextAt = useCallback((key, t) => {
     setRawText((prev) => ({ ...prev, [key]: t }));
@@ -218,7 +232,7 @@ const WizardScreen = ({ navigation }) => {
     return (
       <ReviewScreen
         review={review}
-        onDone={() => navigation.navigate('Dashboard')}
+        onDone={() => navigation.goBack()}
       />
     );
   }
@@ -236,6 +250,13 @@ const WizardScreen = ({ navigation }) => {
         </View>
 
         <ProgressBar current={step.progress.current} total={step.progress.total} />
+
+        {fieldErrorBanner && (
+          <View style={styles.errorBanner}>
+            <MaterialIcons name="error-outline" size={16} color="#b91c1c" />
+            <Text style={styles.errorBannerText}>{fieldErrorBanner}</Text>
+          </View>
+        )}
 
         {lastEcho && (
           <View style={styles.echoBanner}>
@@ -291,9 +312,23 @@ const WizardScreen = ({ navigation }) => {
           </View>
         )}
 
-        <TouchableOpacity style={styles.continueButton} onPress={submitTurn}>
-          <Text style={styles.continueButtonText}>Continue</Text>
-          <MaterialIcons name="arrow-forward" size={18} color="#fff" />
+        <TouchableOpacity
+          style={[styles.continueButton, submitting && styles.continueButtonDisabled]}
+          onPress={submitTurn}
+          disabled={submitting}
+          activeOpacity={0.85}
+        >
+          {submitting ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.continueButtonText}>Saving…</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.continueButtonText}>Continue</Text>
+              <MaterialIcons name="arrow-forward" size={18} color="#fff" />
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -420,6 +455,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   echoText: { fontSize: 13, color: '#28396C', fontWeight: '600' },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorBannerText: { fontSize: 13, color: '#b91c1c', fontWeight: '600', flex: 1 },
 
   promptBubble: {
     backgroundColor: '#fff',
@@ -470,6 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
   },
+  continueButtonDisabled: { opacity: 0.6 },
   continueButtonText: { color: '#fff', fontSize: 15, fontWeight: '700', marginRight: 6 },
 
   button: {

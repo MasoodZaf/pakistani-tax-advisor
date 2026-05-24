@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
 import WizardCtaBanner from '../components/WizardCtaBanner';
@@ -19,11 +20,7 @@ const DashboardScreen = ({ navigation }) => {
   const [, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const response = await dashboardAPI.getDashboardData();
       if (response?.success) {
@@ -34,7 +31,12 @@ const DashboardScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Refetch on every focus so completion_percentage / completed_steps stay in
+  // sync with what the user just did elsewhere (e.g. finished the wizard,
+  // edited a form, etc.) without needing a manual pull-to-refresh.
+  useFocusEffect(useCallback(() => { loadDashboardData(); }, [loadDashboardData]));
 
   // Tax-year filing deadline. For Pakistan, returns for tax year YYYY-YY
   // (ending 30 June YYYY) are due 30 September of that calendar year.

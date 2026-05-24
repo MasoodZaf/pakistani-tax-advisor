@@ -70,8 +70,13 @@ api.interceptors.response.use(
 export const authAPI = {
   login: async (email, password) => {
     const response = await api.post('/login', { email, password });
-    if (response.data.success && response.data.sessionToken) {
-      await setToken(response.data.sessionToken);
+    // Backend returns BOTH a long-lived `sessionToken` (UUID server-session id)
+    // and a `token` (the JWT). The auth middleware verifies the JWT, so that's
+    // what we save. Falling back to sessionToken kept for older builds where the
+    // backend only sent that field.
+    const t = response.data.token || response.data.sessionToken;
+    if (response.data.success && t) {
+      await setToken(t);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response.data;
@@ -89,8 +94,9 @@ export const authAPI = {
   // defeats ID-token replay.
   ssoLogin: async (provider, idToken, nonce) => {
     const response = await api.post(`/sso/${provider}`, { idToken, nonce });
-    if (response.data?.success && response.data.sessionToken) {
-      await setToken(response.data.sessionToken);
+    const t = response.data?.token || response.data?.sessionToken;
+    if (response.data?.success && t) {
+      await setToken(t);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response.data;

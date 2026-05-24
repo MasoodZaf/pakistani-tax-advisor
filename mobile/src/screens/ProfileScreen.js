@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { wizardAPI } from '../services/wizardAPI';
 
@@ -25,7 +25,9 @@ const ProfileScreen = () => {
       setWizardStatus(null);
     }
   }, []);
-  useEffect(() => { refreshWizardStatus(); }, [refreshWizardStatus]);
+  // Refresh on every focus so the section reflects fresh state after the
+  // user finishes or re-runs the wizard from the WizardScreen.
+  useFocusEffect(useCallback(() => { refreshWizardStatus(); }, [refreshWizardStatus]));
 
   // Re-run: confirm, archive prior session, navigate to wizard which picks
   // up the seed from the server-side lastArchivedSeed lookup.

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { wizardAPI } from '../services/wizardAPI';
 
 const DISMISS_KEY = '@wizard_cta_dismissed';
@@ -30,7 +30,9 @@ const WizardCtaBanner = () => {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  // Re-fetch every time the dashboard tab gains focus so the banner reflects
+  // the latest server state — e.g. user just finished or reset the wizard.
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   if (!status || status.completed) return null;
   if (dismissed && !status.in_progress) return null;
