@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,46 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { wizardAPI } from '../services/wizardAPI';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
+  const navigation = useNavigation();
+  const [wizardStatus, setWizardStatus] = useState(null);
+
+  const refreshWizardStatus = useCallback(async () => {
+    try {
+      setWizardStatus(await wizardAPI.status());
+    } catch {
+      setWizardStatus(null);
+    }
+  }, []);
+  useEffect(() => { refreshWizardStatus(); }, [refreshWizardStatus]);
+
+  // Re-run: confirm, archive prior session, navigate to wizard which picks
+  // up the seed from the server-side lastArchivedSeed lookup.
+  const reRunWizard = () => {
+    Alert.alert(
+      'Run the wizard again?',
+      'Your previous answers will be pre-filled — you\'ll edit them in place. The new run replaces the prior estimate when you finish.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, run again',
+          onPress: async () => {
+            try {
+              await wizardAPI.reset();
+              navigation.navigate('Wizard');
+            } catch (e) {
+              Alert.alert('Could not reset wizard', e?.response?.data?.error || 'Try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -76,6 +112,53 @@ const ProfileScreen = () => {
           <InfoRow icon="email" title="Email" subtitle={user?.email || '—'} />
           {user?.cnic ? <InfoRow icon="credit-card" title="CNIC" subtitle={user.cnic} /> : null}
           {user?.phone ? <InfoRow icon="phone" title="Phone" subtitle={user.phone} /> : null}
+        </View>
+
+        {/* Quick-start wizard control — mirrors web Settings → Security. */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick-start wizard</Text>
+          {!wizardStatus ? (
+            <View style={styles.profileItem}>
+              <Text style={styles.profileItemSubtitle}>Loading…</Text>
+            </View>
+          ) : wizardStatus.in_progress ? (
+            <TouchableOpacity style={styles.profileItem} onPress={() => navigation.navigate('Wizard')}>
+              <View style={styles.profileItemLeft}>
+                <MaterialIcons name="auto-awesome" size={24} color="#4f46e5" />
+                <View style={styles.profileItemText}>
+                  <Text style={styles.profileItemTitle}>Wizard is in progress</Text>
+                  <Text style={styles.profileItemSubtitle}>Resume where you left off</Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : wizardStatus.completed ? (
+            <TouchableOpacity style={styles.profileItem} onPress={reRunWizard}>
+              <View style={styles.profileItemLeft}>
+                <MaterialIcons name="refresh" size={24} color="#4f46e5" />
+                <View style={styles.profileItemText}>
+                  <Text style={styles.profileItemTitle}>Run wizard again</Text>
+                  <Text style={styles.profileItemSubtitle}>
+                    {wizardStatus.last_completed_at
+                      ? `Finished ${new Date(wizardStatus.last_completed_at).toLocaleDateString()}`
+                      : 'Completed for this year'}
+                  </Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.profileItem} onPress={() => navigation.navigate('Wizard')}>
+              <View style={styles.profileItemLeft}>
+                <MaterialIcons name="auto-awesome" size={24} color="#4f46e5" />
+                <View style={styles.profileItemText}>
+                  <Text style={styles.profileItemTitle}>Run quick-start wizard</Text>
+                  <Text style={styles.profileItemSubtitle}>~90 seconds for a rough tax estimate</Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>

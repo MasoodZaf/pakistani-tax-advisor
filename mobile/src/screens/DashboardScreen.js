@@ -11,6 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
+import WizardCtaBanner from '../components/WizardCtaBanner';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -109,6 +110,11 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
           </View>
           <MaterialIcons name="notifications" size={24} color="#6b7280" />
+        </View>
+
+        {/* Quick-start wizard banner — self-hides once completed or dismissed. */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <WizardCtaBanner />
         </View>
 
         {/* Stats Card — only show what we have a real data source for */}

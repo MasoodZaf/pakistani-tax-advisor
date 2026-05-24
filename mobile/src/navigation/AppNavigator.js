@@ -17,6 +17,7 @@ import ExpenseCaptureScreen from '../screens/ExpenseCaptureScreen';
 import ConflictResolutionScreen from '../screens/ConflictResolutionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoadingScreen from '../screens/LoadingScreen';
+import WizardScreen from '../screens/WizardScreen';
 
 // Import icons (you can replace with your preferred icon library)
 import { MaterialIcons } from '@expo/vector-icons';
@@ -165,6 +166,30 @@ const MainTabNavigator = () => {
   );
 };
 
+// Root stack for authenticated users — wraps the tab navigator so we can
+// push full-screen experiences (like the Wizard) on top of it without
+// keeping the bottom tab bar visible.
+const AuthenticatedRootStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: '#4f46e5' },
+      headerTintColor: '#fff',
+      headerTitleStyle: { fontWeight: 'bold' },
+    }}
+  >
+    <Stack.Screen
+      name="MainTabs"
+      component={MainTabNavigator}
+      options={{ headerShown: false }}
+    />
+    <Stack.Screen
+      name="Wizard"
+      component={WizardScreen}
+      options={{ title: 'Quick-Start Wizard' }}
+    />
+  </Stack.Navigator>
+);
+
 // Main App Navigator
 const AppNavigator = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -176,7 +201,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       {isAuthenticated ? (
-        <MainTabNavigator />
+        <AuthenticatedRootStack />
       ) : (
         <AuthStackNavigator />
       )}
