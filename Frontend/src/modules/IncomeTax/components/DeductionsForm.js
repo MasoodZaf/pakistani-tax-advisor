@@ -38,6 +38,7 @@ const DeductionsForm = () => {
     watch,
     reset,
     setValue,
+    getValues,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('deductions')
@@ -267,6 +268,7 @@ const DeductionsForm = () => {
       <MobileExpensesWidget
         taxYear={currentTaxYear || '2025-26'}
         setValue={setValue}
+        getValues={getValues}
         fieldMap={{
           zakat: { field: 'zakat_paid_amount', yn: 'zakat_paid_yn' },
         }}

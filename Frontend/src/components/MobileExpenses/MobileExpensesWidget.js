@@ -13,6 +13,9 @@ import toast from 'react-hot-toast';
 //                          treatment. Treatments not in the map are shown
 //                          but not auto-applicable.
 //   setValue             — the react-hook-form setValue from the parent form
+//   getValues            — the react-hook-form getValues from the parent form.
+//                          Required for Apply to be additive — without it we
+//                          would clobber any value the user typed manually.
 //   onApplied (optional) — called after a successful apply with the result
 
 const formatPkr = (n) =>
@@ -34,7 +37,7 @@ const labels = {
   unmapped: 'Other (uncategorised)',
 };
 
-const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, onApplied }) => {
+const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplied }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -72,13 +75,29 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, onApplied }) => {
       });
       const applied = r.data?.by_treatment?.[treatment] || { total_pkr: 0, count: 0 };
 
-      // Add to whatever's already in the form field — the user might have
-      // typed some of it in manually before realising the widget existed.
+      // Apply is ADDITIVE — read whatever the user has already typed and add
+      // the captured amount to it. A user might have entered "₨10,000 cash
+      // Zakat I don't have receipts for" and now tap Apply to add the
+      // receipted mobile-captured amount on top. Without this, the manual
+      // figure is silently overwritten and the filing under-reports.
+      //
+      // If getValues isn't passed, we fall back to a plain setValue and the
+      // old (clobbering) behaviour — but log a warning so it's visible.
       if (mapping.field) {
-        // setValue with shouldDirty:true so react-hook-form picks it up for
-        // submission. Use the *currently-typed* value to avoid clobbering.
-        // (Parent form is responsible for sensible defaults if undefined.)
-        setValue(mapping.field, applied.total_pkr, { shouldDirty: true, shouldValidate: true });
+        let nextValue = applied.total_pkr;
+        if (typeof getValues === 'function') {
+          const current = getValues(mapping.field);
+          const currentNum = typeof current === 'number'
+            ? current
+            : Number(String(current ?? '').replace(/,/g, '')) || 0;
+          if (Number.isFinite(currentNum) && currentNum > 0) {
+            nextValue = currentNum + applied.total_pkr;
+          }
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn('[MobileExpensesWidget] getValues not provided; Apply may clobber manual entry');
+        }
+        setValue(mapping.field, nextValue, { shouldDirty: true, shouldValidate: true });
       }
       if (mapping.yn) {
         setValue(mapping.yn, 'Y', { shouldDirty: true });
