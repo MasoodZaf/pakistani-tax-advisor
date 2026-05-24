@@ -405,9 +405,6 @@ const FinalMinIncomeForm = () => {
     () => visibleFieldsFor('final_min_income_forms', addons, { advanced: showAdvanced }),
     [addons, showAdvanced]
   );
-  const advancedExtraCount =
-    visibleFieldsFor('final_min_income_forms', addons, { advanced: true }).size -
-    visibleFieldsFor('final_min_income_forms', addons).size;
 
   // Apply the visibility filter once per render and reuse below. Empty
   // sections (zero visible fields) are dropped entirely so the user
@@ -420,6 +417,16 @@ const FinalMinIncomeForm = () => {
       }))
       .filter((s) => s.fields.length > 0);
   }, [fieldDefinitions, visibleFields]);
+
+  // Form-accurate count: how many extra ROW items the advanced toggle
+  // would reveal here (not raw column count from the manifest).
+  const advancedExtraCount = useMemo(() => {
+    const withAdv = visibleFieldsFor('final_min_income_forms', addons, { advanced: true });
+    const advRows = fieldDefinitions.reduce(
+      (sum, sec) => sum + sec.fields.filter((f) => withAdv.has(f.taxDeductedField)).length, 0);
+    const baseRows = visibleSections.reduce((sum, sec) => sum + sec.fields.length, 0);
+    return advRows - baseRows;
+  }, [addons, fieldDefinitions, visibleSections]);
 
   // Auto-calculate tax chargeable AND tax deducted when amount changes
   // (fixed-rate fields only). Rate resolved via resolveFinalTaxRate which
@@ -860,7 +867,7 @@ const FinalMinIncomeForm = () => {
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                Show {advancedExtraCount} advanced final-tax field{advancedExtraCount === 1 ? '' : 's'}
+                Show {advancedExtraCount} more advanced final-tax item{advancedExtraCount === 1 ? '' : 's'}
               </>
             )}
           </button>

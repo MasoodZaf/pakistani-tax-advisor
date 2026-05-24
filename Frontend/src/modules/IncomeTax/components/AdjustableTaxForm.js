@@ -52,11 +52,6 @@ const AdjustableTaxForm = () => {
     () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: showAdvanced }),
     [addons, showAdvanced]
   );
-  const visibleFieldsWithAdvanced = useMemo(
-    () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: true }),
-    [addons]
-  );
-  const advancedExtraCount = visibleFieldsWithAdvanced.size - visibleFieldsFor('adjustable_tax_forms', addons).size;
   const { currentTaxYear } = useTaxYear();
   const { rates } = useTaxRates(currentTaxYear);
 
@@ -1307,11 +1302,19 @@ const AdjustableTaxForm = () => {
           ));
         })()}
 
-        {/* Advanced-fields toggle: surfaces the rarely-needed WHT lines
-            (vehicle transfer, landline phone, internet, gatherings,
-            provident-fund) only when the user opts in. Hides when all
-            available fields are already shown. */}
-        {advancedExtraCount > 0 && (
+        {/* Advanced-fields toggle. Count is form-accurate: number of EXTRA
+            row items the toggle reveals (not raw column count from the
+            manifest, which over-counts because each row maps to 2 cols).
+            Hides when all available rows are already shown. */}
+        {(() => {
+          const withAdv = visibleFieldsFor('adjustable_tax_forms', addons, { advanced: true });
+          const baseRows = Object.values(fieldGroups).reduce(
+            (sum, g) => sum + g.fields.filter((f) => visibleFields.has(f.taxField)).length, 0);
+          const advRows = Object.values(fieldGroups).reduce(
+            (sum, g) => sum + g.fields.filter((f) => withAdv.has(f.taxField)).length, 0);
+          const extra = advRows - baseRows;
+          if (extra <= 0) return null;
+          return (
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
@@ -1325,11 +1328,12 @@ const AdjustableTaxForm = () => {
             ) : (
               <>
                 <Plus className="w-4 h-4" />
-                Show {advancedExtraCount} advanced WHT field{advancedExtraCount === 1 ? '' : 's'}
+                Show {extra} more advanced WHT item{extra === 1 ? '' : 's'}
               </>
             )}
           </button>
-        )}
+          );
+        })()}
 
         {/* Totals Section */}
         <div className="bg-gray-800 text-white rounded-xl p-5">

@@ -188,13 +188,16 @@ const ReductionsForm = () => {
     () => visibleFieldsFor('reductions_forms', addons, { advanced: showAdvanced }),
     [addons, showAdvanced]
   );
-  const advancedExtraCount =
-    visibleFieldsFor('reductions_forms', addons, { advanced: true }).size -
-    visibleFieldsFor('reductions_forms', addons).size;
   const visibleReductionItems = useMemo(
     () => reductionItems.filter((item) => visibleFields.has(ITEM_DB_COLUMN[item.id])),
     [reductionItems, visibleFields] // eslint-disable-line react-hooks/exhaustive-deps
   );
+  // Form-accurate count: how many extra rows the toggle will reveal here.
+  const advancedExtraCount = useMemo(() => {
+    const withAdv = visibleFieldsFor('reductions_forms', addons, { advanced: true });
+    const itemsWithAdv = reductionItems.filter((item) => withAdv.has(ITEM_DB_COLUMN[item.id])).length;
+    return itemsWithAdv - visibleReductionItems.length;
+  }, [addons, reductionItems, visibleReductionItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate total tax reduction
   const calculateTotalReduction = () => {
@@ -398,7 +401,7 @@ const ReductionsForm = () => {
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Show {advancedExtraCount} advanced reduction field{advancedExtraCount === 1 ? '' : 's'}
+                  Show {advancedExtraCount} more advanced reduction item{advancedExtraCount === 1 ? '' : 's'}
                 </>
               )}
             </button>

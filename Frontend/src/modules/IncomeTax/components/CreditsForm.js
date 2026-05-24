@@ -196,13 +196,18 @@ const CreditsForm = () => {
     () => visibleFieldsFor('credits_forms', addons, { advanced: showAdvanced }),
     [addons, showAdvanced]
   );
-  const advancedExtraCount =
-    visibleFieldsFor('credits_forms', addons, { advanced: true }).size -
-    visibleFieldsFor('credits_forms', addons).size;
   const visibleCreditItems = useMemo(
     () => creditItems.filter((item) => visibleFields.has(item.amount)),
     [creditItems, visibleFields]
   );
+  // Count is from the FORM's actual creditItems array (not the broader
+  // manifest set), so it tells the user how many extra ROWS this toggle
+  // will reveal here — not how many columns exist on the DB table.
+  const advancedExtraCount = useMemo(() => {
+    const withAdv = visibleFieldsFor('credits_forms', addons, { advanced: true });
+    const itemsWithAdv = creditItems.filter((item) => withAdv.has(item.amount)).length;
+    return itemsWithAdv - visibleCreditItems.length;
+  }, [addons, creditItems, visibleCreditItems]);
 
   // Calculate total tax credit
   const calculateTotalCredit = () => {
@@ -410,7 +415,7 @@ const CreditsForm = () => {
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Show {advancedExtraCount} advanced credit field{advancedExtraCount === 1 ? '' : 's'}
+                  Show {advancedExtraCount} more advanced credit item{advancedExtraCount === 1 ? '' : 's'}
                 </>
               )}
             </button>
