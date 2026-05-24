@@ -1,10 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
 import AppleSignInButton from './AppleSignInButton';
+
+// A 22-char URL-safe random nonce. Generated once per Login mount; both
+// providers receive the same value so the backend can re-check the JWT's
+// `nonce` claim against what the client claims to have sent. This binds the
+// ID token to this specific sign-in attempt — a token captured elsewhere
+// can't be replayed without also matching this nonce.
+function generateNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 /* ─── Styles ─────────────────────────────────────────────────────────────────── */
 const Styles = () => (
@@ -237,6 +248,9 @@ const Login = () => {
   const [loading, setLoading]               = useState(false);
   const [errors, setErrors]                 = useState({});
   const [adminAssistedLogin, setAdminAssistedLogin] = useState(null);
+  // One nonce per Login mount — both Google and Apple receive it; backend
+  // verifies the ID token's nonce claim equals this value.
+  const ssoNonce = useMemo(() => generateNonce(), []);
 
   useEffect(() => {
     const data = localStorage.getItem('adminAssistedLogin');
@@ -310,17 +324,22 @@ const Login = () => {
   };
 
   // Generic post-SSO routing — used by both providers.
+  // New SSO users land in onboarding so they fill personal info before the
+  // dashboard tries to render their tax data; returning users go straight to
+  // their dashboard (or admin console).
   const afterSsoSuccess = (result) => {
     if (!result?.success) return;
     if (['admin', 'super_admin'].includes(result.userData?.role)) {
       navigate('/admin');
+    } else if (result.needsPersonalInfo) {
+      navigate('/onboarding');
     } else {
       navigate('/dashboard');
     }
   };
 
   // Google Sign-In success: the credential is the ID token (a JWT). Hand it
-  // to the backend bridge; the same post-login routing applies.
+  // to the backend bridge along with the nonce we generated for this attempt.
   const handleGoogleSuccess = async (credentialResponse) => {
     const idToken = credentialResponse?.credential;
     if (!idToken) {
@@ -329,7 +348,7 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      afterSsoSuccess(await ssoLogin('google', idToken));
+      afterSsoSuccess(await ssoLogin('google', idToken, ssoNonce));
     } finally {
       setLoading(false);
     }
@@ -338,7 +357,7 @@ const Login = () => {
   const handleAppleSuccess = async ({ identityToken }) => {
     setLoading(true);
     try {
-      afterSsoSuccess(await ssoLogin('apple', identityToken));
+      afterSsoSuccess(await ssoLogin('apple', identityToken, ssoNonce));
     } finally {
       setLoading(false);
     }
@@ -464,11 +483,13 @@ const Login = () => {
               theme="outline"
               size="large"
               width="320"
+              nonce={ssoNonce}
             />
             <AppleSignInButton
               onSuccess={handleAppleSuccess}
               onError={(err) => toast.error(err.message || 'Apple sign-in failed')}
               disabled={loading}
+              nonce={ssoNonce}
             />
           </div>
 

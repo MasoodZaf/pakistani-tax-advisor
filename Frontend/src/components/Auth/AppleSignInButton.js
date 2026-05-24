@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 // Apple Sign-In button. Loads Apple's JS SDK on demand, initialises it with
 // the configured Services ID, and reports the `identityToken` back via
@@ -34,10 +34,20 @@ function loadAppleScript() {
   });
 }
 
-const AppleSignInButton = ({ onSuccess, onError, disabled }) => {
+const AppleSignInButton = ({ onSuccess, onError, disabled, nonce }) => {
   const [ready, setReady] = useState(false);
   const servicesId = process.env.REACT_APP_APPLE_SERVICES_ID || '';
   const redirectUri = process.env.REACT_APP_APPLE_REDIRECT_URI || window.location.origin;
+
+  // Stable refs so the init effect doesn't re-fire when parent re-renders
+  // pass new inline callback identities. Apple's init is idempotent but we
+  // also want to avoid racing with an in-flight popup.
+  const onErrorRef = useRef(onError);
+  const onSuccessRef = useRef(onSuccess);
+  const nonceRef = useRef(nonce);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  useEffect(() => { onSuccessRef.current = onSuccess; }, [onSuccess]);
+  useEffect(() => { nonceRef.current = nonce; }, [nonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,22 +68,26 @@ const AppleSignInButton = ({ onSuccess, onError, disabled }) => {
         });
         setReady(true);
       } catch (err) {
-        if (!cancelled && onError) onError(new Error('Apple SDK failed to load'));
+        if (!cancelled && onErrorRef.current) onErrorRef.current(new Error('Apple SDK failed to load'));
       }
     })();
     return () => { cancelled = true; };
-  }, [servicesId, redirectUri, onError]);
+  }, [servicesId, redirectUri]);
 
   const handleClick = useCallback(async () => {
     if (!servicesId) {
-      if (onError) onError(new Error('Apple Sign-In is not configured'));
+      if (onErrorRef.current) onErrorRef.current(new Error('Apple Sign-In is not configured'));
       return;
     }
     try {
-      const result = await window.AppleID.auth.signIn();
+      // Per-call options override the init() defaults — pass the current
+      // nonce so each sign-in attempt carries a fresh value. Apple echoes it
+      // back as the `nonce` claim in the identity token.
+      const signInOpts = nonceRef.current ? { nonce: nonceRef.current } : undefined;
+      const result = await window.AppleID.auth.signIn(signInOpts);
       const identityToken = result?.authorization?.id_token;
       if (!identityToken) {
-        if (onError) onError(new Error('Apple did not return an identity token'));
+        if (onErrorRef.current) onErrorRef.current(new Error('Apple did not return an identity token'));
         return;
       }
       // Apple only returns the `user` block on the FIRST sign-in. After that
@@ -81,13 +95,13 @@ const AppleSignInButton = ({ onSuccess, onError, disabled }) => {
       const name = result?.user
         ? `${result.user.name?.firstName || ''} ${result.user.name?.lastName || ''}`.trim() || null
         : null;
-      onSuccess({ identityToken, name });
+      onSuccessRef.current({ identityToken, name });
     } catch (err) {
       // User-cancel comes through as { error: 'popup_closed_by_user' } — silent.
       if (err?.error === 'popup_closed_by_user') return;
-      if (onError) onError(err instanceof Error ? err : new Error(err?.error || 'Apple sign-in failed'));
+      if (onErrorRef.current) onErrorRef.current(err instanceof Error ? err : new Error(err?.error || 'Apple sign-in failed'));
     }
-  }, [servicesId, onSuccess, onError]);
+  }, [servicesId]);
 
   return (
     <button

@@ -66,9 +66,13 @@ async function jwksFor(providerKey) {
 // Verify a provider's ID token. Returns:
 //   { sub, email, name, picture, emailVerified, provider, raw }
 //
+// `expectedNonce` (optional): when supplied, the token's `nonce` claim must
+// match exactly. This binds the token to the originating sign-in attempt and
+// is the primary defense against ID-token replay.
+//
 // Throws on signature/claim failure. Errors are intentionally generic
 // (no stack-trace leaking back to the client).
-async function verifyIdToken(providerKey, idToken) {
+async function verifyIdToken(providerKey, idToken, expectedNonce) {
   const p = PROVIDERS[providerKey];
   if (!p) throw new Error('unsupported_provider');
 
@@ -114,6 +118,15 @@ async function verifyIdToken(providerKey, idToken) {
     if (!verified) throw new Error('email_not_verified');
   }
 
+  // Nonce binding. When the caller declares the nonce it generated for this
+  // sign-in attempt, the token must echo it back. Mismatch (or missing nonce
+  // on the token side) indicates replay.
+  if (expectedNonce) {
+    if (!payload.nonce || payload.nonce !== expectedNonce) {
+      throw new Error('invalid_nonce');
+    }
+  }
+
   return {
     sub: payload.sub,
     email: String(payload.email).toLowerCase().trim(),
@@ -133,9 +146,9 @@ function _setVerifierForTests(fn) {
   _testVerifier = fn;
 }
 
-async function verify(providerKey, idToken) {
-  if (_testVerifier) return _testVerifier(providerKey, idToken);
-  return verifyIdToken(providerKey, idToken);
+async function verify(providerKey, idToken, expectedNonce) {
+  if (_testVerifier) return _testVerifier(providerKey, idToken, expectedNonce);
+  return verifyIdToken(providerKey, idToken, expectedNonce);
 }
 
 module.exports = {

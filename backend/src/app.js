@@ -125,10 +125,11 @@ const uploadLimiter = rateLimit({
 app.use(express.static('public'));
 
 // ── Route mounting ──────────────────────────────────────────────────────────
-// Auth: only /login and /register get the strict anti-brute-force limit.
-// (Mounting loginLimiter at '/api' was applying it to every /api/* route,
-//  burning the 5/15min quota during normal page loads.)
-app.use(['/api/login', '/api/register'], loginLimiter);
+// Auth: only /login, /register and the SSO endpoints get the strict
+// anti-brute-force limit. SSO endpoints accept ID tokens, so they need the
+// same throttle to prevent token-verification grinding and email enumeration.
+// /api/sso covers /sso/google, /sso/apple, /sso/link/*, /sso/unlink, /sso/status.
+app.use(['/api/login', '/api/register', '/api/sso'], loginLimiter);
 app.use('/api', authRoutes);
 
 // Public read-only info (tax year config) — no auth, no throttle needed

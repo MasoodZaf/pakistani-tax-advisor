@@ -640,26 +640,32 @@ async function loginViaSso(provider, claims, req) {
 
   let userData = result.rows[0];
 
-  // 2. Fall back to email match. If an existing row uses email+password and
-  //    the verified SSO email matches, link the two so subsequent SSO logins
-  //    are direct hits.
+  // 2. If no SSO identity matches, check whether the verified email is already
+  //    claimed by an existing row (password or another SSO). We do NOT auto-link
+  //    to a password account: /register has no email-verification step, so an
+  //    attacker who squats on a victim's email with a password registration
+  //    would silently inherit the victim's later SSO login. Instead, refuse
+  //    with a clear error and let the user link from their profile after
+  //    signing in with their password.
+  //
+  //    Email comparison is case-insensitive: claims.email is already
+  //    lowercased by oidcVerifier; legacy mixed-case rows would otherwise
+  //    miss and trigger a duplicate-row INSERT collision.
   if (!userData) {
     result = await pool.query(
-      `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active
-       FROM users
-       WHERE email = $1`,
+      `SELECT id, sso_provider FROM users WHERE LOWER(email) = $1`,
       [claims.email]
     );
-    userData = result.rows[0];
-
-    if (userData) {
-      await pool.query(
-        `UPDATE users
-         SET sso_provider = $1, sso_subject = $2, email_verified = TRUE, updated_at = NOW()
-         WHERE id = $3 AND sso_provider IS NULL`,
-        [provider, claims.sub, userData.id]
-      );
-      logger.info(`SSO identity linked to existing user`, { provider, userId: userData.id });
+    const existing = result.rows[0];
+    if (existing) {
+      const err = new Error('sso_email_conflict');
+      err.status = 409;
+      logger.warn(`SSO email already claimed by another account`, {
+        provider,
+        existingUserId: existing.id,
+        existingProvider: existing.sso_provider || 'password',
+      });
+      throw err;
     }
   }
 
@@ -747,12 +753,16 @@ async function loginViaSso(provider, claims, req) {
 // as the user-visible reason (`token_expired`, `invalid_claims`, etc.).
 async function handleSsoLogin(provider, req, res) {
   try {
-    const { idToken } = req.body || {};
+    const { idToken, nonce } = req.body || {};
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
     }
+    // Nonce is optional today for backwards compatibility with older clients,
+    // but when present it must be a non-empty string. New clients always send
+    // one; once mobile is updated we can flip this to required.
+    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
 
-    const claims = await oidc.verify(provider, idToken);
+    const claims = await oidc.verify(provider, idToken, expectedNonce);
     const payload = await loginViaSso(provider, claims, req);
     res.json(payload);
   } catch (err) {
@@ -761,7 +771,7 @@ async function handleSsoLogin(provider, req, res) {
     }
     // Verifier errors are short strings; treat as 401 (auth failed).
     const VERIFIER_ERRORS = new Set([
-      'token_expired', 'invalid_claims', 'invalid_token',
+      'token_expired', 'invalid_claims', 'invalid_token', 'invalid_nonce',
       'missing_sub', 'missing_email', 'email_not_verified',
       'unsupported_provider', 'provider_not_configured',
     ]);
@@ -775,5 +785,178 @@ async function handleSsoLogin(provider, req, res) {
 
 router.post('/sso/google', (req, res) => handleSsoLogin('google', req, res));
 router.post('/sso/apple', (req, res) => handleSsoLogin('apple', req, res));
+
+// ─── SSO link / unlink (authenticated) ──────────────────────────────────────
+// Self-service for users who hit `sso_email_conflict` during the SSO login
+// flow. Pattern: sign in with password first, then from the profile settings
+// link a Google/Apple identity to your existing account.
+//
+// Security:
+//   - Requires a valid JWT (jwtAuth).
+//   - Re-verifies the OIDC ID token, including the nonce the client supplied.
+//   - The verified email on the SSO token must EXACTLY match the user's
+//     account email (case-insensitive). This is what makes the link safe —
+//     the user has proved ownership of the email through both the password
+//     login AND the SSO round-trip.
+//   - Refuses if the user already has any SSO identity linked (one provider
+//     per user keeps the model simple — call unlink first to switch).
+//   - Refuses if the SSO identity is already claimed by another account.
+
+async function handleSsoLink(provider, req, res) {
+  try {
+    const { idToken, nonce } = req.body || {};
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'idToken_required' });
+    }
+    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
+    const claims = await oidc.verify(provider, idToken, expectedNonce);
+
+    const userId = req.user.id;
+    const userEmail = String(req.user.email || '').toLowerCase();
+
+    if (claims.email !== userEmail) {
+      // Don't reveal what the verified email actually was — the user could
+      // be probing for whether another account exists.
+      logger.warn(`SSO link refused: email mismatch`, { provider, userId });
+      return res.status(403).json({ error: 'email_mismatch' });
+    }
+
+    // Reject if the user already has any SSO identity attached.
+    const existing = await pool.query(
+      `SELECT sso_provider FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+    if (existing.rows[0].sso_provider) {
+      return res.status(409).json({
+        error: 'sso_already_linked',
+        current_provider: existing.rows[0].sso_provider,
+      });
+    }
+
+    // Reject if the SSO identity is already claimed by someone else.
+    const claimed = await pool.query(
+      `SELECT id FROM users WHERE sso_provider = $1 AND sso_subject = $2`,
+      [provider, claims.sub]
+    );
+    if (claimed.rows.length > 0 && claimed.rows[0].id !== userId) {
+      return res.status(409).json({ error: 'sso_identity_taken' });
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET sso_provider = $1, sso_subject = $2, email_verified = TRUE, updated_at = NOW()
+       WHERE id = $3`,
+      [provider, claims.sub, userId]
+    );
+
+    await insertAudit(pool, {
+      userId,
+      userEmail: req.user.email,
+      action: 'sso_link',
+      tableName: 'users',
+      newValue: { provider },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
+    logger.info(`SSO identity linked`, { provider, userId });
+    return res.json({ success: true, provider });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    const VERIFIER_ERRORS = new Set([
+      'token_expired', 'invalid_claims', 'invalid_token', 'invalid_nonce',
+      'missing_sub', 'missing_email', 'email_not_verified',
+      'unsupported_provider', 'provider_not_configured',
+    ]);
+    if (VERIFIER_ERRORS.has(err.message)) {
+      return res.status(401).json({ error: err.message });
+    }
+    logger.error(`SSO link failed (${provider})`, { message: err.message, stack: err.stack });
+    return res.status(500).json({ error: 'sso_link_failed' });
+  }
+}
+
+router.post('/sso/link/google', jwtAuth, (req, res) => handleSsoLink('google', req, res));
+router.post('/sso/link/apple', jwtAuth, (req, res) => handleSsoLink('apple', req, res));
+
+// Unlink the currently-linked SSO identity. Refuses if the account has no
+// password_hash — otherwise the `users_has_auth_method` CHECK constraint
+// would (correctly) reject the update and the user would be locked out.
+// Better to refuse here with a clear error and tell them to set a password first.
+router.post('/sso/unlink', jwtAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const r = await pool.query(
+      `SELECT sso_provider, password_hash FROM users WHERE id = $1 AND is_active = true`,
+      [userId]
+    );
+    if (r.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+    const { sso_provider: currentProvider, password_hash: passwordHash } = r.rows[0];
+    if (!currentProvider) {
+      return res.status(409).json({ error: 'no_sso_linked' });
+    }
+    if (!passwordHash) {
+      // Avoid locking the user out — they'd have no remaining auth method.
+      return res.status(409).json({
+        error: 'no_password_set',
+        message: 'Set a password before unlinking your only sign-in method.',
+      });
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET sso_provider = NULL, sso_subject = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [userId]
+    );
+
+    await insertAudit(pool, {
+      userId,
+      userEmail: req.user.email,
+      action: 'sso_unlink',
+      tableName: 'users',
+      oldValue: { provider: currentProvider },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+
+    logger.info(`SSO identity unlinked`, { provider: currentProvider, userId });
+    return res.json({ success: true, unlinked_provider: currentProvider });
+  } catch (err) {
+    logger.error('SSO unlink failed', { message: err.message, stack: err.stack });
+    return res.status(500).json({ error: 'sso_unlink_failed' });
+  }
+});
+
+// Read the current user's linked SSO provider (or null). Used by the
+// Settings UI to render the "Connected accounts" panel.
+router.get('/sso/status', jwtAuth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT sso_provider, password_hash IS NOT NULL AS has_password
+       FROM users WHERE id = $1 AND is_active = true`,
+      [req.user.id]
+    );
+    if (r.rows.length === 0) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+    return res.json({
+      provider: r.rows[0].sso_provider || null,
+      has_password: !!r.rows[0].has_password,
+    });
+  } catch (err) {
+    logger.error('SSO status failed', { message: err.message });
+    return res.status(500).json({ error: 'sso_status_failed' });
+  }
+});
 
 module.exports = router;

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { getToken, setToken, clearToken } from './secureToken';
 
 // Resolve API URL. Order of precedence:
 //   1. EXPO_PUBLIC_API_URL  (override per-build / per-developer)
@@ -29,7 +30,7 @@ const APP_VERSION = Constants.expoConfig?.version || '0.0.0';
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('sessionToken');
+      const token = await getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -52,7 +53,7 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid, clear storage and redirect to login
-      await AsyncStorage.removeItem('sessionToken');
+      await clearToken();
       await AsyncStorage.removeItem('user');
       // Navigation to login will be handled in the component
     }
@@ -60,12 +61,17 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API functions
+// Auth API functions.
+//
+// Token lives in SecureStore (Keychain/Keystore) — see services/secureToken.js.
+// The cached `user` object (PII like name/email/role) stays in AsyncStorage
+// because it's also in the server DB and exposing it from device backup
+// doesn't grant any capability the user can't get by logging in.
 export const authAPI = {
   login: async (email, password) => {
     const response = await api.post('/login', { email, password });
     if (response.data.success && response.data.sessionToken) {
-      await AsyncStorage.setItem('sessionToken', response.data.sessionToken);
+      await setToken(response.data.sessionToken);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response.data;
@@ -78,10 +84,13 @@ export const authAPI = {
 
   // SSO bridge — hand the provider's idToken to the backend, get back the
   // same { token, sessionToken, user } shape /login produces.
-  ssoLogin: async (provider, idToken) => {
-    const response = await api.post(`/sso/${provider}`, { idToken });
+  // `nonce`: the random value the client handed to the OAuth provider before
+  // the round-trip. Backend verifies the ID token's `nonce` claim matches —
+  // defeats ID-token replay.
+  ssoLogin: async (provider, idToken, nonce) => {
+    const response = await api.post(`/sso/${provider}`, { idToken, nonce });
     if (response.data?.success && response.data.sessionToken) {
-      await AsyncStorage.setItem('sessionToken', response.data.sessionToken);
+      await setToken(response.data.sessionToken);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response.data;
@@ -93,7 +102,7 @@ export const authAPI = {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
-      await AsyncStorage.removeItem('sessionToken');
+      await clearToken();
       await AsyncStorage.removeItem('user');
     }
   },
@@ -112,7 +121,7 @@ export const authAPI = {
   // freshest user record is returned (and cached); on failure storage is
   // cleared so the app falls back to the login screen.
   verifySession: async () => {
-    const sessionToken = await AsyncStorage.getItem('sessionToken');
+    const sessionToken = await getToken();
     if (!sessionToken) return null;
     try {
       const response = await api.post('/verify-session', { sessionToken });
@@ -122,7 +131,7 @@ export const authAPI = {
       }
     } catch (error) {
       if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('sessionToken');
+        await clearToken();
         await AsyncStorage.removeItem('user');
       } else {
         // Network failure: keep the cache so the user can use the app offline.

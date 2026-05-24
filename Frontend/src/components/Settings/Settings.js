@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConnectedAccounts from './ConnectedAccounts';
 
 /* ─── Income stream definitions (mirrors Onboarding) ─────────────────────── */
 const INCOME_STREAMS = [
@@ -450,20 +451,23 @@ const Settings = () => {
             <Shield className="w-6 h-6 text-gray-600" />
             <h2 className="text-lg font-semibold text-gray-900">Security</h2>
           </div>
-          
-          <div className="space-y-4">
-            <button 
+
+          <div className="space-y-6">
+            <button
               onClick={() => setShowPasswordModal(true)}
               className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="font-medium text-gray-900">Change Password</div>
               <div className="text-sm text-gray-600">Update your account password</div>
             </button>
-            
-            <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="font-medium text-gray-900">Two-Factor Authentication</div>
-              <div className="text-sm text-gray-600">Add extra security to your account</div>
-            </button>
+
+            {/* Connected accounts — Google / Apple SSO. Lets users who hit
+                sso_email_conflict at sign-in time link the provider here
+                after authenticating with their password. */}
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Connected accounts</h3>
+              <ConnectedAccounts />
+            </div>
           </div>
         </div>
       </div>

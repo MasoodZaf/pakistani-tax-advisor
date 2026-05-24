@@ -232,9 +232,14 @@ export const AuthProvider = ({ children }) => {
   // SSO bridge: client (here, the Google button) hands us an idToken from
   // the OAuth round-trip; backend verifies it, returns the same { token, user }
   // shape /api/login uses. Coexists with password login.
-  const ssoLogin = async (provider, idToken) => {
+  //
+  // `nonce` is the random value the client generated and handed to the
+  // provider before the OAuth round-trip. The backend re-checks that the
+  // ID token's `nonce` claim matches — this binds the token to this
+  // sign-in attempt and is the defense against ID-token replay.
+  const ssoLogin = async (provider, idToken, nonce) => {
     try {
-      const response = await axios.post(`/api/sso/${provider}`, { idToken });
+      const response = await axios.post(`/api/sso/${provider}`, { idToken, nonce });
       if (!response.data?.success) {
         const message = response.data?.error || 'SSO sign-in failed';
         toast.error(message);

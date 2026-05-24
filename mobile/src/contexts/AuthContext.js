@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import { getToken } from '../services/secureToken';
 
 // Initial state
 const initialState = {
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
-      const token = await AsyncStorage.getItem('sessionToken');
+      const token = await getToken();
       if (!token) {
         dispatch({ type: AUTH_ACTIONS.LOGOUT });
         return;
@@ -129,12 +129,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const ssoLogin = async (provider, idToken) => {
+  const ssoLogin = async (provider, idToken, nonce) => {
     try {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
-      const response = await authAPI.ssoLogin(provider, idToken);
+      const response = await authAPI.ssoLogin(provider, idToken, nonce);
 
       if (response.success) {
         dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: response.user });
