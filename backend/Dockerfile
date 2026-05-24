@@ -30,15 +30,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Build context is the repo root (see docker-compose.prod.yml backend.build).
+# Layout inside the image mirrors the repo so the relative require path
+#   require('../../../shared/expenseSchema')
+# in backend/src/services/mobileExpenseHelpers.js resolves the same way
+# in production as it does on a developer's machine.
+WORKDIR /app/backend
 
 # Install dependencies (production only). PUPPETEER_SKIP_DOWNLOAD above keeps
 # npm from pulling its own ~170 MB Chromium — we use the distro package.
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy source
-COPY . .
+# Copy backend source + the sibling /shared/ directory (single source of
+# truth for expense-schema enums, also consumed by mobile via metro's
+# watchFolders).
+COPY backend/ ./
+COPY shared/ /app/shared/
 
 # Non-root runtime user
 RUN groupadd -r --gid 1001 nodejs \

@@ -35,8 +35,11 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      # Build context is the repo root, not ./backend, so the Dockerfile can
+      # COPY the sibling /shared/ directory (single source of truth for the
+      # expense-schema enums consumed by both backend and mobile).
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: tax_advisor_backend
     restart: unless-stopped
     ports:
