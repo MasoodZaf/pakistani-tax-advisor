@@ -16,6 +16,7 @@ const taxYearRoutes = require('./routes/taxYear');
 const aiConsultantRoutes = require('./routes/aiConsultant');
 const aiKnowledgeBase = require('./services/aiConsultant/knowledgeBase');
 const mobileApiRoutes = require('./routes/mobileApi');
+const wizardRoutes = require('./routes/wizard');
 
 // Module imports
 const incomeTaxModule = require('./modules/IncomeTax');
@@ -173,6 +174,11 @@ app.use('/api/mobile/v1', apiWriteLimiter, mobileApiRoutes);
 // Same write limiter; the route module short-circuits when DEEPSEEK_API_KEY
 // isn't set so the rest of the app keeps working without it.
 app.use('/api/ai-consultant', apiWriteLimiter, aiConsultantRoutes);
+
+// AI quick-start wizard — short conversational intake that populates form
+// drafts and returns a rough tax estimate. Auth + rate limit applied at
+// the route file (jwtAuth) and here (apiWriteLimiter).
+app.use('/api/wizard', apiWriteLimiter, wizardRoutes);
 
 // Tax Computation routes (Inter-form data linking).
 // `apiWriteLimiter` is applied even on the read endpoints — the

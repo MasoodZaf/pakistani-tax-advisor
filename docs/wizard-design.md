@@ -96,7 +96,9 @@ Gating rule:
 
 ## Conversation walkthroughs
 
-### Pure salaried (no addons) — **4 turns**
+_The "Review" item in each walkthrough below is rendered by the client when the engine returns `done: true`. It's NOT a wizard step — `progress.total` from the engine is the input-step count only. So "4 turns" below = 3 input steps + 1 review screen._
+
+### Pure salaried (no addons) — **3 input steps + review**
 
 ```
 1. Income summary
@@ -123,16 +125,15 @@ Gating rule:
    each form in detail before submitting."
 ```
 
-### Salaried + bank profit (very common in Pakistan) — **5 turns**
+### Salaried + bank profit (very common in Pakistan) — **4 input steps + review**
 
-Adds turn 4 (renumbering: 4 = bank_profit, 5 = review). Bank profit step
-asks for the deposit profit amount and the WHT the bank deducted.
+Adds the bank_profit step (deposit profit amount + WHT the bank deducted).
 
-### Salaried + bank + dividends — **6 turns**
+### Salaried + bank + dividends — **5 input steps + review**
 
 Adds the dividends step too.
 
-### Heaviest profile (all 11 income addons) — **15 turns**
+### Heaviest profile (all 11 income addons) — **14 input steps + review**
 
 ```
 1.  salary_basics
