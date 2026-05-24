@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Sparkles, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { useTaxForm } from '../../contexts/TaxFormContext';
 import { wizardAPI } from '../../services/wizardAPI';
 import WizardField from './WizardField';
 
@@ -45,6 +46,11 @@ function seedValuesForStep(promptSchema, capturedForStep) {
 
 const Wizard = () => {
   const navigate = useNavigate();
+  // Pull TaxFormContext so we can refresh it after finalize. Without this,
+  // the dashboard's useTaxPreview hook keeps using stale (empty) in-memory
+  // formData and shows "Estimated tax: Rs 0" even though the wizard just
+  // wrote real draft values to the form tables.
+  const { loadTaxReturn } = useTaxForm();
 
   // mode: 'loading' | 'turn' | 'finalizing' | 'review' | 'error'
   const [mode, setMode] = useState('loading');
@@ -132,6 +138,11 @@ const Wizard = () => {
           const fin = await wizardAPI.finalize({ sessionId: session.id });
           setReview(fin);
           setMode('review');
+          // Refresh TaxFormContext so the dashboard's live preview reflects
+          // the freshly-written draft values. Fire-and-forget — if it fails
+          // (network blip) the dashboard will eventually re-fetch on its
+          // next mount; we don't want to block the review screen on it.
+          loadTaxReturn().catch(() => { /* non-blocking */ });
         } catch (e) {
           // finalize failed — let the user retry.
           toast.error(e?.response?.data?.error || 'Could not finalize. Retry?');
@@ -169,7 +180,7 @@ const Wizard = () => {
     } finally {
       submitLockRef.current = false;
     }
-  }, [session, step, values, rawReply]);
+  }, [session, step, values, rawReply, loadTaxReturn]);
 
   // ── Per-field setters used by WizardField ────────────────────────────
   const setValueAt = useCallback((key, v) => {
