@@ -17,12 +17,19 @@ const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const navigation = useNavigation();
   const [wizardStatus, setWizardStatus] = useState(null);
+  const [wizardLoading, setWizardLoading] = useState(true);
+  const [wizardError, setWizardError] = useState(false);
 
   const refreshWizardStatus = useCallback(async () => {
+    setWizardLoading(true);
+    setWizardError(false);
     try {
       setWizardStatus(await wizardAPI.status());
     } catch {
       setWizardStatus(null);
+      setWizardError(true);
+    } finally {
+      setWizardLoading(false);
     }
   }, []);
   // Refresh on every focus so the section reflects fresh state after the
@@ -119,10 +126,21 @@ const ProfileScreen = () => {
         {/* Quick-start wizard control — mirrors web Settings → Security. */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick-start wizard</Text>
-          {!wizardStatus ? (
+          {wizardLoading ? (
             <View style={styles.profileItem}>
               <Text style={styles.profileItemSubtitle}>Loading…</Text>
             </View>
+          ) : wizardError || !wizardStatus ? (
+            <TouchableOpacity style={styles.profileItem} onPress={refreshWizardStatus}>
+              <View style={styles.profileItemLeft}>
+                <MaterialIcons name="refresh" size={24} color="#dc2626" />
+                <View style={styles.profileItemText}>
+                  <Text style={styles.profileItemTitle}>Couldn't load wizard status</Text>
+                  <Text style={styles.profileItemSubtitle}>Tap to retry</Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
           ) : wizardStatus.in_progress ? (
             <TouchableOpacity style={styles.profileItem} onPress={() => navigation.navigate('Wizard')}>
               <View style={styles.profileItemLeft}>

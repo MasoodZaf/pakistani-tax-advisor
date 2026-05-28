@@ -12,7 +12,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
-import WizardCtaBanner from '../components/WizardCtaBanner';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -57,21 +56,16 @@ const DashboardScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const QuickActionCard = ({ title, subtitle, icon, color, onPress, badge }) => (
-    <TouchableOpacity style={[styles.quickActionCard, { borderLeftColor: color }]} onPress={onPress}>
-      <View style={styles.quickActionContent}>
-        <View style={styles.quickActionHeader}>
-          <MaterialIcons name={icon} size={24} color={color} />
-          {badge && (
-            <View style={[styles.badge, { backgroundColor: color }]}>
-              <Text style={styles.badgeText}>{badge}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.quickActionTitle}>{title}</Text>
-        <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
+  const ActionTile = ({ title, icon, color, bg, onPress }) => (
+    <TouchableOpacity
+      style={[styles.tile, { backgroundColor: bg, shadowColor: color }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.tileIconWrap, { backgroundColor: color }]}>
+        <MaterialIcons name={icon} size={56} color="#fff" />
       </View>
-      <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
+      <Text style={styles.tileTitle}>{title}</Text>
     </TouchableOpacity>
   );
 
@@ -114,11 +108,6 @@ const DashboardScreen = ({ navigation }) => {
           <MaterialIcons name="notifications" size={24} color="#6b7280" />
         </View>
 
-        {/* Quick-start wizard banner — self-hides once completed or dismissed. */}
-        <View style={{ paddingHorizontal: 16 }}>
-          <WizardCtaBanner />
-        </View>
-
         {/* Stats Card — only show what we have a real data source for */}
         <View style={styles.statsContainer}>
           <StatsCard
@@ -129,16 +118,41 @@ const DashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Quick Action — only the action we can actually perform */}
+        {/* Action Tiles — 2×2 grid */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Action</Text>
-          <QuickActionCard
-            title="Complete Tax Forms"
-            subtitle="Fill out your income and deduction details"
-            icon="description"
-            color="#4f46e5"
-            onPress={() => navigation.navigate('TaxForms')}
-          />
+          <Text style={styles.sectionTitle}>What would you like to do?</Text>
+          <View style={styles.tileGrid}>
+            <ActionTile
+              title="Quick-Start Wizard"
+              icon="auto-awesome"
+              color="#4f46e5"
+              bg="#eef2ff"
+              onPress={() => navigation.navigate('Wizard')}
+            />
+            <ActionTile
+              title="Log Expense"
+              icon="receipt-long"
+              color="#059669"
+              bg="#ecfdf5"
+              onPress={() =>
+                navigation.navigate('Expenses', { screen: 'ExpenseCapture' })
+              }
+            />
+            <ActionTile
+              title="Tax Forms"
+              icon="description"
+              color="#d97706"
+              bg="#fffbeb"
+              onPress={() => navigation.navigate('TaxForms')}
+            />
+            <ActionTile
+              title="Profile"
+              icon="person"
+              color="#6366f1"
+              bg="#f5f3ff"
+              onPress={() => navigation.navigate('Profile')}
+            />
+          </View>
         </View>
 
         {/* Current Tax Year Status */}
@@ -274,53 +288,42 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
   },
-  quickActionCard: {
+  tileGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  tile: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  quickActionContent: {
-    flex: 1,
-  },
-  quickActionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  tileIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 26,
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  badgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  quickActionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  tileTitle: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1f2937',
-    marginBottom: 2,
-  },
-  quickActionSubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    textAlign: 'center',
   },
   statusCard: {
     backgroundColor: '#ffffff',

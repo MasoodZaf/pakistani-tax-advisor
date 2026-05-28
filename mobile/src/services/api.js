@@ -5,12 +5,20 @@ import { getToken, setToken, clearToken } from './secureToken';
 
 // Resolve API URL. Order of precedence:
 //   1. EXPO_PUBLIC_API_URL  (override per-build / per-developer)
-//   2. app.json -> extra.apiUrl  (production default)
-//   3. localhost fallback for last-ditch dev
+//   2. app.json -> extra.apiUrl  (production VPS — shared with web)
+//
+// No localhost fallback: mobile and web MUST hit the same backend so data
+// (users, returns, wizard sessions, expenses) stays in sync. To point at a
+// local backend for dev, set EXPO_PUBLIC_API_URL explicitly.
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  Constants.expoConfig?.extra?.apiUrl ||
-  'http://localhost:3001/api';
+  Constants.expoConfig?.extra?.apiUrl;
+
+if (!API_URL) {
+  throw new Error(
+    'API URL not configured. Set EXPO_PUBLIC_API_URL or app.json -> extra.apiUrl.'
+  );
+}
 
 // Create axios instance
 const api = axios.create({
