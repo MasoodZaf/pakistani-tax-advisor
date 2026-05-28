@@ -53,7 +53,12 @@ COPY shared/ /app/shared/
 # Non-root runtime user
 RUN groupadd -r --gid 1001 nodejs \
  && useradd -r --uid 1001 --gid nodejs --no-create-home nodejs \
- && chown -R nodejs:nodejs /app
+ && chown -R nodejs:nodejs /app \
+ # /backups is a docker volume mount-point owned by root unless we pre-create
+ # it with the right ownership inside the image. Without this the nightly
+ # pg_dump fails with EACCES when it tries to write into the volume.
+ && mkdir -p /backups/daily /backups/weekly \
+ && chown -R nodejs:nodejs /backups
 USER nodejs
 
 EXPOSE 3001
