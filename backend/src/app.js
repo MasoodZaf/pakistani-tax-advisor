@@ -275,6 +275,13 @@ const server = app.listen(PORT, HOST, () => {
   aiKnowledgeBase.loadAll().catch((e) =>
     logger.warn('AI knowledge base initial load failed', { message: e.message })
   );
+
+  // Daily background jobs (tax-year rollover, Finance Act admin reminder).
+  try {
+    require('./services/cron').startSchedulers();
+  } catch (e) {
+    logger.error('cron bootstrap failed', { message: e.message });
+  }
 });
 
 function gracefulShutdown(signal) {

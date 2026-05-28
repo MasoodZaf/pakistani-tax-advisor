@@ -18,6 +18,7 @@ import ConflictResolutionScreen from '../screens/ConflictResolutionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import WizardScreen from '../screens/WizardScreen';
+import PriorYearUploadScreen from '../screens/PriorYearUploadScreen';
 
 // Import icons (you can replace with your preferred icon library)
 import { MaterialIcons } from '@expo/vector-icons';
@@ -186,6 +187,11 @@ const AuthenticatedRootStack = () => (
       name="Wizard"
       component={WizardScreen}
       options={{ title: 'Quick-Start Wizard' }}
+    />
+    <Stack.Screen
+      name="PriorYearUpload"
+      component={PriorYearUploadScreen}
+      options={{ title: 'Prior-Year Return' }}
     />
   </Stack.Navigator>
 );

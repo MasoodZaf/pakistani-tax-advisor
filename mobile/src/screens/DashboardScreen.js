@@ -154,11 +154,11 @@ const DashboardScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('TaxForms')}
             />
             <ActionTile
-              title="Profile"
-              icon="person"
-              color="#6366f1"
-              bg="#f5f3ff"
-              onPress={() => navigation.navigate('Profile')}
+              title="Prior-Year Return"
+              icon="upload-file"
+              color="#0891b2"
+              bg="#ecfeff"
+              onPress={() => navigation.navigate('PriorYearUpload')}
             />
           </View>
         </View>
