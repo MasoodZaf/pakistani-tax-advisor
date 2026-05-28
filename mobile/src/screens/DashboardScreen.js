@@ -12,6 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
+import SyncStatusChip from '../components/SyncStatusChip';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -101,9 +102,16 @@ const DashboardScreen = ({ navigation }) => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
+            <View style={{ marginTop: 8 }}>
+              <SyncStatusChip
+                onConflictPress={() =>
+                  navigation.navigate('Expenses', { screen: 'ExpensesList' })
+                }
+              />
+            </View>
           </View>
           <MaterialIcons name="notifications" size={24} color="#6b7280" />
         </View>

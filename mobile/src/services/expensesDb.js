@@ -216,6 +216,19 @@ export async function listExpenses({ taxYear, limit = 200 } = {}) {
   );
 }
 
+// Counts of rows in each non-synced state. Drives the sync status chip.
+export async function countsByStatus() {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT sync_status, COUNT(*) AS n FROM expenses
+      WHERE deleted_at IS NULL OR sync_status != 'synced'
+      GROUP BY sync_status`
+  );
+  const out = { pending: 0, error: 0, conflict: 0, synced: 0 };
+  for (const r of rows) out[r.sync_status] = r.n;
+  return out;
+}
+
 // Rows the sync service needs to push.
 export async function listPending() {
   const d = await db();

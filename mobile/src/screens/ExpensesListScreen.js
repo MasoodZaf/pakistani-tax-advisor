@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { listExpenses, deriveTaxYear } from '../services/expensesDb';
 import { syncAll } from '../services/expensesSync';
+import SyncStatusChip from '../components/SyncStatusChip';
 
 const formatCurrency = (n, currency = 'PKR') =>
   new Intl.NumberFormat('en-PK', {
@@ -118,9 +119,17 @@ const ExpensesListScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Expenses</Text>
           <Text style={styles.headerSubtitle}>Tax year {CURRENT_TAX_YEAR}</Text>
+          <View style={styles.chipRow}>
+            <SyncStatusChip
+              onConflictPress={() => {
+                const c = expenses.find((e) => e.sync_status === 'conflict');
+                if (c) navigation.navigate('ConflictResolution', { clientId: c.client_id });
+              }}
+            />
+          </View>
         </View>
         <TouchableOpacity
           style={styles.addButton}
@@ -166,6 +175,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1f2937' },
   headerSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  chipRow: { marginTop: 8 },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',

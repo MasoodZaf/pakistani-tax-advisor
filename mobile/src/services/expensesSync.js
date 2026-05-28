@@ -22,6 +22,14 @@ import {
 
 const BATCH_LIMIT = 100;
 const LAST_PULL_KEY = 'expenses:last_pull';
+const LAST_SYNC_KEY = 'expenses:last_sync';
+
+// Last successful syncAll wall-clock time (ISO string). Drives the
+// "Synced just now / 2m ago" header chip. Distinct from LAST_PULL_KEY,
+// which tracks the server watermark for delta pulls.
+export async function getLastSyncedAt() {
+  return getSyncState(LAST_SYNC_KEY);
+}
 
 // Convert a SQLite row into the wire shape the server expects.
 //
@@ -170,5 +178,6 @@ export async function pullDelta() {
 export async function syncAll() {
   const push = await pushPending();
   const pull = await pullDelta();
+  await setSyncState(LAST_SYNC_KEY, new Date().toISOString()).catch(() => {});
   return { ...push, applied: pull.applied };
 }
