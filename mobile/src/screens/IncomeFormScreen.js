@@ -18,17 +18,18 @@ import { taxFormsAPI } from '../services/api';
 const IncomeFormScreen = () => {
   const navigation = useNavigation();
   
+  // Field names match the backend income_forms columns exactly so values
+  // entered on web flow through to mobile and back. The salary field is the
+  // one exception: the backend stores `annual_basic_salary` but the UX is
+  // monthly — we send `monthly_basic_salary` (server converts to annual) and
+  // derive monthly from annual on load.
   const [formData, setFormData] = useState({
-    monthly_salary: '',
+    monthly_basic_salary: '',
     bonus: '',
-    car_allowance: '',
-    other_taxable: '',
+    taxable_car_value: '',
+    other_taxable_income_others: '',
     medical_allowance: '',
-    employer_contribution: '',
-    other_exempt: '',
-    salary_tax_deducted: '',
-    additional_tax_deducted: '',
-    multiple_employer: '',
+    employer_contribution_provident: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -42,12 +43,22 @@ const IncomeFormScreen = () => {
     try {
       setLoading(true);
       const response = await taxFormsAPI.getFormData('income');
-      if (response.success && response.data) {
-        setFormData(prev => ({
-          ...prev,
-          ...response.data
-        }));
-      }
+      const row = response?.data;
+      if (!row) return;
+
+      // Backend returns annual_basic_salary; UI shows monthly. If the server
+      // already has an annual figure, surface it as monthly. Zero stays blank.
+      const annual = Number(row.annual_basic_salary) || 0;
+      const monthly = annual > 0 ? Math.round(annual / 12) : 0;
+
+      setFormData({
+        monthly_basic_salary: monthly ? String(monthly) : '',
+        bonus: String(row.bonus || ''),
+        taxable_car_value: String(row.taxable_car_value || ''),
+        other_taxable_income_others: String(row.other_taxable_income_others || ''),
+        medical_allowance: String(row.medical_allowance || ''),
+        employer_contribution_provident: String(row.employer_contribution_provident || ''),
+      });
     } catch (error) {
       console.error('Load form data error:', error);
     } finally {
@@ -65,19 +76,18 @@ const IncomeFormScreen = () => {
   };
 
   const calculateTotals = () => {
-    const annualSalary = (parseFloat(formData.monthly_salary) || 0) * 12;
-    
+    const annualSalary = (parseFloat(formData.monthly_basic_salary) || 0) * 12;
+
     const grossIncome = [
       annualSalary,
       parseFloat(formData.bonus) || 0,
-      parseFloat(formData.car_allowance) || 0,
-      parseFloat(formData.other_taxable) || 0,
+      parseFloat(formData.taxable_car_value) || 0,
+      parseFloat(formData.other_taxable_income_others) || 0,
     ].reduce((sum, amount) => sum + amount, 0);
 
     const exemptIncome = [
       parseFloat(formData.medical_allowance) || 0,
-      parseFloat(formData.employer_contribution) || 0,
-      parseFloat(formData.other_exempt) || 0,
+      parseFloat(formData.employer_contribution_provident) || 0,
     ].reduce((sum, amount) => sum + amount, 0);
 
     const taxableIncome = grossIncome - exemptIncome;
@@ -86,7 +96,7 @@ const IncomeFormScreen = () => {
       grossIncome,
       exemptIncome,
       taxableIncome,
-      annualSalary
+      annualSalary,
     };
   };
 
@@ -204,8 +214,8 @@ const IncomeFormScreen = () => {
           <SectionCard title="Taxable Income" icon="attach-money" color="#4f46e5">
             <InputField
               label="Monthly Salary (PKR)"
-              value={formData.monthly_salary}
-              onChangeText={(value) => handleInputChange('monthly_salary', value)}
+              value={formData.monthly_basic_salary}
+              onChangeText={(value) => handleInputChange('monthly_basic_salary', value)}
               placeholder="0"
               icon="payment"
               showAnnual={true}
@@ -220,17 +230,17 @@ const IncomeFormScreen = () => {
             />
 
             <InputField
-              label="Car Allowance (PKR)"
-              value={formData.car_allowance}
-              onChangeText={(value) => handleInputChange('car_allowance', value)}
+              label="Taxable Car Value (PKR)"
+              value={formData.taxable_car_value}
+              onChangeText={(value) => handleInputChange('taxable_car_value', value)}
               placeholder="0"
               icon="directions-car"
             />
 
             <InputField
               label="Other Taxable Income (PKR)"
-              value={formData.other_taxable}
-              onChangeText={(value) => handleInputChange('other_taxable', value)}
+              value={formData.other_taxable_income_others}
+              onChangeText={(value) => handleInputChange('other_taxable_income_others', value)}
               placeholder="0"
               icon="more-horiz"
             />
@@ -249,68 +259,11 @@ const IncomeFormScreen = () => {
 
             <InputField
               label="Employer Contribution (PKR)"
-              value={formData.employer_contribution}
-              onChangeText={(value) => handleInputChange('employer_contribution', value)}
+              value={formData.employer_contribution_provident}
+              onChangeText={(value) => handleInputChange('employer_contribution_provident', value)}
               placeholder="0"
               icon="business"
             />
-
-            <InputField
-              label="Other Exempt Income (PKR)"
-              value={formData.other_exempt}
-              onChangeText={(value) => handleInputChange('other_exempt', value)}
-              placeholder="0"
-              icon="security"
-            />
-          </SectionCard>
-
-          {/* Tax Deductions Section */}
-          <SectionCard title="Tax Already Deducted" icon="receipt" color="#f59e0b">
-            <InputField
-              label="Salary Tax Deducted (PKR)"
-              value={formData.salary_tax_deducted}
-              onChangeText={(value) => handleInputChange('salary_tax_deducted', value)}
-              placeholder="0"
-              icon="money-off"
-            />
-
-            <InputField
-              label="Additional Tax Deducted (PKR)"
-              value={formData.additional_tax_deducted}
-              onChangeText={(value) => handleInputChange('additional_tax_deducted', value)}
-              placeholder="0"
-              icon="remove-circle"
-            />
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Multiple Employers</Text>
-              <View style={styles.radioGroup}>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    formData.multiple_employer === 'Y' && styles.radioButtonSelected
-                  ]}
-                  onPress={() => setFormData(prev => ({ ...prev, multiple_employer: 'Y' }))}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    formData.multiple_employer === 'Y' && styles.radioTextSelected
-                  ]}>Yes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    formData.multiple_employer === 'N' && styles.radioButtonSelected
-                  ]}
-                  onPress={() => setFormData(prev => ({ ...prev, multiple_employer: 'N' }))}
-                >
-                  <Text style={[
-                    styles.radioText,
-                    formData.multiple_employer === 'N' && styles.radioTextSelected
-                  ]}>No</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </SectionCard>
 
           {/* Summary Section */}
@@ -322,7 +275,7 @@ const IncomeFormScreen = () => {
                 <Text style={styles.breakdownLabel}>Salary Breakdown:</Text>
                 <View style={styles.breakdownRow}>
                   <Text style={styles.breakdownText}>
-                    Monthly: {formatCurrency(parseFloat(formData.monthly_salary) || 0)}
+                    Monthly: {formatCurrency(parseFloat(formData.monthly_basic_salary) || 0)}
                   </Text>
                   <Text style={styles.breakdownAnnual}>
                     Annual: {formatCurrency(totals.annualSalary)}
