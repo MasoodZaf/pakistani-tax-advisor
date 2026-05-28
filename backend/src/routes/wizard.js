@@ -102,12 +102,19 @@ router.post('/start', async (req, res) => {
     if (!firstStep) {
       return res.status(500).json({ error: 'no_steps_for_profile' });
     }
-    // Pre-fill from the most recent abandoned/completed session so a re-run
-    // (where /reset just archived the prior session) starts with the user's
-    // prior answers as editable defaults. First-time users get {} and an
-    // empty form. This is the load-bearing piece of the "should have the
-    // data which user can modify on rerun" requirement.
-    const seedCapturedData = await sessions.lastArchivedSeed(req.user.id, taxYear);
+    // Pre-fill from two sources, merged:
+    //   1. existing tax form rows the user already entered on web/mobile
+    //      (e.g. income_forms) — so the wizard doesn't ask for salary that
+    //      another flow already captured
+    //   2. the most recent abandoned/completed wizard session — for a
+    //      "re-run with my prior answers" UX
+    // The prior wizard session wins on overlap because it represents the
+    // user's most recent intent inside the wizard's own context.
+    const [formSeed, archivedSeed] = await Promise.all([
+      sessions.seedFromExistingForms(req.user.id, taxYear),
+      sessions.lastArchivedSeed(req.user.id, taxYear),
+    ]);
+    const seedCapturedData = sessions.mergeCapturedData(formSeed, archivedSeed);
 
     const created = await sessions.create({
       userId: req.user.id,

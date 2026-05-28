@@ -160,6 +160,48 @@ async function reset(userId, taxYear) {
   }
 }
 
+// Seed wizard captured_data from existing tax form tables. Lets the wizard
+// pre-fill steps with values the user already entered via the web/mobile
+// forms — so the wizard doesn't ask for salary again when income_forms
+// already has it. Returns the same `{ step_id: { field_key: value } }`
+// shape as captured_data.
+//
+// Only fields with a direct equivalent in the source form table are seeded.
+// Anything not found stays absent so the wizard prompts for it normally.
+async function seedFromExistingForms(userId, taxYear) {
+  const seed = {};
+
+  // salary_basics ← income_forms
+  try {
+    const { rows } = await pool.query(
+      `SELECT annual_basic_salary, allowances, bonus
+         FROM income_forms
+        WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    if (rows[0]) {
+      const r = rows[0];
+      const step = {};
+      if (Number(r.annual_basic_salary) > 0) step.annual_basic_salary = Number(r.annual_basic_salary);
+      if (Number(r.allowances) > 0) step.allowances = Number(r.allowances);
+      if (Number(r.bonus) > 0) step.bonus = Number(r.bonus);
+      if (Object.keys(step).length > 0) seed.salary_basics = step;
+    }
+  } catch { /* table missing or migration not run — skip */ }
+
+  return seed;
+}
+
+// Merge two captured_data objects shallowly per step. `b` wins on conflict
+// — used to layer in-progress wizard captures over the form-data seed.
+function mergeCapturedData(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [stepId, vals] of Object.entries(b)) {
+    out[stepId] = { ...(a[stepId] || {}), ...(vals || {}) };
+  }
+  return out;
+}
+
 module.exports = {
   getStatus,
   create,
@@ -168,4 +210,6 @@ module.exports = {
   markCompleted,
   reset,
   lastArchivedSeed,
+  seedFromExistingForms,
+  mergeCapturedData,
 };
