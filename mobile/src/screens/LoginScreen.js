@@ -138,6 +138,9 @@ const LoginScreen = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  accessibilityLabel="Email address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
                 />
               </View>
             </View>
@@ -153,15 +156,21 @@ const LoginScreen = ({ navigation }) => {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
+                  accessibilityLabel="Password"
+                  textContentType="password"
+                  autoComplete="current-password"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  accessibilityState={{ checked: showPassword }}
                 >
-                  <MaterialIcons 
-                    name={showPassword ? 'visibility-off' : 'visibility'} 
-                    size={20} 
-                    color="#6b7280" 
+                  <MaterialIcons
+                    name={showPassword ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color="#6b7280"
                   />
                 </TouchableOpacity>
               </View>
@@ -178,6 +187,9 @@ const LoginScreen = ({ navigation }) => {
               style={[styles.loginButton, loading && styles.disabledButton]}
               onPress={handleLogin}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+              accessibilityState={{ busy: loading, disabled: loading }}
             >
               <Text style={styles.loginButtonText}>
                 {loading ? 'Signing In...' : 'Sign In'}
@@ -194,6 +206,10 @@ const LoginScreen = ({ navigation }) => {
               style={styles.googleButton}
               onPress={() => promptGoogle()}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+              accessibilityHint="Sign in using your Google account"
+              accessibilityState={{ disabled: loading }}
             >
               <MaterialIcons name="login" size={18} color="#1f2937" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
@@ -212,6 +228,8 @@ const LoginScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.registerButton}
               onPress={navigateToRegister}
+              accessibilityRole="button"
+              accessibilityLabel="Create new account"
             >
               <Text style={styles.registerButtonText}>Create New Account</Text>
             </TouchableOpacity>

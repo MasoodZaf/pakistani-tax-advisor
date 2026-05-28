@@ -197,7 +197,13 @@ const ProfileScreen = () => {
 
         {/* Logout Button */}
         <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            accessibilityHint="Signs you out of the app"
+          >
             <MaterialIcons name="logout" size={20} color="#ef4444" />
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>

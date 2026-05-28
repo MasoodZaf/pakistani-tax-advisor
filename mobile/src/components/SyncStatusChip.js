@@ -62,11 +62,15 @@ const SyncStatusChip = ({ onConflictPress }) => {
 
   // Conflict takes priority — it needs explicit user resolution.
   if (conflict > 0) {
+    const label = `${conflict} sync conflict${conflict === 1 ? '' : 's'}`;
     return (
       <TouchableOpacity
         style={[styles.chip, styles.red]}
         onPress={onConflictPress}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint="Opens the conflict resolution screen"
       >
         <MaterialIcons name="warning" size={14} color="#fff" />
         <Text style={styles.text}>
@@ -82,6 +86,9 @@ const SyncStatusChip = ({ onConflictPress }) => {
         style={[styles.chip, styles.red]}
         onPress={triggerSync}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Sync failed"
+        accessibilityHint="Tap to retry"
       >
         <MaterialIcons name="error-outline" size={14} color="#fff" />
         <Text style={styles.text}>Couldn't sync — tap to retry</Text>
@@ -90,12 +97,19 @@ const SyncStatusChip = ({ onConflictPress }) => {
   }
 
   if (syncing || pending > 0) {
+    const label = syncing
+      ? `Syncing${pending ? ` ${pending} expense${pending === 1 ? '' : 's'}` : ''}`
+      : `${pending} expense${pending === 1 ? '' : 's'} pending sync`;
     return (
       <TouchableOpacity
         style={[styles.chip, styles.amber]}
         onPress={triggerSync}
         activeOpacity={0.8}
         disabled={syncing}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ busy: syncing, disabled: syncing }}
+        accessibilityHint={syncing ? '' : 'Tap to sync now'}
       >
         {syncing ? (
           <ActivityIndicator size="small" color="#92400e" />
@@ -112,15 +126,21 @@ const SyncStatusChip = ({ onConflictPress }) => {
   }
 
   // All synced — quiet green chip with the relative time.
+  const syncedLabel = lastSyncedAt
+    ? `Synced ${formatAgo(lastSyncedAt)}`
+    : 'Up to date';
   return (
     <TouchableOpacity
       style={[styles.chip, styles.green]}
       onPress={triggerSync}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={syncedLabel}
+      accessibilityHint="Double tap to force sync"
     >
       <MaterialIcons name="cloud-done" size={14} color="#065f46" />
       <Text style={[styles.text, styles.greenText]}>
-        {lastSyncedAt ? `Synced ${formatAgo(lastSyncedAt)}` : 'Up to date'}
+        {syncedLabel}
       </Text>
     </TouchableOpacity>
   );

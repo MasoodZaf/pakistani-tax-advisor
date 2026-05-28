@@ -82,6 +82,15 @@ const ExpensesListScreen = ({ navigation }) => {
         ? formatCurrency(item.amount, 'PKR')
         : `${formatCurrency(item.amount, item.currency)} · ${formatCurrency(item.amount_pkr, 'PKR')}`;
 
+    const a11yLabel = [
+      displayAmount,
+      formatDate(item.occurred_on),
+      item.category.replace(/_/g, ' '),
+      item.payee || null,
+      item.receipt_id ? 'with receipt' : null,
+      `sync ${item.sync_status}`,
+    ].filter(Boolean).join(', ');
+
     return (
       <TouchableOpacity
         style={styles.row}
@@ -89,6 +98,13 @@ const ExpensesListScreen = ({ navigation }) => {
           item.sync_status === 'conflict'
             ? navigation.navigate('ConflictResolution', { clientId: item.client_id })
             : navigation.navigate('ExpenseCapture', { clientId: item.client_id })
+        }
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        accessibilityHint={
+          item.sync_status === 'conflict'
+            ? 'Opens conflict resolution'
+            : 'Opens expense details for editing'
         }
       >
         <View style={styles.rowLeft}>
@@ -98,7 +114,11 @@ const ExpensesListScreen = ({ navigation }) => {
           </Text>
           {item.payee ? <Text style={styles.rowPayee}>{item.payee}</Text> : null}
         </View>
-        <View style={styles.rowIcons}>
+        <View
+          style={styles.rowIcons}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
           {item.receipt_id ? (
             <MaterialIcons name="attachment" size={18} color="#6b7280" style={styles.receiptIcon} />
           ) : null}
@@ -134,6 +154,9 @@ const ExpensesListScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate('ExpenseCapture', {})}
+          accessibilityRole="button"
+          accessibilityLabel="Add expense"
+          accessibilityHint="Opens the form to log a new expense"
         >
           <MaterialIcons name="add" size={24} color="#fff" />
           <Text style={styles.addButtonText}>Add</Text>

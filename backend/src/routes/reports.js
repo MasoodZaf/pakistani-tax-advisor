@@ -80,13 +80,23 @@ router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
 
     // Canonical breakdown — reuses the same code path the Tax Computation
     // page and PDF builders depend on, so totals match across surfaces.
-    // Falls back to a zero shape if compute throws (e.g. missing rate seed)
-    // so the report still renders rather than 500-ing the whole tab.
+    //
+    // Previously this catch fell back to an all-zeros shape so the report
+    // tab still rendered. That made the PDF look "complete" while every
+    // tax row showed Rs 0 — a critical correctness bug, since the user
+    // would download what looks like a finished return and try to file it.
+    //
+    // Now we surface the failure in `computationError` so the PDF builder
+    // can stamp an explicit warning instead of silently lying.
     let breakdown = null;
+    let computationError = null;
     try {
       breakdown = await TaxCalculationService.calculateTaxComputation(userId, taxYear);
     } catch (err) {
-      logger.warn('Tax computation failed for summary endpoint', { error: err.message, userId, taxYear });
+      logger.error('Tax computation failed for summary endpoint', {
+        error: err.message, stack: err.stack, userId, taxYear,
+      });
+      computationError = err.message || 'tax_computation_failed';
     }
 
     const grossIncome    = breakdown ? breakdown.income.totalIncome           : summary.totalIncome;
@@ -153,6 +163,9 @@ router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
       // Surface the full breakdown so the on-screen panel can show the same
       // numbers without re-fetching /api/tax-computation/:taxYear.
       breakdown,
+      // Non-null when calculateTaxComputation threw — clients should warn the
+      // user rather than treat the zero-fallback `calculations` as authoritative.
+      computationError,
     };
 
     logger.info(`Tax calculation summary completed for user ${userId}, tax year ${taxYear}`, {
@@ -504,6 +517,21 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
     }
 
     const apiResponse = summaryResponse.data.data;
+
+    // Refuse to stamp a PDF with all-zero tax rows. Previously the calc
+    // service's error was swallowed and the PDF showed Rs 0 for every
+    // chargeable line — a filer could mistake that for a real return.
+    if (apiResponse.computationError) {
+      logger.error('Refusing PDF generation: tax computation failed', {
+        taxReturnId, userId, taxYear, computationError: apiResponse.computationError,
+      });
+      return res.status(409).json({
+        success: false,
+        error: 'tax_computation_incomplete',
+        message: 'Tax computation could not be completed. Finish all required forms before downloading the return.',
+        detail: apiResponse.computationError,
+      });
+    }
 
     // Debug logging to trace the data flow
     logger.debug('FBR PDF data flow', {

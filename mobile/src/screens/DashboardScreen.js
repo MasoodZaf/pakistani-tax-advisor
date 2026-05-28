@@ -62,8 +62,15 @@ const DashboardScreen = ({ navigation }) => {
       style={[styles.tile, { backgroundColor: bg, shadowColor: color }]}
       onPress={onPress}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={`Opens ${title}`}
     >
-      <View style={[styles.tileIconWrap, { backgroundColor: color }]}>
+      <View
+        style={[styles.tileIconWrap, { backgroundColor: color }]}
+        accessibilityElementsHidden  // icon decoration only — label above carries the meaning
+        importantForAccessibility="no-hide-descendants"
+      >
         <MaterialIcons name={icon} size={56} color="#fff" />
       </View>
       <Text style={styles.tileTitle}>{title}</Text>

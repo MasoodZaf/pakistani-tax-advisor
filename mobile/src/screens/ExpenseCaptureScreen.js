@@ -199,6 +199,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
+                accessibilityLabel="Amount"
               />
               <TextInput
                 style={[styles.input, { flex: 1, marginLeft: 8, textAlign: 'center' }]}
@@ -207,6 +208,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
                 autoCapitalize="characters"
                 maxLength={3}
                 placeholder="PKR"
+                accessibilityLabel="Currency code"
               />
             </View>
           </Field>
@@ -219,6 +221,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
                 onChangeText={setFxRate}
                 keyboardType="decimal-pad"
                 placeholder="e.g. 278.5"
+                accessibilityLabel={`Exchange rate from ${currency} to PKR`}
               />
             </Field>
           )}
@@ -230,6 +233,8 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
               onChangeText={setOccurredOn}
               placeholder="YYYY-MM-DD"
               autoCapitalize="none"
+              accessibilityLabel="Date of expense"
+              accessibilityHint="Format: year, month, day"
             />
           </Field>
 
@@ -247,6 +252,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
               value={payee}
               onChangeText={setPayee}
               placeholder="e.g. Servaid Pharmacy"
+              accessibilityLabel="Payee"
             />
           </Field>
 
@@ -258,6 +264,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
               placeholder="Notes for filing time"
               multiline
               numberOfLines={3}
+              accessibilityLabel="Description"
             />
           </Field>
 
@@ -269,13 +276,28 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
               </View>
             ) : receiptPreview ? (
               <View style={styles.receiptCard}>
-                <Image source={{ uri: receiptPreview }} style={styles.receiptImage} />
-                <TouchableOpacity style={styles.receiptRemove} onPress={onRemoveReceipt}>
+                <Image
+                  source={{ uri: receiptPreview }}
+                  style={styles.receiptImage}
+                  accessibilityLabel="Receipt image attached"
+                />
+                <TouchableOpacity
+                  style={styles.receiptRemove}
+                  onPress={onRemoveReceipt}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove receipt"
+                >
                   <MaterialIcons name="close" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={styles.receiptAdd} onPress={onAttachReceipt}>
+              <TouchableOpacity
+                style={styles.receiptAdd}
+                onPress={onAttachReceipt}
+                accessibilityRole="button"
+                accessibilityLabel="Attach receipt"
+                accessibilityHint="Opens camera or photo library"
+              >
                 <MaterialIcons name="add-a-photo" size={24} color="#4f46e5" />
                 <Text style={styles.receiptAddText}>Attach receipt</Text>
               </TouchableOpacity>
@@ -286,13 +308,22 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
             style={[styles.saveButton, (saving || uploading) && { opacity: 0.6 }]}
             onPress={onSave}
             disabled={saving || uploading}
+            accessibilityRole="button"
+            accessibilityLabel="Save expense"
+            accessibilityState={{ busy: saving, disabled: saving || uploading }}
           >
             <MaterialIcons name="check" size={20} color="#fff" />
             <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
           </TouchableOpacity>
 
           {editingClientId ? (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={onDelete}
+              accessibilityRole="button"
+              accessibilityLabel="Delete expense"
+              accessibilityHint="Removes this expense from your ledger"
+            >
               <MaterialIcons name="delete-outline" size={20} color="#dc2626" />
               <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
@@ -314,14 +345,18 @@ const ChipPicker = ({ options, value, onChange }) => (
   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
     {options.map((opt) => {
       const selected = opt === value;
+      const label = opt.replace(/_/g, ' ');
       return (
         <TouchableOpacity
           key={opt}
           style={[styles.chip, selected && styles.chipSelected]}
           onPress={() => onChange(opt)}
+          accessibilityRole="radio"
+          accessibilityLabel={label}
+          accessibilityState={{ selected }}
         >
           <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-            {opt.replace(/_/g, ' ')}
+            {label}
           </Text>
         </TouchableOpacity>
       );
