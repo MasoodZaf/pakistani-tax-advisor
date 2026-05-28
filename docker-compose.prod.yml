@@ -74,6 +74,20 @@ services:
       # Where the nightly Postgres dump writes (see services/cron/postgresBackup.js).
       # Empty / unset disables the backup cron entirely.
       BACKUP_DIR: /backups
+      # Mobile clients: minimum supported version + where to send users to
+      # upgrade. Backend now refuses to start in production if MOBILE_UPGRADE_URL
+      # is unset (see mobileApi.js).
+      MOBILE_MIN_SUPPORTED_VERSION: ${MOBILE_MIN_SUPPORTED_VERSION:-1.0.0}
+      MOBILE_UPGRADE_URL: ${MOBILE_UPGRADE_URL}
+      # SMTP for Finance-Act admin reminders (leave blank to keep audit-only).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Sentry — leave SENTRY_DSN blank to disable error reporting.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     volumes:
       # Persist admin-uploaded knowledge-base docs across rebuilds.
       - ai_kb_data:/app/data/knowledge-base
