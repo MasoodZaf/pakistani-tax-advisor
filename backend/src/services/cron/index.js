@@ -8,6 +8,7 @@ const cron = require('node-cron');
 const logger = require('../../utils/logger');
 const { rolloverOnce } = require('./taxYearRollover');
 const { checkAndFireOnce } = require('./taxYearAdminReminder');
+const { backupOnce } = require('./postgresBackup');
 
 function safeWrap(name, fn) {
   return async () => {
@@ -41,9 +42,21 @@ function startSchedulers() {
     timezone: 'Asia/Karachi',
   });
 
+  // Nightly 02:15 PKT — Postgres dump with rotation (14 daily, 8 weekly).
+  // Backup target is the /backups volume mounted in docker-compose.prod.yml.
+  // Skipped if BACKUP_DIR unset (e.g. dev / local node) — see postgresBackup.js.
+  if (process.env.BACKUP_DIR) {
+    cron.schedule('15 2 * * *', safeWrap('postgresBackup', () => backupOnce()), {
+      timezone: 'Asia/Karachi',
+    });
+  } else {
+    logger.info('postgres backup cron skipped (BACKUP_DIR not set)');
+  }
+
   logger.info('cron schedulers registered', {
     rollover: '30 0 * * * Asia/Karachi',
     adminReminder: '0 9 * * * Asia/Karachi',
+    backup: process.env.BACKUP_DIR ? '15 2 * * * Asia/Karachi' : 'disabled',
   });
 }
 

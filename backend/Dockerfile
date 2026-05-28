@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgbm1 \
       libasound2 \
       curl \
+      postgresql-client-15 \
+      gzip \
   && rm -rf /var/lib/apt/lists/*
 
 # Build context is the repo root (see docker-compose.prod.yml backend.build).
