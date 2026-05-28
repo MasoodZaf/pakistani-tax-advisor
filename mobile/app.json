@@ -16,7 +16,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.paktaxadvisor.mobile",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Pakistani Tax Advisor uses the camera so you can photograph receipts to attach to expense records.",
+        "NSPhotoLibraryUsageDescription": "Pakistani Tax Advisor needs access to your photo library so you can attach receipt images to expense records.",
+        "NSPhotoLibraryAddUsageDescription": "Pakistani Tax Advisor saves downloaded return templates to your photo library for offline access.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

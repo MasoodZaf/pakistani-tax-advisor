@@ -24,7 +24,14 @@ const router = express.Router();
 // Every mobile request must send `X-App-Version`. Builds older than
 // MOBILE_MIN_SUPPORTED_VERSION are forced to upgrade.
 const MIN_VERSION = process.env.MOBILE_MIN_SUPPORTED_VERSION || '1.0.0';
-const UPGRADE_URL = process.env.MOBILE_UPGRADE_URL || 'https://tax.aurmak.com/mobile';
+
+// In production we REQUIRE MOBILE_UPGRADE_URL — silently falling back to
+// tax.aurmak.com would force staging/dev mobile builds to point users at
+// the prod marketing page when they hit a version-gate response.
+const UPGRADE_URL = process.env.MOBILE_UPGRADE_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? (() => { throw new Error('MOBILE_UPGRADE_URL env is required in production'); })()
+    : 'https://tax.aurmak.com/mobile');
 
 function semverGte(a, b) {
   const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);

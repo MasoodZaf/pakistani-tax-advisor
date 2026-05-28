@@ -2,17 +2,40 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const { z } = require('zod');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 const jwtAuth = require('../middleware/auth'); // JWT middleware for protected routes
+const validate = require('../middleware/validate');
 const { insertAudit } = require('../helpers/auditLog');
 const { validatePasswordPolicy, BCRYPT_ROUNDS } = require('../helpers/passwordPolicy');
 const oidc = require('../services/oidcVerifier');
 
 const router = express.Router();
 
+// ── Validation schemas ──────────────────────────────────────────────────────
+// Password complexity is enforced separately via validatePasswordPolicy so
+// the message text stays under one source of truth.
+const registerSchema = z.object({
+  email:    z.string().trim().toLowerCase().email().max(254),
+  name:     z.string().trim().min(1).max(120),
+  password: z.string().min(1), // policy check happens in handler
+  cnic:     z.string().trim().regex(/^\d{5}-?\d{7}-?\d$/).optional().nullable(),
+  phone:    z.string().trim().max(20).optional().nullable(),
+}).strip();
+
+const loginSchema = z.object({
+  email:    z.string().trim().toLowerCase().email(),
+  password: z.string().min(1).optional(), // optional for admin-assisted login
+  adminBypassToken: z.string().optional(),
+}).strip();
+
+const verifySessionSchema = z.object({
+  sessionToken: z.string().min(1),
+}).strip();
+
 // User Registration
-router.post('/register', async (req, res) => {
+router.post('/register', validate(registerSchema), async (req, res) => {
   const client = await pool.connect();
 
   // ROLLBACK + return helper. Early returns inside the BEGIN block must NOT
@@ -174,7 +197,7 @@ router.post('/register', async (req, res) => {
 });
 
 // User Login
-router.post('/login', async (req, res) => {
+router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { email, password, adminBypassToken } = req.body;
     
@@ -388,7 +411,7 @@ router.post('/logout', async (req, res) => {
 });
 
 // Verify session
-router.post('/verify-session', async (req, res) => {
+router.post('/verify-session', validate(verifySessionSchema), async (req, res) => {
   try {
     const { sessionToken } = req.body;
 

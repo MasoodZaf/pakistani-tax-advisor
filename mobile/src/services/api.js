@@ -210,31 +210,12 @@ export const taxFormsAPI = {
   }
 };
 
-// Admin API functions
+// Admin API removed from mobile — AdminDashboardScreen is intentionally
+// "Coming Soon" (the admin surface is web-only by design). Re-add the
+// wrappers here when the mobile admin screens land. Web admin lives at
+// Frontend/src/modules/Admin/ — the backend endpoints (/api/admin/*) work
+// today; this is purely a client-side gap.
 export const adminAPI = {
-  calculateTax: async (income, allowances, taxYear = '2025-26') => {
-    const response = await api.post('/admin/tax-calculator', {
-      income,
-      allowances,
-      tax_year: taxYear
-    });
-    return response.data;
-  },
-
-  getUsers: async () => {
-    const response = await api.get('/admin/users');
-    return response.data;
-  },
-
-  getUserTaxRecords: async (userId) => {
-    const response = await api.get(`/admin/users/${userId}/tax-records`);
-    return response.data;
-  },
-
-  updateUserTaxForm: async (userId, formType, formData) => {
-    const response = await api.put(`/admin/users/${userId}/tax-forms/${formType}`, formData);
-    return response.data;
-  }
 };
 
 // Dashboard API. The backend has no dedicated /dashboard endpoint — we

@@ -143,12 +143,48 @@ router.get('/current-return', auth, async (req, res) => {
       completionPercentage: 0,
     };
 
+    // Fan out all reads in parallel — was 11 sequential round-trips, now one.
+    // Failures on any individual table are caught and logged below, matching
+    // the previous per-block try/catch behaviour. We unwrap by position.
+    const _qs = (sql) => pool.query(sql, [userId, taxYear]);
+    const _results = await Promise.allSettled([
+      _qs('SELECT * FROM form_completion_status WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM income_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM capital_gain_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM deductions_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM final_tax_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM expenses_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM wealth_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM wealth_reconciliation_forms WHERE user_id = $1 AND tax_year = $2'),
+      _qs('SELECT * FROM tax_computation_forms WHERE user_id = $1 AND tax_year = $2'),
+    ]);
+    const _unwrap = (i, label) => {
+      const r = _results[i];
+      if (r.status === 'fulfilled') return r.value;
+      logger.error(`Error fetching ${label} data:`, { message: r.reason?.message });
+      return { rows: [] };
+    };
+    const _completionStatusResult = _unwrap(0, 'completion status');
+    const _incomeResult           = _unwrap(1, 'income form');
+    const _adjustableTaxResult    = _unwrap(2, 'adjustable tax');
+    const _capitalGainResult      = _unwrap(3, 'capital gains');
+    const _finalMinIncomeResult   = _unwrap(4, 'final/min income');
+    const _reductionsResult       = _unwrap(5, 'reductions');
+    const _creditsResult          = _unwrap(6, 'credits');
+    const _deductionsResult       = _unwrap(7, 'deductions');
+    const _finalTaxResult         = _unwrap(8, 'final tax');
+    const _expensesResult         = _unwrap(9, 'expenses');
+    const _wealthResult           = _unwrap(10, 'wealth form');
+    const _wealthReconResult      = _unwrap(11, 'wealth reconciliation');
+    const _taxComputationResult   = _unwrap(12, 'tax computation');
+
     // Get actual completion status from form_completion_status table
     try {
-      const completionStatusResult = await pool.query(
-        'SELECT * FROM form_completion_status WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const completionStatusResult = _completionStatusResult;
 
       if (completionStatusResult.rows.length > 0) {
         const completionStatus = completionStatusResult.rows[0];
@@ -183,12 +219,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching completion status:', error);
     }
 
-    // Fetch income form data
+    // Fetch income form data (from prefetch)
     try {
-      const incomeResult = await pool.query(
-        'SELECT * FROM income_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const incomeResult = _incomeResult;
 
       if (incomeResult.rows.length > 0) {
         const incomeData = incomeResult.rows[0];
@@ -228,12 +261,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching income form data:', error);
     }
 
-    // Fetch adjustable tax form data
+    // Fetch adjustable tax form data (from prefetch)
     try {
-      const adjustableTaxResult = await pool.query(
-        'SELECT * FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const adjustableTaxResult = _adjustableTaxResult;
 
       if (adjustableTaxResult.rows.length > 0) {
         response.formData.adjustable_tax = adjustableTaxResult.rows[0];
@@ -243,12 +273,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching adjustable tax data:', error);
     }
 
-    // Fetch capital gains form data
+    // Fetch capital gains form data (from prefetch)
     try {
-      const capitalGainResult = await pool.query(
-        'SELECT * FROM capital_gain_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const capitalGainResult = _capitalGainResult;
 
       if (capitalGainResult.rows.length > 0) {
         response.formData.capital_gain = capitalGainResult.rows[0];
@@ -269,19 +296,12 @@ router.get('/current-return', auth, async (req, res) => {
         incomeFormForFinalMin = response.formData.income;
       }
 
-      // Fetch adjustable tax data for auto-linking
-      const adjustableForMinResult = await pool.query(
-        'SELECT * FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
-      if (adjustableForMinResult.rows.length > 0) {
-        adjustableTaxForFinalMin = adjustableForMinResult.rows[0];
+      // Reuse adjustable tax data already prefetched (same row).
+      if (_adjustableTaxResult.rows.length > 0) {
+        adjustableTaxForFinalMin = _adjustableTaxResult.rows[0];
       }
 
-      const finalMinIncomeResult = await pool.query(
-        'SELECT * FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const finalMinIncomeResult = _finalMinIncomeResult;
 
       if (finalMinIncomeResult.rows.length > 0) {
         const finalMinData = finalMinIncomeResult.rows[0];
@@ -433,12 +453,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching final/min income data:', error);
     }
 
-    // Fetch reductions form data
+    // Fetch reductions form data (from prefetch)
     try {
-      const reductionsResult = await pool.query(
-        'SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const reductionsResult = _reductionsResult;
 
       if (reductionsResult.rows.length > 0) {
         response.formData.reductions = reductionsResult.rows[0];
@@ -448,12 +465,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching reductions data:', error);
     }
 
-    // Fetch credits form data
+    // Fetch credits form data (from prefetch)
     try {
-      const creditsResult = await pool.query(
-        'SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const creditsResult = _creditsResult;
 
       if (creditsResult.rows.length > 0) {
         response.formData.credits = creditsResult.rows[0];
@@ -463,12 +477,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching credits data:', error);
     }
 
-    // Fetch deductions form data
+    // Fetch deductions form data (from prefetch)
     try {
-      const deductionsResult = await pool.query(
-        'SELECT * FROM deductions_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const deductionsResult = _deductionsResult;
 
       if (deductionsResult.rows.length > 0) {
         response.formData.deductions = deductionsResult.rows[0];
@@ -478,12 +489,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching deductions data:', error);
     }
 
-    // Fetch final tax form data
+    // Fetch final tax form data (from prefetch)
     try {
-      const finalTaxResult = await pool.query(
-        'SELECT * FROM final_tax_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const finalTaxResult = _finalTaxResult;
 
       if (finalTaxResult.rows.length > 0) {
         response.formData.final_tax = finalTaxResult.rows[0];
@@ -493,12 +501,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching final tax data:', error);
     }
 
-    // Fetch expenses form data
+    // Fetch expenses form data (from prefetch)
     try {
-      const expensesResult = await pool.query(
-        'SELECT * FROM expenses_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const expensesResult = _expensesResult;
 
       if (expensesResult.rows.length > 0) {
         response.formData.expenses = expensesResult.rows[0];
@@ -508,12 +513,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching expenses data:', error);
     }
 
-    // Fetch wealth form data (stored in wealth_forms — matches WealthStatementForm field names)
+    // Fetch wealth form data (from prefetch — matches WealthStatementForm field names)
     try {
-      const wealthResult = await pool.query(
-        'SELECT * FROM wealth_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const wealthResult = _wealthResult;
 
       if (wealthResult.rows.length > 0) {
         // Key must be 'wealth' to match TaxFormContext FORM_STEPS id and WealthStatementForm context reads
@@ -524,12 +526,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching wealth form data:', error);
     }
 
-    // Fetch wealth reconciliation form data
+    // Fetch wealth reconciliation form data (from prefetch)
     try {
-      const wealthReconResult = await pool.query(
-        'SELECT * FROM wealth_reconciliation_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const wealthReconResult = _wealthReconResult;
 
       if (wealthReconResult.rows.length > 0) {
         response.formData.wealth_reconciliation = wealthReconResult.rows[0];
@@ -539,12 +538,9 @@ router.get('/current-return', auth, async (req, res) => {
       logger.error('Error fetching wealth reconciliation data:', error);
     }
 
-    // Fetch tax computation form data
+    // Fetch tax computation form data (from prefetch)
     try {
-      const taxComputationResult = await pool.query(
-        'SELECT * FROM tax_computation_forms WHERE user_id = $1 AND tax_year = $2',
-        [userId, taxYear]
-      );
+      const taxComputationResult = _taxComputationResult;
 
       if (taxComputationResult.rows.length > 0) {
         response.formData.tax_computation = taxComputationResult.rows[0];

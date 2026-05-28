@@ -7,10 +7,35 @@
 
 const express = require('express');
 const router = express.Router();
+const { z } = require('zod');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 const jwtAuth = require('../middleware/auth');
+const validate = require('../middleware/validate');
 const { insertAudit } = require('../helpers/auditLog');
+
+// Wizard input schemas. `values` and `raw_reply` are both optional but at
+// least one must be present (enforced in the handler since zod refine inside
+// optional fields gets noisy). Top-level shape is strict — extra keys reject.
+const turnSchema = z.object({
+  session_id: z.string().uuid(),
+  step_id:    z.string().min(1).max(64),
+  values:     z.record(z.any()).optional(),
+  raw_reply:  z.string().max(4000).optional(),
+}).strip();
+
+const startSchema = z.object({
+  taxYear: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  force:   z.boolean().optional(),
+}).strip();
+
+const finalizeSchema = z.object({
+  session_id: z.string().uuid(),
+}).strip();
+
+const resetSchema = z.object({
+  taxYear: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+}).strip();
 
 const engine = require('../services/wizard/wizardEngine');
 const sessions = require('../services/wizard/wizardSessions');
@@ -66,7 +91,7 @@ router.get('/status', async (req, res) => {
 // the caller should go through /reset first for the audit trail; force is
 // retained for first-launch races where two devices both think they're
 // starting).
-router.post('/start', async (req, res) => {
+router.post('/start', validate(startSchema), async (req, res) => {
   try {
     const taxYear = req.body?.taxYear || (await currentTaxYear());
     const force = req.body?.force === true || req.query?.force === 'true';
@@ -161,7 +186,7 @@ router.post('/start', async (req, res) => {
 // raw_reply (if any), merges with explicit values (structured wins),
 // validates against the field types, records the turn, returns the next
 // step's prompt (or { done: true } if we've hit the end).
-router.post('/turn', async (req, res) => {
+router.post('/turn', validate(turnSchema), async (req, res) => {
   try {
     const { session_id, step_id, values: rawValues, raw_reply } = req.body || {};
     if (!session_id || !step_id) {
@@ -235,7 +260,7 @@ router.post('/turn', async (req, res) => {
 
 // ── POST /api/wizard/finalize ────────────────────────────────────────────
 // Writes captured_data to draft form rows, runs rough calc, marks complete.
-router.post('/finalize', async (req, res) => {
+router.post('/finalize', validate(finalizeSchema), async (req, res) => {
   try {
     const { session_id } = req.body || {};
     if (!session_id) return res.status(400).json({ error: 'session_id_required' });
@@ -282,7 +307,7 @@ router.post('/finalize', async (req, res) => {
 // prior captured_data so the caller can immediately start a new session
 // pre-filled with the prior answers (the "re-run with my old answers as
 // defaults" UX).
-router.post('/reset', async (req, res) => {
+router.post('/reset', validate(resetSchema), async (req, res) => {
   try {
     const taxYear = req.body?.taxYear || (await currentTaxYear());
     const { seedCapturedData, archived } = await sessions.reset(req.user.id, taxYear);

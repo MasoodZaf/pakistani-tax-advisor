@@ -168,26 +168,109 @@ async function reset(userId, taxYear) {
 //
 // Only fields with a direct equivalent in the source form table are seeded.
 // Anything not found stays absent so the wizard prompts for it normally.
+// Helper: only set a key if the value is a positive number. Avoids polluting
+// the seed with 0s that the wizard would render as pre-filled defaults the
+// user has to manually clear.
+function _maybeSet(target, key, value) {
+  const n = Number(value);
+  if (Number.isFinite(n) && n > 0) target[key] = n;
+}
+
 async function seedFromExistingForms(userId, taxYear) {
   const seed = {};
 
+  // Pull every relevant row in parallel — each is best-effort.
+  const tryQuery = async (sql) => {
+    try {
+      const r = await pool.query(sql, [userId, taxYear]);
+      return r.rows[0] || null;
+    } catch { return null; }
+  };
+
+  const [income, adjustable, deductions, credits, capitalGain, finalMin] = await Promise.all([
+    tryQuery(`SELECT annual_basic_salary, allowances, bonus, other_taxable_income_rent
+                FROM income_forms WHERE user_id = $1 AND tax_year = $2`),
+    tryQuery(`SELECT salary_employees_149_tax_collected,
+                     profit_debt_151_15_tax_collected,
+                     tax_deducted_rent_section_155_tax_collected
+                FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2`),
+    tryQuery(`SELECT zakat_paid_amount FROM deductions_forms
+               WHERE user_id = $1 AND tax_year = $2`),
+    tryQuery(`SELECT charitable_donations_amount FROM credits_forms
+               WHERE user_id = $1 AND tax_year = $2`),
+    tryQuery(`SELECT securities, securities_tax_deducted FROM capital_gain_forms
+               WHERE user_id = $1 AND tax_year = $2`),
+    tryQuery(`SELECT profit_on_debt_u_s_7b,
+                     dividend_u_s_150_31_atl_15pc,
+                     dividend_u_s_150_31pc_atl_tax_deducted,
+                     return_invest_exceed_1m_sukuk_saa_12_5pc,
+                     return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted
+                FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2`),
+  ]);
+
   // salary_basics ← income_forms
-  try {
-    const { rows } = await pool.query(
-      `SELECT annual_basic_salary, allowances, bonus
-         FROM income_forms
-        WHERE user_id = $1 AND tax_year = $2`,
-      [userId, taxYear]
-    );
-    if (rows[0]) {
-      const r = rows[0];
-      const step = {};
-      if (Number(r.annual_basic_salary) > 0) step.annual_basic_salary = Number(r.annual_basic_salary);
-      if (Number(r.allowances) > 0) step.allowances = Number(r.allowances);
-      if (Number(r.bonus) > 0) step.bonus = Number(r.bonus);
-      if (Object.keys(step).length > 0) seed.salary_basics = step;
-    }
-  } catch { /* table missing or migration not run — skip */ }
+  if (income) {
+    const step = {};
+    _maybeSet(step, 'annual_basic_salary', income.annual_basic_salary);
+    _maybeSet(step, 'allowances', income.allowances);
+    _maybeSet(step, 'bonus', income.bonus);
+    if (Object.keys(step).length > 0) seed.salary_basics = step;
+  }
+
+  // salary_wht ← adjustable_tax_forms.salary_employees_149_tax_collected
+  if (adjustable) {
+    const step = {};
+    _maybeSet(step, 'salary_tax_deducted', adjustable.salary_employees_149_tax_collected);
+    if (Object.keys(step).length > 0) seed.salary_wht = step;
+  }
+
+  // common_deductions ← deductions_forms.zakat_paid_amount + credits_forms.charitable_donations_amount
+  {
+    const step = {};
+    if (deductions) _maybeSet(step, 'zakat_paid_amount', deductions.zakat_paid_amount);
+    if (credits) _maybeSet(step, 'charitable_donations_amount', credits.charitable_donations_amount);
+    if (Object.keys(step).length > 0) seed.common_deductions = step;
+  }
+
+  // bank_profit ← final_min_income.profit_on_debt_u_s_7b + adjustable_tax.profit_debt_151_15
+  if (finalMin || adjustable) {
+    const step = {};
+    if (finalMin) _maybeSet(step, 'profit_amount', finalMin.profit_on_debt_u_s_7b);
+    if (adjustable) _maybeSet(step, 'profit_wht', adjustable.profit_debt_151_15_tax_collected);
+    if (Object.keys(step).length > 0) seed.bank_profit = step;
+  }
+
+  // dividends ← final_min_income (atl_15pc + atl_tax_deducted)
+  if (finalMin) {
+    const step = {};
+    _maybeSet(step, 'dividend_amount', finalMin.dividend_u_s_150_31_atl_15pc);
+    _maybeSet(step, 'dividend_wht', finalMin.dividend_u_s_150_31pc_atl_tax_deducted);
+    if (Object.keys(step).length > 0) seed.dividends = step;
+  }
+
+  // securities ← capital_gain_forms
+  if (capitalGain) {
+    const step = {};
+    _maybeSet(step, 'securities_gain', capitalGain.securities);
+    _maybeSet(step, 'securities_wht', capitalGain.securities_tax_deducted);
+    if (Object.keys(step).length > 0) seed.securities = step;
+  }
+
+  // sukuk ← final_min_income (12.5% bucket)
+  if (finalMin) {
+    const step = {};
+    _maybeSet(step, 'sukuk_amount', finalMin.return_invest_exceed_1m_sukuk_saa_12_5pc);
+    _maybeSet(step, 'sukuk_wht', finalMin.return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted);
+    if (Object.keys(step).length > 0) seed.sukuk = step;
+  }
+
+  // rental ← income_forms.other_taxable_income_rent + adjustable_tax.tax_deducted_rent_section_155
+  if (income || adjustable) {
+    const step = {};
+    if (income) _maybeSet(step, 'rental_gross', income.other_taxable_income_rent);
+    if (adjustable) _maybeSet(step, 'rental_wht', adjustable.tax_deducted_rent_section_155_tax_collected);
+    if (Object.keys(step).length > 0) seed.rental = step;
+  }
 
   return seed;
 }

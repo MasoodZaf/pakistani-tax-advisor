@@ -130,7 +130,7 @@ app.use(express.static('public'));
 // anti-brute-force limit. SSO endpoints accept ID tokens, so they need the
 // same throttle to prevent token-verification grinding and email enumeration.
 // /api/sso covers /sso/google, /sso/apple, /sso/link/*, /sso/unlink, /sso/status.
-app.use(['/api/login', '/api/register', '/api/sso'], loginLimiter);
+app.use(['/api/login', '/api/register', '/api/sso', '/api/verify-session'], loginLimiter);
 app.use('/api', authRoutes);
 
 // Public read-only info (tax year config) — no auth, no throttle needed
@@ -286,6 +286,16 @@ const server = app.listen(PORT, HOST, () => {
 
 function gracefulShutdown(signal) {
   logger.info(`${signal} received — shutting down gracefully`);
+
+  // Stop cron timers BEFORE closing the server so no new background jobs
+  // (rollover, reminder, backup) fire mid-shutdown. In-flight runs keep
+  // executing — the event loop won't exit until they return.
+  try {
+    require('./services/cron').stopSchedulers();
+  } catch (e) {
+    logger.error('cron shutdown failed', { message: e?.message });
+  }
+
   server.close(async () => {
     try {
       await pool.end();
