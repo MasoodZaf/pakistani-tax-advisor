@@ -25,6 +25,7 @@ const logger = require('../utils/logger');
 const { parseExcelBuffer, parseJsonBuffer } = require('../services/parsers/excelParser');
 const { mapFields } = require('../services/parsers/fieldMapper');
 const { auditRates, getHighSeverityWarnings } = require('../services/parsers/rateAudit');
+const { parseFbrPdfBuffer } = require('../services/parsers/fbrPdfParser');
 
 const router = express.Router();
 
@@ -38,13 +39,14 @@ const upload = multer({
     const allowedMime = new Set([
       'application/json',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/pdf',
       'text/plain',
     ]);
     const ext = (file.originalname || '').split('.').pop().toLowerCase();
-    if (allowedMime.has(file.mimetype) || ['json', 'xlsx'].includes(ext)) {
+    if (allowedMime.has(file.mimetype) || ['json', 'xlsx', 'pdf'].includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only JSON and .xlsx files are supported'));
+      cb(new Error('Only PDF, JSON and .xlsx files are supported'));
     }
   },
 });
@@ -106,7 +108,18 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
 
     let rawData = {};
     let sourceFormat = 'json';
-    if (ext === 'json') {
+    let mapped = null;
+    let unmatched = null;
+
+    if (ext === 'pdf') {
+      // FBR 114(1) PDF — parser returns mapped_data directly in the same
+      // shape mapFields() would produce, so we skip the field-mapper.
+      const parsed = await parseFbrPdfBuffer(req.file.buffer);
+      rawData = parsed.mapped_data; // raw_data column carries the structured extract
+      mapped = parsed.mapped_data;
+      sourceFormat = parsed.source_format;
+      unmatched = {};
+    } else if (ext === 'json') {
       rawData = parseJsonBuffer(req.file.buffer);
       sourceFormat = 'json';
     } else if (ext === 'xlsx') {
@@ -123,7 +136,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       }
     }
 
-    const { mapped, unmatched } = mapFields(rawData);
+    if (!mapped) ({ mapped, unmatched } = mapFields(rawData));
     const rateFlags = auditRates(mapped);
     const warnings = getHighSeverityWarnings(rateFlags);
     const totals = extractTotals(mapped);
