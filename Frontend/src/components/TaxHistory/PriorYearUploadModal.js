@@ -100,7 +100,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Import Prior Year Return</h2>
-              <p className="text-sm text-gray-500">Upload TY 2024-25 JSON or Excel export from FBR Iris</p>
+              <p className="text-sm text-gray-500">Upload PDF / Excel / JSON export from FBR Iris</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -134,6 +134,21 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             </select>
           </div>
 
+          {/* Template download */}
+          <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+            <span className="text-indigo-900">
+              Don't have an FBR export? Download a blank template to fill in.
+            </span>
+            <a
+              href={`${API_BASE}/api/tax-history/template?taxYear=${taxYear}`}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-3 px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium whitespace-nowrap"
+            >
+              Download .xlsx
+            </a>
+          </div>
+
           {/* Drop zone */}
           <div
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -149,7 +164,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,.xlsx,.xls"
+              accept=".pdf,.json,.xlsx,.xls"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -163,7 +178,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
               <div className="flex flex-col items-center gap-2 text-gray-500">
                 <Upload className="w-10 h-10" />
                 <p className="font-medium">Drag & drop file here, or click to select</p>
-                <p className="text-sm">Supports JSON and Excel (.xlsx) — max 10 MB</p>
+                <p className="text-sm">PDF (FBR 114(1)), Excel (.xlsx), or JSON — max 10 MB</p>
               </div>
             )}
           </div>

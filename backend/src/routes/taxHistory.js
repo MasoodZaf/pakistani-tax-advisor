@@ -26,6 +26,7 @@ const { parseExcelBuffer, parseJsonBuffer } = require('../services/parsers/excel
 const { mapFields } = require('../services/parsers/fieldMapper');
 const { auditRates, getHighSeverityWarnings } = require('../services/parsers/rateAudit');
 const { parseFbrPdfBuffer } = require('../services/parsers/fbrPdfParser');
+const { buildTemplate } = require('../services/parsers/excelTemplate');
 
 const router = express.Router();
 
@@ -94,6 +95,50 @@ async function tryResolveTaxYearId(taxYear) {
     return null;
   }
 }
+
+// ── GET /template — download a blank or pre-filled .xlsx template ───────────
+// Optional ?taxYear=2024-25 sets the filename + instructions sheet header.
+// Optional ?prefill=true pre-fills with the caller's existing income_forms
+// + adjustable_tax_forms row for the requested year (or current if absent),
+// turning the download into "export my saved data".
+router.get('/template', authenticateToken, async (req, res) => {
+  try {
+    const taxYear = req.query.taxYear || '2024-25';
+    const prefillFlag = req.query.prefill === 'true' || req.query.prefill === '1';
+
+    let incomePrefill = {};
+    let adjustablePrefill = {};
+
+    if (prefillFlag) {
+      try {
+        const incomeRow = await pool.query(
+          `SELECT * FROM income_forms WHERE user_id = $1 AND tax_year = $2`,
+          [req.user.id, taxYear]
+        );
+        if (incomeRow.rows[0]) incomePrefill = incomeRow.rows[0];
+
+        const adjRow = await pool.query(
+          `SELECT * FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2`,
+          [req.user.id, taxYear]
+        );
+        if (adjRow.rows[0]) adjustablePrefill = adjRow.rows[0];
+      } catch (e) {
+        // Prefill is best-effort — fall through to blank template.
+        logger.warn('template prefill lookup failed', { message: e.message });
+      }
+    }
+
+    const buffer = await buildTemplate({ taxYear, incomePrefill, adjustablePrefill });
+    const fileName = `tax-return-template-${taxYear}${prefillFlag ? '-prefilled' : ''}.xlsx`;
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    logger.error('template generation failed', { message: err.message, stack: err.stack });
+    res.status(500).json({ success: false, message: 'Failed to generate template' });
+  }
+});
 
 // ── POST /upload — create or replace the archive for a user+tax_year ────────
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {

@@ -11,11 +11,26 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import api from '../services/api';
 
 // Picks an FBR 114(1) PDF, posts to /api/tax-history/upload, then offers
 // "Copy forward" to pre-fill the current return. Same backend as the web
 // PriorYearUploadModal — no mobile-specific API surface.
+
+// Minimal ArrayBuffer → base64. expo-file-system needs base64 for writes
+// and the standard `btoa` isn't available in RN's JS engine for binary data.
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  // global.btoa exists in Hermes / React Native runtimes; fall back if not.
+  // eslint-disable-next-line no-undef
+  return typeof btoa === 'function' ? btoa(binary) : Buffer.from(binary, 'binary').toString('base64');
+}
 
 function formatPkr(n) {
   if (!Number.isFinite(n) || n === 0) return '—';
@@ -31,6 +46,7 @@ const PriorYearUploadScreen = ({ navigation }) => {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);     // server response after upload
   const [copying, setCopying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const onPickFile = async () => {
     const res = await DocumentPicker.getDocumentAsync({
@@ -69,6 +85,36 @@ const PriorYearUploadScreen = ({ navigation }) => {
     }
   };
 
+  const onDownloadTemplate = async () => {
+    setDownloading(true);
+    try {
+      const response = await api.get('/tax-history/template', {
+        params: { taxYear: '2024-25' },
+        responseType: 'arraybuffer',
+      });
+      // arraybuffer comes through as ArrayBuffer on RN — encode to base64
+      // for FileSystem.writeAsStringAsync.
+      const base64 = arrayBufferToBase64(response.data);
+      const uri = `${FileSystem.cacheDirectory}tax-return-template-2024-25.xlsx`;
+      await FileSystem.writeAsStringAsync(uri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: 'Save tax return template',
+          UTI: 'org.openxmlformats.spreadsheetml.sheet',
+        });
+      } else {
+        Alert.alert('Saved', `Template saved to ${uri}`);
+      }
+    } catch (err) {
+      Alert.alert('Download failed', err.response?.data?.message || err.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const onCopyForward = async () => {
     const taxYear = result?.archive?.tax_year || result?.totals?.tax_year;
     if (!taxYear) {
@@ -101,6 +147,19 @@ const PriorYearUploadScreen = ({ navigation }) => {
           Drop in your FBR 114(1) PDF from IRIS. We'll extract the totals
           and let you copy them into this year's forms as a starting point.
         </Text>
+
+        {/* Download template option */}
+        <TouchableOpacity
+          style={styles.templateRow}
+          onPress={onDownloadTemplate}
+          disabled={downloading}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons name="download" size={20} color="#4f46e5" />
+          <Text style={styles.templateText}>
+            {downloading ? 'Preparing…' : 'No FBR file? Download a blank template'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Picker card */}
         <TouchableOpacity style={styles.pickCard} onPress={onPickFile} activeOpacity={0.7}>
@@ -187,6 +246,17 @@ const styles = StyleSheet.create({
   scroll: { padding: 20 },
   heading: { fontSize: 22, fontWeight: '700', color: '#1f2937' },
   sub: { fontSize: 14, color: '#6b7280', marginTop: 6, marginBottom: 24 },
+  templateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#eef2ff',
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  templateText: { fontSize: 13, fontWeight: '600', color: '#4f46e5', flex: 1 },
   pickCard: {
     backgroundColor: '#eef2ff',
     borderColor: '#4f46e5',
