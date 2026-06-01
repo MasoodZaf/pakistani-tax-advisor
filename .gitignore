@@ -20,6 +20,11 @@ node_modules/
 .env.production.local
 /backend/.env
 
+# Host-local deploy files — environment-specific, kept per-host (not in git).
+# Version-controlled templates: docker-compose.override.yml.example, deploy/DEPLOY.md
+/docker-compose.override.yml
+/DEPLOY.md
+
 # Logs
 logs
 *.log
