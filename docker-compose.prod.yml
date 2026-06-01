@@ -41,13 +41,14 @@ services:
     container_name: tax_advisor_backend
     restart: unless-stopped
     ports:
-      # Bound to 127.0.0.1 only — the backend is reached exclusively through the
-      # Caddy reverse proxy (api.tax.aurmak.com → 127.0.0.1:${BACKEND_HOST_PORT}).
-      # Publishing on 0.0.0.0 would expose the API on the raw host port,
-      # bypassing TLS. The host port is env-driven so it always matches the Caddy
-      # route; the default (3001) matches the current deploy + Caddyfile. To move
-      # it, set BACKEND_HOST_PORT in .env AND update the Caddyfile together.
-      - "127.0.0.1:${BACKEND_HOST_PORT:-3001}:3001"
+      # Pinned to 127.0.0.1:3001 — ONE source of truth for the port, must match
+      # the Caddy route (api.tax.aurmak.com → 127.0.0.1:3001; see
+      # deploy/Caddyfile.tax-advisor.example). Bound to localhost so the API is
+      # never published on the raw host port (0.0.0.0), which would bypass TLS.
+      # Deliberately NOT env-driven: the outage was caused by the host port
+      # diverging across compose / .env / Caddy, so it lives in exactly one
+      # place. To change it, edit here AND the Caddyfile together.
+      - "127.0.0.1:3001:3001"
     environment:
       DB_HOST: database
       DB_PORT: 5432
@@ -116,14 +117,12 @@ services:
     container_name: tax_advisor_frontend
     restart: unless-stopped
     ports:
-      # Bound to 127.0.0.1 only — served to the public via Caddy
-      # (tax.aurmak.com → 127.0.0.1:${FRONTEND_HOST_PORT}). The host port is
-      # env-driven so a recreate never shifts it out from under Caddy — a
-      # hardcoded mismatch here (compose said 3000 while the running container
-      # was on 4000) is exactly what caused a production outage. The default
-      # (4000) matches the current deploy + Caddyfile. To move it, set
-      # FRONTEND_HOST_PORT in .env AND update the Caddyfile together.
-      - "127.0.0.1:${FRONTEND_HOST_PORT:-4000}:80"
+      # Pinned to 127.0.0.1:4000 — must match the Caddy route (tax.aurmak.com →
+      # 127.0.0.1:4000). See the backend note above re: why this is one fixed
+      # value, not env-driven. The original outage came from a mismatch here
+      # (compose said 3000 while the running container + Caddy used 4000);
+      # pinning it to the live value (4000) makes a recreate a no-op.
+      - "127.0.0.1:4000:80"
     depends_on:
       - backend
     healthcheck:
