@@ -12,7 +12,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 /* ── Styles ── */
 const S = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Nunito:wght@500;600;700&display=swap');
+    /* Brand fonts loaded once in public/index.html (UX-06) */
     .trm-root { font-family:'Nunito',sans-serif; }
     .trm-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.02em; }
     .trm-rate-pill { display:inline-flex;align-items:center;justify-content:center;padding:4px 12px;border-radius:100px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800; }

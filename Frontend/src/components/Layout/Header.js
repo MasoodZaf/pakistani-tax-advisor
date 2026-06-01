@@ -36,7 +36,7 @@ const Header = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Nunito:wght@500;600;700&display=swap');
+        /* Brand fonts loaded once in public/index.html (UX-06) */
         .hdr-root {
           font-family: 'Nunito', sans-serif;
           position: fixed; top: 0; left: 0; right: 0; height: 56px;

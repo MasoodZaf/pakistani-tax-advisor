@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Brand design tokens — SINGLE SOURCE OF TRUTH (UX-06).
+   Mirrored as Tailwind theme tokens in tailwind.config.js (navy/lime/cream/ink,
+   font-display, font-body). Brand fonts are loaded ONCE in public/index.html,
+   not via per-component @import. UX-01 migrates the tax-form modules onto these.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --brand-navy: #28396C;
+  --brand-navy-dark: #1e2d5a;
+  --brand-navy-mid: #3d5a90;
+  --brand-navy-ink: #1e2a4a;
+  --brand-lime: #B5E18B;
+  --brand-lime-soft: #c0da94;
+  --brand-cream: #F0FFC2;
+  --brand-cream-track: #EAE6BC;
+  --brand-bg: #fdfcf8;
+  --brand-ink: #1c1d1a;
+  --brand-border: #e3e2dc;
+  --brand-hover-bg: #f5f8ea;
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;

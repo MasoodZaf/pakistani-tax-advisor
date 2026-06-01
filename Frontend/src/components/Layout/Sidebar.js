@@ -11,7 +11,7 @@ import {
 
 const Styles = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Nunito:wght@500;600;700&display=swap');
+    /* Brand fonts loaded once in public/index.html (UX-06) */
 
     .sb-root {
       font-family: 'Nunito', sans-serif;
