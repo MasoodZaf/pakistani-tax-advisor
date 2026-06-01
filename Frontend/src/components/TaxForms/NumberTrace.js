@@ -64,7 +64,7 @@ const NumberTrace = ({
           onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
           aria-label="Show calculation breakdown"
           title="Show calculation"
-          className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-navy/20 bg-navy/5 text-navy hover:bg-navy/10 transition-colors"
         >
           <Calculator size={11} strokeWidth={2.4} />
         </button>
@@ -108,8 +108,8 @@ const NumberTrace = ({
                 })}
                 <tr className="border-t border-gray-200 font-semibold">
                   <td />
-                  <td className="py-2 text-blue-900">{resultLabel}</td>
-                  <td className="text-right font-mono py-2 text-blue-900 whitespace-nowrap pl-3">
+                  <td className="py-2 text-navy">{resultLabel}</td>
+                  <td className="text-right font-mono py-2 text-navy whitespace-nowrap pl-3">
                     {formatCurrency(value)}
                   </td>
                 </tr>
