@@ -125,13 +125,29 @@ export async function generateIrisPdf(ctx) {
 
   // Taxpayer profile block — two-column grid
   const profile = ctx.profile || {};
-  const period  = `01-Jul-${ctx.taxYear?.split('-')[0] - 1 || '2024'}  -  30-Jun-${ctx.taxYear?.split('-')[0] || '2025'}`;
+
+  // Filing period & due date.
+  // Pakistani tax year "2025-26" runs 01-Jul-2025 → 30-Jun-2026 and is due
+  // 30-Sep-2026 — the END year drives both the period close and the deadline.
+  // The previous code computed `startYear - 1` (period start) and `startYear`
+  // (period end / due year), which printed the whole period and due date a
+  // full year early (e.g. due 30-Sep-2025, already past) — audit BLIND-01.
+  // Prefer authoritative DB-sourced values when the caller passes them
+  // (period / dueDate / taxYearLabel handle FBR deadline extensions); fall
+  // back to deriving them from the tax-year label.
+  const startYear = parseInt(String(ctx.taxYear || '').split('-')[0], 10);
+  const validStartYear = Number.isFinite(startYear) ? startYear : 2025;
+  const endYear = validStartYear + 1;
+  const period       = ctx.period   || `01-Jul-${validStartYear}  -  30-Jun-${endYear}`;
+  const dueDate      = ctx.dueDate  || `30-Sep-${endYear}`;
+  const taxYearLabel = ctx.taxYear  || `${validStartYear}-${String(endYear).slice(-2)}`;
+
   const profileRows = [
     ['Name',             profile.name        || '—',                                  'Registration No', profile.ntn || profile.cnic || '—'],
-    ['Address',          profile.address     || '—',                                  'Tax Year',        ctx.taxYear?.split('-')[0] || '2025'],
+    ['Address',          profile.address     || '—',                                  'Tax Year',        taxYearLabel],
     ['Contact No',       profile.phone       || '—',                                  'Period',          period],
     ['Email',            profile.email       || '—',                                  'Form Type',       ctx.formType || '114(1)'],
-    ['Document Date',    dateLong(new Date()),                                        'Due Date',        '30-Sep-' + (ctx.taxYear?.split('-')[0] || '2025')],
+    ['Document Date',    dateLong(new Date()),                                        'Due Date',        dueDate],
   ];
   autoTable(doc, {
     ...tableTheme,

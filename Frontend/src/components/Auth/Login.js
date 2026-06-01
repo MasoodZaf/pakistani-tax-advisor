@@ -458,7 +458,7 @@ const Login = () => {
                 <input type="checkbox" style={{ width: 15, height: 15, accentColor: '#28396C', cursor: 'pointer' }} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#5c5d55' }}>Remember me</span>
               </label>
-              <button type="button" onClick={() => toast.info('Contact your administrator for password reset')}
+              <button type="button" onClick={() => toast('Contact your administrator to reset your password.', { icon: 'ℹ️' })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#28396C', fontFamily: "'Nunito', sans-serif" }}>
                 Forgot password?
               </button>

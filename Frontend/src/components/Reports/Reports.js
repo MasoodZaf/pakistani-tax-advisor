@@ -216,7 +216,7 @@ const Reports = () => {
         ['Total taxable income',   Number(ri.total_taxable_income)  || 0],
         [],
         ['Capital gains',          Number(reportData.capitalGains?.total_capital_gain || reportData.capitalGains?.total_capital_gains || 0)],
-        ['Final tax income',       Number((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0))],
+        ['Final tax income',       Number(reportData.finalTaxIncome?.total_final_tax ?? ((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0)))],
       ]);
       incomeSheet['!cols'] = [{ wch: 32 }, { wch: 18 }];
       XLSX.utils.book_append_sheet(wb, incomeSheet, 'Income');
@@ -454,7 +454,7 @@ const Reports = () => {
 
     const regularIncome = data.regularIncome?.total_taxable_income || 0;
     const capitalGains = data.capitalGains?.total_capital_gain || data.capitalGains?.total_capital_gains || 0;
-    const finalTaxIncome = (data.finalTaxIncome?.sukuk_amount || 0) + (data.finalTaxIncome?.debt_amount || 0);
+    const finalTaxIncome = data.finalTaxIncome?.total_final_tax ?? ((data.finalTaxIncome?.sukuk_amount || 0) + (data.finalTaxIncome?.debt_amount || 0));
 
     return (
       <div className="space-y-6">

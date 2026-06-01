@@ -477,6 +477,7 @@ const TaxComputationSummary = () => {
             </button>
             <button
               type="button"
+              onClick={() => window.print()}
               className="flex items-center px-4 py-2 text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
             >
               <Printer className="w-4 h-4 mr-2" />
@@ -484,6 +485,8 @@ const TaxComputationSummary = () => {
             </button>
             <button
               type="button"
+              onClick={() => navigate('/reports')}
+              title="Download the IRIS-format PDF from Reports"
               className="flex items-center px-4 py-2 text-green-600 bg-green-100 rounded-lg hover:bg-green-200 transition-colors"
             >
               <Download className="w-4 h-4 mr-2" />
