@@ -10,7 +10,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 const S = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Nunito:wght@500;600;700&display=swap');
+    /* Brand fonts loaded once in public/index.html (UX-06) */
     .am-root { font-family:'Nunito',sans-serif; }
     .am-input { width:100%;padding:9px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:#111827;outline:none;transition:border-color .18s,box-shadow .18s; }
     .am-input:focus { border-color:#28396C;box-shadow:0 0 0 3px rgba(40,57,108,.1); }

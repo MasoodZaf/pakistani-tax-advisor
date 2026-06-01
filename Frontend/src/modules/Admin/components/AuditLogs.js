@@ -5,7 +5,7 @@ import { Activity, RefreshCw, Search, Filter, Clock, User, FileText, ChevronLeft
 
 const S = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&display=swap');
+    /* Brand fonts loaded once in public/index.html (UX-06) */
     .al-root { font-family:'Nunito',sans-serif; }
     .al-input { padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;outline:none;transition:border-color .18s; }
     .al-input:focus { border-color:#28396C; }

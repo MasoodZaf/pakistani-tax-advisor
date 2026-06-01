@@ -26,7 +26,7 @@ const stepRoute = (id) =>
 
 const Styles = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;500;600;700&display=swap');
+    /* Brand fonts loaded once in public/index.html (UX-06) */
     .dash-root { font-family: 'Nunito', sans-serif; -webkit-font-smoothing: antialiased; color: #1e2a4a; }
     .dash-display { font-family: 'Bricolage Grotesque', sans-serif; }
     .dash-card { background: #fff; border: 1px solid #e3e2dc; border-radius: 18px; transition: box-shadow 0.2s; }
