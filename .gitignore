@@ -114,3 +114,8 @@ scripts/generate-test-excel.js
 FBR Docs/
 backend/data/knowledge-base/*.pdf
 backend/data/knowledge-base/*.xlsx
+
+# Audit reports — kept local only (contain a vuln roadmap; not for the public repo)
+AUDIT_REPORT_2026-06-01_FULL.md
+AUDIT_LIVE_VERIFICATION_2026-06-01.md
+AUDIT_P0_FIXES_2026-06-01.md

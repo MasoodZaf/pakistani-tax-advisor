@@ -190,13 +190,22 @@ const TaxComputationSummary = () => {
       normalIncomeTaxIncludingSurchargeAndCGT - taxReductions - taxCredits
     );
     
-    // Final/Min tax from Final/Min Income form (D20 in Excel = grand total tax chargeable).
-    // For salaried scope this captures dividends (s.150), sukuk/profit-on-debt
-    // (s.151(1A), s.7B), prize bonds (s.156), bonus shares (s.236Z) and salary
-    // arrears at relevant rate (s.12(7)) — all FINAL tax streams under their
-    // own sections, NOT min-tax variants of normal income. So the doctrine is
-    // "in addition to normal tax", not "higher of" — Excel adds them too.
-    const finalMinTax = num(finalMinIncomeData.grand_total_tax_chargeable);
+    // Final/Min tax from Final/Min Income form. For salaried scope this captures
+    // dividends (s.150), sukuk/profit-on-debt (s.151(1A), s.7B), prize bonds
+    // (s.156), bonus shares (s.236Z) and salary arrears at relevant rate
+    // (s.12(7)) — all FINAL tax streams under their own sections, NOT min-tax
+    // variants of normal income. So the doctrine is "in addition to normal tax",
+    // not "higher of".
+    //
+    // Use subtotal_tax_chargeable, which EXCLUDES capital gains. CGT is owned by
+    // the Capital Gains form and is already added above as `capitalGainTax`; the
+    // Final/Min form auto-mirrors that CGT into its capital_gain_tax_chargeable
+    // row, so grand_total_tax_chargeable (= subtotal + capital_gain) would
+    // double-count CGT for every capital-gains filer (audit UX-03). Fall back to
+    // grand_total − capital_gain for rows predating the subtotal column.
+    const finalMinTax = finalMinIncomeData.subtotal_tax_chargeable != null
+      ? num(finalMinIncomeData.subtotal_tax_chargeable)
+      : num(finalMinIncomeData.grand_total_tax_chargeable) - num(finalMinIncomeData.capital_gain_tax_chargeable);
     const finalIncomeTax = normalIncomeTaxAfterReductionCredit + finalMinTax;
 
     // Super Tax u/s 4C (Finance Act 2025) — charged on persons with income > Rs 150M
@@ -477,6 +486,7 @@ const TaxComputationSummary = () => {
             </button>
             <button
               type="button"
+              onClick={() => window.print()}
               className="flex items-center px-4 py-2 text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
             >
               <Printer className="w-4 h-4 mr-2" />
@@ -484,6 +494,8 @@ const TaxComputationSummary = () => {
             </button>
             <button
               type="button"
+              onClick={() => navigate('/reports')}
+              title="Download the IRIS-format PDF from Reports"
               className="flex items-center px-4 py-2 text-green-600 bg-green-100 rounded-lg hover:bg-green-200 transition-colors"
             >
               <Download className="w-4 h-4 mr-2" />

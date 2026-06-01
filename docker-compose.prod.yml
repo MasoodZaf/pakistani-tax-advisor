@@ -1,5 +1,3 @@
-version: '3.8'
-
 # PRODUCTION: runs full stack (DB + backend + frontend).
 # Start with: docker compose -f docker-compose.prod.yml up -d --build
 
@@ -43,7 +41,14 @@ services:
     container_name: tax_advisor_backend
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      # Pinned to 127.0.0.1:3001 — ONE source of truth for the port, must match
+      # the Caddy route (api.tax.aurmak.com → 127.0.0.1:3001; see
+      # deploy/Caddyfile.tax-advisor.example). Bound to localhost so the API is
+      # never published on the raw host port (0.0.0.0), which would bypass TLS.
+      # Deliberately NOT env-driven: the outage was caused by the host port
+      # diverging across compose / .env / Caddy, so it lives in exactly one
+      # place. To change it, edit here AND the Caddyfile together.
+      - "127.0.0.1:3001:3001"
     environment:
       DB_HOST: database
       DB_PORT: 5432
@@ -112,7 +117,12 @@ services:
     container_name: tax_advisor_frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      # Pinned to 127.0.0.1:4000 — must match the Caddy route (tax.aurmak.com →
+      # 127.0.0.1:4000). See the backend note above re: why this is one fixed
+      # value, not env-driven. The original outage came from a mismatch here
+      # (compose said 3000 while the running container + Caddy used 4000);
+      # pinning it to the live value (4000) makes a recreate a no-op.
+      - "127.0.0.1:4000:80"
     depends_on:
       - backend
     healthcheck:

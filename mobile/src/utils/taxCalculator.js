@@ -9,14 +9,27 @@ export class MobileTaxCalculator {
   // Slabs are stored as (min, max, rate) only. We compute marginal tax in a
   // single pass — no precomputed "fixed" base, which avoids the double-count
   // bug that earlier shipped here.
+  //
+  // Rates are the Finance Act 2025 salaried-individual schedule (tax year
+  // 2025-26): 0 / 1 / 11 / 23 / 30 / 35 %. These MUST match the backend
+  // tax_slabs seed (taxCalculationService) — the previous values (5/15/25 %)
+  // were the stale FA-2024 rates and over-stated tax by tens of thousands of
+  // rupees (audit TEST-01). The server stays the source of truth; this table
+  // is an offline fallback only — fetch /api/tax-year when online.
   static TAX_SLABS_2025_26 = [
     { min: 0,       max: 600000,  rate: 0.00 },
-    { min: 600000,  max: 1200000, rate: 0.05 },
-    { min: 1200000, max: 2200000, rate: 0.15 },
-    { min: 2200000, max: 3200000, rate: 0.25 },
+    { min: 600000,  max: 1200000, rate: 0.01 },
+    { min: 1200000, max: 2200000, rate: 0.11 },
+    { min: 2200000, max: 3200000, rate: 0.23 },
     { min: 3200000, max: 4100000, rate: 0.30 },
     { min: 4100000, max: null,    rate: 0.35 }
   ];
+
+  // Surcharge u/s 4AB (FA 2025): 10% of computed income tax when taxable
+  // income exceeds Rs 10,000,000. Mirrors the backend surcharge so the mobile
+  // estimate does not under-state for high earners (audit BLIND-03). Threshold
+  // and rate ideally come from /api/tax-year when online.
+  static SURCHARGE_2025_26 = { threshold: 10000000, rate: 0.10 };
 
   // Calculate progressive (marginal) tax. Offline-capable.
   static calculateProgressiveTax(taxableIncome /* , taxYear */) {
@@ -52,10 +65,17 @@ export class MobileTaxCalculator {
       });
     }
 
+    // Surcharge u/s 4AB — applied on the computed income tax above the
+    // threshold (mirrors the backend so high earners are not under-stated).
+    const sc = this.SURCHARGE_2025_26;
+    const surcharge = taxableIncome > sc.threshold ? Math.round(totalTax * sc.rate) : 0;
+    totalTax += surcharge;
+
     const effectiveRate = (totalTax / taxableIncome) * 100;
 
     return {
       totalTax: Math.round(totalTax),
+      surcharge,
       effectiveRate: Math.round(effectiveRate * 100) / 100,
       breakdown,
       taxableIncome,

@@ -238,28 +238,27 @@ router.get('/income-analysis/:taxYear', auth, async (req, res) => {
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 
-    // Get capital gains data (canonical column names are singular: total_capital_gain)
+    // Get capital gains data.
+    // NOTE: migration phase-u restructured capital_gain_forms — the legacy
+    // per-holding-period columns (property_1_year, property_2_3_years,
+    // property_4_plus_years, securities, other_capital_gains) and the
+    // never-real `total_capital_gain_tax` were dropped and replaced by the
+    // immovable_property_*_taxable / securities_*_taxable families plus the
+    // canonical total_capital_gain / total_tax_deducted columns. Selecting the
+    // old names by hand made this endpoint 500 for every user. SELECT * keeps
+    // the report resilient to that drift; the response consumer reads the
+    // canonical totals it needs and ignores the rest.
     const capitalGainsData = await pool.query(`
-      SELECT
-        property_1_year,
-        property_2_3_years,
-        property_4_plus_years,
-        securities,
-        other_capital_gains,
-        total_capital_gain,
-        total_capital_gain_tax
-      FROM capital_gain_forms
+      SELECT * FROM capital_gain_forms
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 
-    // Get final tax income (if exists)
+    // Get final tax income (if exists). phase-u likewise dropped the legacy
+    // per-instrument columns (sukuk_amount, debt_amount, prize_bonds,
+    // other_final_tax_amount) in favour of canonical total_final_tax, so
+    // SELECT * to avoid the same column-does-not-exist 500.
     const finalTaxData = await pool.query(`
-      SELECT 
-        sukuk_amount,
-        debt_amount,
-        prize_bonds,
-        other_final_tax_amount
-      FROM final_tax_forms 
+      SELECT * FROM final_tax_forms
       WHERE tax_return_id = $1 AND user_id = $2
     `, [taxReturnId, userId]);
 

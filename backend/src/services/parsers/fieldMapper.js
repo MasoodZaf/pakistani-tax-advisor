@@ -195,8 +195,17 @@ const FIELD_MAP = [
     dst: 'income_tax_demanded',                      step: 'final_min_income' },
 
   // ──────────── Capital Gains (capital_gain_forms) ───────────────────────────
-  // Reference uses long FBR holding-period descriptors. The DB has buckets;
-  // we rely on the per-row payload here being post-aggregated upstream.
+  // ⚠️ NON-FUNCTIONAL after migration phase-u. The `dst` columns below
+  // (property_1_year / property_2_3_years / property_4_plus_years / securities)
+  // were DROPPED, and total_capital_gain is now a GENERATED column that cannot be
+  // written to — so every mapping in this block is silently filtered out on save
+  // (getAllowedColumns drops unknown/generated columns). Capital-gains PDF/Excel
+  // IMPORT therefore does nothing today.
+  // TODO(capital-gain-import): remap these src descriptors to the new granular
+  // families (immovable_property_1_year_taxable … immovable_property_over_6_years_taxable,
+  // securities_*_taxable). The old 5 coarse buckets do NOT map 1:1 to the ~15 new
+  // families, so this needs the real IRIS source structure + fixtures — do not
+  // guess the bucket→family split. The src names below are kept as the reference.
   { src: ['Capital Gains on Immovable Property u/s 37(1A) where holding period does not exceed 1 year'],
     dst: 'property_1_year',                          step: 'capital_gain' },
   { src: ['Capital Gains on Immovable Property u/s 37(1A) where holding period exceeds 1 year but does not exceed 2 years',

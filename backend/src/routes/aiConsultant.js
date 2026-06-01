@@ -138,11 +138,23 @@ router.post('/knowledge-base/upload', auth, upload.array('files', 10), async (re
   }
   try {
     const saved = [];
+    const kbRoot = path.resolve(kb.KB_DIR);
     for (const f of req.files || []) {
       // multer drops files into KB_DIR with random names; rename to original.
-      const target = path.join(kb.KB_DIR, f.originalname);
+      // Harden against path traversal (audit SEC-04): the client-supplied
+      // originalname is untrusted, so strip any directory components with
+      // path.basename and verify the resolved target stays directly inside
+      // KB_DIR before writing. Without this, an originalname such as
+      // "../../app/x.md" (which still passes the extension filter) would escape
+      // KB_DIR via path.join into an arbitrary-file-write.
+      const safeName = path.basename(f.originalname);
+      const target = path.resolve(kbRoot, safeName);
+      if (path.dirname(target) !== kbRoot || !safeName || safeName === '.' || safeName === '..') {
+        try { fs.unlinkSync(f.path); } catch {}
+        return res.status(400).json({ success: false, message: `Invalid filename: ${f.originalname}` });
+      }
       fs.renameSync(f.path, target);
-      saved.push(f.originalname);
+      saved.push(safeName);
     }
     const count = await kb.loadAll();
     res.json({ success: true, uploaded: saved, chunkCount: count });

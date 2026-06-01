@@ -188,24 +188,19 @@ function checkAdjustableTax(income, adjustable) {
 
 function checkCapitalGain(cg) {
   if (!cg) return [];
-  const issues = [];
-  // The DB-generated total should equal the sum of buckets. If the user
-  // used the form's UI it always will; if they POSTed via API the form
-  // might have inconsistent numbers.
-  const totalBuckets =
-    num(cg.property_1_year) + num(cg.property_2_3_years) +
-    num(cg.property_4_plus_years) + num(cg.securities) +
-    num(cg.other_capital_gains);
-  const declaredTotal = num(cg.total_capital_gains);
-  if (declaredTotal > 0 && Math.abs(declaredTotal - totalBuckets) > 1) {
-    issues.push({
-      severity: 'warning', code: 'CG_TOTAL_DRIFT',
-      message: `Capital Gain total (Rs ${declaredTotal.toLocaleString()}) doesn't match sum of per-bucket amounts (Rs ${totalBuckets.toLocaleString()}).`,
-      formStep: 'capital_gain',
-      fix: 'Open Capital Gains; the total is auto-summed from the per-row entries.',
-    });
-  }
-  return issues;
+  // Drift check intentionally retired.
+  //
+  // This used to compare a declared total against the sum of per-bucket
+  // amounts (property_1_year / property_2_3_years / securities / …). Migration
+  // phase-u dropped all of those legacy columns and replaced total_capital_gain
+  // with a GENERATED ALWAYS AS (...) STORED column summed from the surviving
+  // immovable_property_*_taxable / securities_*_taxable families. Because the
+  // total is now derived by the database it can no longer drift from its
+  // components, so the check has nothing to verify. (Reading the dropped column
+  // names also silently produced 0 here, making this a permanent no-op — see
+  // audit finding BE-04.) Left as an explicit, documented no-op rather than
+  // resurrecting a check the schema now enforces for us.
+  return [];
 }
 
 function checkWealth(wealth, wealthRecon) {

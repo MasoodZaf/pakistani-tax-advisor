@@ -78,6 +78,7 @@ function compute(inputs) {
     reductionsData:    inputs.reductions    || {},
     creditsData:       inputs.credits       || {},
     deductionsData:    inputs.deductions    || {},
+    finalMinData:      inputs.final_min     || {},
     rates:             inputs.rates         || FA2025_RATES,
     taxYear:           '2025-26',
   });
@@ -178,6 +179,46 @@ describe('TaxCalculationService._computeFromInputs', () => {
     expect(r.tax.surcharge).toBe(0);
     expect(r.tax.capitalGainsTax).toBe(175000);
     expect(r.tax.totalTaxChargeable).toBe(175000);
+  });
+
+  // ── F2. CGT is NOT double-counted via the Final/Min mirror (audit UX-03) ─────
+  // A capital-gains filer's CGT (175k) lives canonically on the Capital Gains
+  // form (capital_gains_tax_chargeable) AND is auto-mirrored into the Final/Min
+  // form's capital_gain_tax_chargeable row, which feeds grand_total_tax_chargeable.
+  // The computation must add CGT ONCE (via capitalGainsTax), so the final-min
+  // contribution uses subtotal_tax_chargeable (CGT-excluded), not grand_total.
+  //   capitalGainsTax       = 175,000  (from the Capital Gains form)
+  //   final-min subtotal    =  50,000  (e.g. a dividend line)
+  //   final-min grand_total = 225,000  (= subtotal + 175k mirrored CGT)
+  //   Correct total         = 175,000 + 50,000 = 225,000   (NOT 400,000)
+  test('CGT is not double-counted through the Final/Min grand-total mirror (UX-03)', () => {
+    const r = compute({
+      capital_gain: { total_capital_gain: 1500000, capital_gains_tax_chargeable: 175000 },
+      final_min: {
+        subtotal_tax_chargeable:     50000,
+        capital_gain_tax_chargeable: 175000, // mirrored from the Capital Gains form
+        grand_total_tax_chargeable:  225000, // subtotal + mirror
+      },
+    });
+    expect(r.tax.capitalGainsTax).toBe(175000);
+    expect(r.tax.finalMinTaxChargeable).toBe(50000);   // subtotal, NOT grand_total
+    expect(r.tax.totalTaxChargeable).toBe(225000);     // CGT counted exactly once
+    expect(r.tax.totalTaxChargeable).not.toBe(400000); // the old double-counted figure
+  });
+
+  // ── F3. UX-03 back-compat: derive the CGT-excluded total when the subtotal ───
+  // column is absent (rows written before phase-u re-added subtotal_tax_chargeable).
+  test('UX-03 fallback: grand_total − capital_gain when subtotal column is absent', () => {
+    const r = compute({
+      capital_gain: { total_capital_gain: 1500000, capital_gains_tax_chargeable: 175000 },
+      final_min: {
+        // no subtotal_tax_chargeable (older row)
+        capital_gain_tax_chargeable: 175000,
+        grand_total_tax_chargeable:  225000,
+      },
+    });
+    expect(r.tax.finalMinTaxChargeable).toBe(50000);  // 225,000 − 175,000
+    expect(r.tax.totalTaxChargeable).toBe(225000);
   });
 
   // ── G. Super tax (s.4C) breach ──────────────────────────────────────────────

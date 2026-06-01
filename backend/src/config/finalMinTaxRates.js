@@ -193,8 +193,78 @@ function getTaxRate(incomeType, subType, isATL = false) {
   return config.rate || null;
 }
 
+/**
+ * Per-FIELD statutory final-tax rates (TY 2025-26) for the Final/Min Income
+ * form's save path. A field appears here ONLY when its rate is unambiguous —
+ * the rate encoded in the field name, the inline FBR-section comment in
+ * taxForms.js, AND the category rates in FINAL_MIN_TAX_RATES above all agree,
+ * and the rate is fixed (NOT ATL-dependent).
+ *
+ * Used to set tax_chargeable = gross × rate (audit TAX-01). Previously every
+ * line set tax_chargeable = tax_deducted, so an under-withheld line cancelled
+ * itself out and silently filed an UNDER-STATED return.
+ *
+ * ✅ VERIFIED against the FBR Tax Card 2025-2026 (TY 2025-26, Finance Act 2025)
+ *    — "FBR Docs/Tax Card 2025-2026.pdf". Each line carries a filer (ATL) and a
+ *    non-filer rate; the non-filer rate (≈ double) is applied when the taxpayer
+ *    answers "No" to the Active-Taxpayer question on the Final/Min Income form.
+ *    Lines intentionally OMITTED (caller keeps tax_chargeable = tax_deducted)
+ *    because the field↔section/rate is ambiguous or variable:
+ *      • return_on_investment_sukuk_u_s_151_1a_25pc — the Tax Card has no fixed
+ *        25% sukuk final-tax line (sukuk > Rs 5M is Minimum Tax); ambiguous.
+ *      • profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc — field says 10%/20% but
+ *        Tax Card §151A (premature disposal of debt securities) is 15%/30%
+ *        Advance Tax — direct conflict; needs the field reconciled to a section.
+ *      • interest_income_profit_debt_7b_up_to_5m — s.7B vs s.151 mapping unclear
+ *        (Tax Card individual profit-on-debt ≤ 5M = 15%/30% final tax).
+ *      • profit_debt_national_savings_defence_39_14a — variable
+ *      • employment_termination_benefits_12_6_avg_rate — average rate (variable)
+ *      • salary_arrears_12_7_relevant_rate — relevant rate (variable)
+ *      • salary_u_s_12_7 — computed from the main tax computation
+ *      • capital_gain — owned by the Capital Gains form
+ */
+const FINAL_MIN_FIELD_RATE = {
+  // { atl: filer rate, nonAtl: non-filer rate } — FBR Tax Card 2025-2026.
+  dividend_u_s_150_0pc_share_profit_reit_spv:    { atl: 0.00,  nonAtl: 0.00 },  // §150 SPV via REIT
+  dividend_u_s_150_35pc_share_profit_other_spv:  { atl: 0.35,  nonAtl: 0.70 },  // §150 SPV by others
+  dividend_u_s_150_7_5pc_ipp_shares:             { atl: 0.075, nonAtl: 0.15 },  // §150 IPP pass-through
+  dividend_u_s_150_31pc_atl:                     { atl: 0.15,  nonAtl: 0.30 },  // §150 regular / in specie
+  dividend_u_s_150_25pc_bf_losses:               { atl: 0.25,  nonAtl: 0.50 },  // §150 exemption / b-f losses
+  return_on_investment_sukuk_u_s_151_1a_10pc:    { atl: 0.10,  nonAtl: 0.20 },  // §151 sukuk ≤ Rs 1M
+  return_on_investment_sukuk_u_s_151_1a_12_5pc:  { atl: 0.125, nonAtl: 0.25 },  // §151 sukuk Rs 1M–5M
+  return_invest_not_exceed_1m_sukuk_saa_10pc:    { atl: 0.10,  nonAtl: 0.20 },  // §151 sukuk ≤ Rs 1M
+  return_invest_exceed_1m_sukuk_saa_12_5pc:      { atl: 0.125, nonAtl: 0.25 },  // §151 sukuk Rs 1M–5M
+  prize_raffle_lottery_quiz_promotional_156:     { atl: 0.20,  nonAtl: 0.40 },  // §156 raffle/lottery/quiz
+  prize_bond_cross_world_puzzle_156:             { atl: 0.15,  nonAtl: 0.30 },  // §156 prize bond
+  bonus_shares_companies_236f:                   { atl: 0.10,  nonAtl: 0.20 },  // §236Z bonus shares
+};
+
+/**
+ * Compute a final/min line's tax_chargeable = gross × statutory rate (audit
+ * TAX-01), picking the filer (ATL) or non-filer rate from the Tax Card pair.
+ *   - Verified line (in FINAL_MIN_FIELD_RATE): gross × rate when the gross is
+ *     provided; otherwise fall back to the withheld amount (some users enter
+ *     only the WHT certificate value — never invent a refund).
+ *   - Any other line: keep the withheld amount until its rate is reconciled.
+ * @param {string}  fieldBase    e.g. 'prize_bond_cross_world_puzzle_156'
+ * @param {number}  grossAmount
+ * @param {number}  taxDeducted
+ * @param {boolean} isATL        true = Active Taxpayer (filer); defaults true.
+ * @returns {number} integer rupees
+ */
+function lineChargeable(fieldBase, grossAmount, taxDeducted, isATL = true) {
+  const pair = FINAL_MIN_FIELD_RATE[fieldBase];
+  const deducted = Number(taxDeducted) || 0;
+  if (!pair) return deducted;
+  const rate = isATL ? pair.atl : pair.nonAtl;
+  const amount = Number(grossAmount) || 0;
+  return amount > 0 ? Math.round(amount * rate) : deducted;
+}
+
 module.exports = {
   FINAL_MIN_TAX_RATES,
   calculateTaxChargeable,
-  getTaxRate
+  getTaxRate,
+  FINAL_MIN_FIELD_RATE,
+  lineChargeable,
 };

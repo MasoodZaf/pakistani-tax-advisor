@@ -106,18 +106,28 @@ describe('readinessService — individual checks', () => {
 
   // ── Capital Gain ───────────────────────────────────────────────────────────
   describe('checkCapitalGain', () => {
-    test('declared total drift from per-bucket sum → warning', () => {
+    // The per-bucket drift check was retired (audit BE-04). Migration phase-u
+    // dropped the legacy bucket columns (property_1_year, property_2_3_years,
+    // securities, other_capital_gains, total_capital_gains) and re-added
+    // total_capital_gain as a GENERATED ALWAYS AS (...) STORED column summed
+    // from the surviving immovable_property_*_taxable / securities_*_taxable
+    // families — so the declared total can no longer drift from its components
+    // and there is nothing to verify. (Reading the old column names here also
+    // silently produced 0, making the check a permanent no-op.)
+    test('returns no issues — drift check retired, total is DB-generated', () => {
       const issues = checkCapitalGain({
-        property_2_3_years: 500000, securities: 1000000,
-        total_capital_gains: 2000000, // should be 1.5m
+        immovable_property_2_years_taxable: 500000,
+        securities_15_percent_taxable: 1000000,
+        total_capital_gain: 1500000,
       });
-      expect(warnOf(issues, 'CG_TOTAL_DRIFT')).toBeDefined();
+      expect(issues).toEqual([]);
     });
 
     test('matched totals → no issues', () => {
       const issues = checkCapitalGain({
-        property_2_3_years: 500000, securities: 1000000,
-        total_capital_gains: 1500000,
+        immovable_property_2_years_taxable: 500000,
+        securities_15_percent_taxable: 1000000,
+        total_capital_gain: 1500000,
       });
       expect(issues).toEqual([]);
     });
