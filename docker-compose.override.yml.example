@@ -1,0 +1,40 @@
+# Site-specific compose override — TEMPLATE.
+#
+# Copy to docker-compose.override.yml on each host (that real file is gitignored,
+# because the values are environment-specific). The deploy ALWAYS passes both
+# files explicitly:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d
+#
+# See deploy/DEPLOY.md for the full runbook.
+#
+# This override (as used on codearc-staging-01):
+# - Renames containers to tax-advisor-* so they don't clash with co-hosted stacks.
+# - Binds host ports to 127.0.0.1 only (Caddy fronts them publicly over TLS).
+#   Requires BACKEND_HOST_PORT + FRONTEND_HOST_PORT in .env (no defaults here, on
+#   purpose — a missing value should fail loudly, not silently pick a wrong port).
+#   These MUST match the Caddy reverse_proxy routes (api -> backend, root -> frontend).
+# - Sets the public-facing CORS allowlist.
+# - Bumps rate limits for the testing phase. Remove LOGIN_RATE_LIMIT_MAX +
+#   API_RATE_LIMIT_MAX (and restart) to revert to prod defaults (5/15min, 60/min)
+#   when testing is done.
+
+services:
+  backend:
+    container_name: tax-advisor-backend
+    environment:
+      FRONTEND_URL: https://tax.aurmak.com
+      CORS_ORIGINS: https://tax.aurmak.com,https://api.tax.aurmak.com
+      # ── Testing-phase rate-limit overrides ───────────────────────────────
+      LOGIN_RATE_LIMIT_MAX: "200"   # login + register (per 15 min, per IP)
+      API_RATE_LIMIT_MAX: "1000"    # write ops on other /api routes (per min, per IP)
+    ports: !override
+      - "127.0.0.1:${BACKEND_HOST_PORT}:3001"
+
+  frontend:
+    container_name: tax-advisor-frontend
+    ports: !override
+      - "127.0.0.1:${FRONTEND_HOST_PORT}:80"
+
+  database:
+    container_name: tax-advisor-db
