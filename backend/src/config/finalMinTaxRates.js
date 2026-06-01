@@ -193,8 +193,69 @@ function getTaxRate(incomeType, subType, isATL = false) {
   return config.rate || null;
 }
 
+/**
+ * Per-FIELD statutory final-tax rates (TY 2025-26) for the Final/Min Income
+ * form's save path. A field appears here ONLY when its rate is unambiguous —
+ * the rate encoded in the field name, the inline FBR-section comment in
+ * taxForms.js, AND the category rates in FINAL_MIN_TAX_RATES above all agree,
+ * and the rate is fixed (NOT ATL-dependent).
+ *
+ * Used to set tax_chargeable = gross × rate (audit TAX-01). Previously every
+ * line set tax_chargeable = tax_deducted, so an under-withheld line cancelled
+ * itself out and silently filed an UNDER-STATED return.
+ *
+ * ⚠️  RATE SIGN-OFF: confirm these 12 rates against the current Income Tax
+ *     Ordinance before relying on them. Lines intentionally OMITTED (so the
+ *     caller keeps tax_chargeable = tax_deducted) because the rate is
+ *     ATL-dependent, variable, or the sources disagree:
+ *       • dividend_u_s_150_31pc_atl              — field 31% vs comment+config 15% (CONFLICT)
+ *       • profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc — 10% ATL / 20% non-ATL (needs filer ATL)
+ *       • interest_income_profit_debt_7b_up_to_5m — comment 15% vs config 20% (FA2025 CONFLICT)
+ *       • profit_debt_national_savings_defence_39_14a — variable
+ *       • employment_termination_benefits_12_6_avg_rate — average rate (variable)
+ *       • salary_arrears_12_7_relevant_rate       — relevant rate (variable)
+ *       • salary_u_s_12_7                          — computed from the main tax computation
+ *       • capital_gain                             — owned by the Capital Gains form
+ */
+const FINAL_MIN_FIELD_RATE = {
+  dividend_u_s_150_0pc_share_profit_reit_spv:    0.00,
+  dividend_u_s_150_35pc_share_profit_other_spv:  0.35,
+  dividend_u_s_150_7_5pc_ipp_shares:             0.075,
+  dividend_u_s_150_25pc_bf_losses:               0.25,
+  return_on_investment_sukuk_u_s_151_1a_10pc:    0.10,
+  return_on_investment_sukuk_u_s_151_1a_12_5pc:  0.125,
+  return_on_investment_sukuk_u_s_151_1a_25pc:    0.25,
+  return_invest_exceed_1m_sukuk_saa_12_5pc:      0.125,
+  return_invest_not_exceed_1m_sukuk_saa_10pc:    0.10,
+  prize_raffle_lottery_quiz_promotional_156:     0.20,
+  prize_bond_cross_world_puzzle_156:             0.15,
+  bonus_shares_companies_236f:                   0.10,
+};
+
+/**
+ * Compute a final/min line's tax_chargeable.
+ *   - Signed-off line (in FINAL_MIN_FIELD_RATE): chargeable = gross × rate when
+ *     the gross amount is provided; otherwise fall back to the withheld amount
+ *     (some users enter only the WHT certificate value — never invent a refund).
+ *   - Any other line: keep the withheld amount (its prior behaviour) until the
+ *     rate is signed off.
+ * @param {string} fieldBase  e.g. 'prize_bond_cross_world_puzzle_156'
+ * @param {number} grossAmount
+ * @param {number} taxDeducted
+ * @returns {number} integer rupees
+ */
+function lineChargeable(fieldBase, grossAmount, taxDeducted) {
+  const rate = FINAL_MIN_FIELD_RATE[fieldBase];
+  const deducted = Number(taxDeducted) || 0;
+  if (rate == null) return deducted;
+  const amount = Number(grossAmount) || 0;
+  return amount > 0 ? Math.round(amount * rate) : deducted;
+}
+
 module.exports = {
   FINAL_MIN_TAX_RATES,
   calculateTaxChargeable,
-  getTaxRate
+  getTaxRate,
+  FINAL_MIN_FIELD_RATE,
+  lineChargeable,
 };

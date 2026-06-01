@@ -1786,7 +1786,7 @@ router.post('/final-min-income', auth, async (req, res) => {
     logger.info(`Saving final/min income data for user ${userId}, tax year ${taxYear}`);
 
     // Import tax rate configuration
-    const { calculateTaxChargeable, FINAL_MIN_TAX_RATES } = require('../../../config/finalMinTaxRates');
+    const { calculateTaxChargeable, FINAL_MIN_TAX_RATES, lineChargeable } = require('../../../config/finalMinTaxRates');
 
     // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
@@ -1895,92 +1895,52 @@ router.post('/final-min-income', auth, async (req, res) => {
       capital_gain_tax_deducted: getNumericValue(formData.capital_gain_tax_deducted),
     };
 
-    // Calculate tax_chargeable for each field using tax rate configuration
-    // For now, use simple fixed rates - ATL status will be added later
-    const isATL = formData.isATL || false; // TODO: Get from user profile or form
-
-    // Calculate tax chargeable for each income type
-    // For final tax income, tax_chargeable = tax_deducted (tax already withheld at source)
+    // ── Final/min-tax: tax_chargeable per line (audit TAX-01) ───────────────
+    // chargeable must be the STATUTORY liability (gross × section rate), NOT the
+    // amount withheld. The previous code set every line's tax_chargeable =
+    // tax_deducted, so an under-withheld line cancelled itself out in the
+    // computation (chargeable − deducted = 0) and silently filed an
+    // UNDER-STATED return.
+    //
+    // `lineChargeable` (config/finalMinTaxRates.js) returns gross × rate for the
+    // lines whose rate is signed off in FINAL_MIN_FIELD_RATE (field-name rate +
+    // section comment + category config all agree, fixed rate), and falls back
+    // to the withheld amount for every other line — the ATL-dependent, variable,
+    // and source-disagreement lines stay flagged for rate sign-off (see the note
+    // in finalMinTaxRates.js). Gross-absent lines also fall back to the withheld
+    // amount so we never invent a refund.
+    const FINAL_MIN_LINE_BASES = [
+      'dividend_u_s_150_0pc_share_profit_reit_spv',
+      'dividend_u_s_150_35pc_share_profit_other_spv',
+      'dividend_u_s_150_7_5pc_ipp_shares',
+      'dividend_u_s_150_31pc_atl',
+      'dividend_u_s_150_25pc_bf_losses',
+      'return_on_investment_sukuk_u_s_151_1a_10pc',
+      'return_on_investment_sukuk_u_s_151_1a_12_5pc',
+      'return_on_investment_sukuk_u_s_151_1a_25pc',
+      'return_invest_exceed_1m_sukuk_saa_12_5pc',
+      'return_invest_not_exceed_1m_sukuk_saa_10pc',
+      'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc',
+      'profit_debt_national_savings_defence_39_14a',
+      'interest_income_profit_debt_7b_up_to_5m',
+      'prize_raffle_lottery_quiz_promotional_156',
+      'prize_bond_cross_world_puzzle_156',
+      'bonus_shares_companies_236f',
+      'employment_termination_benefits_12_6_avg_rate',
+      'salary_arrears_12_7_relevant_rate',
+      'capital_gain',
+    ];
     const taxChargeableCalculations = {
-      // Salary - Variable rate (from tax computation)
-      salary_u_s_12_7_tax_chargeable: 0, // Will be calculated from tax computation
-
-      // REIT SPV - Tax chargeable = tax deducted
-      dividend_u_s_150_0pc_share_profit_reit_spv_tax_chargeable:
-        getNumericValue(formData.dividend_u_s_150_0pc_share_profit_reit_spv_tax_deducted) || 0,
-
-      // Other SPV - Tax chargeable = tax deducted
-      dividend_u_s_150_35pc_share_profit_other_spv_tax_chargeable:
-        getNumericValue(formData.dividend_u_s_150_35pc_share_profit_other_spv_tax_deducted) || 0,
-
-      // IPP Shares - Tax chargeable = tax deducted
-      dividend_u_s_150_7_5pc_ipp_shares_tax_chargeable:
-        getNumericValue(formData.dividend_u_s_150_7_5pc_ipp_shares_tax_deducted) || 0,
-
-      // @15% dividend - Tax chargeable = tax deducted
-      dividend_u_s_150_31pc_atl_tax_chargeable:
-        getNumericValue(formData.dividend_u_s_150_31pc_atl_tax_deducted) || 0,
-
-      // @25% dividend (BF losses) - Tax chargeable = tax deducted
-      dividend_u_s_150_25pc_bf_losses_tax_chargeable:
-        getNumericValue(formData.dividend_u_s_150_25pc_bf_losses_tax_deducted) || 0,
-
-      // Sukuk @ 10% - Tax chargeable = tax deducted
-      return_on_investment_sukuk_u_s_151_1a_10pc_tax_chargeable:
-        getNumericValue(formData.return_on_investment_sukuk_u_s_151_1a_10pc_tax_deducted) || 0,
-
-      // Sukuk @ 12.5% - Tax chargeable = tax deducted
-      return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_chargeable:
-        getNumericValue(formData.return_on_investment_sukuk_u_s_151_1a_12_5pc_tax_deducted) || 0,
-
-      // Sukuk @ 25% - Tax chargeable = tax deducted
-      return_on_investment_sukuk_u_s_151_1a_25pc_tax_chargeable:
-        getNumericValue(formData.return_on_investment_sukuk_u_s_151_1a_25pc_tax_deducted) || 0,
-
-      // Return exceeding 1M @ 12.5% - Tax chargeable = tax deducted
-      return_invest_exceed_1m_sukuk_saa_12_5pc_tax_chargeable:
-        getNumericValue(formData.return_invest_exceed_1m_sukuk_saa_12_5pc_tax_deducted) || 0,
-
-      // Return not exceeding 1M @ 10% - Tax chargeable = tax deducted
-      return_invest_not_exceed_1m_sukuk_saa_10pc_tax_chargeable:
-        getNumericValue(formData.return_invest_not_exceed_1m_sukuk_saa_10pc_tax_deducted) || 0,
-
-      // Profit on Debt @ 10%/20% - Tax chargeable = tax deducted
-      profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_chargeable:
-        getNumericValue(formData.profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc_tax_deducted) || 0,
-
-      // National Savings - Variable (use tax_deducted as tax_chargeable)
-      profit_debt_national_savings_defence_39_14a_tax_chargeable:
-        getNumericValue(formData.profit_debt_national_savings_defence_39_14a_tax_deducted) || 0,
-
-      // Interest/Profit on Debt @ 15% - Tax chargeable = tax deducted
-      interest_income_profit_debt_7b_up_to_5m_tax_chargeable:
-        getNumericValue(formData.interest_income_profit_debt_7b_up_to_5m_tax_deducted) || 0,
-
-      // Prize on Raffle/Lottery @ 20% - Tax chargeable = tax deducted
-      prize_raffle_lottery_quiz_promotional_156_tax_chargeable:
-        getNumericValue(formData.prize_raffle_lottery_quiz_promotional_156_tax_deducted) || 0,
-
-      // Prize on Prize Bond @ 15% - Tax chargeable = tax deducted
-      prize_bond_cross_world_puzzle_156_tax_chargeable:
-        getNumericValue(formData.prize_bond_cross_world_puzzle_156_tax_deducted) || 0,
-
-      // Bonus Shares - Tax chargeable = tax deducted
-      bonus_shares_companies_236f_tax_chargeable:
-        getNumericValue(formData.bonus_shares_companies_236f_tax_deducted) || 0,
-
-      // Employment Termination - Variable (use tax_deducted as tax_chargeable)
-      employment_termination_benefits_12_6_avg_rate_tax_chargeable:
-        getNumericValue(formData.employment_termination_benefits_12_6_avg_rate_tax_deducted) || 0,
-
-      // Salary Arrears - Relevant rate (use tax_deducted as tax_chargeable)
-      salary_arrears_12_7_relevant_rate_tax_chargeable:
-        getNumericValue(formData.salary_arrears_12_7_relevant_rate_tax_deducted) || 0,
-
-      // Capital Gain (from capital gain form calculation)
-      capital_gain_tax_chargeable:
-        getNumericValue(formData.capital_gain_tax_deducted) || 0, // Use tax_deducted as tax_chargeable
+      // Salary u/s 12(7) — variable, computed from the main tax computation.
+      salary_u_s_12_7_tax_chargeable: 0,
     };
+    for (const base of FINAL_MIN_LINE_BASES) {
+      taxChargeableCalculations[`${base}_tax_chargeable`] = lineChargeable(
+        base,
+        getNumericValue(formData[`${base}_amount`]),
+        getNumericValue(formData[`${base}_tax_deducted`]),
+      );
+    }
 
     logger.info('Tax chargeable calculations completed:', taxChargeableCalculations);
 
