@@ -295,7 +295,18 @@ class TaxCalculationService {
     //   (s.149) and is already in adjustableData.total_tax_collected — so
     //   it's excluded from the final-min deducted sum to avoid a double-
     //   count of ~the whole salary WHT.
-    const finalMinTaxChargeable = toNum(finalMinData?.grand_total_tax_chargeable);
+    // Use subtotal_tax_chargeable, which EXCLUDES capital gains. The Capital
+    // Gains form's CGT is already added above as `capitalGainsTax`; the
+    // Final/Min form auto-mirrors that same CGT into its
+    // `capital_gain_tax_chargeable` row (FinalMinIncomeForm auto-populate), so
+    // `grand_total_tax_chargeable` (= subtotal + capital_gain_tax_chargeable)
+    // would double-count CGT for every capital-gains filer (audit UX-03).
+    // Fall back to grand_total − capital_gain for rows predating the subtotal
+    // column.
+    const finalMinTaxChargeable =
+      finalMinData?.subtotal_tax_chargeable != null
+        ? toNum(finalMinData.subtotal_tax_chargeable)
+        : toNum(finalMinData?.grand_total_tax_chargeable) - toNum(finalMinData?.capital_gain_tax_chargeable);
     const finalMinTaxDeducted = Object.entries(finalMinData || {})
       .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
       .reduce((s, [, v]) => s + toNum(v), 0);
