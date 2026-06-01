@@ -552,13 +552,19 @@ class ExcelService {
       },
       capital_gain_forms: {
         sheetName: 'Capital Gain',
+        // NOTE (migration phase-u): the coarse per-holding-period columns
+        // (property_1_year / property_2_3_years / property_4_plus_years /
+        // securities / other_capital_gains) were DROPPED and replaced by the
+        // granular immovable_property_*_taxable and securities_*_taxable families
+        // (~15 columns); total_capital_gain is now a GENERATED total. Exporting
+        // the dropped names produced blank cells, so only the surviving
+        // canonical generated total is mapped here.
+        // TODO(capital-gain-excel): rebuild the per-instrument rows + their Excel
+        // cells against the new immovable_property_* / securities_* families.
+        // This is a schema reshape (5 coarse buckets → 15 granular families), not
+        // a rename — do it with the real IRIS template + fixtures, not a guess.
         fields: {
-          property_1_year: { label: 'Property (< 1 Year)', description: 'Property held for less than 1 year', excelCell: 'B5' },
-          property_2_3_years: { label: 'Property (2-3 Years)', description: 'Property held for 2-3 years', excelCell: 'B6' },
-          property_4_plus_years: { label: 'Property (4+ Years)', description: 'Property held for 4+ years', excelCell: 'B7' },
-          securities: { label: 'Securities', description: 'Securities capital gains', excelCell: 'E17' },
-          other_capital_gains: { label: 'Other Capital Gains', description: 'Other capital gains', excelCell: 'B18' },
-          total_capital_gain: { label: 'Total Capital Gains', description: 'Total capital gains (E19)', excelCell: 'E19', calculated: true }
+          total_capital_gain: { label: 'Total Capital Gains', description: 'Total capital gains (generated)', excelCell: 'E19', calculated: true }
         }
       },
       wealth_forms: {
