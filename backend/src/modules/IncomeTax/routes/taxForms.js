@@ -1902,13 +1902,21 @@ router.post('/final-min-income', auth, async (req, res) => {
     // computation (chargeable − deducted = 0) and silently filed an
     // UNDER-STATED return.
     //
-    // `lineChargeable` (config/finalMinTaxRates.js) returns gross × rate for the
-    // lines whose rate is signed off in FINAL_MIN_FIELD_RATE (field-name rate +
-    // section comment + category config all agree, fixed rate), and falls back
-    // to the withheld amount for every other line — the ATL-dependent, variable,
-    // and source-disagreement lines stay flagged for rate sign-off (see the note
-    // in finalMinTaxRates.js). Gross-absent lines also fall back to the withheld
-    // amount so we never invent a refund.
+    // `lineChargeable` (config/finalMinTaxRates.js) returns gross × statutory
+    // rate for the lines whose filer/non-filer rate is verified against the FBR
+    // Tax Card 2025-26 (FINAL_MIN_FIELD_RATE), and falls back to the withheld
+    // amount for every other line — the ambiguous/variable lines stay flagged
+    // (see the note in finalMinTaxRates.js). Gross-absent lines also fall back to
+    // the withheld amount so we never invent a refund.
+    //
+    // Active Taxpayer (filer) status drives which rate applies — a non-filer pays
+    // the higher (≈ double) final-tax rate per the Tax Card. The Final/Min form
+    // asks "Are you an Active Taxpayer?"; default to filer when unanswered.
+    const atlAnswer = formData.is_atl;
+    const isATL = !(
+      atlAnswer === false || atlAnswer === 'false' ||
+      atlAnswer === 'no' || atlAnswer === 0 || atlAnswer === '0'
+    );
     const FINAL_MIN_LINE_BASES = [
       'dividend_u_s_150_0pc_share_profit_reit_spv',
       'dividend_u_s_150_35pc_share_profit_other_spv',
@@ -1939,6 +1947,7 @@ router.post('/final-min-income', auth, async (req, res) => {
         base,
         getNumericValue(formData[`${base}_amount`]),
         getNumericValue(formData[`${base}_tax_deducted`]),
+        isATL,
       );
     }
 
@@ -1954,6 +1963,11 @@ router.post('/final-min-income', auth, async (req, res) => {
       const dbKey = key.replace(/_amount$/, '');
       mappedCleanedData[dbKey] = value;
     }
+
+    // Persist the Active-Taxpayer answer (when the column exists) for transparency
+    // and form pre-fill — the computation above already used it. Filtered to the
+    // allowed columns below, so it's a safe no-op until the is_atl migration runs.
+    mappedCleanedData.is_atl = isATL;
 
     logger.info('Field name mapping applied:', {
       sampleOriginal: 'salary_u_s_12_7_amount',

@@ -441,8 +441,16 @@ const FinalMinIncomeForm = () => {
         if (field.taxRate === null) return;
 
         const amount = parseFloat(watchedValues[field.amountField]) || 0;
-        const taxRate = resolveFinalTaxRate(field);
-        if (taxRate === undefined || taxRate === null) return;
+        const baseRate = resolveFinalTaxRate(field);
+        if (baseRate === undefined || baseRate === null) return;
+
+        // ATL-aware preview: non-filers pay the higher final-tax rate. For every
+        // line in the FBR Tax Card 2025-26 the non-filer rate is exactly 2× the
+        // filer rate, so ×2 here mirrors the backend's verified pairs
+        // (config/finalMinTaxRates.js), which recompute chargeable
+        // authoritatively on save. Driven by the "Active Taxpayer?" toggle.
+        const isATL = watchedValues.is_atl !== false;
+        const taxRate = isATL ? baseRate : baseRate * 2;
 
         const calculatedTax = (taxRate > 0 && amount > 0) ? Math.round(amount * taxRate) : 0;
 
@@ -625,6 +633,39 @@ const FinalMinIncomeForm = () => {
             </ul>
           </div>
         )}
+      </div>
+
+      {/* Active Taxpayer (filer) status — drives the final-tax rates below.
+          Non-filers pay the higher (≈ double) rate per the FBR Tax Card 2025-26. */}
+      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="max-w-xl">
+            <h3 className="font-semibold text-amber-900">Are you an Active Taxpayer (on the FBR ATL)?</h3>
+            <p className="text-sm text-amber-800 mt-1">
+              Final-tax rates are higher for non-filers — often double. Your answer sets
+              the rate applied to the dividend, sukuk, prize and other income below.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {[{ label: 'Yes — Filer', val: true }, { label: 'No — Non-filer', val: false }].map((opt) => {
+              const active = (watchedValues.is_atl !== false) === opt.val;
+              return (
+                <button
+                  key={String(opt.val)}
+                  type="button"
+                  onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                    active
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <form onSubmit={async (e) => {
