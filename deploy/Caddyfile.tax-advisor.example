@@ -1,0 +1,28 @@
+# Caddy reverse-proxy routes for the Pakistan Tax App (REFERENCE COPY).
+#
+# The live Caddyfile lives on the server at /etc/caddy/Caddyfile and is the only
+# source of truth for TLS + routing — it is NOT otherwise version-controlled.
+# Keep these two route blocks in sync with it.
+#
+# CRITICAL: the upstream ports below MUST equal the host ports the containers
+# publish (docker-compose.prod.yml → 127.0.0.1:${BACKEND_HOST_PORT:-3001} and
+# 127.0.0.1:${FRONTEND_HOST_PORT:-4000}). If the compose port and this proxy
+# target ever disagree, every request 502s — that exact mismatch (compose moved
+# the backend 4001→3001 on a recreate while Caddy still pointed at 4001) caused a
+# production outage. Change the two together, never one alone.
+#
+# Apply changes:
+#   caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+# (this server uses Caddy, not nginx)
+
+# ── Frontend SPA ──────────────────────────────────────────────────────────
+tax.aurmak.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:4000        # = FRONTEND_HOST_PORT (docker-compose.prod.yml)
+}
+
+# ── Backend API ───────────────────────────────────────────────────────────
+api.tax.aurmak.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:3001        # = BACKEND_HOST_PORT (docker-compose.prod.yml)
+}

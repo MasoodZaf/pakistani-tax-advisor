@@ -1,5 +1,3 @@
-version: '3.8'
-
 # PRODUCTION: runs full stack (DB + backend + frontend).
 # Start with: docker compose -f docker-compose.prod.yml up -d --build
 
@@ -43,7 +41,13 @@ services:
     container_name: tax_advisor_backend
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      # Bound to 127.0.0.1 only — the backend is reached exclusively through the
+      # Caddy reverse proxy (api.tax.aurmak.com → 127.0.0.1:${BACKEND_HOST_PORT}).
+      # Publishing on 0.0.0.0 would expose the API on the raw host port,
+      # bypassing TLS. The host port is env-driven so it always matches the Caddy
+      # route; the default (3001) matches the current deploy + Caddyfile. To move
+      # it, set BACKEND_HOST_PORT in .env AND update the Caddyfile together.
+      - "127.0.0.1:${BACKEND_HOST_PORT:-3001}:3001"
     environment:
       DB_HOST: database
       DB_PORT: 5432
@@ -112,7 +116,14 @@ services:
     container_name: tax_advisor_frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      # Bound to 127.0.0.1 only — served to the public via Caddy
+      # (tax.aurmak.com → 127.0.0.1:${FRONTEND_HOST_PORT}). The host port is
+      # env-driven so a recreate never shifts it out from under Caddy — a
+      # hardcoded mismatch here (compose said 3000 while the running container
+      # was on 4000) is exactly what caused a production outage. The default
+      # (4000) matches the current deploy + Caddyfile. To move it, set
+      # FRONTEND_HOST_PORT in .env AND update the Caddyfile together.
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-4000}:80"
     depends_on:
       - backend
     healthcheck:
