@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,18 +20,22 @@ import {
   TaxFormShell,
   AmountRow,
   FormNav,
+  LiveTotalsProvider,
+  LiveAmount,
 } from '../../../components/forms';
 
 // Two-input wealth row (previous + current year). Defined at MODULE scope so it
-// never remounts its inputs — an in-component definition would drop focus on
-// every keystroke because the parent re-renders on watch(). register +
-// watchedValues are passed in as props.
+// never remounts its inputs. PERF-02: it self-subscribes to ONLY its own two
+// fields via useWatch, so typing in one row re-renders that row alone — not the
+// whole form.
 const WEALTH_INPUT_CLASSES =
   'w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-9 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15';
 
-const WealthRow = ({ rowKey, label, icon: Icon, register, watchedValues }) => {
-  const prevValue = parseFloat(watchedValues[`${rowKey}_previous_year`]) || 0;
-  const currValue = parseFloat(watchedValues[`${rowKey}_current_year`]) || 0;
+const WealthRow = ({ rowKey, label, icon: Icon, register, control }) => {
+  const prev = useWatch({ control, name: `${rowKey}_previous_year` });
+  const curr = useWatch({ control, name: `${rowKey}_current_year` });
+  const prevValue = parseFloat(prev) || 0;
+  const currValue = parseFloat(curr) || 0;
   const change = currValue - prevValue;
   const prevId = `${rowKey}_previous_year`;
   const currId = `${rowKey}_current_year`;
@@ -109,7 +113,8 @@ const WealthStatementForm = () => {
     register,
     handleSubmit,
     watch,
-    reset
+    reset,
+    control
   } = useForm({
     defaultValues: getStepData('wealth')
   });
@@ -122,8 +127,8 @@ const WealthStatementForm = () => {
     }
   }, [contextFormData, reset]);
 
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. Totals are isolated in
+  // <LiveTotalsProvider>; each WealthRow self-subscribes to its own fields.
 
   // Auto-calculate wealth totals
   const calculateWealthTotals = (values) => {
@@ -179,18 +184,19 @@ const WealthStatementForm = () => {
     };
   };
 
-  const totals = calculateWealthTotals(watchedValues);
-
-  const buildWealthPayload = (data) => ({
-    ...data,
-    total_assets_previous_year: totals.assetsPrevious,
-    total_assets_current_year: totals.assetsCurrent,
-    total_liabilities_previous_year: totals.liabilitiesPrevious,
-    total_liabilities_current_year: totals.liabilitiesCurrent,
-    // Include computed net worth so WealthReconciliation can read it from formData
-    net_worth_previous_year: totals.netWorthPrevious,
-    net_worth_current_year: totals.netWorthCurrent,
-  });
+  const buildWealthPayload = (data) => {
+    const t = calculateWealthTotals(data);
+    return {
+      ...data,
+      total_assets_previous_year: t.assetsPrevious,
+      total_assets_current_year: t.assetsCurrent,
+      total_liabilities_previous_year: t.liabilitiesPrevious,
+      total_liabilities_current_year: t.liabilitiesCurrent,
+      // Include computed net worth so WealthReconciliation can read it from formData
+      net_worth_previous_year: t.netWorthPrevious,
+      net_worth_current_year: t.netWorthCurrent,
+    };
+  };
 
   const onSubmit = async (data) => {
     const success = await saveFormStep('wealth', buildWealthPayload(data), true);
@@ -201,7 +207,7 @@ const WealthStatementForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const success = await saveFormStep('wealth', buildWealthPayload(watchedValues), false);
+    const success = await saveFormStep('wealth', buildWealthPayload(watch()), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/wealth-statement/wealth-reconciliation');
@@ -249,6 +255,7 @@ const WealthStatementForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <LiveTotalsProvider control={control} compute={calculateWealthTotals}>
       <TaxFormShell
         title="Wealth Statement"
         subtitle="Your assets, liabilities and wealth reconciliation"
@@ -283,10 +290,10 @@ const WealthStatementForm = () => {
               { key: 'bank_balance', label: 'Bank balances', icon: CreditCard },
               { key: 'other_assets', label: 'Other assets', icon: Briefcase }
             ].map(({ key, label, icon }) => (
-              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} watchedValues={watchedValues} />
+              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} control={control} />
             ))}
-            <AmountRow variant="subtotal" label="Total assets (previous year)" amount={totals.assetsPrevious} />
-            <AmountRow variant="subtotal" label="Total assets (current year)" amount={totals.assetsCurrent} />
+            <LiveAmount component={AmountRow} variant="subtotal" field="assetsPrevious" label="Total assets (previous year)" />
+            <LiveAmount component={AmountRow} variant="subtotal" field="assetsCurrent" label="Total assets (current year)" />
           </div>
         </div>
 
@@ -299,10 +306,10 @@ const WealthStatementForm = () => {
               { key: 'loan', label: 'Loans / mortgages', icon: CreditCard },
               { key: 'other_liabilities', label: 'Other liabilities', icon: Briefcase }
             ].map(({ key, label, icon }) => (
-              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} watchedValues={watchedValues} />
+              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} control={control} />
             ))}
-            <AmountRow variant="subtotal" label="Total liabilities (previous year)" amount={totals.liabilitiesPrevious} />
-            <AmountRow variant="subtotal" label="Total liabilities (current year)" amount={totals.liabilitiesCurrent} />
+            <LiveAmount component={AmountRow} variant="subtotal" field="liabilitiesPrevious" label="Total liabilities (previous year)" />
+            <LiveAmount component={AmountRow} variant="subtotal" field="liabilitiesCurrent" label="Total liabilities (current year)" />
           </div>
         </div>
 
@@ -310,9 +317,9 @@ const WealthStatementForm = () => {
         <div>
           {groupHeading('Net worth')}
           <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
-            <AmountRow variant="line" label="Net worth (previous year)" sublabel="As of 30 June 2024" amount={totals.netWorthPrevious} />
-            <AmountRow variant="line" label="Net worth (current year)" sublabel="As of 30 June 2025" amount={totals.netWorthCurrent} />
-            <AmountRow variant="total" label="Net wealth increase" sublabel="Change during the tax year" amount={totals.netWorthIncrease} />
+            <LiveAmount component={AmountRow} variant="line" field="netWorthPrevious" label="Net worth (previous year)" sublabel="As of 30 June 2024" />
+            <LiveAmount component={AmountRow} variant="line" field="netWorthCurrent" label="Net worth (current year)" sublabel="As of 30 June 2025" />
+            <LiveAmount component={AmountRow} variant="total" field="netWorthIncrease" label="Net wealth increase" sublabel="Change during the tax year" />
           </div>
           <div className="mt-3 flex items-start gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3">
             <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
@@ -326,6 +333,7 @@ const WealthStatementForm = () => {
           </div>
         </div>
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
