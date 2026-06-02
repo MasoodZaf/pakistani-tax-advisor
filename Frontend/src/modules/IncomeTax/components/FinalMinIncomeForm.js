@@ -6,14 +6,10 @@ import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   Calculator,
   DollarSign,
   Info,
   ChevronDown,
-  ChevronRight,
   TrendingUp,
   PiggyBank,
   Award,
@@ -26,6 +22,11 @@ import HelpHint from '../../../components/Help/HelpHint';
 import finalMinIncomeHelp from '../../../help/finalMinIncomeHelp';
 import { formatCurrency } from '../../../utils/currency';
 import FormEmptyState from './FormEmptyState';
+import {
+  TaxFormShell,
+  CollapsibleSection,
+  FormNav,
+} from '../../../components/forms';
 
 // Static field definitions — kept at module scope so they aren't rebuilt on
 // every render (the component has ~30 inputs; each keystroke was previously
@@ -555,18 +556,6 @@ const FinalMinIncomeForm = () => {
     }));
   };
 
-  const getColorClasses = (color) => {
-    const colorMap = {
-      blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-600' },
-      green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: 'text-green-600' },
-      purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', icon: 'text-purple-600' },
-      yellow: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', icon: 'text-yellow-600' },
-      indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', icon: 'text-indigo-600' },
-      red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: 'text-red-600' }
-    };
-    return colorMap[color] || colorMap.blue;
-  };
-
   // Input handlers
   const handleNumberFocus = (fieldName, event) => {
     // Remove formatting and select all
@@ -593,107 +582,102 @@ const FinalMinIncomeForm = () => {
     event.target.value = formatNumber(numericValue);
   };
 
-  const inputClasses = "w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
-  const readOnlyInputClasses = "w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-right text-sm font-semibold text-gray-700";
+  const inputClasses = "w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15";
+  const readOnlyInputClasses = "w-full rounded-brand border-[1.5px] border-slate-200 bg-slate-100 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500";
+
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="finalmin-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="finalmin-help">
+      <h3 className="font-display text-sm font-bold text-navy">How this form works</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li><strong className="text-navy">Amount</strong> — the gross income received.</li>
+        <li><strong className="text-navy">Tax deducted</strong> — the tax withheld at source.</li>
+        <li><strong className="text-navy">Tax chargeable</strong> — auto-calculated from the FBR rate (editable only where the rate is variable, e.g. salary/arrears).</li>
+        <li>Final-tax rates depend on your filer status (set above) — non-filers pay more.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Income Subject to Final/Minimum Tax</h1>
-              <p className="text-gray-600">Enter income with fixed tax rates (3-column structure: Amount, Tax Deducted, Tax Chargeable)</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">How to Use This Form</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Amount/Receipt:</strong> Enter the gross amount received (green cells - user input)</li>
-              <li>• <strong>Tax Deducted:</strong> Enter the tax already deducted at source (green cells - user input)</li>
-              <li>• <strong>Tax Chargeable:</strong> Auto-calculated based on FBR rates (white cells - read-only)</li>
-              <li>• Tax rates vary by income type: 0%, 7.5%, 10%, 12.5%, 15%, 20%, 25%, 35%</li>
-              <li>• Some rates differ for ATL (Active Tax List) vs Non-ATL taxpayers</li>
-              <li>• Variable rates (Salary, Termination, Arrears) use tax_deducted as tax_chargeable</li>
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* Active Taxpayer (filer) status — drives the final-tax rates below.
-          Non-filers pay the higher (≈ double) rate per the FBR Tax Card 2025-26. */}
-      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="max-w-xl">
-            <h3 className="font-semibold text-amber-900">Are you an Active Taxpayer (on the FBR ATL)?</h3>
-            <p className="text-sm text-amber-800 mt-1">
-              Final-tax rates are higher for non-filers — often double. Your answer sets
-              the rate applied to the dividend, sukuk, prize and other income below.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {[{ label: 'Yes — Filer', val: true }, { label: 'No — Non-filer', val: false }].map((opt) => {
-              const active = (watchedValues.is_atl !== false) === opt.val;
-              return (
-                <button
-                  key={String(opt.val)}
-                  type="button"
-                  onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                    active
-                      ? 'bg-amber-600 text-white border-amber-600'
-                      : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={async (e) => {
+    <form
+      onSubmit={async (e) => {
         e.preventDefault();
         await syncInputsToForm();
         handleSubmit(onSubmit)(e);
-      }} className="space-y-6">
-
-        {/* Column Headers */}
-        <div className="grid grid-cols-12 gap-2 items-center py-3 mb-4 bg-gray-800 text-white rounded-lg px-4">
-          <div className="col-span-6">
-            <span className="font-semibold" style={{ fontSize: 'clamp(0.65rem, 1.4vw, 1rem)' }}>Description</span>
-          </div>
-          <div className="col-span-2 text-center">
-            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Amount/<wbr/>Receipt</span>
-          </div>
-          <div className="col-span-2 text-center">
-            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Tax<br/>Deducted</span>
-          </div>
-          <div className="col-span-2 text-center">
-            <span className="font-semibold leading-tight block" style={{ fontSize: 'clamp(0.6rem, 1.2vw, 0.9rem)' }}>Tax<br/>Chargeable</span>
+      }}
+    >
+      <TaxFormShell
+        title="Final / minimum tax income"
+        subtitle="Income taxed at fixed or final rates"
+        icon={DollarSign}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/income')}
+            backLabel="Income"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save data'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {/* Active Taxpayer (filer) status — drives the final-tax rates below.
+            Non-filers pay the higher (≈ double) rate per the FBR Tax Card 2025-26. */}
+        <div className="rounded-brand-lg border border-navy/20 bg-navy/[0.04] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <h3 className="font-display text-sm font-bold text-navy">Are you an Active Taxpayer (on the FBR ATL)?</h3>
+              <p className="mt-1 font-body text-sm text-slate-600">
+                Final-tax rates are higher for non-filers — often double. Your answer sets the
+                rate applied to the dividend, sukuk, prize and other income below.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {[{ label: 'Yes — Filer', val: true }, { label: 'No — Non-filer', val: false }].map((opt) => {
+                const active = (watchedValues.is_atl !== false) === opt.val;
+                return (
+                  <button
+                    key={String(opt.val)}
+                    type="button"
+                    onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
+                    className={`rounded-brand border px-4 py-2 font-body text-sm font-semibold transition-colors ${
+                      active ? 'border-navy bg-navy text-white' : 'border-slate-300 bg-white text-navy hover:bg-navy/5'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Dynamic Sections — filtered by the income-profile addons via
-            shared/formFieldVisibility.js. A pure salaried user with no
-            addons sees zero sections; selecting bank_profit / dividends /
-            sukuk / prizes unlocks the relevant rows. */}
+        {/* Column headers (desktop) */}
+        <div className="hidden grid-cols-[1fr_repeat(3,120px)] gap-3 px-1 md:grid">
+          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Amount</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax deducted</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax chargeable</span>
+        </div>
+
+        {/* Sections — filtered by income-profile addons via shared/formFieldVisibility.js. */}
         {visibleSections.length === 0 && (
           <FormEmptyState
             title="No final-tax income to declare based on your income profile yet."
@@ -701,330 +685,226 @@ const FinalMinIncomeForm = () => {
             note="Final-tax income (s.150 / s.151 / s.156) only shows up if you have one of these streams. We hide the buckets otherwise so you don't have to scan past 30 rows of zeros."
           />
         )}
-        {visibleSections.map((sectionDef, sectionIdx) => {
-          const colors = getColorClasses(sectionDef.sectionColor);
-          const IconComponent = sectionDef.sectionIcon;
-          const isExpanded = expandedSections[sectionDef.section];
 
-          return (
-            <div key={sectionDef.section} className={`${colors.bg} ${colors.border} border rounded-lg`}>
-              <div
-                className="p-4 cursor-pointer"
-                onClick={() => toggleSection(sectionDef.section)}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className={`text-lg font-semibold ${colors.text} flex items-center`}>
-                    <IconComponent className={`w-5 h-5 mr-2 ${colors.icon}`} />
-                    {sectionDef.sectionTitle}
-                  </h3>
-                  {isExpanded ?
-                    <ChevronDown className={`w-4 h-4 ${colors.icon}`} /> :
-                    <ChevronRight className={`w-4 h-4 ${colors.icon}`} />
-                  }
+        {visibleSections.map((sectionDef) => (
+          <CollapsibleSection
+            key={sectionDef.section}
+            title={sectionDef.sectionTitle}
+            icon={sectionDef.sectionIcon}
+            open={!!expandedSections[sectionDef.section]}
+            onToggle={() => toggleSection(sectionDef.section)}
+          >
+            {sectionDef.fields.map((field) => (
+              <div key={field.amountField} className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-start md:gap-3">
+                {/* Description */}
+                <div className="min-w-0">
+                  <div className="flex items-start gap-1.5">
+                    <span className="font-body text-sm leading-snug text-slate-700">{field.label}</span>
+                    <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
+                  </div>
+                  {field.description && <p className="mt-0.5 font-body text-xs text-slate-400">{field.description}</p>}
+                  {field.slabCalculatedTaxDeducted && (() => {
+                    const salary = parseFloat(watchedValues[field.amountField]) || 0;
+                    if (salary <= 0) return null;
+                    const { tax, baseTax, surcharge, slabLabel } = calculateFBRSalaryTax(salary);
+                    const effectiveRate = ((tax / salary) * 100).toFixed(1);
+                    return (
+                      <div className="mt-1 space-y-0.5 rounded-brand border border-navy/15 bg-navy/[0.04] px-2 py-1 font-body text-xs">
+                        <p className="font-semibold text-navy">FBR Finance Act 2025 slab: {slabLabel}</p>
+                        {surcharge > 0 && (
+                          <p className="text-slate-500">
+                            Base tax Rs {baseTax.toLocaleString()} + 9% surcharge (income &gt; Rs 10M) Rs {surcharge.toLocaleString()}
+                          </p>
+                        )}
+                        <p className="font-semibold text-navy">
+                          Total tax Rs {tax.toLocaleString()} &nbsp;·&nbsp; effective {effectiveRate}%
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</span>
+                  {field.autoPopulateAmount ? (
+                    <input
+                      key={`${field.amountField}-${refreshKey}`}
+                      type="text"
+                      className={readOnlyInputClasses}
+                      value={formatNumber(watchedValues[field.amountField] || 0)}
+                      readOnly
+                      placeholder="0"
+                      aria-label={`${field.label} — amount (auto)`}
+                      title="Auto-populated from Income form"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="0"
+                      aria-label={`${field.label} — amount`}
+                      value={formatNumber(watchedValues[field.amountField] || 0)}
+                      onFocus={(e) => handleNumberFocus(field.amountField, e)}
+                      onChange={(e) => handleNumberInput(field.amountField, e)}
+                      onBlur={(e) => handleNumberBlur(field.amountField, e)}
+                    />
+                  )}
+                </div>
+
+                {/* Tax deducted */}
+                <div>
+                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
+                  {field.slabCalculatedTaxDeducted ? (
+                    <div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className={`${inputClasses} pr-8`}
+                          placeholder="0"
+                          aria-label={`${field.label} — tax deducted`}
+                          value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
+                          onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
+                          onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
+                          onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
+                          title="FBR slab-calculated (editable for actual employer deduction)"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Reset to FBR slab calculation"
+                          title="Reset to FBR slab calculation"
+                          onClick={() => {
+                            const salary = parseFloat(watchedValues[field.amountField]) || 0;
+                            const { tax } = calculateFBRSalaryTax(salary);
+                            setValue(field.taxDeductedField, tax);
+                            setRefreshKey((k) => k + 1);
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-navy/50 transition-colors hover:text-navy"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {(() => {
+                        const certWHT = parseFloat(formData['adjustable_tax']?.salary_employees_149_tax_collected) || 0;
+                        if (certWHT <= 0) return null;
+                        return (
+                          <button
+                            type="button"
+                            title={`Use WHT from employer certificate: ${formatCurrency(certWHT)}`}
+                            onClick={() => {
+                              setValue(field.taxDeductedField, certWHT);
+                              setRefreshKey((k) => k + 1);
+                            }}
+                            className="mt-1 flex w-full items-center gap-1 rounded-brand border border-lime/40 bg-lime/15 px-2 py-0.5 font-body text-xs text-navy transition-colors hover:bg-lime/25"
+                          >
+                            <FileCheck className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                            <span>Use cert. WHT: {formatCurrency(certWHT)}</span>
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="0"
+                      aria-label={`${field.label} — tax deducted`}
+                      value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
+                      onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
+                      onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
+                      onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
+                    />
+                  )}
+                </div>
+
+                {/* Tax chargeable — manual for salary/arrears, auto for fixed-rate rows */}
+                <div>
+                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax chargeable</span>
+                  {field.taxChargeableManual ? (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="Enter tax"
+                      aria-label={`${field.label} — tax chargeable`}
+                      value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
+                      onFocus={(e) => handleNumberFocus(field.taxChargeableField, e)}
+                      onChange={(e) => handleNumberInput(field.taxChargeableField, e)}
+                      onBlur={(e) => handleNumberBlur(field.taxChargeableField, e)}
+                      title="Manual entry — the actual tax chargeable, for the over/under-deduction check"
+                    />
+                  ) : (
+                    <input
+                      key={`${field.taxChargeableField}-${refreshKey}`}
+                      type="text"
+                      className={readOnlyInputClasses}
+                      value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
+                      readOnly
+                      placeholder="0"
+                      aria-label={`${field.label} — tax chargeable (auto)`}
+                    />
+                  )}
                 </div>
               </div>
+            ))}
+          </CollapsibleSection>
+        ))}
 
-              {isExpanded && (
-                <div className="px-4 pb-4">
-                  <div className="space-y-3">
-                    {sectionDef.fields.map((field, fieldIdx) => (
-                      <div key={field.amountField} className="grid grid-cols-12 gap-2 items-start py-2 border-b border-gray-100 last:border-0">
-                        {/* Description */}
-                        <div className="col-span-6">
-                          <label className="text-sm font-medium text-gray-700">
-                            {field.label}
-                            <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
-                          </label>
-                          {field.description && (
-                            <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>
-                          )}
-                          {field.slabCalculatedTaxDeducted && (() => {
-                            const salary = parseFloat(watchedValues[field.amountField]) || 0;
-                            if (salary <= 0) return null;
-                            const { tax, baseTax, surcharge, slabLabel, fixedPortion, varRate, threshold } = calculateFBRSalaryTax(salary);
-                            const effectiveRate = ((tax / salary) * 100).toFixed(1);
-                            return (
-                              <div className="mt-1 text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1 space-y-0.5">
-                                <p className="font-medium text-blue-700">FBR Finance Act 2025 Slab: {slabLabel}</p>
-                                {fixedPortion !== undefined && (
-                                  <p className="text-blue-600">
-                                    Rs {fixedPortion.toLocaleString()} + {(varRate * 100)}% × (Rs {salary.toLocaleString()} − Rs {threshold.toLocaleString()})
-                                  </p>
-                                )}
-                                {surcharge > 0 && (
-                                  <p className="text-orange-600 font-medium">
-                                    Base Tax: Rs {baseTax.toLocaleString()} + 9% Surcharge (income &gt; Rs 10M): Rs {surcharge.toLocaleString()}
-                                  </p>
-                                )}
-                                <p className="text-blue-800 font-semibold">
-                                  Total Tax = Rs {tax.toLocaleString()} &nbsp;|&nbsp; Effective Rate: {effectiveRate}%
-                                </p>
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Amount/Receipt */}
-                        <div className="col-span-2">
-                          {field.autoPopulateAmount ? (
-                            <input
-                              key={`${field.amountField}-${refreshKey}`}
-                              type="text"
-                              className={readOnlyInputClasses}
-                              value={formatNumber(watchedValues[field.amountField] || 0)}
-                              readOnly
-                              placeholder="0"
-                              title="Auto-populated from Income form"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              className={`${inputClasses} bg-green-50`}
-                              placeholder="0"
-                              value={formatNumber(watchedValues[field.amountField] || 0)}
-                              onFocus={(e) => handleNumberFocus(field.amountField, e)}
-                              onChange={(e) => handleNumberInput(field.amountField, e)}
-                              onBlur={(e) => handleNumberBlur(field.amountField, e)}
-                            />
-                          )}
-                        </div>
-
-                        {/* Tax Deducted */}
-                        <div className="col-span-2">
-                          {field.slabCalculatedTaxDeducted ? (
-                            <div>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  className={`${inputClasses} bg-green-50 pr-8`}
-                                  placeholder="0"
-                                  value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
-                                  onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
-                                  onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
-                                  onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
-                                  title="FBR slab-calculated (editable for actual employer deduction)"
-                                />
-                                <button
-                                  type="button"
-                                  title="Reset to FBR slab calculation"
-                                  onClick={() => {
-                                    const salary = parseFloat(watchedValues[field.amountField]) || 0;
-                                    const { tax } = calculateFBRSalaryTax(salary);
-                                    setValue(field.taxDeductedField, tax);
-                                    setRefreshKey(k => k + 1);
-                                  }}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-700"
-                                >
-                                  <RotateCcw className="w-3 h-3" />
-                                </button>
-                              </div>
-                              {/* Use actual WHT from employer salary certificate (AdjustableTaxForm) */}
-                              {(() => {
-                                const certWHT = parseFloat(formData['adjustable_tax']?.salary_employees_149_tax_collected) || 0;
-                                if (certWHT <= 0) return null;
-                                return (
-                                  <button
-                                    type="button"
-                                    title={`Use WHT from employer certificate: ${formatCurrency(certWHT)}`}
-                                    onClick={() => {
-                                      setValue(field.taxDeductedField, certWHT);
-                                      setRefreshKey(k => k + 1);
-                                    }}
-                                    className="mt-1 flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 hover:bg-emerald-100 w-full"
-                                  >
-                                    <FileCheck className="w-3 h-3 flex-shrink-0" />
-                                    <span>Use cert. WHT: {formatCurrency(certWHT)}</span>
-                                  </button>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              className={`${inputClasses} bg-green-50`}
-                              placeholder="0"
-                              value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
-                              onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
-                              onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
-                              onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
-                            />
-                          )}
-                        </div>
-
-                        {/* Tax Chargeable — manual for salary, auto-calculated for fixed-rate rows */}
-                        <div className="col-span-2">
-                          {field.taxChargeableManual ? (
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              className={`${inputClasses} bg-yellow-50 border-yellow-300`}
-                              placeholder="Enter tax"
-                              value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
-                              onFocus={(e) => handleNumberFocus(field.taxChargeableField, e)}
-                              onChange={(e) => handleNumberInput(field.taxChargeableField, e)}
-                              onBlur={(e) => handleNumberBlur(field.taxChargeableField, e)}
-                              title="Manual entry — enter the actual tax chargeable for over/under deduction check"
-                            />
-                          ) : (
-                            <input
-                              key={`${field.taxChargeableField}-${refreshKey}`}
-                              type="text"
-                              className={readOnlyInputClasses}
-                              value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
-                              readOnly
-                              placeholder="0"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Advanced-fields toggle: surfaces seldom-needed final-tax buckets
-            (declared in ADVANCED on the manifest). Hidden when there's
-            nothing extra to reveal. */}
         {advancedExtraCount > 0 && (
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
-            {showAdvanced ? (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                Hide advanced final-tax fields
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Show {advancedExtraCount} more advanced final-tax item{advancedExtraCount === 1 ? '' : 's'}
-              </>
-            )}
+            {showAdvanced
+              ? (<><ChevronDown size={16} aria-hidden="true" /> Hide advanced final-tax fields</>)
+              : (<><Plus size={16} aria-hidden="true" /> Show {advancedExtraCount} more advanced final-tax item{advancedExtraCount === 1 ? '' : 's'}</>)}
           </button>
         )}
 
-        {/* Capital Gain Row — auto-populated from Capital Gain form. Only
-            shown if the user has the securities addon (which is also what
-            populates capital_gain on the upstream form). */}
+        {/* Capital gain row — auto-populated from the Capital Gain form. */}
         {visibleFields.has('capital_gain_tax_deducted') && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <div className="grid grid-cols-12 gap-3 items-center">
-            <div className="col-span-6">
-              <label className="text-sm font-medium text-gray-700 flex items-center">
-                <Award className="w-4 h-4 inline mr-2 text-orange-600" />
-                Capital Gain (from Capital Gain Form)
-              </label>
-              <p className="text-xs text-orange-600 mt-1">Auto-populated from Capital Gain form — fill that form first</p>
-            </div>
-            <div className="col-span-2">
-              <input
-                key={`capital_gain-${refreshKey}`}
-                type="text"
-                className={readOnlyInputClasses}
-                value={formatNumber(watchedValues.capital_gain)}
-                readOnly
-                placeholder="0"
-              />
-            </div>
-            <div className="col-span-2">
-              <input
-                key={`capital_gain_tax_deducted-${refreshKey}`}
-                type="text"
-                className={readOnlyInputClasses}
-                value={formatNumber(watchedValues.capital_gain_tax_deducted)}
-                readOnly
-                placeholder="0"
-              />
-            </div>
-            <div className="col-span-2">
-              <input
-                key={`capital_gain_tax_chargeable-${refreshKey}`}
-                type="text"
-                className={readOnlyInputClasses}
-                value={formatNumber(watchedValues.capital_gain_tax_chargeable)}
-                readOnly
-                placeholder="0"
-              />
+          <div>
+            <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Capital gain</h2>
+            <div className="overflow-hidden rounded-brand-lg border border-slate-200">
+              <div className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-center md:gap-3">
+                <div className="flex items-start gap-2">
+                  <Award size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
+                  <div className="min-w-0">
+                    <span className="font-body text-sm text-slate-700">Capital gain (from Capital Gain form)</span>
+                    <p className="font-body text-xs text-slate-400">Auto-populated — fill the Capital Gain form first</p>
+                  </div>
+                </div>
+                <input key={`capital_gain-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain)} readOnly placeholder="0" aria-label="Capital gain — amount" />
+                <input key={`capital_gain_tax_deducted-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain_tax_deducted)} readOnly placeholder="0" aria-label="Capital gain — tax deducted" />
+                <input key={`capital_gain_tax_chargeable-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain_tax_chargeable)} readOnly placeholder="0" aria-label="Capital gain — tax chargeable" />
+              </div>
             </div>
           </div>
-        </div>
         )}
 
-        {/* Totals Section */}
-        <div className="bg-gray-800 text-white rounded-xl p-5 space-y-3">
+        {/* Totals — navy card; grand total in lime. */}
+        <div className="space-y-3 rounded-brand-lg bg-navy p-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h3 className="font-semibold opacity-80" style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1rem)' }}>
-                Subtotal Tax Chargeable
-              </h3>
-              <p className="text-xs opacity-50">Excluding capital gain</p>
+              <h3 className="font-body text-sm font-semibold text-white/80">Subtotal tax chargeable</h3>
+              <p className="font-body text-xs text-white/50">Excluding capital gain</p>
             </div>
-            <p
-              className="font-bold shrink-0"
-              style={{ fontSize: 'clamp(0.9rem, 2vw, 1.5rem)' }}
-            >
-              {formatCurrency(subtotal)}
-            </p>
+            <p className="shrink-0 font-mono text-lg font-bold tabular-nums text-white">{formatCurrency(subtotal)}</p>
           </div>
-
-          <div className="border-t border-gray-600 pt-3 flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 border-t border-white/15 pt-3">
             <div className="min-w-0">
-              <h3 className="font-bold" style={{ fontSize: 'clamp(0.85rem, 1.6vw, 1.1rem)' }}>
-                Grand Total Tax Chargeable
-              </h3>
-              <p className="text-xs opacity-50">Subtotal + Capital Gain Tax Chargeable</p>
+              <h3 className="font-body text-sm font-bold text-white">Grand total tax chargeable</h3>
+              <p className="font-body text-xs text-white/50">Subtotal + capital-gain tax chargeable</p>
             </div>
-            <p
-              className="font-bold text-yellow-400 shrink-0"
-              style={{ fontSize: 'clamp(1rem, 2.5vw, 1.8rem)' }}
-            >
-              {formatCurrency(grandTotal)}
-            </p>
+            <p className="shrink-0 font-mono text-xl font-bold tabular-nums text-lime">{formatCurrency(grandTotal)}</p>
           </div>
         </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/income-tax/income')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Income
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Data'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </TaxFormShell>
+    </form>
   );
 };
 
