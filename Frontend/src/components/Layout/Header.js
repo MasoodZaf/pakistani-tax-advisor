@@ -130,7 +130,7 @@ const Header = () => {
 
         <div style={{ flex: 1 }} />
 
-        <button className="hdr-notif">
+        <button className="hdr-notif" aria-label="Notifications">
           <Bell size={15} color="#6b6c64" />
           <span className="hdr-notif-dot" />
         </button>

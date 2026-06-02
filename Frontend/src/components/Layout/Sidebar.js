@@ -223,7 +223,12 @@ const Sidebar = ({ collapsed, onToggle }) => {
     <>
       <Styles />
       <div className="sb-root" style={{ width: collapsed ? 60 : 220 }}>
-        <button className="sb-toggle" onClick={onToggle}>
+        <button
+          className="sb-toggle"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+        >
           {collapsed
             ? <ChevronRight size={13} color="rgba(255,255,255,0.6)" />
             : <ChevronLeft  size={13} color="rgba(255,255,255,0.6)" />
