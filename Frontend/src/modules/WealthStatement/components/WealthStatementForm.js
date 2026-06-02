@@ -3,9 +3,6 @@ import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   Gem,
   Home,
   TrendingUp,
@@ -19,6 +16,81 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import wealthStatementHelp from '../../../help/wealthStatementHelp';
 import { formatCurrency } from '../../../utils/currency';
+import {
+  TaxFormShell,
+  AmountRow,
+  FormNav,
+} from '../../../components/forms';
+
+// Two-input wealth row (previous + current year). Defined at MODULE scope so it
+// never remounts its inputs — an in-component definition would drop focus on
+// every keystroke because the parent re-renders on watch(). register +
+// watchedValues are passed in as props.
+const WEALTH_INPUT_CLASSES =
+  'w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-9 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15';
+
+const WealthRow = ({ rowKey, label, icon: Icon, register, watchedValues }) => {
+  const prevValue = parseFloat(watchedValues[`${rowKey}_previous_year`]) || 0;
+  const currValue = parseFloat(watchedValues[`${rowKey}_current_year`]) || 0;
+  const change = currValue - prevValue;
+  const prevId = `${rowKey}_previous_year`;
+  const currId = `${rowKey}_current_year`;
+
+  return (
+    <div className="grid grid-cols-1 gap-x-4 gap-y-2 px-3 py-3 md:grid-cols-[1fr_repeat(2,150px)] md:items-center">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={16} aria-hidden="true" className="shrink-0 text-slate-400" />}
+        <label htmlFor={currId} className="font-body text-sm font-medium text-slate-700">
+          {label}
+        </label>
+        <HelpHint fieldId={rowKey} source={wealthStatementHelp} />
+      </div>
+      <div>
+        <label htmlFor={prevId} className="mb-1 block font-body text-xs text-slate-400 md:hidden">
+          Previous year
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">
+            Rs
+          </span>
+          <input
+            id={prevId}
+            type="number"
+            step="0.01"
+            {...register(`${rowKey}_previous_year`, {
+              min: { value: 0, message: 'Amount cannot be negative' }
+            })}
+            className={WEALTH_INPUT_CLASSES}
+            placeholder="0"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor={currId} className="mb-1 block font-body text-xs text-slate-400 md:hidden">
+          Current year
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">
+            Rs
+          </span>
+          <input
+            id={currId}
+            type="number"
+            step="0.01"
+            {...register(`${rowKey}_current_year`, {
+              min: { value: 0, message: 'Amount cannot be negative' }
+            })}
+            className={WEALTH_INPUT_CLASSES}
+            placeholder="0"
+          />
+        </div>
+        <p className="mt-1 text-right font-body text-xs text-slate-400 tabular-nums">
+          {change >= 0 ? '+' : ''}{formatCurrency(change)}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const WealthStatementForm = () => {
   const navigate = useNavigate();
@@ -133,305 +205,126 @@ const WealthStatementForm = () => {
       navigate('/wealth-statement/wealth-reconciliation');
     }
   };
-  const inputClasses = "form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right";
+  const groupHeading = (text) => (
+    <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+      {text}
+    </h2>
+  );
+
+  const columnHeader = (
+    <div className="hidden grid-cols-[1fr_repeat(2,150px)] gap-4 px-3 pb-1 md:grid">
+      <span />
+      <span className="text-right font-body text-xs font-semibold uppercase tracking-wide text-slate-400">Previous year</span>
+      <span className="text-right font-body text-xs font-semibold uppercase tracking-wide text-slate-400">Current year</span>
+    </div>
+  );
+
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="wealth-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="wealth-help">
+      <h3 className="font-display text-sm font-bold text-navy">About the wealth statement</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>Required for income reconciliation under Pakistani tax law.</li>
+        <li>Include the market value of all assets as of 30 June.</li>
+        <li>Previous year = 30 June 2024; current year = 30 June 2025.</li>
+        <li>Include all bank accounts, investments, property and vehicles.</li>
+        <li>Declare all liabilities including loans and mortgages.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Gem className="w-6 h-6 text-emerald-600" />
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Wealth Statement"
+        subtitle="Your assets, liabilities and wealth reconciliation"
+        icon={Gem}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/expenses')}
+            backLabel="Expenses"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {/* Assets */}
+        <div>
+          {groupHeading('Assets')}
+          {columnHeader}
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+            {[
+              { key: 'property', label: 'Immovable property', icon: Home },
+              { key: 'investment', label: 'Investments / securities', icon: TrendingUp },
+              { key: 'vehicle', label: 'Motor vehicles', icon: Car },
+              { key: 'jewelry', label: 'Jewellery / valuables', icon: Gem },
+              { key: 'cash', label: 'Cash in hand', icon: DollarSign },
+              { key: 'pf', label: 'Provident fund', icon: Briefcase },
+              { key: 'bank_balance', label: 'Bank balances', icon: CreditCard },
+              { key: 'other_assets', label: 'Other assets', icon: Briefcase }
+            ].map(({ key, label, icon }) => (
+              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} watchedValues={watchedValues} />
+            ))}
+            <AmountRow variant="subtotal" label="Total assets (previous year)" amount={totals.assetsPrevious} />
+            <AmountRow variant="subtotal" label="Total assets (current year)" amount={totals.assetsCurrent} />
+          </div>
+        </div>
+
+        {/* Liabilities */}
+        <div>
+          {groupHeading('Liabilities')}
+          {columnHeader}
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+            {[
+              { key: 'loan', label: 'Loans / mortgages', icon: CreditCard },
+              { key: 'other_liabilities', label: 'Other liabilities', icon: Briefcase }
+            ].map(({ key, label, icon }) => (
+              <WealthRow key={key} rowKey={key} label={label} icon={icon} register={register} watchedValues={watchedValues} />
+            ))}
+            <AmountRow variant="subtotal" label="Total liabilities (previous year)" amount={totals.liabilitiesPrevious} />
+            <AmountRow variant="subtotal" label="Total liabilities (current year)" amount={totals.liabilitiesCurrent} />
+          </div>
+        </div>
+
+        {/* Net worth */}
+        <div>
+          {groupHeading('Net worth')}
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+            <AmountRow variant="line" label="Net worth (previous year)" sublabel="As of 30 June 2024" amount={totals.netWorthPrevious} />
+            <AmountRow variant="line" label="Net worth (current year)" sublabel="As of 30 June 2025" amount={totals.netWorthCurrent} />
+            <AmountRow variant="total" label="Net wealth increase" sublabel="Change during the tax year" amount={totals.netWorthIncrease} />
+          </div>
+          <div className="mt-3 flex items-start gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3">
+            <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Wealth Statement</h1>
-              <p className="text-gray-600">Enter your assets, liabilities, and wealth reconciliation</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Wealth Statement Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Required for income reconciliation under Pakistani tax law</li>
-              <li>• Include market value of all assets as of June 30th</li>
-              <li>• Previous year = June 30, 2024; Current year = June 30, 2025</li>
-              <li>• Include all bank accounts, investments, property, vehicles</li>
-              <li>• Declare all liabilities including loans and mortgages</li>
-            </ul>
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Assets Section */}
-        <div className="bg-green-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
-            Assets
-          </h2>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-green-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Asset Type</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Previous Year (PKR)</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Current Year (PKR)</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Change</th>
-                </tr>
-              </thead>
-              <tbody className="space-y-2">
-                {[
-                  { key: 'property', label: 'Immovable Property', icon: Home },
-                  { key: 'investment', label: 'Investments/Securities', icon: TrendingUp },
-                  { key: 'vehicle', label: 'Motor Vehicles', icon: Car },
-                  { key: 'jewelry', label: 'Jewelry/Valuables', icon: Gem },
-                  { key: 'cash', label: 'Cash in Hand', icon: DollarSign },
-                  { key: 'pf', label: 'Provident Fund', icon: Briefcase },
-                  { key: 'bank_balance', label: 'Bank Balances', icon: CreditCard },
-                  { key: 'other_assets', label: 'Other Assets', icon: Briefcase }
-                ].map(({ key, label, icon: Icon }) => {
-                  const prevValue = parseFloat(watchedValues[`${key}_previous_year`]) || 0;
-                  const currValue = parseFloat(watchedValues[`${key}_current_year`]) || 0;
-                  const change = currValue - prevValue;
-                  
-                  return (
-                    <tr key={key} className="border-b border-green-100">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4 text-green-600" />
-                          <span className="font-medium">{label}</span>
-                          <HelpHint fieldId={key} source={wealthStatementHelp} />
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          {...register(`${key}_previous_year`, {
-                            min: { value: 0, message: 'Amount cannot be negative' }
-                          })}
-                          className={inputClasses}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          {...register(`${key}_current_year`, {
-                            min: { value: 0, message: 'Amount cannot be negative' }
-                          })}
-                          className={inputClasses}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`font-medium ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {change >= 0 ? '+' : ''}{formatCurrency(change)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Assets Total */}
-          <div className="mt-4 p-4 bg-green-100 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-sm text-green-700 mb-1">Total Assets (Previous)</p>
-                <p className="text-xl font-bold text-green-800">{formatCurrency(totals.assetsPrevious)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-green-700 mb-1">Total Assets (Current)</p>
-                <p className="text-xl font-bold text-green-800">{formatCurrency(totals.assetsCurrent)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-green-700 mb-1">Net Change</p>
-                <p className={`text-xl font-bold ${totals.assetsCurrent - totals.assetsPrevious >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(totals.assetsCurrent - totals.assetsPrevious)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Liabilities Section */}
-        <div className="bg-red-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-            <CreditCard className="w-5 h-5 mr-2 text-red-600" />
-            Liabilities
-          </h2>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-red-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Liability Type</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Previous Year (PKR)</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Current Year (PKR)</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Change</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { key: 'loan', label: 'Loans/Mortgages', icon: CreditCard },
-                  { key: 'other_liabilities', label: 'Other Liabilities', icon: Briefcase }
-                ].map(({ key, label, icon: Icon }) => {
-                  const prevValue = parseFloat(watchedValues[`${key}_previous_year`]) || 0;
-                  const currValue = parseFloat(watchedValues[`${key}_current_year`]) || 0;
-                  const change = currValue - prevValue;
-                  
-                  return (
-                    <tr key={key} className="border-b border-red-100">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4 text-red-600" />
-                          <span className="font-medium">{label}</span>
-                          <HelpHint fieldId={key} source={wealthStatementHelp} />
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          {...register(`${key}_previous_year`, {
-                            min: { value: 0, message: 'Amount cannot be negative' }
-                          })}
-                          className={inputClasses}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          {...register(`${key}_current_year`, {
-                            min: { value: 0, message: 'Amount cannot be negative' }
-                          })}
-                          className={inputClasses}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`font-medium ${change >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {change >= 0 ? '+' : ''}{formatCurrency(change)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Liabilities Total */}
-          <div className="mt-4 p-4 bg-red-100 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-sm text-red-700 mb-1">Total Liabilities (Previous)</p>
-                <p className="text-xl font-bold text-red-800">{formatCurrency(totals.liabilitiesPrevious)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-red-700 mb-1">Total Liabilities (Current)</p>
-                <p className="text-xl font-bold text-red-800">{formatCurrency(totals.liabilitiesCurrent)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-red-700 mb-1">Net Change</p>
-                <p className={`text-xl font-bold ${totals.liabilitiesCurrent - totals.liabilitiesPrevious >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(totals.liabilitiesCurrent - totals.liabilitiesPrevious)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Net Worth Summary */}
-        <div className="bg-primary-50 p-6 rounded-lg border border-primary-200">
-          <h2 className="text-lg font-semibold text-primary-900 mb-6">Net Worth Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 bg-white rounded-lg">
-              <p className="text-sm text-primary-700 mb-2">Net Worth (Previous Year)</p>
-              <p className="text-2xl font-bold text-primary-900">{formatCurrency(totals.netWorthPrevious)}</p>
-              <p className="text-xs text-gray-500 mt-1">As of June 30, 2024</p>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg">
-              <p className="text-sm text-primary-700 mb-2">Net Worth (Current Year)</p>
-              <p className="text-2xl font-bold text-primary-900">{formatCurrency(totals.netWorthCurrent)}</p>
-              <p className="text-xs text-gray-500 mt-1">As of June 30, 2025</p>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg">
-              <p className="text-sm text-primary-700 mb-2">Net Wealth Increase</p>
-              <p className={`text-2xl font-bold ${totals.netWorthIncrease >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(totals.netWorthIncrease)}
+              <p className="font-body text-sm font-semibold text-navy">Wealth reconciliation</p>
+              <p className="font-body text-sm text-slate-600">
+                The increase in net worth should reconcile with your declared income and expenses.
+                Significant unexplained increases may trigger tax-authority scrutiny.
               </p>
-              <p className="text-xs text-gray-500 mt-1">Change during tax year</p>
-            </div>
-          </div>
-
-          {/* Wealth Reconciliation Note */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Wealth Reconciliation</h4>
-                <p className="text-sm text-blue-800">
-                  The increase in net worth should be reconciled with your declared income and expenses. 
-                  Significant unexplained increases may trigger tax authority scrutiny.
-                </p>
-              </div>
             </div>
           </div>
         </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/income-tax/expenses')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Expenses
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <ArrowRight className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Next: Wealth Reconciliation'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </TaxFormShell>
+    </form>
   );
 };
 
