@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -16,7 +16,58 @@ import {
   TaxFormRow,
   AmountRow,
   FormNav,
+  LiveTotalsProvider,
+  LiveAmount,
 } from '../../../components/forms';
+
+// PERF-02: the two auto-calc effects run here (headless) so their field
+// subscriptions don't re-render the whole form. Logic byte-identical to the
+// former in-component effects.
+const DeductionsAutoCalc = ({ control, setValue, taxableIncome, profExpEligible, eduExpEligible, profPosPct, profTaxablePct, eduPerChild, eduMaxChildren }) => {
+  const posAmount = useWatch({ control, name: 'professional_expenses_pos_amount' });
+  const childrenCount = useWatch({ control, name: 'education_expense_children_count' });
+
+  // Professional expenses: MIN(POS-pct × POS amount, taxable-pct × taxable income).
+  useEffect(() => {
+    if (!profExpEligible || taxableIncome <= 0) return;
+    if (!profPosPct || !profTaxablePct) return; // wait for rates
+    const pos = parseFloat(posAmount) || 0;
+    if (pos > 0) {
+      const posCapped    = Math.round(pos * profPosPct);
+      const incomeCapped = Math.round(taxableIncome * profTaxablePct);
+      setValue('professional_expenses_amount', Math.min(posCapped, incomeCapped));
+    }
+  }, [posAmount, taxableIncome, profExpEligible, profPosPct, profTaxablePct]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Education expense: per-child cap × min(count, max-children).
+  useEffect(() => {
+    if (eduPerChild === undefined || eduMaxChildren === undefined) return;
+    if (!eduExpEligible) {
+      setValue('education_expense_deduction', 0);
+      return;
+    }
+    const numChildren = Math.min(parseInt(childrenCount) || 0, eduMaxChildren);
+    setValue('education_expense_deduction', numChildren * eduPerChild);
+  }, [childrenCount, taxableIncome, eduExpEligible, eduPerChild, eduMaxChildren]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+};
+
+// Self-subscribing "lower of …" hint under the POS-amount input.
+const ProfExpHint = ({ control, taxableIncome, posPct, taxPct }) => {
+  const posAmount = useWatch({ control, name: 'professional_expenses_pos_amount' });
+  const pos = parseFloat(posAmount) || 0;
+  if (!(pos > 0 && taxableIncome > 0 && posPct && taxPct)) return null;
+  const a = Math.round(pos * posPct);
+  const b = Math.round(taxableIncome * taxPct);
+  const posPctDisplay = (posPct * 100).toFixed(0);
+  const taxPctDisplay = (taxPct * 100).toFixed(0);
+  return (
+    <p className="mt-1 text-right font-body text-xs text-slate-500">
+      Lower of {posPctDisplay}% of POS (Rs {a.toLocaleString('en-PK')}) and {taxPctDisplay}% of income (Rs {b.toLocaleString('en-PK')}) = Rs {Math.min(a, b).toLocaleString('en-PK')}
+    </p>
+  );
+};
 
 const DeductionsForm = () => {
   const navigate = useNavigate();
@@ -38,6 +89,7 @@ const DeductionsForm = () => {
     reset,
     setValue,
     getValues,
+    control,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('deductions')
@@ -59,8 +111,9 @@ const DeductionsForm = () => {
     }
   }, [contextFormData, reset]);
 
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. The two auto-calc effects run in the
+  // headless <DeductionsAutoCalc> child; the total is isolated in
+  // <LiveTotalsProvider>; the POS hint self-subscribes via <ProfExpHint>.
 
   // Prior year pre-fill
   const { hasPriorData: hasPriorDed, applyPriorYear: applyPriorDed, dismissPriorYear: dismissPriorDed } = usePriorYearData('deductions', setValue);
@@ -92,31 +145,7 @@ const DeductionsForm = () => {
     ? false
     : (taxableIncome === 0 || taxableIncome <= EDU_THRESHOLD);
 
-  // Professional expenses deduction: MIN(POS-pct × POS amount, taxable-pct × taxable income).
-  useEffect(() => {
-    if (!profExpEligible || taxableIncome <= 0) return;
-    if (!PROF_EXP_POS_PCT || !PROF_EXP_TAXABLE_PCT) return; // wait for rates
-    const posAmount = parseFloat(watchedValues.professional_expenses_pos_amount) || 0;
-    if (posAmount > 0) {
-      const posCapped     = Math.round(posAmount * PROF_EXP_POS_PCT);
-      const incomeCapped  = Math.round(taxableIncome * PROF_EXP_TAXABLE_PCT);
-      setValue('professional_expenses_amount', Math.min(posCapped, incomeCapped));
-    }
-  }, [watchedValues.professional_expenses_pos_amount, taxableIncome, profExpEligible, PROF_EXP_POS_PCT, PROF_EXP_TAXABLE_PCT]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Education expense: per-child cap × min(count, max-children).
-  useEffect(() => {
-    if (EDU_DEDUCTION_PER_CHILD === undefined || EDU_MAX_CHILDREN === undefined) return;
-    if (!eduExpEligible) {
-      setValue('education_expense_deduction', 0);
-      return;
-    }
-    const numChildren = Math.min(
-      parseInt(watchedValues.education_expense_children_count) || 0,
-      EDU_MAX_CHILDREN
-    );
-    setValue('education_expense_deduction', numChildren * EDU_DEDUCTION_PER_CHILD);
-  }, [watchedValues.education_expense_children_count, taxableIncome, eduExpEligible, EDU_DEDUCTION_PER_CHILD, EDU_MAX_CHILDREN]); // eslint-disable-line react-hooks/exhaustive-deps
+  // (auto-calc effects relocated to <DeductionsAutoCalc> — see module scope)
   // ────────────────────────────────────────────────────────────────────────────
 
   // Define comprehensive deductible allowances structure matching Excel
@@ -150,14 +179,9 @@ const DeductionsForm = () => {
     }
   ];
 
-  // Calculate total deduction
-  const calculateTotalDeduction = () => {
-    return deductionItems.reduce((total, item) => {
-      return total + (parseFloat(watchedValues[item.amount]) || 0);
-    }, 0);
-  };
-
-  const totalDeduction = calculateTotalDeduction();
+  // Sum of all per-item deduction amounts. Pure.
+  const sumDeductions = (values) =>
+    deductionItems.reduce((total, item) => total + (parseFloat(values[item.amount]) || 0), 0);
 
   // Map frontend field names to DB column names and strip non-existent columns
   const buildDeductionsPayload = (data) => {
@@ -176,7 +200,7 @@ const DeductionsForm = () => {
       educational_expenses_amount:        education_expense_deduction    || 0,
       educational_expenses_children_count: education_expense_children_count || 0,
       educational_expenses_yn:            education_expense_yn            || '',
-      total_deduction_from_income:        totalDeduction,
+      total_deduction_from_income:        sumDeductions(data),
     };
   };
 
@@ -189,7 +213,7 @@ const DeductionsForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const success = await saveFormStep('deductions', buildDeductionsPayload(watchedValues), false);
+    const success = await saveFormStep('deductions', buildDeductionsPayload(watch()), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/final-tax');
@@ -222,6 +246,18 @@ const DeductionsForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <DeductionsAutoCalc
+        control={control}
+        setValue={setValue}
+        taxableIncome={taxableIncome}
+        profExpEligible={profExpEligible}
+        eduExpEligible={eduExpEligible}
+        profPosPct={PROF_EXP_POS_PCT}
+        profTaxablePct={PROF_EXP_TAXABLE_PCT}
+        eduPerChild={EDU_DEDUCTION_PER_CHILD}
+        eduMaxChildren={EDU_MAX_CHILDREN}
+      />
+      <LiveTotalsProvider control={control} compute={(v) => ({ total: sumDeductions(v) })}>
       <TaxFormShell
         title="Deductible allowances"
         subtitle="Eligible allowances that reduce your taxable income"
@@ -352,21 +388,7 @@ const DeductionsForm = () => {
                           placeholder="0"
                         />
                       </div>
-                      {(() => {
-                        const pos = parseFloat(watchedValues.professional_expenses_pos_amount) || 0;
-                        if (pos > 0 && taxableIncome > 0 && PROF_EXP_POS_PCT && PROF_EXP_TAXABLE_PCT) {
-                          const a = Math.round(pos * PROF_EXP_POS_PCT);
-                          const b = Math.round(taxableIncome * PROF_EXP_TAXABLE_PCT);
-                          const posPctDisplay = (PROF_EXP_POS_PCT * 100).toFixed(0);
-                          const taxPctDisplay = (PROF_EXP_TAXABLE_PCT * 100).toFixed(0);
-                          return (
-                            <p className="mt-1 text-right font-body text-xs text-slate-500">
-                              Lower of {posPctDisplay}% of POS (Rs {a.toLocaleString('en-PK')}) and {taxPctDisplay}% of income (Rs {b.toLocaleString('en-PK')}) = Rs {Math.min(a, b).toLocaleString('en-PK')}
-                            </p>
-                          );
-                        }
-                        return null;
-                      })()}
+                      <ProfExpHint control={control} taxableIncome={taxableIncome} posPct={PROF_EXP_POS_PCT} taxPct={PROF_EXP_TAXABLE_PCT} />
                     </div>
                   </div>
                 )}
@@ -404,9 +426,10 @@ const DeductionsForm = () => {
             );
           })}
 
-          <AmountRow variant="total" label="Total deduction from income" amount={totalDeduction} />
+          <LiveAmount component={AmountRow} variant="total" field="total" label="Total deduction from income" />
         </div>
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };

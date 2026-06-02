@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -21,6 +21,91 @@ import {
   FormNav,
 } from '../../../components/forms';
 
+// Inflow/outflow input fields the reconciliation calc depends on.
+const RECON_INPUT_FIELDS = [
+  'personal_expenses', 'gift_value', 'gift_outflow', 'asset_disposal_gain_loss',
+  'foreign_remittance', 'inheritance', 'other_inflows', 'adjustments_outflows', 'loss_on_disposal',
+];
+
+// PERF-02: the reconciliation calc + personal-expenses sync run here (headless)
+// so the parent needs no bare watch(). Self-subscribes to ONLY the inflow/
+// outflow inputs, computes the reconciliation, writes the DB-bound computed
+// fields via setValue, and lifts the result to the parent via onResult. Math is
+// byte-identical to the former in-component effects. Rendered OUTSIDE the
+// parent's loading branch so it always runs (and clears loading).
+const WealthReconCalc = ({ control, formData, setValue, onResult }) => {
+  const w = useWatch({ control, name: RECON_INPUT_FIELDS });
+  const wv = {};
+  RECON_INPUT_FIELDS.forEach((f, i) => { wv[f] = w[i]; });
+
+  // Auto-populate personal_expenses from the Expenses form (total_expenses).
+  useEffect(() => {
+    const totalExpenses = parseFloat(formData?.expenses?.total_expenses);
+    if (totalExpenses > 0) setValue('personal_expenses', totalExpenses);
+  }, [formData, setValue]);
+
+  useEffect(() => {
+    if (!(formData && Object.keys(formData).length > 0)) {
+      onResult(null, 0);
+      return;
+    }
+    try {
+      const wealthData   = formData?.wealth    || {};
+      const incomeData   = formData?.income    || {};
+      const expensesData = formData?.expenses  || {};
+      const finalTaxData = formData?.final_tax || {};
+
+      const netAssetsCurrent  = parseFloat(wealthData.net_worth_current_year)
+        || (parseFloat(wealthData.total_assets_current_year  || 0) - parseFloat(wealthData.total_liabilities_current_year  || 0));
+      const netAssetsPrevious = parseFloat(wealthData.net_worth_previous_year)
+        || (parseFloat(wealthData.total_assets_previous_year || 0) - parseFloat(wealthData.total_liabilities_previous_year || 0));
+      const netAssetsIncrease = netAssetsCurrent - netAssetsPrevious;
+
+      const incomeNormalTax    = parseFloat(incomeData.total_employment_income || incomeData.total_taxable_income || 0);
+      const incomeExemptFromTax= parseFloat(incomeData.income_exempt_from_tax  || incomeData.total_exempt_income   || 0);
+      const incomeFinalTax     = parseFloat(finalTaxData.total_final_tax || 0);
+      const foreignRemittance  = parseFloat(wv.foreign_remittance   || 0);
+      const inheritance        = parseFloat(wv.inheritance          || 0);
+      const giftInflow         = parseFloat(wv.gift_value           || 0);
+      const assetGainLoss      = parseFloat(wv.asset_disposal_gain_loss || 0);
+      const otherInflows       = parseFloat(wv.other_inflows        || 0);
+      const totalInflows = incomeNormalTax + incomeExemptFromTax + incomeFinalTax +
+                           foreignRemittance + inheritance + giftInflow + assetGainLoss + otherInflows;
+
+      const personalExpenses   = parseFloat(expensesData.total_expenses || wv.personal_expenses || 0);
+      const adjustmentsOutflows= parseFloat(wv.adjustments_outflows || 0);
+      const giftOutflow        = parseFloat(wv.gift_outflow   || 0);
+      const lossOnDisposal     = parseFloat(wv.loss_on_disposal    || 0);
+      const totalOutflows = personalExpenses + adjustmentsOutflows + giftOutflow + lossOnDisposal;
+
+      const calculatedNetIncrease = totalInflows - totalOutflows;
+      const unreconciledDiff      = netAssetsIncrease - calculatedNetIncrease;
+
+      const reconciliation = {
+        net_assets_current_year:  netAssetsCurrent,
+        net_assets_previous_year: netAssetsPrevious,
+        net_assets_increase:      netAssetsIncrease,
+        income_normal_tax:        incomeNormalTax,
+        income_exempt_from_tax:   incomeExemptFromTax,
+        income_final_tax:         incomeFinalTax,
+        total_inflows:            totalInflows,
+        personal_expenses:        personalExpenses,
+        total_outflows:           totalOutflows,
+        calculated_net_increase:  calculatedNetIncrease,
+        unreconciled_difference:  unreconciledDiff,
+      };
+
+      Object.entries(reconciliation).forEach(([key, value]) => setValue(key, value));
+      onResult(reconciliation, unreconciledDiff);
+    } catch {
+      toast.error('Error calculating wealth reconciliation');
+      onResult(null, 0);
+    }
+  }, [formData, wv.personal_expenses, wv.gift_value, wv.gift_outflow, wv.asset_disposal_gain_loss, wv.foreign_remittance, wv.inheritance, wv.other_inflows, wv.adjustments_outflows, wv.loss_on_disposal, setValue, onResult]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+};
+
 const WealthReconciliationForm = () => {
   const navigate = useNavigate();
   const { 
@@ -40,7 +125,9 @@ const WealthReconciliationForm = () => {
     handleSubmit,
     watch,
     setValue,
-    reset
+    reset,
+    control,
+    getValues
   } = useForm({
     defaultValues: getStepData('wealth_reconciliation')
   });
@@ -53,99 +140,14 @@ const WealthReconciliationForm = () => {
     }
   }, [formData, reset]);
 
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
-
-  // Auto-populate personal_expenses from Expenses form (total_expenses DB computed column).
-  // Always sync so stale cached values don't persist across saves.
-  useEffect(() => {
-    const expensesData = formData?.expenses || {};
-    const totalExpenses = parseFloat(expensesData.total_expenses);
-    if (totalExpenses > 0) {
-      setValue('personal_expenses', totalExpenses);
-    }
-  }, [formData, setValue]);
-
-  // Calculate wealth reconciliation from existing form data
-  useEffect(() => {
-    const calculateReconciliation = () => {
-      try {
-        setLoading(true);
-
-        const wealthData   = formData?.wealth    || {};
-        const incomeData   = formData?.income    || {};
-        const expensesData = formData?.expenses  || {};
-        const finalTaxData = formData?.final_tax || {};
-
-        // Net Assets — prefer DB-computed net_worth columns; fall back to totals diff
-        const netAssetsCurrent  = parseFloat(wealthData.net_worth_current_year)
-          || (parseFloat(wealthData.total_assets_current_year  || 0) - parseFloat(wealthData.total_liabilities_current_year  || 0));
-        const netAssetsPrevious = parseFloat(wealthData.net_worth_previous_year)
-          || (parseFloat(wealthData.total_assets_previous_year || 0) - parseFloat(wealthData.total_liabilities_previous_year || 0));
-        const netAssetsIncrease = netAssetsCurrent - netAssetsPrevious;
-
-        // Inflows
-        const incomeNormalTax    = parseFloat(incomeData.total_employment_income || incomeData.total_taxable_income || 0);
-        const incomeExemptFromTax= parseFloat(incomeData.income_exempt_from_tax  || incomeData.total_exempt_income   || 0);
-        const incomeFinalTax     = parseFloat(finalTaxData.total_final_tax || 0);
-        const foreignRemittance  = parseFloat(watchedValues.foreign_remittance   || 0);
-        const inheritance        = parseFloat(watchedValues.inheritance          || 0);
-        const giftInflow         = parseFloat(watchedValues.gift_value           || 0); // gift RECEIVED
-        const assetGainLoss      = parseFloat(watchedValues.asset_disposal_gain_loss || 0);
-        const otherInflows       = parseFloat(watchedValues.other_inflows        || 0);
-        const totalInflows = incomeNormalTax + incomeExemptFromTax + incomeFinalTax +
-                             foreignRemittance + inheritance + giftInflow + assetGainLoss + otherInflows;
-
-        // Outflows — personal_expenses synced from expenses form; gift_outflow is gift GIVEN
-        const personalExpenses   = parseFloat(expensesData.total_expenses || watchedValues.personal_expenses || 0);
-        const adjustmentsOutflows= parseFloat(watchedValues.adjustments_outflows || 0);
-        const giftOutflow        = parseFloat(watchedValues.gift_outflow   || 0); // gift GIVEN
-        const lossOnDisposal     = parseFloat(watchedValues.loss_on_disposal    || 0);
-        const totalOutflows = personalExpenses + adjustmentsOutflows + giftOutflow + lossOnDisposal;
-
-        const calculatedNetIncrease = totalInflows - totalOutflows;
-        const unreconciledDiff      = netAssetsIncrease - calculatedNetIncrease;
-
-        // Use snake_case keys matching DB column names
-        const reconciliation = {
-          net_assets_current_year:  netAssetsCurrent,
-          net_assets_previous_year: netAssetsPrevious,
-          net_assets_increase:      netAssetsIncrease,
-          income_normal_tax:        incomeNormalTax,
-          income_exempt_from_tax:   incomeExemptFromTax,
-          income_final_tax:         incomeFinalTax,
-          total_inflows:            totalInflows,
-          personal_expenses:        personalExpenses,
-          total_outflows:           totalOutflows,
-          calculated_net_increase:  calculatedNetIncrease,
-          unreconciled_difference:  unreconciledDiff,
-        };
-
-        setReconciliationData(reconciliation);
-        setUnreconciledDifference(unreconciledDiff);
-
-        // Sync only the DB-bound computed fields (not user-editable registered fields)
-        Object.entries(reconciliation).forEach(([key, value]) => {
-          setValue(key, value);
-        });
-
-      } catch (error) {
-        toast.error('Error calculating wealth reconciliation');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (formData && Object.keys(formData).length > 0) {
-      calculateReconciliation();
-    } else {
-      setLoading(false);
-    }
-  }, [formData,
-      watchedValues.personal_expenses, watchedValues.gift_value, watchedValues.gift_outflow,
-      watchedValues.asset_disposal_gain_loss, watchedValues.foreign_remittance,
-      watchedValues.inheritance, watchedValues.other_inflows,
-      watchedValues.adjustments_outflows, watchedValues.loss_on_disposal, setValue]);
+  // PERF-02: no bare watch() at render. The reconciliation calc + personal-
+  // expenses sync run in the headless <WealthReconCalc> child below, which lifts
+  // the result here. Stable callback so the child's effect dep is stable.
+  const handleResult = useCallback((reconciliation, diff) => {
+    setReconciliationData(reconciliation);
+    setUnreconciledDifference(diff);
+    setLoading(false);
+  }, []);
 
   const onSubmit = async (data) => {
     // FBR Compliance Check - Unreconciled difference MUST be zero
@@ -162,21 +164,30 @@ const WealthReconciliationForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
+    const data = watch();
     const success = await saveFormStep('wealth_reconciliation', data, false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/tax-computation');
     }
   };
+  // Always-mounted headless calc child — drives loading + reconciliation state.
+  // Rendered in BOTH branches at the same position so it never remounts.
+  const calcChild = (
+    <WealthReconCalc control={control} formData={formData} setValue={setValue} onResult={handleResult} />
+  );
+
   if (loading) {
     return (
-      <FormStateScreen
-        icon={Calculator}
-        spinning
-        title="Calculating reconciliation…"
-        message="Pulling figures from your wealth statement and income forms."
-      />
+      <>
+        {calcChild}
+        <FormStateScreen
+          icon={Calculator}
+          spinning
+          title="Calculating reconciliation…"
+          message="Pulling figures from your wealth statement and income forms."
+        />
+      </>
     );
   }
 
@@ -209,6 +220,8 @@ const WealthReconciliationForm = () => {
   ) : null;
 
   return (
+    <>
+    {calcChild}
     <form onSubmit={handleSubmit(onSubmit)}>
       <TaxFormShell
         title="Wealth reconciliation"
@@ -287,7 +300,7 @@ const WealthReconciliationForm = () => {
                     { field: 'loss_on_disposal',         label: 'Loss on Disposal' },
                   ]
               ).map(({ field, label }) => {
-                const current = parseFloat(watchedValues[field] || 0);
+                const current = parseFloat(getValues(field) || 0);
                 const next    = unreconciledDifference > 0
                   ? current + unreconciledDifference
                   : current + Math.abs(unreconciledDifference);
@@ -415,6 +428,7 @@ const WealthReconciliationForm = () => {
         </div>
       </TaxFormShell>
     </form>
+    </>
   );
 };
 
