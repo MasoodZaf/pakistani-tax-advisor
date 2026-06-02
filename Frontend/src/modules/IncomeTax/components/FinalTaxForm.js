@@ -1,6 +1,5 @@
-/* eslint-disable react-hooks/exhaustive-deps -- auto-calc effect uses a spread of watched values; adding watchedValues/finalTaxRate to deps would loop */
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -13,7 +12,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalTaxHelp from '../../../help/finalTaxHelp';
-import { TaxFormShell, AmountRow, FormNav } from '../../../components/forms';
+import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount } from '../../../components/forms';
 
 // Final Tax items. Rates are NOT stored here — they live in tax_rates_config
 // (rate_type='final_tax', rate_category=item.id) and are resolved per-year
@@ -38,6 +37,41 @@ const FINAL_TAX_EPHEMERAL = new Set(
   FINAL_TAX_ITEMS.flatMap(item => [item.amountField, item.taxField, `${item.id}_yn`])
 );
 
+// Sum of all per-item final-tax fields (the form's total). Pure.
+const sumFinalTax = (values) =>
+  FINAL_TAX_ITEMS.reduce((sum, item) => sum + (parseFloat(values[item.taxField]) || 0), 0);
+
+// PERF-02: the auto-calc effect lives here (headless) so its field subscription
+// doesn't re-render the whole form. It watches ONLY the amount fields; the
+// current tax value (for the no-loop guard) is read one-shot via getValues.
+// Logic is byte-identical to the former in-component effect.
+const FinalTaxAutoCalc = ({ control, getValues, setValue, rates }) => {
+  const amounts = useWatch({ control, name: FINAL_TAX_ITEMS.map(i => i.amountField) });
+  useEffect(() => {
+    if (!rates?.finalTax) return;
+    FINAL_TAX_ITEMS.forEach((item, idx) => {
+      if (item.manual) return;
+      const rate = rates.finalTax[item.id]?.rate ?? null;
+      if (rate === null) return; // category missing from DB — leave untouched
+      const amount = parseFloat(amounts[idx]) || 0;
+      const calculated = amount > 0 ? Math.round(amount * rate) : 0;
+      const current = parseFloat(getValues(item.taxField)) || 0;
+      if (Math.abs(current - calculated) > 0.01) {
+        setValue(item.taxField, calculated);
+      }
+    });
+  }, [...amounts, rates, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+};
+
+// Per-row "Auto-calculated @ X%" hint — self-subscribes to just its amount
+// field so the row's hint updates without re-rendering the rest of the form.
+const AutoCalcHint = ({ control, field, ratePct }) => {
+  const amount = useWatch({ control, name: field });
+  if (!((parseFloat(amount) || 0) > 0)) return null;
+  return <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated @ {ratePct}%</p>;
+};
+
 const FinalTaxForm = () => {
   const navigate = useNavigate();
   const {
@@ -60,7 +94,9 @@ const FinalTaxForm = () => {
     handleSubmit,
     watch,
     reset,
-    setValue
+    setValue,
+    control,
+    getValues
   } = useForm({
     defaultValues: getStepData('final_tax')
   });
@@ -104,37 +140,12 @@ const FinalTaxForm = () => {
     }
   }, [contextFormData, reset]);
 
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. The auto-calc effect runs in the
+  // headless <FinalTaxAutoCalc> child; the total is isolated in
+  // <LiveTotalsProvider>; each row's auto-calc hint self-subscribes.
 
   // Prior year pre-fill
   const { hasPriorData: hasPriorFT, applyPriorYear: applyPriorFT, dismissPriorYear: dismissPriorFT } = usePriorYearData('final_tax', setValue);
-
-  // Auto-calculate tax for fixed-rate items. Rate sourced from DB; manual-entry
-  // items skip auto-calc. Fires again when `rates` arrive so initial pre-fill
-  // uses authoritative DB values.
-  useEffect(() => {
-    if (!rates?.finalTax) return;
-    FINAL_TAX_ITEMS.forEach(item => {
-      if (item.manual) return;
-      const rate = finalTaxRate(item.id);
-      if (rate === null) return; // category missing from DB — leave untouched
-      const amount = parseFloat(watchedValues[item.amountField]) || 0;
-      const calculated = amount > 0 ? Math.round(amount * rate) : 0;
-      const current = parseFloat(watchedValues[item.taxField]) || 0;
-      if (Math.abs(current - calculated) > 0.01) {
-        setValue(item.taxField, calculated);
-      }
-    });
-  }, [
-    ...FINAL_TAX_ITEMS.map(i => watchedValues[i.amountField]),
-    rates,
-    setValue,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Compute total final tax
-  const totalFinalTax = FINAL_TAX_ITEMS.reduce((sum, item) => {
-    return sum + (parseFloat(watchedValues[item.taxField]) || 0);
-  }, 0);
 
   const buildFinalTaxPayload = (data) => {
     const sanitized = Object.fromEntries(
@@ -182,7 +193,7 @@ const FinalTaxForm = () => {
       other_final_tax_yn:                          data.other_final_tax_yn                       || '',
       other_final_tax_gross_amount:                data.other_final_tax_income_amount            || 0,
       other_final_tax_tax_amount:                  data.other_final_tax_income_tax               || 0,
-      total_final_tax: totalFinalTax,
+      total_final_tax: sumFinalTax(data),
     };
   };
 
@@ -195,7 +206,7 @@ const FinalTaxForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const success = await saveFormStep('final_tax', buildFinalTaxPayload(watchedValues), false);
+    const success = await saveFormStep('final_tax', buildFinalTaxPayload(watch()), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/capital-gains');
@@ -238,6 +249,8 @@ const FinalTaxForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <FinalTaxAutoCalc control={control} getValues={getValues} setValue={setValue} rates={rates} />
+      <LiveTotalsProvider control={control} compute={(v) => ({ total: sumFinalTax(v) })}>
       <TaxFormShell
         title="Final tax"
         subtitle="Income taxed at fixed rates, outside normal computation"
@@ -339,9 +352,7 @@ const FinalTaxForm = () => {
                             title={isAutoCalc ? 'Auto-calculated — read-only' : 'Enter manually'}
                           />
                         </div>
-                        {isAutoCalc && (parseFloat(watchedValues[item.amountField]) || 0) > 0 && (
-                          <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated @ {ratePct}%</p>
-                        )}
+                        {isAutoCalc && <AutoCalcHint control={control} field={item.amountField} ratePct={ratePct} />}
                       </div>
                     </div>
                   );
@@ -353,9 +364,10 @@ const FinalTaxForm = () => {
 
         {/* Total — navy emphasis band (this is final tax owed, not a refund). */}
         <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
-          <AmountRow label="Total final tax" amount={totalFinalTax} variant="total" />
+          <LiveAmount component={AmountRow} field="total" label="Total final tax" variant="total" />
         </div>
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
