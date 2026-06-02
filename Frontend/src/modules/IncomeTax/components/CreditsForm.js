@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -16,7 +16,113 @@ import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import creditsHelp from '../../../help/creditsHelp';
 import { formatCurrency } from '../../../utils/currency';
-import { TaxFormShell, TaxFormRow, AmountRow, FormNav } from '../../../components/forms';
+import { TaxFormShell, TaxFormRow, AmountRow, FormNav, LiveTotalsProvider, LiveAmount } from '../../../components/forms';
+
+// PERF-02: the three rebate auto-calc effects run here (headless) so their
+// field subscriptions don't re-render the whole form. Each watches only its own
+// donation/contribution field; the current credit value isn't needed (the
+// effects always overwrite). Logic byte-identical to the former in-component
+// effects (computeRebateCredit moved here verbatim).
+const CreditsAutoCalc = ({ control, setValue, taxableIncome, normalTax, avgRate, donationCap, donationAssociateCap, pensionCap }) => {
+  const donation = useWatch({ control, name: 'charitable_donations_amount' });
+  const donationAssociate = useWatch({ control, name: 'charitable_donations_associate_amount' });
+  const pension = useWatch({ control, name: 'pension_fund_amount' });
+
+  const computeRebateCredit = (actualAmount, capPct) => {
+    if (!taxableIncome || !normalTax || !actualAmount || !capPct) return 0;
+    const eligible = Math.min(parseFloat(actualAmount) || 0, taxableIncome * capPct);
+    return eligible > 0 ? Math.round(eligible * avgRate) : 0;
+  };
+
+  useEffect(() => {
+    if (!donationCap) return;
+    const amount = parseFloat(donation) || 0;
+    if (taxableIncome > 0) {
+      setValue('charitable_donations_tax_credit', computeRebateCredit(amount, donationCap));
+    }
+  }, [donation, taxableIncome, normalTax, donationCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!donationAssociateCap) return;
+    const amount = parseFloat(donationAssociate) || 0;
+    if (taxableIncome > 0) {
+      setValue('charitable_donations_associate_tax_credit', computeRebateCredit(amount, donationAssociateCap));
+    }
+  }, [donationAssociate, taxableIncome, normalTax, donationAssociateCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pensionCap) return;
+    const amount = parseFloat(pension) || 0;
+    if (taxableIncome > 0) {
+      setValue('pension_fund_tax_credit', computeRebateCredit(amount, pensionCap));
+    }
+  }, [pension, taxableIncome, normalTax, pensionCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+};
+
+// One credit row. Self-subscribes to its own donation amount so the live
+// eligible/hint updates without re-rendering the rest of the form.
+const CreditItemRow = ({ item, control, register, errors, taxableIncome, avgRate }) => {
+  const donated = parseFloat(useWatch({ control, name: item.amount })) || 0;
+  const eligible = item.autoCalc && taxableIncome > 0 ? Math.min(donated, taxableIncome * item.limitPct) : 0;
+  const creditHint =
+    item.autoCalc && taxableIncome > 0 && donated > 0
+      ? `Auto: eligible Rs ${eligible.toLocaleString('en-PK')} × ${(avgRate * 100).toFixed(2)}%`
+      : undefined;
+  return (
+    <div className="px-3 py-3">
+      <div className="flex items-start gap-1.5">
+        <p className="font-body text-sm font-medium leading-snug text-slate-700">
+          {item.description}
+          <HelpHint fieldId={item.id} source={creditsHelp} />
+        </p>
+      </div>
+      {item.yesNo !== '-' && (
+        <div className="mt-2">
+          <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-500">Claiming this credit?</label>
+          <select
+            id={`${item.id}_yn`}
+            {...register(`${item.id}_yn`)}
+            className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+          >
+            <option value="">—</option>
+            <option value="Y">Yes</option>
+            <option value="N">No</option>
+          </select>
+        </div>
+      )}
+      <TaxFormRow
+        name={item.amount}
+        label="Amount donated / contributed"
+        error={errors[item.amount]?.message}
+        inputProps={{
+          type: 'number',
+          step: '0.01',
+          ...register(item.amount, {
+            min: { value: 0, message: 'Amount cannot be negative' },
+            valueAsNumber: true
+          })
+        }}
+      />
+      <TaxFormRow
+        name={item.taxReduction}
+        label="Tax credit"
+        sublabel={item.autoCalc ? 'Auto-calculated — editable' : 'Manual entry'}
+        hint={creditHint}
+        error={errors[item.taxReduction]?.message}
+        inputProps={{
+          type: 'number',
+          step: '0.01',
+          ...register(item.taxReduction, {
+            min: { value: 0, message: 'Amount cannot be negative' },
+            valueAsNumber: true
+          })
+        }}
+      />
+    </div>
+  );
+};
 
 const CreditsForm = () => {
   const navigate = useNavigate();
@@ -38,6 +144,7 @@ const CreditsForm = () => {
     watch,
     reset,
     setValue,
+    control,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('credits')
@@ -51,8 +158,9 @@ const CreditsForm = () => {
     }
   }, [contextFormData, reset]);
 
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. The three rebate effects run in the
+  // headless <CreditsAutoCalc> child; the total is isolated in
+  // <LiveTotalsProvider>; each row self-subscribes via <CreditItemRow>.
 
   // Prior year pre-fill
   const { hasPriorData: hasPriorCredits, applyPriorYear: applyPriorCredits, dismissPriorYear: dismissPriorCredits } = usePriorYearData('credits', setValue);
@@ -103,40 +211,11 @@ const CreditsForm = () => {
   const normalTax = calculateNormalTax(taxableIncome);
   const avgRate = taxableIncome > 0 ? normalTax / taxableIncome : 0;
 
-  const computeRebateCredit = (actualAmount, capPct) => {
-    if (!taxableIncome || !normalTax || !actualAmount || !capPct) return 0;
-    const eligible = Math.min(parseFloat(actualAmount) || 0, taxableIncome * capPct);
-    return eligible > 0 ? Math.round(eligible * avgRate) : 0;
-  };
-
   // DB-sourced cap ratios (u/s 61: 30%, u/s 61 to associate: 15%, u/s 63: 20%).
   const donationCap = rates?.creditCaps?.donation_u61?.rate;
   const donationAssociateCap = rates?.creditCaps?.donation_u61_associate?.rate;
   const pensionCap = rates?.creditCaps?.pension_u63?.rate;
-
-  useEffect(() => {
-    if (!donationCap) return;
-    const donation = parseFloat(watchedValues.charitable_donations_amount) || 0;
-    if (taxableIncome > 0) {
-      setValue('charitable_donations_tax_credit', computeRebateCredit(donation, donationCap));
-    }
-  }, [watchedValues.charitable_donations_amount, taxableIncome, normalTax, donationCap]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!donationAssociateCap) return;
-    const donation = parseFloat(watchedValues.charitable_donations_associate_amount) || 0;
-    if (taxableIncome > 0) {
-      setValue('charitable_donations_associate_tax_credit', computeRebateCredit(donation, donationAssociateCap));
-    }
-  }, [watchedValues.charitable_donations_associate_amount, taxableIncome, normalTax, donationAssociateCap]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!pensionCap) return;
-    const contribution = parseFloat(watchedValues.pension_fund_amount) || 0;
-    if (taxableIncome > 0) {
-      setValue('pension_fund_tax_credit', computeRebateCredit(contribution, pensionCap));
-    }
-  }, [watchedValues.pension_fund_amount, taxableIncome, normalTax, pensionCap]); // eslint-disable-line react-hooks/exhaustive-deps
+  // (rebate auto-calc effects relocated to <CreditsAutoCalc> — see module scope)
   // ────────────────────────────────────────────────────────────────────────────
 
   // Define comprehensive tax credits structure matching Excel. Memoised
@@ -207,19 +286,14 @@ const CreditsForm = () => {
     return itemsWithAdv - visibleCreditItems.length;
   }, [addons, creditItems, visibleCreditItems]);
 
-  // Calculate total tax credit
-  const calculateTotalCredit = () => {
-    return creditItems.reduce((total, item) => {
-      return total + (parseFloat(watchedValues[item.taxReduction]) || 0);
-    }, 0);
-  };
-
-  const totalCredit = calculateTotalCredit();
+  // Sum of all per-item tax-credit fields. Pure.
+  const sumCredits = (values) =>
+    creditItems.reduce((total, item) => total + (parseFloat(values[item.taxReduction]) || 0), 0);
 
   const onSubmit = async (data) => {
     const formData = {
       ...data,
-      total_tax_credits: totalCredit
+      total_tax_credits: sumCredits(data)
     };
 
     const success = await saveFormStep('credits', formData, true);
@@ -230,10 +304,10 @@ const CreditsForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
+    const data = watch();
     const formData = {
       ...data,
-      total_tax_credits: totalCredit
+      total_tax_credits: sumCredits(data)
     };
 
     const success = await saveFormStep('credits', formData, false);
@@ -270,6 +344,8 @@ const CreditsForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <CreditsAutoCalc control={control} setValue={setValue} taxableIncome={taxableIncome} normalTax={normalTax} avgRate={avgRate} donationCap={donationCap} donationAssociateCap={donationAssociateCap} pensionCap={pensionCap} />
+      <LiveTotalsProvider control={control} compute={(v) => ({ total: sumCredits(v) })}>
       <TaxFormShell
         title="Tax credits"
         subtitle="Charitable donations and approved pension contributions"
@@ -320,66 +396,17 @@ const CreditsForm = () => {
         {/* Credit rows — flat list. Each item carries a Y/N selector, a donation
             amount input and an editable computed-credit input. */}
         <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
-          {visibleCreditItems.map((item) => {
-            const donated = parseFloat(watchedValues[item.amount]) || 0;
-            const eligible = item.autoCalc && taxableIncome > 0 ? Math.min(donated, taxableIncome * item.limitPct) : 0;
-            const creditHint =
-              item.autoCalc && taxableIncome > 0 && donated > 0
-                ? `Auto: eligible Rs ${eligible.toLocaleString('en-PK')} × ${(avgRate * 100).toFixed(2)}%`
-                : undefined;
-            return (
-              <div key={item.id} className="px-3 py-3">
-                <div className="flex items-start gap-1.5">
-                  <p className="font-body text-sm font-medium leading-snug text-slate-700">
-                    {item.description}
-                    <HelpHint fieldId={item.id} source={creditsHelp} />
-                  </p>
-                </div>
-                {item.yesNo !== '-' && (
-                  <div className="mt-2">
-                    <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-500">Claiming this credit?</label>
-                    <select
-                      id={`${item.id}_yn`}
-                      {...register(`${item.id}_yn`)}
-                      className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
-                    >
-                      <option value="">—</option>
-                      <option value="Y">Yes</option>
-                      <option value="N">No</option>
-                    </select>
-                  </div>
-                )}
-                <TaxFormRow
-                  name={item.amount}
-                  label="Amount donated / contributed"
-                  error={errors[item.amount]?.message}
-                  inputProps={{
-                    type: 'number',
-                    step: '0.01',
-                    ...register(item.amount, {
-                      min: { value: 0, message: 'Amount cannot be negative' },
-                      valueAsNumber: true
-                    })
-                  }}
-                />
-                <TaxFormRow
-                  name={item.taxReduction}
-                  label="Tax credit"
-                  sublabel={item.autoCalc ? 'Auto-calculated — editable' : 'Manual entry'}
-                  hint={creditHint}
-                  error={errors[item.taxReduction]?.message}
-                  inputProps={{
-                    type: 'number',
-                    step: '0.01',
-                    ...register(item.taxReduction, {
-                      min: { value: 0, message: 'Amount cannot be negative' },
-                      valueAsNumber: true
-                    })
-                  }}
-                />
-              </div>
-            );
-          })}
+          {visibleCreditItems.map((item) => (
+            <CreditItemRow
+              key={item.id}
+              item={item}
+              control={control}
+              register={register}
+              errors={errors}
+              taxableIncome={taxableIncome}
+              avgRate={avgRate}
+            />
+          ))}
         </div>
 
         {/* Advanced toggle: reveals less-common credit lines (donations
@@ -407,8 +434,9 @@ const CreditsForm = () => {
         )}
 
         {/* Total tax credit — navy total band. */}
-        <AmountRow label="Total tax credit" amount={totalCredit} variant="total" />
+        <LiveAmount component={AmountRow} field="total" label="Total tax credit" variant="total" />
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
