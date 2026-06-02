@@ -56,6 +56,7 @@ const WealthRow = ({ rowKey, label, icon: Icon, register, watchedValues }) => {
           <input
             id={prevId}
             type="number"
+            inputMode="decimal"
             step="0.01"
             {...register(`${rowKey}_previous_year`, {
               min: { value: 0, message: 'Amount cannot be negative' }
@@ -76,6 +77,7 @@ const WealthRow = ({ rowKey, label, icon: Icon, register, watchedValues }) => {
           <input
             id={currId}
             type="number"
+            inputMode="decimal"
             step="0.01"
             {...register(`${rowKey}_current_year`, {
               min: { value: 0, message: 'Amount cannot be negative' }

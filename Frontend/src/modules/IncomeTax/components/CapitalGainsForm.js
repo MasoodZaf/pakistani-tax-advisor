@@ -221,6 +221,7 @@ const CapitalGainsForm = () => {
                 <input
                   id={item.taxableAmount}
                   type="number"
+                  inputMode="numeric"
                   step="1"
                   min="0"
                   aria-label={`${item.description} — gain amount`}
@@ -258,6 +259,7 @@ const CapitalGainsForm = () => {
                 <input
                   id={item.taxDeducted}
                   type="number"
+                  inputMode="numeric"
                   step="1"
                   min="0"
                   aria-label={`${item.description} — tax deducted`}
@@ -272,6 +274,7 @@ const CapitalGainsForm = () => {
                 <input
                   id={item.taxCarryable}
                   type="number"
+                  inputMode="numeric"
                   step="1"
                   min="0"
                   aria-label={`${item.description} — carryable`}
