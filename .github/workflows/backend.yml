@@ -104,6 +104,11 @@ jobs:
           # live cluster's hand-applied t→…→d/m order).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-d-form-unique-constraints.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-m-income-wealth-recon-uniques.sql
+          # ensureTaxReturn (helpers/ensureTaxReturn.js) upserts tax_returns with
+          # ON CONFLICT (user_id, tax_year_id); schema.sql only ships the
+          # (user_id, tax_year) unique. Add the id-based one prod has so form
+          # saves work.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='tax_returns_user_year_id_unique') THEN ALTER TABLE tax_returns ADD CONSTRAINT tax_returns_user_year_id_unique UNIQUE (user_id, tax_year_id); END IF; END \$\$;"
 
       - name: Seed tax years + slabs
         run: |
