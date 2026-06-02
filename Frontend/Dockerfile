@@ -16,6 +16,10 @@ COPY . .
 # Build the application
 ARG REACT_APP_API_URL=http://localhost:3001
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+# Match the CI policy: never ship source maps into the public nginx root.
+# Plain `npm run build` defaults GENERATE_SOURCEMAP=true, which would publish
+# ~7.6MB of readable, commented source (FBR logic, auth flows) at /static/js/*.map.
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 # Production stage
