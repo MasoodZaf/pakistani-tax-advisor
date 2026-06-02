@@ -13,6 +13,8 @@ import {
   TaxFormRow,
   AmountRow,
   FormNav,
+  LiveTotalsProvider,
+  LiveAmount,
 } from '../../../components/forms';
 
 const ExpensesForm = () => {
@@ -33,6 +35,7 @@ const ExpensesForm = () => {
     watch,
     reset,
     setValue,
+    control,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('expenses')
@@ -46,8 +49,9 @@ const ExpensesForm = () => {
     }
   }, [contextFormData, reset]);
 
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. Live subtotals/total are isolated in
+  // <LiveTotalsProvider> below; the input rows use register() and don't
+  // re-render on keystroke.
 
   // Prior year pre-fill (expenses are good candidates for year-over-year carry-forward)
   const { hasPriorData: hasPriorExp, applyPriorYear: applyPriorExp, dismissPriorYear: dismissPriorExp } = usePriorYearData('expenses', setValue);
@@ -73,12 +77,20 @@ const ExpensesForm = () => {
     ].reduce((sum, field) => sum + (parseFloat(values[field]) || 0), 0);
   };
 
-  const totalExpenses = calculateTotal(watchedValues);
+  // Breakdown + grand total for the live display rows. Same arithmetic as the
+  // inline JSX it replaces — just relocated so only these rows re-render.
+  const computeTotals = (v) => ({
+    housing: (parseFloat(v.rent) || 0) + (parseFloat(v.rates_taxes_charges) || 0) + (parseFloat(v.maintenance) || 0),
+    utilities: (parseFloat(v.electricity) || 0) + (parseFloat(v.water) || 0) + (parseFloat(v.gas) || 0) + (parseFloat(v.telephone) || 0),
+    transportation: (parseFloat(v.vehicle_running_maintenance) || 0) + (parseFloat(v.travelling) || 0),
+    personal: (parseFloat(v.medical) || 0) + (parseFloat(v.educational) || 0) + (parseFloat(v.entertainment) || 0),
+    total: calculateTotal(v),
+  });
 
   const onSubmit = async (data) => {
     const formData = {
       ...data,
-      total_expenses: totalExpenses
+      total_expenses: calculateTotal(data)
     };
 
     const success = await saveFormStep('expenses', formData, true);
@@ -89,10 +101,10 @@ const ExpensesForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const data = watchedValues;
+    const data = watch();
     const formData = {
       ...data,
-      total_expenses: totalExpenses
+      total_expenses: calculateTotal(data)
     };
 
     const success = await saveFormStep('expenses', formData, false);
@@ -138,6 +150,7 @@ const ExpensesForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <LiveTotalsProvider control={control} compute={computeTotals}>
       <TaxFormShell
         title="Allowable expenses"
         subtitle="Enter your annual living and professional expenses"
@@ -223,13 +236,14 @@ const ExpensesForm = () => {
         </div>
 
         <div className="overflow-hidden rounded-brand-lg border border-slate-200">
-          <AmountRow variant="calculated" label="Housing &amp; property" amount={(parseFloat(watchedValues.rent) || 0) + (parseFloat(watchedValues.rates_taxes_charges) || 0) + (parseFloat(watchedValues.maintenance) || 0)} />
-          <AmountRow variant="calculated" label="Utilities" amount={(parseFloat(watchedValues.electricity) || 0) + (parseFloat(watchedValues.water) || 0) + (parseFloat(watchedValues.gas) || 0) + (parseFloat(watchedValues.telephone) || 0)} />
-          <AmountRow variant="calculated" label="Transportation" amount={(parseFloat(watchedValues.vehicle_running_maintenance) || 0) + (parseFloat(watchedValues.travelling) || 0)} />
-          <AmountRow variant="calculated" label="Personal &amp; family" amount={(parseFloat(watchedValues.medical) || 0) + (parseFloat(watchedValues.educational) || 0) + (parseFloat(watchedValues.entertainment) || 0)} />
-          <AmountRow variant="total" label="Total annual expenses" sublabel="Used for wealth statement reconciliation and tax planning" amount={totalExpenses} />
+          <LiveAmount component={AmountRow} variant="calculated" field="housing" label="Housing &amp; property" />
+          <LiveAmount component={AmountRow} variant="calculated" field="utilities" label="Utilities" />
+          <LiveAmount component={AmountRow} variant="calculated" field="transportation" label="Transportation" />
+          <LiveAmount component={AmountRow} variant="calculated" field="personal" label="Personal &amp; family" />
+          <LiveAmount component={AmountRow} variant="total" field="total" label="Total annual expenses" sublabel="Used for wealth statement reconciliation and tax planning" />
         </div>
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
