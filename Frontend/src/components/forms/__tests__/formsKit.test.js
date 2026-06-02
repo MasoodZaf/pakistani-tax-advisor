@@ -47,6 +47,12 @@ describe('forms kit', () => {
     expect(screen.getByRole('button', { name: /complete & next/i })).toBeInTheDocument();
   });
 
+  test('FormNav renders a real submit button when nextType=submit even without onNext', () => {
+    render(<FormNav nextType="submit" nextLabel="Complete & next" />);
+    const btn = screen.getByRole('button', { name: /complete & next/i });
+    expect(btn).toHaveAttribute('type', 'submit');
+  });
+
   test('FormStateScreen announces error state', () => {
     render(<FormStateScreen title="Could not load rates" message="Try again" tone="error" />);
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load rates');
