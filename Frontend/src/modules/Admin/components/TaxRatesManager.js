@@ -8,6 +8,7 @@ import {
   TrendingUp, BarChart2, Info, ArrowRight, Package, Download
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 /* ── Styles ── */
 const S = () => (
@@ -121,6 +122,12 @@ export default function TaxRatesManager() {
   const [form, setForm] = useState(emptyForm);
   const [cloneForm, setCloneForm] = useState({ fromYearId:'', toYearId:'' });
   const [yearForm, setYearForm] = useState({ taxYear:'', startDate:'', endDate:'', filingDeadline:'', isCurrent: false, description:'' });
+
+  // Focus-trap each modal while it's open (Escape closes; focus restores to trigger).
+  const slabRef  = useFocusTrap(showSlabModal,  { onEscape: () => setShowSlabModal(false) });
+  const rateRef  = useFocusTrap(showRateModal,  { onEscape: () => setShowRateModal(false) });
+  const cloneRef = useFocusTrap(showCloneModal, { onEscape: () => setShowCloneModal(false) });
+  const yearRef  = useFocusTrap(showYearModal,  { onEscape: () => setShowYearModal(false) });
 
   const loadTaxYears = useCallback(async () => {
     try {
@@ -937,9 +944,9 @@ export default function TaxRatesManager() {
       {/* ── Slab Modal ── */}
       {showSlabModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowSlabModal(false)}>
-          <div className="trm-modal">
+          <div ref={slabRef} role="dialog" aria-modal="true" aria-labelledby="trm-slab-title" className="trm-modal" style={{ outline:'none' }}>
             <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
+              <span id="trm-slab-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
                 {editingSlab ? 'Edit Tax Slab' : 'Add Tax Slab'}
               </span>
               <button onClick={() => setShowSlabModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}>
@@ -1004,9 +1011,9 @@ export default function TaxRatesManager() {
       {/* ── Rate Modal (non-slab rates) ── */}
       {showRateModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowRateModal(false)}>
-          <div className="trm-modal" style={{ maxWidth: 600 }}>
+          <div ref={rateRef} role="dialog" aria-modal="true" aria-labelledby="trm-rate-title" className="trm-modal" style={{ maxWidth: 600, outline:'none' }}>
             <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
+              <span id="trm-rate-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
                 {editingRate ? 'Edit Rate' : 'Add Rate'} — {RATE_TYPES.find(t=>t.id===rateForm.rate_type)?.label}
               </span>
               <button onClick={() => setShowRateModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}>
@@ -1077,9 +1084,9 @@ export default function TaxRatesManager() {
       {/* ── Clone Modal ── */}
       {showCloneModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowCloneModal(false)}>
-          <div className="trm-modal">
+          <div ref={cloneRef} role="dialog" aria-modal="true" aria-labelledby="trm-clone-title" className="trm-modal" style={{ outline:'none' }}>
             <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>Clone Tax Slabs</span>
+              <span id="trm-clone-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>Clone Tax Slabs</span>
               <button onClick={() => setShowCloneModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}><X size={20} /></button>
             </div>
             <div style={{ padding:'20px 24px' }}>
@@ -1126,9 +1133,9 @@ export default function TaxRatesManager() {
       {/* ── New Tax Year Modal ── */}
       {showYearModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowYearModal(false)}>
-          <div className="trm-modal">
+          <div ref={yearRef} role="dialog" aria-modal="true" aria-labelledby="trm-year-title" className="trm-modal" style={{ outline:'none' }}>
             <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>New Tax Year</span>
+              <span id="trm-year-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>New Tax Year</span>
               <button onClick={() => setShowYearModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}><X size={20} /></button>
             </div>
             <div style={{ padding:'20px 24px' }}>

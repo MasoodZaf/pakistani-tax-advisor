@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertTriangle, Clock
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const S = () => (
   <style>{`
@@ -59,6 +60,11 @@ export default function AdminManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
+
+  // Focus-trap each modal while it's open (Escape closes; focus restores to trigger).
+  const createRef = useFocusTrap(showCreate, { onEscape: () => setShowCreate(false) });
+  const editRef = useFocusTrap(!!editTarget, { onEscape: () => setEditTarget(null) });
+  const resetRef = useFocusTrap(!!resetTarget, { onEscape: () => { setResetTarget(null); setNewPwd(''); } });
 
   // Create form
   const [createForm, setCreateForm] = useState({ name:'', email:'', password:'', role:'admin' });
@@ -310,11 +316,11 @@ export default function AdminManagement() {
       {/* ── Create Admin Modal ── */}
       {showCreate && (
         <div className="am-modal-overlay" onClick={() => setShowCreate(false)}>
-          <div className="am-modal" onClick={e => e.stopPropagation()}>
+          <div ref={createRef} role="dialog" aria-modal="true" aria-labelledby="am-create-title" className="am-modal" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-gray-700" />
-                <h2 className="text-base font-bold text-gray-900">Create Admin Account</h2>
+                <h2 id="am-create-title" className="text-base font-bold text-gray-900">Create Admin Account</h2>
               </div>
               <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -398,11 +404,11 @@ export default function AdminManagement() {
       {/* ── Edit Admin Modal ── */}
       {editTarget && (
         <div className="am-modal-overlay" onClick={() => setEditTarget(null)}>
-          <div className="am-modal" onClick={e => e.stopPropagation()}>
+          <div ref={editRef} role="dialog" aria-modal="true" aria-labelledby="am-edit-title" className="am-modal" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-gray-700" />
-                <h2 className="text-base font-bold text-gray-900">Edit Admin — {editTarget.name}</h2>
+                <h2 id="am-edit-title" className="text-base font-bold text-gray-900">Edit Admin — {editTarget.name}</h2>
               </div>
               <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -470,11 +476,11 @@ export default function AdminManagement() {
       {/* ── Reset Password Modal ── */}
       {resetTarget && (
         <div className="am-modal-overlay" onClick={() => { setResetTarget(null); setNewPwd(''); }}>
-          <div className="am-modal" onClick={e => e.stopPropagation()}>
+          <div ref={resetRef} role="dialog" aria-modal="true" aria-labelledby="am-reset-title" className="am-modal" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Key className="w-5 h-5 text-amber-600" />
-                <h2 className="text-base font-bold text-gray-900">Reset Password — {resetTarget.name}</h2>
+                <h2 id="am-reset-title" className="text-base font-bold text-gray-900">Reset Password — {resetTarget.name}</h2>
               </div>
               <button onClick={() => { setResetTarget(null); setNewPwd(''); }} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />

@@ -12,9 +12,12 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const UserImpersonation = ({ onClose }) => {
   const { user, logout } = useAuth();
+  // Trap focus inside whichever dialog branch renders; Escape closes it.
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [impersonating, setImpersonating] = useState(false);
@@ -137,10 +140,16 @@ const UserImpersonation = ({ onClose }) => {
   if (user?.role !== 'super_admin') {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="admin-impersonation-denied-title"
+          className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4 outline-none"
+        >
           <div className="text-center">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
             <p className="text-gray-600 mb-6">
               Only Super Admin can access user impersonation features.
             </p>
@@ -158,14 +167,20 @@ const UserImpersonation = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-impersonation-title"
+        className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden outline-none"
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Shield className="w-6 h-6 text-white" />
               <div>
-                <h2 className="text-xl font-bold text-white">User Impersonation Panel</h2>
+                <h2 id="admin-impersonation-title" className="text-xl font-bold text-white">User Impersonation Panel</h2>
                 <p className="text-red-100 text-sm">Super Admin Only - All actions are logged</p>
               </div>
             </div>
