@@ -1,14 +1,7 @@
-// Shared currency helpers for the tax-form kit. One implementation replaces the
-// comma-formatting closure copy-pasted across every IncomeTax form.
-
-// Format a number as grouped digits. Negatives are parenthesised (accounting
-// convention used throughout the FBR return), e.g. -2500 -> "(2,500)".
-export function formatPKR(value) {
-  const num = Number(value);
-  if (!isFinite(num)) return '0';
-  const abs = new Intl.NumberFormat('en-US').format(Math.round(Math.abs(num)));
-  return num < 0 ? `(${abs})` : abs;
-}
+// Input helpers for the tax-form kit (parse + live formatting). For DISPLAY use
+// `formatCurrency` from src/utils/currency — the app-wide single source of truth
+// ("Rs 1,234,567"). These two replace the comma-formatting closure that was
+// copy-pasted across every IncomeTax form.
 
 // Parse a user-entered / formatted string back to a number.
 export function parseAmount(str) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatPKR } from './formatCurrency';
+import { formatCurrency } from '../../utils/currency';
 
 /**
  * Read-only computation row (label + amount). `variant` carries the ONLY colour
@@ -21,11 +21,13 @@ const ROW = {
 };
 
 export default function AmountRow({
-  label, sublabel, amount = 0, variant = 'line', signAware = false, trace, className = '',
+  label, sublabel, amount = 0, amountNode, variant = 'line', signAware = false, trace, className = '',
 }) {
   const v = signAware ? (Number(amount) < 0 ? 'refund' : 'payable') : variant;
   const styles = ROW[v] || ROW.line;
-  const display = signAware ? formatPKR(Math.abs(Number(amount))) : formatPKR(amount);
+  // `amountNode` lets a caller render the value themselves (e.g. <NumberTrace/>),
+  // inheriting the variant's semantic colour; otherwise we format `amount`.
+  const display = signAware ? formatCurrency(Math.abs(Number(amount))) : formatCurrency(amount);
 
   return (
     <div
@@ -36,7 +38,9 @@ export default function AmountRow({
         {sublabel && <div className="font-body text-xs text-slate-400">{sublabel}</div>}
       </div>
       <div className="flex items-baseline gap-2 md:justify-end">
-        <span className={`font-mono text-sm tabular-nums ${styles.amount}`}>{display}</span>
+        <span className={`font-mono text-sm tabular-nums ${styles.amount}`}>
+          {amountNode != null ? amountNode : display}
+        </span>
         {trace}
       </div>
     </div>

@@ -4,14 +4,13 @@ import '@testing-library/jest-dom';
 import { FileText } from 'lucide-react';
 import {
   TaxFormShell, FormStateScreen, CollapsibleSection,
-  TaxFormRow, AmountRow, CalculatedRow, FormNav, formatPKR,
+  TaxFormRow, AmountRow, CalculatedRow, FormNav, formatCurrency,
 } from '../index';
 
 describe('forms kit', () => {
-  test('formatPKR groups thousands and parenthesises negatives', () => {
-    expect(formatPKR(1701000)).toBe('1,701,000');
-    expect(formatPKR(-2500)).toBe('(2,500)');
-    expect(formatPKR(0)).toBe('0');
+  test('formatCurrency renders grouped PKR amounts', () => {
+    expect(formatCurrency(1701000)).toMatch(/1,701,000/);
+    expect(formatCurrency(0)).toMatch(/0/);
   });
 
   test('TaxFormRow wires label↔input (A11Y-01) and announces errors (A11Y-02)', () => {
@@ -32,9 +31,9 @@ describe('forms kit', () => {
 
   test('AmountRow sign-aware shows magnitude for both refund and payable', () => {
     const { rerender } = render(<AmountRow label="Result" amount={-5000} signAware />);
-    expect(screen.getByText('5,000')).toBeInTheDocument();
+    expect(screen.getByText(/5,000/)).toBeInTheDocument();
     rerender(<AmountRow label="Result" amount={5000} signAware />);
-    expect(screen.getByText('5,000')).toBeInTheDocument();
+    expect(screen.getByText(/5,000/)).toBeInTheDocument();
   });
 
   test('shell + nav + calculated row + state screen render without crashing', () => {

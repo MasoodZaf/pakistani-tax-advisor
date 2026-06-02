@@ -5,10 +5,7 @@ import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import {
-  Save,
-  ArrowLeft,
   Calculator,
-  FileText,
   CheckCircle,
   Info,
   Download,
@@ -19,7 +16,25 @@ import HelpHint from '../../../components/Help/HelpHint';
 import taxComputationHelp from '../../../help/taxComputationHelp';
 import ReadinessChecklist from '../../../components/TaxForms/ReadinessChecklist';
 import NumberTrace from '../../../components/TaxForms/NumberTrace';
-import { formatCurrency } from '../../../utils/currency';
+import {
+  TaxFormShell,
+  FormStateScreen,
+  AmountRow,
+  TaxFormRow,
+  FormNav,
+} from '../../../components/forms';
+
+// Section group: a small label over a bordered, divided card of rows. Defined at
+// module scope so it never remounts its children (an in-component definition
+// would drop focus from the refund-adjustment input on every keystroke).
+const Section = ({ title, children }) => (
+  <div>
+    <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h2>
+    <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+      {children}
+    </div>
+  </div>
+);
 
 const TaxComputationSummary = () => {
   const navigate = useNavigate();
@@ -376,52 +391,43 @@ const TaxComputationSummary = () => {
   };
   if (ratesError) {
     return (
-      <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Calculator className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tax rates not available</h3>
-            <p className="text-gray-600 mb-4">
-              {ratesError} — the administrator must seed the rate tables for
-              tax year <strong>{currentTaxYear}</strong>.
-            </p>
-          </div>
-        </div>
-      </div>
+      <FormStateScreen
+        icon={Calculator}
+        tone="error"
+        title="Tax rates not available"
+        message={`${ratesError} — the administrator must seed the rate tables for tax year ${currentTaxYear}.`}
+      />
     );
   }
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Calculator className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Calculating tax computation...</p>
-          </div>
-        </div>
-      </div>
+      <FormStateScreen
+        icon={Calculator}
+        spinning
+        title="Calculating…"
+        message="Crunching your tax computation from every form."
+      />
     );
   }
 
   // Show message if no data is available
   if (!computationData) {
     return (
-      <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Calculator className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Tax Data Available</h3>
-            <p className="text-gray-600 mb-4">Please complete some tax forms first to see the computation summary.</p>
-            <button
-              onClick={() => navigate('/income-tax')}
-              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Go to Tax Forms
-            </button>
-          </div>
-        </div>
-      </div>
+      <FormStateScreen
+        icon={Calculator}
+        title="No tax data yet"
+        message="Complete some tax forms first to see your computation summary."
+        action={
+          <button
+            type="button"
+            onClick={() => navigate('/income-tax')}
+            className="inline-flex items-center gap-2 rounded-brand bg-navy px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-navy-dark focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/30"
+          >
+            Go to tax forms
+          </button>
+        }
+      />
     );
   }
 
@@ -459,368 +465,238 @@ const TaxComputationSummary = () => {
   const netPaidForTrace = (computationData?.base_net_tax_paid || 0) + refundAdjustment;
   const demandedForTrace = (computationData?.total_tax_chargeable || 0) - netPaidForTrace;
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calculator className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Tax Computation
-                <HelpHint fieldId="page_overview" source={taxComputationHelp} />
-              </h1>
-              <p className="text-gray-600">Complete tax calculation summary based on all entered data</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              onClick={() => setShowHelp(!showHelp)}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-            >
-              <Info className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="flex items-center px-4 py-2 text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/reports')}
-              title="Download the IRIS-format PDF from Reports"
-              className="flex items-center px-4 py-2 text-green-600 bg-green-100 rounded-lg hover:bg-green-200 transition-colors"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </button>
-          </div>
-        </div>
+  const isRefund = (demandedForTrace || 0) < 0;
 
-        {/* Pre-submit readiness checklist — surfaces blocking issues
-            before the user wastes a click on Submit. Server enforces
-            again at submit time. */}
-        <div className="mt-6">
-          <ReadinessChecklist />
-        </div>
+  const headerActions = (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowHelp((v) => !v)}
+        aria-label="Toggle help"
+        aria-expanded={showHelp}
+        aria-controls="taxcomp-help"
+        className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+      >
+        <Info size={18} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={() => window.print()}
+        className="inline-flex items-center gap-1.5 rounded-brand bg-white/10 px-3 py-1.5 font-body text-xs font-semibold text-white transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+      >
+        <Printer size={14} aria-hidden="true" /> Print
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/reports')}
+        title="Download the IRIS-format PDF from Reports"
+        className="inline-flex items-center gap-1.5 rounded-brand bg-white/10 px-3 py-1.5 font-body text-xs font-semibold text-white transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+      >
+        <Download size={14} aria-hidden="true" /> Export
+      </button>
+    </>
+  );
 
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Tax Computation Summary Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• This is the final tax computation based on all your entered data</li>
-              <li>• <strong>Income</strong>: Total income from all sources</li>
-              <li>• <strong>Deductible Allowances</strong>: Professional expenses and Zakat deductions</li>
-              <li>• <strong>Tax Chargeable</strong>: Calculated tax using Pakistani tax slabs</li>
-              <li>• <strong>Surcharge</strong>: 9% additional tax if income exceeds Rs 10 million (Finance Act 2025)</li>
-              <li>• <strong>Final Result</strong>: Tax payable or refundable amount</li>
-            </ul>
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
-        {/* Tax Computation Table */}
-        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          <div className="bg-blue-600 text-white py-3 px-4">
-            <h2 className="text-lg font-semibold flex items-center">
-              <FileText className="w-5 h-5 mr-2" />
-              Tax Computation
-            </h2>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            {/* Header Row */}
-            <div className="bg-blue-100 grid grid-cols-12 gap-4 py-3 px-4 font-semibold text-blue-900">
-              <div className="col-span-8">Description</div>
-              <div className="col-span-4 text-right">Amount PKR</div>
-            </div>
-
-            {/* Income Section */}
-            <div className="py-2 px-4">
-              <h3 className="font-semibold text-gray-800 mb-2">Income</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Income from Salary</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.income_from_salary)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Income / (Loss) from Other Sources</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.income_from_other_sources)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Total Income</div>
-              <div className="col-span-4 text-right text-blue-900 flex justify-end">
-                <NumberTrace
-                  value={computationData?.total_income}
-                  resultLabel="Total Income"
-                  formula="Salary + Other Sources"
-                  trace={[
-                    { label: 'Income from salary',         value: computationData?.income_from_salary },
-                    { label: 'Income from other sources',  value: computationData?.income_from_other_sources },
-                  ]}
-                />
-              </div>
-            </div>
-
-            {/* Deductions Section */}
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Deductible Allowances</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.deductible_allowances)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Taxable Income before capital gains/(loss)</div>
-              <div className="col-span-4 text-right text-blue-900 flex justify-end">
-                <NumberTrace
-                  value={computationData?.taxable_income_before_capital_gains}
-                  resultLabel="Taxable Income (excl. CG)"
-                  formula="Total Income − Deductible Allowances"
-                  trace={[
-                    { label: 'Total income',           value: computationData?.total_income },
-                    { label: 'Deductible allowances',  value: computationData?.deductible_allowances, op: '-' },
-                  ]}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Gains / (Loss) from Capital Assets</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.capital_gains_loss)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Taxable Income including capital gains/(loss)</div>
-              <div className="col-span-4 text-right text-blue-900 flex justify-end">
-                <NumberTrace
-                  value={computationData?.taxable_income_including_capital_gains}
-                  resultLabel="Taxable Income (incl. CG)"
-                  formula="Taxable Income (excl. CG) + Capital Gains"
-                  trace={[
-                    { label: 'Taxable income (excl. CG)',  value: computationData?.taxable_income_before_capital_gains },
-                    { label: 'Gains from capital assets',  value: computationData?.capital_gains_loss },
-                  ]}
-                />
-              </div>
-            </div>
-
-            {/* Tax Chargeable Section */}
-            <div className="py-2 px-4">
-              <h3 className="font-semibold text-gray-800 mb-2">Tax Chargeable</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Normal Income Tax</div>
-              <div className="col-span-4 text-right flex justify-end">
-                <NumberTrace
-                  value={computationData?.normal_income_tax}
-                  resultLabel="Normal Income Tax"
-                  formula="Sum of (slab amount × slab rate)"
-                  trace={buildSlabTrace(computationData?.taxable_income_before_capital_gains || 0)}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Surcharge (9% of Income Tax where income exceeds Rs 10m — Finance Act 2025)</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.surcharge)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Capital Gain Tax (CGT)</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.capital_gain_tax)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Normal Income Tax including Surcharge and CGT</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency(computationData?.normal_income_tax_including_surcharge_cgt)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Tax Reductions</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.tax_reductions)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Tax Credits</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.tax_credits)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Normal Income Tax after Tax Reduction/Credit</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency(computationData?.normal_income_tax_after_reduction_credit)}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Final / Fixed / Minimum / Average / Relevant / Reduced Income Tax</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.final_min_tax)}
-              </div>
-            </div>
-
-            {(computationData?.super_tax || 0) > 0 && (
-              <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-red-50 hover:bg-red-100">
-                <div className="col-span-8 text-red-800 font-medium">
-                  Super Tax u/s 4C — Finance Act 2025
-                  <span className="ml-2 text-xs text-red-600">(Income exceeds Rs 150M)</span>
-                </div>
-                <div className="col-span-4 text-right font-mono text-red-800 font-semibold">
-                  {formatCurrency(computationData?.super_tax)}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-green-50 font-bold border-2 border-green-200">
-              <div className="col-span-8 text-green-900">Total Tax Chargeable</div>
-              <div className="col-span-4 text-right text-green-900 text-lg flex justify-end">
-                <NumberTrace
-                  value={computationData?.total_tax_chargeable}
-                  resultLabel="Total Tax Chargeable"
-                  formula="Final Income Tax + Super Tax"
-                  trace={[
-                    { label: 'Normal income tax',           value: computationData?.normal_income_tax },
-                    { label: 'Surcharge',                   value: computationData?.surcharge },
-                    { label: 'Capital gains tax',           value: computationData?.capital_gain_tax },
-                    { label: 'Tax reductions',              value: computationData?.tax_reductions, op: '-' },
-                    { label: 'Tax credits',                 value: computationData?.tax_credits,    op: '-' },
-                    { label: 'Super tax u/s 4C',            value: computationData?.super_tax },
-                  ]}
-                />
-              </div>
-            </div>
-
-            {/* Taxes Paid Section */}
-            <div className="py-2 px-4">
-              <h3 className="font-semibold text-gray-800 mb-2">Taxes Paid/Adjusted</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Withholding Income Tax</div>
-              <div className="col-span-4 text-right font-mono">
-                {formatCurrency(computationData?.withholding_income_tax)}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50 items-center">
-              <div className="col-span-8 text-gray-700">
-                Refund Adjustment of Other Year(s) against Demand of this Year
-                <HelpHint fieldId="refund_adjustment" source={taxComputationHelp} />
-              </div>
-              <div className="col-span-4 text-right">
-                <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  value={refundAdjustment || ''}
-                  onChange={(e) => setRefundAdjustment(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Net Tax Paid/Adjusted</div>
-              <div className="col-span-4 text-right font-mono text-blue-900">
-                {formatCurrency((computationData?.base_net_tax_paid || 0) + refundAdjustment)}
-              </div>
-            </div>
-
-            {/* Final Result — the headline number every user comes here for. */}
-            <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-red-50 font-bold border-2 border-red-200">
-              <div className="col-span-8 text-red-900 text-lg">Income Tax Demanded /(Refundable)</div>
-              <div className="col-span-4 text-right text-red-900 text-xl flex justify-end">
-                <NumberTrace
-                  value={demandedForTrace}
-                  resultLabel={demandedForTrace >= 0 ? 'Tax payable to FBR' : 'Refund due to you'}
-                  formula="Tax chargeable − (WHT + Final-tax + Refund adj.)"
-                  trace={[
-                    { label: 'Total tax chargeable',          value: computationData?.total_tax_chargeable },
-                    { label: 'Withholding income tax',        value: computationData?.withholding_income_tax,  op: '-' },
-                    { label: 'Final tax already paid',        value: computationData?.final_tax_paid,          op: '-' },
-                    { label: 'Refund adjustment (other yrs)', value: refundAdjustment,                          op: '-' },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Indicator */}
-        <div className="flex items-center justify-center py-6">
-          <div className="flex items-center space-x-3 px-6 py-3 bg-green-50 border border-green-200 rounded-lg">
-            <CheckCircle className="w-6 h-6 text-green-600" />
-            <span className="text-green-800 font-medium">
-              Tax Computation Complete
-            </span>
-          </div>
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/wealth-statement/wealth-statement')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Wealth Statement
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Summary'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              Complete Tax Return
-              <CheckCircle className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
+  const helpPanel = showHelp ? (
+    <div id="taxcomp-help">
+      <h3 className="font-display text-sm font-bold text-navy">How this summary works</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>The final tax computation, calculated from everything you entered.</li>
+        <li><strong className="text-navy">Income</strong> — total income from all sources.</li>
+        <li><strong className="text-navy">Deductible allowances</strong> — professional expenses, Zakat and the like.</li>
+        <li><strong className="text-navy">Tax chargeable</strong> — tax computed on the Pakistani slabs.</li>
+        <li><strong className="text-navy">Final result</strong> — the amount payable to FBR, or your refund.</li>
+      </ul>
     </div>
+  ) : null;
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <TaxFormShell
+        title="Tax Computation"
+        subtitle="Your complete return, calculated from every form"
+        icon={Calculator}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/wealth-statement/wealth-statement')}
+            backLabel="Wealth statement"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save summary'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete tax return"
+          />
+        }
+      >
+        {/* Pre-submit readiness checklist — surfaces blocking issues before the
+            user wastes a click on Submit. Server re-enforces at submit time. */}
+        <ReadinessChecklist />
+
+        <Section title="Income">
+          <AmountRow label="Income from salary" amount={computationData?.income_from_salary} />
+          <AmountRow label="Income / (loss) from other sources" amount={computationData?.income_from_other_sources} />
+          <AmountRow
+            variant="subtotal"
+            label="Total income"
+            amountNode={
+              <NumberTrace
+                value={computationData?.total_income}
+                resultLabel="Total Income"
+                formula="Salary + Other Sources"
+                trace={[
+                  { label: 'Income from salary', value: computationData?.income_from_salary },
+                  { label: 'Income from other sources', value: computationData?.income_from_other_sources },
+                ]}
+              />
+            }
+          />
+        </Section>
+
+        <Section title="Taxable income">
+          <AmountRow label="Deductible allowances" amount={computationData?.deductible_allowances} />
+          <AmountRow
+            variant="subtotal"
+            label="Taxable income before capital gains"
+            amountNode={
+              <NumberTrace
+                value={computationData?.taxable_income_before_capital_gains}
+                resultLabel="Taxable Income (excl. CG)"
+                formula="Total Income − Deductible Allowances"
+                trace={[
+                  { label: 'Total income', value: computationData?.total_income },
+                  { label: 'Deductible allowances', value: computationData?.deductible_allowances, op: '-' },
+                ]}
+              />
+            }
+          />
+          <AmountRow label="Gains / (loss) from capital assets" amount={computationData?.capital_gains_loss} />
+          <AmountRow
+            variant="subtotal"
+            label="Taxable income including capital gains"
+            amountNode={
+              <NumberTrace
+                value={computationData?.taxable_income_including_capital_gains}
+                resultLabel="Taxable Income (incl. CG)"
+                formula="Taxable Income (excl. CG) + Capital Gains"
+                trace={[
+                  { label: 'Taxable income (excl. CG)', value: computationData?.taxable_income_before_capital_gains },
+                  { label: 'Gains from capital assets', value: computationData?.capital_gains_loss },
+                ]}
+              />
+            }
+          />
+        </Section>
+
+        <Section title="Tax chargeable">
+          <AmountRow
+            label="Normal income tax"
+            amountNode={
+              <NumberTrace
+                value={computationData?.normal_income_tax}
+                resultLabel="Normal Income Tax"
+                formula="Sum of (slab amount × slab rate)"
+                trace={buildSlabTrace(computationData?.taxable_income_before_capital_gains || 0)}
+              />
+            }
+          />
+          <AmountRow
+            label="Surcharge"
+            sublabel="9% of income tax where taxable income exceeds Rs 10M (Finance Act 2025)"
+            amount={computationData?.surcharge}
+          />
+          <AmountRow label="Capital gains tax (CGT)" amount={computationData?.capital_gain_tax} />
+          <AmountRow variant="subtotal" label="Normal income tax incl. surcharge & CGT" amount={computationData?.normal_income_tax_including_surcharge_cgt} />
+          <AmountRow label="Tax reductions" amount={computationData?.tax_reductions} />
+          <AmountRow label="Tax credits" amount={computationData?.tax_credits} />
+          <AmountRow variant="subtotal" label="Normal income tax after reductions & credits" amount={computationData?.normal_income_tax_after_reduction_credit} />
+          <AmountRow
+            label="Final / fixed tax"
+            sublabel="Final / fixed / minimum / average / relevant / reduced income tax"
+            amount={computationData?.final_min_tax}
+          />
+          {(computationData?.super_tax || 0) > 0 && (
+            <AmountRow
+              label="Super tax"
+              sublabel="Section 4C — taxable income exceeds Rs 150M (Finance Act 2025)"
+              amount={computationData?.super_tax}
+            />
+          )}
+          <AmountRow
+            variant="total"
+            label="Total tax chargeable"
+            amountNode={
+              <NumberTrace
+                value={computationData?.total_tax_chargeable}
+                resultLabel="Total Tax Chargeable"
+                formula="Final Income Tax + Super Tax"
+                trace={[
+                  { label: 'Normal income tax', value: computationData?.normal_income_tax },
+                  { label: 'Surcharge', value: computationData?.surcharge },
+                  { label: 'Capital gains tax', value: computationData?.capital_gain_tax },
+                  { label: 'Tax reductions', value: computationData?.tax_reductions, op: '-' },
+                  { label: 'Tax credits', value: computationData?.tax_credits, op: '-' },
+                  { label: 'Super tax u/s 4C', value: computationData?.super_tax },
+                ]}
+              />
+            }
+          />
+        </Section>
+
+        <Section title="Taxes paid / adjusted">
+          <AmountRow label="Withholding income tax" amount={computationData?.withholding_income_tax} />
+          <TaxFormRow
+            name="refund_adjustment"
+            label="Refund carried over from prior years"
+            help={<HelpHint fieldId="refund_adjustment" source={taxComputationHelp} />}
+            prefix="Rs"
+            inputProps={{
+              type: 'number',
+              step: '1',
+              min: '0',
+              value: refundAdjustment || '',
+              onChange: (e) => setRefundAdjustment(parseFloat(e.target.value) || 0),
+            }}
+          />
+          <AmountRow
+            variant="subtotal"
+            label="Net tax paid / adjusted"
+            amount={(computationData?.base_net_tax_paid || 0) + refundAdjustment}
+          />
+        </Section>
+
+        {/* Final result — the headline. Sign-aware: red = payable, green = refund,
+            and the LABEL states the outcome so meaning is never colour-only. */}
+        <AmountRow
+          signAware
+          amount={demandedForTrace}
+          label={isRefund ? 'Refund due to you' : 'Tax payable to FBR'}
+          amountNode={
+            <NumberTrace
+              value={Math.abs(demandedForTrace || 0)}
+              resultLabel={isRefund ? 'Refund due to you' : 'Tax payable to FBR'}
+              formula="Tax chargeable − (withholding + final tax + refund adj.)"
+              trace={[
+                { label: 'Total tax chargeable', value: computationData?.total_tax_chargeable },
+                { label: 'Withholding income tax', value: computationData?.withholding_income_tax, op: '-' },
+                { label: 'Final tax already paid', value: computationData?.final_tax_paid, op: '-' },
+                { label: 'Refund adjustment (other years)', value: refundAdjustment, op: '-' },
+              ]}
+            />
+          }
+        />
+
+        {/* Neutral completion banner — navy, NOT green, so green stays reserved
+            for the refund outcome above. */}
+        <div className="flex items-center justify-center gap-2 rounded-brand border border-navy/15 bg-navy/[0.03] px-4 py-3">
+          <CheckCircle size={18} className="text-navy" aria-hidden="true" />
+          <span className="font-body text-sm font-semibold text-navy">Tax computation complete</span>
+        </div>
+      </TaxFormShell>
+    </form>
   );
 };
 
