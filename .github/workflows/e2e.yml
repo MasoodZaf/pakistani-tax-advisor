@@ -71,6 +71,11 @@ jobs:
             echo "applying $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
+          # phase-t (sorted AFTER phase-d/phase-m) recreates the form tables,
+          # dropping the (user_id, tax_year) uniques those add. Re-apply them so
+          # /api/register's ON CONFLICT (user_id, tax_year) works.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-d-form-unique-constraints.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-m-income-wealth-recon-uniques.sql
           # filing_deadline + effective_from are NOT NULL; slab insert UPSERTs to
           # force the exact FA-2025 values (schema.sql + phases already seed slabs).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "

@@ -91,13 +91,19 @@ jobs:
           # columns Postgres rejects) — schema.sql + phase-* is the real path.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
 
-      - name: Apply phase migrations (phase-b, phase-c, phase-d)
+      - name: Apply phase migrations
         run: |
           cd backend
           for f in $(ls database/migrations/phase-*.sql | sort); do
             echo "applying $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
+          # phase-t (sorted AFTER phase-d/phase-m) recreates the form tables,
+          # dropping the (user_id, tax_year) uniques those add. Re-apply them so
+          # /api/register's ON CONFLICT (user_id, tax_year) works (matches the
+          # live cluster's hand-applied t→…→d/m order).
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-d-form-unique-constraints.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-m-income-wealth-recon-uniques.sql
 
       - name: Seed tax years + slabs
         run: |
