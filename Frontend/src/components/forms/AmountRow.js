@@ -21,7 +21,7 @@ const ROW = {
 };
 
 export default function AmountRow({
-  label, sublabel, amount = 0, amountNode, variant = 'line', signAware = false, trace, className = '',
+  label, sublabel, amount = 0, amountNode, variant = 'line', signAware = false, trace, help, className = '',
 }) {
   const v = signAware ? (Number(amount) < 0 ? 'refund' : 'payable') : variant;
   const styles = ROW[v] || ROW.line;
@@ -34,7 +34,10 @@ export default function AmountRow({
       className={`grid grid-cols-1 gap-0.5 px-3 py-2.5 md:grid-cols-[1fr_200px] md:items-baseline md:gap-4 ${styles.wrap} ${className}`}
     >
       <div className="min-w-0">
-        <div className={`font-body text-sm ${styles.label}`}>{label}</div>
+        <div className="flex items-start gap-1.5">
+          <div className={`font-body text-sm ${styles.label}`}>{label}</div>
+          {help}
+        </div>
         {sublabel && <div className="font-body text-xs text-slate-400">{sublabel}</div>}
       </div>
       <div className="flex items-baseline gap-2 md:justify-end">

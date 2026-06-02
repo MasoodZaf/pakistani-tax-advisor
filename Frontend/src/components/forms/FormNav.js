@@ -36,7 +36,7 @@ export default function FormNav({
             {saveLabel}
           </button>
         )}
-        {onNext && (
+        {(onNext || nextType === 'submit') && (
           <button
             type={nextType}
             onClick={nextType === 'button' ? onNext : undefined}

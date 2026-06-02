@@ -69,7 +69,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               justifyContent: 'space-between',
               padding: '18px 22px',
               borderBottom: '1px solid #f1f5f9',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)',
+              background: 'linear-gradient(135deg, #f8fafc 0%, rgba(40,57,108,0.06) 100%)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <div style={{
@@ -233,7 +233,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
           marginLeft: 6,
           padding: 0,
           border: '1.5px solid #cbd5e1',
-          background: '#eef2ff',
+          background: 'rgba(40,57,108,0.07)',
           color: '#28396C',
           cursor: 'pointer',
           borderRadius: 999,

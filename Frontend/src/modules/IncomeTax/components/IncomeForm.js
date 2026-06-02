@@ -4,21 +4,21 @@ import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
-  DollarSign,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  Upload
-} from 'lucide-react';
+import { DollarSign, Info, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import HelpHint from '../../../components/Help/HelpHint';
 import incomeFormHelp from '../../../help/incomeFormHelp';
+import {
+  TaxFormShell,
+  FormStateScreen,
+  CollapsibleSection,
+  TaxFormRow,
+  AmountRow,
+  CalculatedRow,
+  FormNav,
+} from '../../../components/forms';
 
 const IncomeForm = () => {
   const navigate = useNavigate();
@@ -275,771 +275,129 @@ const IncomeForm = () => {
     }
   };
 
-  const inputClasses = "form-input w-full h-10 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm font-medium";
-
-  const displayClasses = "h-10 px-3 py-2 border border-gray-300 rounded-md text-right text-sm font-medium flex items-center justify-end";
-
-  const inputLabelClasses = "text-xs text-gray-500 mt-1 text-center h-4";
-
-  const formatDisplayNumber = (value) => {
-    if (!value || value === 0) return '';
-    return new Intl.NumberFormat('en-US').format(Math.abs(value));
+  // One change handler for every currency input: strip commas and re-group as
+  // the user types (replaces the closure that was copy-pasted into all 16 inputs).
+  const reformatCommas = (e) => {
+    const numericValue = e.target.value.replace(/,/g, '');
+    if (!isNaN(numericValue) && numericValue !== '') {
+      e.target.value = formatNumber(numericValue);
+    }
   };
+
+  // Build the register + change props for a currency input row.
+  const reg = (name) => ({
+    type: 'text',
+    ...register(name, { setValueAs: parseToInteger, onChange: reformatCommas }),
+  });
 
   // Show loading state while data is being fetched
   if (dataLoading) {
-    return (
-      <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="spinner mb-4"></div>
-            <p className="text-gray-600">Loading income form data...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <FormStateScreen spinning title="Loading…" message="Loading your income details." />;
   }
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Detail of Income Subject to Normal Taxation</h1>
-              <p className="text-gray-600">Enter your annual income details for tax year</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="income-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
 
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Income Form Instructions</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Enter amounts in PKR without commas (e.g., 1000000 for 10 lakh)</li>
-              <li>• Fields marked "Please Input" require your data entry</li>
-              <li>• Calculated fields are automatically computed</li>
-              <li>• All values are displayed with comma formatting for readability</li>
-            </ul>
+  const helpPanel = showHelp ? (
+    <div id="income-help">
+      <h3 className="font-display text-sm font-bold text-navy">Filling in this form</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>Enter annual amounts in rupees — monthly fields are converted to annual (×12) for you.</li>
+        <li>Grey rows are calculated automatically and can&apos;t be edited.</li>
+        <li>Amounts format with thousands separators as you type.</li>
+      </ul>
+    </div>
+  ) : null;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Income"
+        subtitle="Income subject to normal taxation — enter your annual amounts"
+        icon={DollarSign}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/tax-forms')}
+            backLabel="Overview"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {hasPriorData && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 font-body text-sm text-navy">
+              <Upload size={16} aria-hidden="true" />
+              <span>Prior-year income data is available. Pre-fill this form?</span>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorYear}
+                className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                Dismiss
+              </button>
+              <button type="button" onClick={applyPriorYear}
+                className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">
+                Apply prior year
+              </button>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Prior Year Pre-fill Banner */}
-      {hasPriorData && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-indigo-800">
-            <Upload className="w-4 h-4 flex-shrink-0" />
-            <span>Prior year income data is available. Apply to pre-fill this form?</span>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorYear}
-              className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">
-              Dismiss
-            </button>
-            <button type="button" onClick={applyPriorYear}
-              className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">
-              Apply Prior Year Data
-            </button>
-          </div>
-        </div>
-      )}
+        <CollapsibleSection title="Payments by employer" open={expandedSections.paymentsEmployer} onToggle={() => toggleSection('paymentsEmployer')}>
+          <TaxFormRow name="monthly_basic_salary" label="Monthly basic salary" hint="Monthly — converted to annual" help={<HelpHint fieldId="monthly_basic_salary" source={incomeFormHelp} />} inputProps={reg('monthly_basic_salary')} />
+          <TaxFormRow name="monthly_allowances" label="Monthly allowances (excluding bonus & medical)" hint="Monthly — converted to annual" help={<HelpHint fieldId="monthly_allowances" source={incomeFormHelp} />} inputProps={reg('monthly_allowances')} />
+          <CalculatedRow label="Annual basic salary (monthly × 12)" amount={totals.annualBasicSalary} />
+          <CalculatedRow label="Annual allowances (monthly × 12)" amount={totals.allowances} />
+          <TaxFormRow name="bonus" label="Bonus" help={<HelpHint fieldId="bonus" source={incomeFormHelp} />} inputProps={reg('bonus')} />
+          <TaxFormRow name="medical_allowance" label="Medical allowance (where facility not provided by employer)" help={<HelpHint fieldId="medical_allowance" source={incomeFormHelp} />} inputProps={reg('medical_allowance')} />
+          <TaxFormRow name="pension_from_ex_employer" label="Pension received from ex-employer" help={<HelpHint fieldId="pension_received" source={incomeFormHelp} />} inputProps={reg('pension_from_ex_employer')} />
+          <TaxFormRow name="employment_termination_payment" label="Employment termination payment" sublabel="Section 12(2)(e)(iii)" help={<HelpHint fieldId="employment_termination_payment" source={incomeFormHelp} />} inputProps={reg('employment_termination_payment')} />
+          <TaxFormRow name="retirement_from_approved_funds" label="Amount received on retirement from approved funds (provident, pension, gratuity)" help={<HelpHint fieldId="amount_received_on_retirement" source={incomeFormHelp} />} inputProps={reg('retirement_from_approved_funds')} />
+          <TaxFormRow name="directorship_fee" label="Directorship fee" sublabel="u/s 149(3)" help={<HelpHint fieldId="directorship_fee" source={incomeFormHelp} />} inputProps={reg('directorship_fee')} />
+          <TaxFormRow name="other_cash_benefits" label="Other cash benefits (LFA, children education, etc.)" help={<HelpHint fieldId="other_cash_benefits" source={incomeFormHelp} />} inputProps={reg('other_cash_benefits')} />
+          <CalculatedRow label="Income exempt from tax" amount={totals.incomeExemptFromTax} help={<HelpHint fieldId="income_exempt_from_tax" source={incomeFormHelp} />} />
+          <AmountRow variant="subtotal" label="Annual salary & wages total" amount={totals.annualSalaryWagesTotal} />
+        </CollapsibleSection>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Main Table */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden">
+        <CollapsibleSection title="Non-cash benefits" open={expandedSections.nonCashBenefits} onToggle={() => toggleSection('nonCashBenefits')}>
+          <TaxFormRow name="employer_contribution_provident" label="Employer contribution to approved provident funds" help={<HelpHint fieldId="employer_provident_fund_contribution" source={incomeFormHelp} />} inputProps={reg('employer_contribution_provident')} />
+          <TaxFormRow name="taxable_car_value" label="Taxable value of car provided by employer" help={<HelpHint fieldId="taxable_value_of_car" source={incomeFormHelp} />} inputProps={reg('taxable_car_value')} />
+          <TaxFormRow name="other_taxable_subsidies" label="Other taxable subsidies & non-cash benefits" help={<HelpHint fieldId="other_taxable_subsidies" source={incomeFormHelp} />} inputProps={reg('other_taxable_subsidies')} />
+          <CalculatedRow label="Non-cash benefit exempt from tax" sublabel="Up to Rs 150,000 of provident contribution is exempt" amount={totals.providentExemption} help={<HelpHint fieldId="non_cash_benefit_exempt" source={incomeFormHelp} />} />
+          <AmountRow variant="subtotal" label="Total non-cash benefits" amount={totals.totalNonCashBenefits} />
+          <AmountRow variant="total" label="Total employment income" amount={totals.totalEmploymentIncome} />
+        </CollapsibleSection>
 
-          {/* Table Header */}
-          <div className="bg-blue-900 text-white">
-            <div className="grid grid-cols-12 p-4">
-              <div className="col-span-8">
-                <h2 className="text-lg font-bold">Description</h2>
-              </div>
-              <div className="col-span-4 text-center">
-                <h2 className="text-lg font-bold">Annual Value in PKR</h2>
-              </div>
-            </div>
-          </div>
+        <CollapsibleSection title="Other income (subject to minimum tax)" open={expandedSections.otherIncomeMinTax} onToggle={() => toggleSection('otherIncomeMinTax')}>
+          <TaxFormRow name="profit_on_debt_15_percent" label="Profit on debt @ 15% (profit on debt exceeding Rs 5M)" sublabel="u/s 151" help={<HelpHint fieldId="profit_on_debt_151" source={incomeFormHelp} />} inputProps={reg('profit_on_debt_15_percent')} />
+          <TaxFormRow name="profit_on_debt_12_5_percent" label="Profit on debt @ 12.5% (sukook exceeding Rs 5M)" sublabel="u/s 151A" help={<HelpHint fieldId="profit_on_debt_151A" source={incomeFormHelp} />} inputProps={reg('profit_on_debt_12_5_percent')} />
+          <AmountRow variant="subtotal" label="Total other income (subject to minimum tax)" amount={totals.totalOtherIncomeMinTax} />
+        </CollapsibleSection>
 
-          {/* Payments By Employer Section */}
-          <div
-            className="bg-gray-100 p-3 border-b border-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
-            onClick={() => toggleSection('paymentsEmployer')}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Payments By Employer</h3>
-              {expandedSections.paymentsEmployer ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-          </div>
-
-          {expandedSections.paymentsEmployer && (
-            <>
-          {/* Annual Salary and Wages Subsection */}
-          <div className="bg-gray-50 p-2 border-b border-gray-200">
-            <h4 className="font-medium text-gray-700">Annual Salary and Wages</h4>
-          </div>
-
-          {/* Monthly Basic Salary (will be multiplied by 12) */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Monthly Basic Salary (will be converted to annual)
-                <HelpHint fieldId="monthly_basic_salary" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('monthly_basic_salary', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input Monthly</div>
-            </div>
-          </div>
-
-          {/* Monthly Allowances (will be multiplied by 12) */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Monthly Allowances (excluding bonus and medical allowance)
-                <HelpHint fieldId="monthly_allowances" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('monthly_allowances', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input Monthly</div>
-            </div>
-          </div>
-
-          {/* Annual Basic Salary - Calculated Display */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800 font-medium">Annual Basic Salary (Monthly × 12)</label>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-blue-100 border-blue-300`}>
-                {formatDisplayNumber(totals.annualBasicSalary)}
-              </div>
-            </div>
-          </div>
-
-          {/* Annual Allowances - Calculated Display */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800 font-medium">Annual Allowances (Monthly × 12)</label>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-blue-100 border-blue-300`}>
-                {formatDisplayNumber(totals.allowances)}
-              </div>
-            </div>
-          </div>
-
-          {/* Bonus */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Bonus
-                <HelpHint fieldId="bonus" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('bonus', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Medical allowance */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Medical allowance (Where medical facility not provided by employer)
-                <HelpHint fieldId="medical_allowance" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('medical_allowance', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Pension received from ex-employer */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Pension received from ex-employer
-                <HelpHint fieldId="pension_received" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('pension_from_ex_employer', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Employment Termination payment */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Employment Termination payment (Section 12 (2) e iii)
-                <HelpHint fieldId="employment_termination_payment" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('employment_termination_payment', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Amount received on retirement - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Amount received on retirement from approved funds (Provident, pension, gratuity)
-                <HelpHint fieldId="amount_received_on_retirement" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('retirement_from_approved_funds', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Directorship Fee - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Directorship Fee u/s 149(3)
-                <HelpHint fieldId="directorship_fee" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('directorship_fee', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Other cash benefits */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Other cash benefits (LFA, Children education, etc.)
-                <HelpHint fieldId="other_cash_benefits" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('other_cash_benefits', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Income Exempt from tax - Calculated Field */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-gray-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Income Exempt from tax
-                <HelpHint fieldId="income_exempt_from_tax" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-gray-100`}>
-                ({formatDisplayNumber(Math.abs(totals.incomeExemptFromTax))})
-              </div>
-            </div>
-          </div>
-
-          {/* Annual Salary and Wages Total - Calculated Field (Excel B16) */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-300 bg-green-50">
-            <div className="col-span-8">
-              <label className="font-bold text-green-800">Annual Salary and Wages Total</label>
-              <div className="text-xs text-gray-600 mt-1">SUM of all above fields (Excel Formula B16)</div>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-green-100 border-green-300 font-bold text-lg`}>
-                {formatDisplayNumber(totals.annualSalaryWagesTotal)}
-              </div>
-            </div>
-          </div>
-            </>
-          )}
-
-          {/* Non cash benefits Section Header */}
-          <div
-            className="bg-gray-100 p-3 border-b border-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
-            onClick={() => toggleSection('nonCashBenefits')}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Non cash benefits</h3>
-              {expandedSections.nonCashBenefits ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-          </div>
-
-          {expandedSections.nonCashBenefits && (
-            <>
-          {/* Employer Contribution to Approved Provident Funds */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Employer Contribution to Approved Provident Funds
-                <HelpHint fieldId="employer_provident_fund_contribution" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('employer_contribution_provident', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Taxable value of Car provided by employer */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Taxable value of Car provided by employer
-                <HelpHint fieldId="taxable_value_of_car" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('taxable_car_value', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Other taxable subsidies and non cash benefits */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 hover:bg-blue-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Other taxable subsidies and non cash benefits
-                <HelpHint fieldId="other_taxable_subsidies" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('other_taxable_subsidies', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Non cash benefit exempt from tax - Calculated Field (Excel B22) */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-gray-50">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Non cash benefit exempt from tax
-                <HelpHint fieldId="non_cash_benefit_exempt" source={incomeFormHelp} />
-              </label>
-              <div className="text-xs text-gray-600 mt-1">-MIN(Provident, 150,000) - Excel Formula B22</div>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-gray-100`}>
-                ({formatDisplayNumber(Math.abs(totals.providentExemption))})
-              </div>
-            </div>
-          </div>
-
-          {/* Total non cash benefits - Calculated Field (Excel B23) */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-purple-50">
-            <div className="col-span-8">
-              <label className="font-bold text-purple-800">Total non cash benefits</label>
-              <div className="text-xs text-gray-600 mt-1">SUM(B19:B22) - Excel Formula B23</div>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-purple-100 border-purple-300 font-bold`}>
-                {formatDisplayNumber(totals.totalNonCashBenefits)}
-              </div>
-            </div>
-          </div>
-
-          {/* Total Employment Income - New Database Field */}
-          <div className="grid grid-cols-12 p-4 border-b border-gray-300 bg-indigo-50">
-            <div className="col-span-8">
-              <label className="font-bold text-indigo-900 text-lg">Total Employment Income</label>
-              <div className="text-xs text-gray-700 mt-1">Annual Salary + Non-Cash Benefits (Database Field)</div>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-indigo-100 border-indigo-400 font-bold text-lg`}>
-                {formatDisplayNumber(totals.totalEmploymentIncome)}
-              </div>
-            </div>
-          </div>
-            </>
-          )}
-
-          {/* Other Income (Subject to minimum tax) Section Header */}
-          <div
-            className="bg-gray-100 p-3 border-b border-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
-            onClick={() => toggleSection('otherIncomeMinTax')}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Other Income (Subject to minimum tax)</h3>
-              {expandedSections.otherIncomeMinTax ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-          </div>
-
-          {expandedSections.otherIncomeMinTax && (
-            <>
-          {/* Profit on Debt u/s 151 @ 15% - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Profit on Debt u/s 151 @ 15% (Profit on debt Exceeding Rs 5m)
-                <HelpHint fieldId="profit_on_debt_151" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('profit_on_debt_15_percent', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Profit on Debt u/s 151A @ 12.5% - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Profit on Debt u/s 151A @ 12.5% (Sukook Exceeding Rs 5m)
-                <HelpHint fieldId="profit_on_debt_151A" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('profit_on_debt_12_5_percent', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Total Other Income (Subject to minimum tax) - Calculated Field */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-300 bg-yellow-50">
-            <div className="col-span-8">
-              <label className="font-bold text-yellow-800"></label>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-yellow-100 border-yellow-300 font-bold`}>
-                {formatDisplayNumber(totals.totalOtherIncomeMinTax)}
-              </div>
-            </div>
-          </div>
-            </>
-          )}
-
-          {/* Other Income (Not Subject to minimum tax) Section Header */}
-          <div
-            className="bg-gray-100 p-3 border-b border-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
-            onClick={() => toggleSection('otherIncomeNoMinTax')}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-800">Other Income (Not Subject to minimum tax)</h3>
-              {expandedSections.otherIncomeNoMinTax ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-          </div>
-
-          {expandedSections.otherIncomeNoMinTax && (
-            <>
-          {/* Other taxable income - Rent income - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Other taxable income - Rent income
-                <HelpHint fieldId="rent_income" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('other_taxable_income_rent', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Other taxable income - Others - highlighted in yellow */}
-          <div className="grid grid-cols-12 p-3 border-b border-gray-200 bg-yellow-100 hover:bg-yellow-200">
-            <div className="col-span-8">
-              <label className="text-gray-800">
-                Other taxable income - Others
-                <HelpHint fieldId="other_taxable_income_others" source={incomeFormHelp} />
-              </label>
-            </div>
-            <div className="col-span-4">
-              <input
-                type="text"
-                {...register('other_taxable_income_others', {
-                  setValueAs: parseToInteger,
-                  onChange: (e) => {
-                    const numericValue = e.target.value.replace(/,/g, '');
-                    if (!isNaN(numericValue) && numericValue !== '') {
-                      e.target.value = formatNumber(numericValue);
-                    }
-                  },
-                })}
-                className={inputClasses}
-                placeholder="0"
-              />
-              <div className={inputLabelClasses}>Please Input</div>
-            </div>
-          </div>
-
-          {/* Other taxable income - Total - Calculated Field */}
-          <div className="grid grid-cols-12 p-4 border-b border-gray-300 bg-yellow-50">
-            <div className="col-span-8">
-              <label className="font-bold text-yellow-800 text-lg">Other taxable income - Total</label>
-            </div>
-            <div className="col-span-4">
-              <div className={`${displayClasses} bg-yellow-100 border-yellow-300 font-bold text-lg`}>
-                {formatDisplayNumber(totals.totalOtherIncomeNoMinTax)}
-              </div>
-            </div>
-          </div>
-            </>
-          )}
-
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200 mt-8">
-          <button
-            type="button"
-            onClick={() => navigate('/tax-forms')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Overview
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        <CollapsibleSection title="Other income (not subject to minimum tax)" open={expandedSections.otherIncomeNoMinTax} onToggle={() => toggleSection('otherIncomeNoMinTax')}>
+          <TaxFormRow name="other_taxable_income_rent" label="Other taxable income — rent" help={<HelpHint fieldId="rent_income" source={incomeFormHelp} />} inputProps={reg('other_taxable_income_rent')} />
+          <TaxFormRow name="other_taxable_income_others" label="Other taxable income — others" help={<HelpHint fieldId="other_taxable_income_others" source={incomeFormHelp} />} inputProps={reg('other_taxable_income_others')} />
+          <AmountRow variant="subtotal" label="Other taxable income — total" amount={totals.totalOtherIncomeNoMinTax} />
+        </CollapsibleSection>
+      </TaxFormShell>
+    </form>
   );
 };
 
