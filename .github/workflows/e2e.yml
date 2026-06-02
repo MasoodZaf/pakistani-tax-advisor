@@ -40,7 +40,9 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: tax_advisor_e2e
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tax_advisor_e2e?schema=public
+      # No ?schema= param — raw psql (libpq) rejects it. The backend connects
+      # via the DB_* vars; DATABASE_URL is only used by the psql CLI steps.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tax_advisor_e2e
       JWT_SECRET: ci-e2e-jwt-secret-at-least-32-chars-long
       NODE_ENV: test
       E2E_API_URL: http://localhost:3001
@@ -62,17 +64,21 @@ jobs:
       - name: Initialize schema + migrations + seeds
         run: |
           cd backend
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/0_init/migration.sql
+          # Canonical init = ../schema.sql (repo root), NOT the unusable Prisma
+          # 0_init migration (DEFAULT-based generated columns Postgres rejects).
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ../schema.sql
           for f in $(ls database/migrations/phase-*.sql | sort); do
             echo "applying $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
+          # filing_deadline + effective_from are NOT NULL; slab insert UPSERTs to
+          # force the exact FA-2025 values (schema.sql + phases already seed slabs).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
-            INSERT INTO tax_years (id, tax_year, is_current, is_active, start_date, end_date, description)
-            VALUES (gen_random_uuid(), '2025-26', true, true, '2025-07-01', '2026-06-30', 'TY 2025-26')
+            INSERT INTO tax_years (id, tax_year, is_current, is_active, start_date, end_date, filing_deadline, description)
+            VALUES (gen_random_uuid(), '2025-26', true, true, '2025-07-01', '2026-06-30', '2026-09-30', 'TY 2025-26')
             ON CONFLICT (tax_year) DO NOTHING;
-            INSERT INTO tax_slabs (id, tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, fixed_amount)
-            SELECT gen_random_uuid(), ty.id, v.name, v.ord, v.min, v.max, v.rate, 'individual', v.fixed
+            INSERT INTO tax_slabs (id, tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, fixed_amount, effective_from)
+            SELECT gen_random_uuid(), ty.id, v.name, v.ord, v.min, v.max, v.rate, 'individual', v.fixed, ty.start_date
             FROM tax_years ty, (VALUES
               ('slab_1', 1, 0::numeric, 600000::numeric, 0::numeric, 0::numeric),
               ('slab_2', 2, 600001, 1200000, 0.01, 0),
@@ -81,7 +87,10 @@ jobs:
               ('slab_5', 5, 3200001, 4100000, 0.30, 346000),
               ('slab_6', 6, 4100001, NULL, 0.35, 616000)
             ) AS v(name, ord, min, max, rate, fixed)
-            WHERE ty.tax_year = '2025-26';
+            WHERE ty.tax_year = '2025-26'
+            ON CONFLICT (tax_year_id, slab_type, slab_order) DO UPDATE SET
+              min_income=EXCLUDED.min_income, max_income=EXCLUDED.max_income, tax_rate=EXCLUDED.tax_rate,
+              fixed_amount=EXCLUDED.fixed_amount, slab_name=EXCLUDED.slab_name, effective_from=EXCLUDED.effective_from;
           "
 
       - name: Boot backend
