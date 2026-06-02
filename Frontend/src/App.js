@@ -39,6 +39,22 @@ const PageLoader = () => (
   </div>
 );
 
+// Branded 404 — the old fallback used the sky-blue legacy `.btn-primary`,
+// visually disowning the navy/lime brand (UX-08). Links to "/" so PublicHome
+// routes guests to the landing and signed-in users to their dashboard.
+const NotFound = () => (
+  <div style={{ minHeight: '100vh', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Nunito', sans-serif" }}>
+    <div style={{ textAlign: 'center', maxWidth: 420 }}>
+      <p style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 88, fontWeight: 800, color: '#28396C', lineHeight: 1, margin: 0, letterSpacing: '-0.03em' }}>404</p>
+      <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 700, color: '#1c1d1a', margin: '12px 0 8px' }}>Page not found</h1>
+      <p style={{ fontSize: 15, color: '#6b6c64', margin: '0 0 24px', lineHeight: 1.5 }}>The page you're looking for doesn't exist or may have moved.</p>
+      <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#28396C', color: '#fff', fontWeight: 700, fontSize: 15, padding: '11px 22px', borderRadius: 10, textDecoration: 'none' }}>
+        Back to home
+      </a>
+    </div>
+  </div>
+);
+
 // A user is "needs onboarding" when authenticated as a non-admin and the
 // wizard hasn't been marked complete yet. Admins skip onboarding entirely.
 const needsOnboarding = (u) =>
@@ -325,20 +341,7 @@ function App() {
               <Route path="/home" element={<Navigate to="/" replace />} />
               
               {/* 404 Route */}
-              <Route 
-                path="*" 
-                element={
-                  <div className="min-h-screen flex items-center justify-center">
-                    <div className="text-center">
-                      <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-                      <p className="text-gray-600 mb-8">Page not found</p>
-                      <a href="/dashboard" className="btn-primary">
-                        Go to Dashboard
-                      </a>
-                    </div>
-                  </div>
-                } 
-              />
+              <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
 
