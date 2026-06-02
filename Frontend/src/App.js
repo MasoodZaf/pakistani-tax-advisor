@@ -1,28 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TaxFormProvider } from './contexts/TaxFormContext';
 import { TaxYearProvider } from './contexts/TaxYearContext';
+// Eager: the persistent shell + the two first-paint views (login / guest
+// landing). Keeping these in the entry bundle avoids a spinner flash on the
+// very first screen.
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
-import PersonalInfoForm from './components/PersonalInfo/PersonalInfoForm';
-import Dashboard from './components/Dashboard/Dashboard';
-import TaxFormsFlow from './components/TaxForms/TaxFormsFlow';
-import IncomeTaxModule from './modules/IncomeTax';
-import WealthStatementModule from './modules/WealthStatement';
-import AdminModule from './modules/Admin';
-import Reports from './components/Reports/Reports';
-import ExcelManager from './components/Excel/ExcelManager';
-import TaxArchiveView from './components/TaxHistory/TaxArchiveView';
-import Settings from './components/Settings/Settings';
 import Landing from './components/Landing/Landing';
-import Onboarding from './components/Onboarding/Onboarding';
-import ConsultantPage from './components/AIConsultant/ConsultantPage';
-import FloatingChatWidget from './components/AIConsultant/FloatingChatWidget';
-import Wizard from './components/Wizard/Wizard';
+
+// Route-level code-splitting (PERF-01): everything below the shell loads as its
+// own chunk on demand, so the entry bundle no longer carries the whole app
+// (xlsx, the AI-consultant markdown stack, all tax modules, etc.).
+const PersonalInfoForm = lazy(() => import('./components/PersonalInfo/PersonalInfoForm'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
+const TaxFormsFlow = lazy(() => import('./components/TaxForms/TaxFormsFlow'));
+const IncomeTaxModule = lazy(() => import('./modules/IncomeTax'));
+const WealthStatementModule = lazy(() => import('./modules/WealthStatement'));
+const AdminModule = lazy(() => import('./modules/Admin'));
+const Reports = lazy(() => import('./components/Reports/Reports'));
+const ExcelManager = lazy(() => import('./components/Excel/ExcelManager'));
+const TaxArchiveView = lazy(() => import('./components/TaxHistory/TaxArchiveView'));
+const Settings = lazy(() => import('./components/Settings/Settings'));
+const Onboarding = lazy(() => import('./components/Onboarding/Onboarding'));
+const ConsultantPage = lazy(() => import('./components/AIConsultant/ConsultantPage'));
+const FloatingChatWidget = lazy(() => import('./components/AIConsultant/FloatingChatWidget'));
+const Wizard = lazy(() => import('./components/Wizard/Wizard'));
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
+
+// Full-screen fallback shown while a route chunk loads (mirrors the
+// ProtectedRoute spinner so it feels continuous).
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="spinner"></div>
+  </div>
+);
 
 // A user is "needs onboarding" when authenticated as a non-admin and the
 // wizard hasn't been marked complete yet. Admins skip onboarding entirely.
@@ -160,6 +175,7 @@ function App() {
               }}
             />
             
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<PublicHome />} />
@@ -324,10 +340,13 @@ function App() {
                 } 
               />
             </Routes>
+            </Suspense>
 
             {/* Floating tax-consultant bubble — self-renders only for
                 authenticated non-admin users when the server is configured. */}
-            <FloatingChatWidget />
+            <Suspense fallback={null}>
+              <FloatingChatWidget />
+            </Suspense>
           </div>
         </Router>
       </TaxFormProvider>
