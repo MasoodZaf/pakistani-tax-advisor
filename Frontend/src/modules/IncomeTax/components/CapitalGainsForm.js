@@ -7,10 +7,7 @@ import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
-  Home,
+  TrendingUp,
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,6 +16,7 @@ import HelpHint from '../../../components/Help/HelpHint';
 import capitalGainsHelp from '../../../help/capitalGainsHelp';
 import { formatCurrency } from '../../../utils/currency';
 import FormEmptyState from './FormEmptyState';
+import { TaxFormShell, FormNav } from '../../../components/forms';
 
 // Capital-gain category definitions. Rates are NOT in this array any more —
 // they come from tax_rates_config via useTaxRates() (rate_type='capital_gains',
@@ -162,7 +160,6 @@ const CapitalGainsForm = () => {
       navigate('/income-tax/expenses');
     }
   };
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
   // Field-level visibility — driven by income-profile addons. The
   // property group needs property_gain; the securities group needs
@@ -181,82 +178,105 @@ const CapitalGainsForm = () => {
     .filter(i => i.id.startsWith('securities'))
     .filter(i => visibleFields.has(i.taxableAmount));
 
-  const renderGroup = (title, items, color) => {
-    const borderClass = color === 'orange' ? 'border-orange-200' : 'border-blue-200';
-    const headerClass = color === 'orange'
-      ? 'bg-orange-100 text-orange-800 border-orange-200'
-      : 'bg-blue-100 text-blue-800 border-blue-200';
-    const rowBorderClass = color === 'orange' ? 'border-orange-100' : 'border-blue-100';
-
-    return (
-      <div className={`border ${borderClass} rounded-lg overflow-hidden`}>
-        <div className={`px-4 py-2 font-semibold text-sm border-b ${headerClass}`}>{title}</div>
+  const renderGroup = (title, sublabel, items) => (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-2 px-3">
+        <h2 className="font-display text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h2>
+        {sublabel && <span className="font-body text-xs text-slate-400">{sublabel}</span>}
+      </div>
+      <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
         {items.map(item => {
           const gain = parseFloat(watchedValues[item.taxableAmount]) || 0;
+          const r = cgtRate(item.id);
           return (
-            <div key={item.id} className={`grid grid-cols-12 gap-2 items-center py-3 px-4 border-b ${rowBorderClass} last:border-b-0 bg-white hover:bg-gray-50`}>
-              <div className="col-span-4">
-                <p className="text-sm font-medium text-gray-700">
-                  {item.description}
+            <div key={item.id} className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_72px_140px_140px_140px_120px] md:items-start md:gap-3">
+              <div className="min-w-0">
+                <div className="flex items-start gap-1.5">
+                  <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
                   <HelpHint fieldId={item.id} source={capitalGainsHelp} />
-                </p>
+                </div>
+                <div className="mt-0.5 md:hidden">
+                  {r === null ? (
+                    <span className="font-body text-xs text-slate-400">Rate loading…</span>
+                  ) : r === 0 ? (
+                    <span className="font-body text-xs text-slate-400">Rate: exempt</span>
+                  ) : (
+                    <span className="font-body text-xs font-semibold text-navy">Rate {(r * 100).toFixed(1)}%</span>
+                  )}
+                </div>
               </div>
-              <div className="col-span-1 text-center">
-                {(() => {
-                  const r = cgtRate(item.id);
-                  if (r === null) return <span className="text-xs text-gray-400">…</span>;
-                  if (r === 0) return <span className="text-xs text-gray-400">NIL</span>;
-                  return <span className="text-sm font-semibold text-teal-700">{(r * 100).toFixed(1)}%</span>;
-                })()}
+
+              <div className="hidden md:flex md:items-center md:justify-center md:pt-2">
+                {r === null ? (
+                  <span className="font-body text-xs text-slate-400">…</span>
+                ) : r === 0 ? (
+                  <span className="font-body text-xs font-semibold text-slate-400">NIL</span>
+                ) : (
+                  <span className="font-body text-sm font-bold tabular-nums text-navy">{(r * 100).toFixed(1)}%</span>
+                )}
               </div>
-              <div className="col-span-2">
+
+              <div>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Gain amount</span>
                 <input
+                  id={item.taxableAmount}
                   type="number"
                   step="1"
                   min="0"
+                  aria-label={`${item.description} — gain amount`}
+                  aria-invalid={errors[item.taxableAmount] ? true : undefined}
                   {...register(item.taxableAmount, { valueAsNumber: true, min: 0 })}
-                  className={inputClasses}
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
                 {errors[item.taxableAmount] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.taxableAmount].message}</p>
+                  <p role="alert" className="mt-1 text-right font-body text-xs font-medium text-red-600">{errors[item.taxableAmount].message}</p>
                 )}
               </div>
-              <div className="col-span-2">
+
+              <div>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">CGT (auto)</span>
                 <input
+                  id={item.taxField}
                   type="number"
                   step="1"
                   min="0"
+                  aria-label={`${item.description} — capital gains tax (auto-calculated)`}
                   {...register(item.taxField, { valueAsNumber: true, min: 0 })}
-                  className={`${inputClasses} bg-teal-50 border-teal-200`}
+                  className="w-full cursor-default rounded-brand border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500 focus:outline-none"
                   placeholder="0"
                   readOnly
                   title="Auto-calculated — read-only"
                 />
-                {(() => {
-                  const r = cgtRate(item.id);
-                  return gain > 0 && r !== null && r > 0 && (
-                    <p className="mt-0.5 text-xs text-teal-600">Auto @ {(r * 100).toFixed(1)}%</p>
-                  );
-                })()}
+                {gain > 0 && r !== null && r > 0 && (
+                  <p className="mt-1 text-right font-body text-xs text-slate-400">Auto @ {(r * 100).toFixed(1)}%</p>
+                )}
               </div>
-              <div className="col-span-2">
+
+              <div>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
                 <input
+                  id={item.taxDeducted}
                   type="number"
                   step="1"
                   min="0"
+                  aria-label={`${item.description} — tax deducted`}
                   {...register(item.taxDeducted, { valueAsNumber: true, min: 0 })}
-                  className={inputClasses}
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
               </div>
-              <div className="col-span-1">
+
+              <div>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Carryable</span>
                 <input
+                  id={item.taxCarryable}
                   type="number"
                   step="1"
                   min="0"
+                  aria-label={`${item.description} — carryable`}
                   {...register(item.taxCarryable, { valueAsNumber: true, min: 0 })}
-                  className={inputClasses}
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
               </div>
@@ -264,68 +284,78 @@ const CapitalGainsForm = () => {
           );
         })}
       </div>
-    );
-  };
+    </div>
+  );
+
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="cg-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="cg-help">
+      <h3 className="font-display text-sm font-bold text-navy">About this form</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li><strong className="text-navy">Immovable property u/s 37(1A)</strong>: rates step from 15% down to 2.5% by holding period; exempt after 6 years.</li>
+        <li><strong className="text-navy">Securities u/s 37A</strong>: rates from 5% to 25% depending on type and acquisition date.</li>
+        <li>CGT is auto-calculated from gain amount × rate (read-only column).</li>
+        <li><strong className="text-navy">Tax deducted</strong>: advance tax already withheld (e.g. u/s 236C on property).</li>
+        <li><strong className="text-navy">Carryable</strong>: net CGT that carries to your computation summary.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Home className="w-6 h-6 text-orange-600" />
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Capital gains"
+        subtitle="Gains from property and securities"
+        icon={TrendingUp}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/final-tax')}
+            backLabel="Final tax"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save data'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {hasPriorCG && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-body text-sm text-navy">Prior-year capital gains data is available. Pre-fill this form? CGT rates will be recalculated at current statutory rates.</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorCG} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
+              <button type="button" onClick={applyPriorCG} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Capital Gain</h1>
-              <p className="text-gray-600">Enter capital gains from property and securities — rates per Finance Act 2025</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Capital Gains Tax Help — Finance Act 2025</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Immovable Property u/s 37(1A)</strong>: Rates 15% → 2.5% depending on holding period; exempt after 6 years</li>
-              <li>• <strong>Securities u/s 37A</strong>: Rates from 5% to 25% depending on type and acquisition date</li>
-              <li>• CGT is <strong>auto-calculated</strong> from gain amount × rate (teal fields)</li>
-              <li>• <strong>Tax Deducted</strong>: Enter advance tax already deducted (e.g., u/s 236C on property)</li>
-              <li>• <strong>Tax Carryable</strong>: Net CGT that carries to computation summary</li>
-            </ul>
           </div>
         )}
-      </div>
 
-      {hasPriorCG && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <span className="text-sm text-indigo-800">Prior year capital gains data available — apply to pre-fill? CGT rates will be recalculated at Finance Act 2025 rates.</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorCG} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
-            <button type="button" onClick={applyPriorCG} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+        {/* Column headers (desktop) */}
+        {(propertyItems.length > 0 || securitiesItems.length > 0) && (
+          <div className="hidden grid-cols-[1fr_72px_140px_140px_140px_120px] gap-3 px-3 md:grid">
+            <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
+            <span className="text-center font-body text-xs font-bold uppercase tracking-wider text-slate-400">Rate</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Gain amount</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">CGT (auto)</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax deducted</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Carryable</span>
           </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Column Headers */}
-        <div className="bg-teal-600 text-white rounded-lg">
-          <div className="grid grid-cols-12 gap-2 items-center py-3 px-4 font-semibold text-sm">
-            <div className="col-span-4">Description</div>
-            <div className="col-span-1 text-center">Rate</div>
-            <div className="col-span-2 text-center">Gain Amount (Rs)</div>
-            <div className="col-span-2 text-center">CGT (Auto)</div>
-            <div className="col-span-2 text-center">Tax Deducted (Rs)</div>
-            <div className="col-span-1 text-center">Carryable</div>
-          </div>
-        </div>
+        )}
 
         {propertyItems.length === 0 && securitiesItems.length === 0 ? (
           <FormEmptyState
@@ -335,65 +365,48 @@ const CapitalGainsForm = () => {
           />
         ) : (
           <>
-            {propertyItems.length > 0 && renderGroup('Immovable Property — u/s 37(1A) Finance Act 2025', propertyItems, 'orange')}
-            {securitiesItems.length > 0 && renderGroup('Securities & Mutual Funds — u/s 37A Finance Act 2025', securitiesItems, 'blue')}
+            {propertyItems.length > 0 && renderGroup('Immovable property', 'u/s 37(1A)', propertyItems)}
+            {securitiesItems.length > 0 && renderGroup('Securities & mutual funds', 'u/s 37A', securitiesItems)}
 
-            {/* Totals — hidden in empty-state because there's nothing to sum. */}
-            <div className="grid grid-cols-12 gap-2 items-center py-4 px-4 bg-teal-100 border-2 border-teal-300 rounded-lg font-bold">
-              <div className="col-span-4 text-teal-900">Total Capital Gain</div>
-              <div className="col-span-1"></div>
-              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxable)}</div>
-              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.cgt)}</div>
-              <div className="col-span-2 text-right text-teal-900">{formatCurrency(totals.taxDeducted)}</div>
-              <div className="col-span-1 text-right text-teal-900">{formatCurrency(totals.taxCarryable)}</div>
+            {/* Totals — navy emphasis band; net CGT payable shown as a red headline. */}
+            <div className="rounded-brand-lg bg-navy p-5">
+              <h3 className="mb-3 font-body text-xs font-bold uppercase tracking-wider text-white/60">Total capital gain</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-brand bg-white/5 p-3">
+                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gain amount</span>
+                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxable)}</span>
+                </div>
+                <div className="rounded-brand bg-white/5 p-3">
+                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gross CGT</span>
+                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.cgt)}</span>
+                </div>
+                <div className="rounded-brand bg-white/5 p-3">
+                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Tax deducted</span>
+                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxDeducted)}</span>
+                </div>
+                <div className="rounded-brand bg-white/5 p-3">
+                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Carryable</span>
+                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxCarryable)}</span>
+                </div>
+              </div>
             </div>
           </>
         )}
 
-        {/* Net CGT payable banner */}
+        {/* Net CGT payable headline */}
         {totals.cgt > 0 && (
-          <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
-            <Info className="w-4 h-4 flex-shrink-0" />
-            <span>
-              Gross CGT: <strong>{formatCurrency(totals.cgt)}</strong> — Tax Deducted: <strong>{formatCurrency(totals.taxDeducted)}</strong> — Net CGT Payable: <strong>{formatCurrency(Math.max(0, totals.cgt - totals.taxDeducted))}</strong>
-            </span>
+          <div className="flex flex-col gap-1 rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="font-body text-sm font-bold text-red-700">Net CGT payable</div>
+            <div className="font-body text-xs text-slate-500 sm:text-right">
+              Gross CGT {formatCurrency(totals.cgt)} − tax deducted {formatCurrency(totals.taxDeducted)}
+            </div>
+            <div className="font-mono text-base font-bold tabular-nums text-red-600 sm:text-right">
+              {formatCurrency(Math.max(0, totals.cgt - totals.taxDeducted))}
+            </div>
           </div>
         )}
-
-        {/* Navigation */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/income-tax/final-tax')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Final Tax
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </TaxFormShell>
+    </form>
   );
 };
 

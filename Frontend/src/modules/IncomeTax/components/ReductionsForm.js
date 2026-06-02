@@ -6,9 +6,6 @@ import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   TrendingDown,
   Info,
   ChevronDown,
@@ -18,7 +15,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import reductionsHelp from '../../../help/reductionsHelp';
-import { formatCurrency } from '../../../utils/currency';
+import { TaxFormShell, AmountRow, FormNav } from '../../../components/forms';
 import FormEmptyState from './FormEmptyState';
 
 const ReductionsForm = () => {
@@ -246,213 +243,170 @@ const ReductionsForm = () => {
       navigate('/income-tax/credits');
     }
   };
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="reductions-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="reductions-help">
+      <h3 className="font-display text-sm font-bold text-navy">About tax reductions</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>Tax reductions directly reduce your calculated tax liability.</li>
+        <li>Select <strong className="text-navy">Y</strong> for any reduction that applies to you, then enter the relevant amount.</li>
+        <li>Some reductions are auto-calculated from your salary or profit figures — these stay editable.</li>
+        <li>Capital-gain reductions for armed-forces and government personnel apply only to qualifying disposals.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-green-600" />
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Tax reductions"
+        subtitle="Reductions that lower your calculated tax liability"
+        icon={TrendingDown}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/adjustable-tax')}
+            backLabel="Adjustable tax"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {hasPriorRed && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-body text-sm text-navy">Prior-year reduction data is available. Pre-fill this form?</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorRed} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
+              <button type="button" onClick={applyPriorRed} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tax Reduction, Credit and Deductible Allowances</h1>
-              <p className="text-gray-600">Enter eligible tax reductions to reduce your tax liability</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Tax Reductions Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Special straight deduction</strong> is available for Zakat paid under the Zakat and Usher Ordinance</li>
-              <li>• <strong>Rebate at average rate</strong> of tax is allowed on donations made to approved non-profit organisations</li>
-              <li>• <strong>Donation limit</strong>: Lower of donation value and 30% of taxable income</li>
-              <li>• <strong>Associate donations</strong>: Restricted to 15% of taxable income</li>
-              <li>• <strong>Tax reductions</strong> directly reduce your calculated tax liability</li>
-            </ul>
           </div>
         )}
-      </div>
 
-      {hasPriorRed && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <span className="text-sm text-indigo-800">Prior year reduction data available — apply to pre-fill?</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorRed} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
-            <button type="button" onClick={applyPriorRed} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
-          </div>
-        </div>
-      )}
+        {visibleReductionItems.length === 0 && (
+          <FormEmptyState
+            title="No tax reductions apply to your income profile yet."
+            addons={['Property Sale']}
+            note='Capital-gain reductions on immovable property appear when you add Property Sale. Use "Show advanced" below to reveal teacher/researcher and Behbood-certificate reductions.'
+          />
+        )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Column Headers */}
-        <div className="bg-blue-600 text-white rounded-lg">
-          <div className="grid grid-cols-12 gap-3 items-center py-3 px-4 font-semibold">
-            <div className="col-span-5">Description</div>
-            <div className="col-span-1 text-center">Y/N</div>
-            <div className="col-span-2 text-center">Amount</div>
-            <div className="col-span-2 text-center">Tax Reduction</div>
-            <div className="col-span-2 text-center">Limits/Remarks</div>
-          </div>
-        </div>
+        {visibleReductionItems.length > 0 && (
+          <>
+            <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Tax reductions</h2>
+            <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+              {visibleReductionItems.map((item) => (
+                <div key={item.id} className="grid grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[1fr_90px_160px_160px] md:items-start md:gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
+                      <HelpHint fieldId={item.id} source={reductionsHelp} />
+                    </div>
+                    {item.limits && <p className="mt-0.5 font-body text-xs text-slate-400">{item.limits}</p>}
+                  </div>
 
-        {/* Tax Reduction Section */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
-            <TrendingDown className="w-5 h-5 mr-2" />
-            Tax Reduction
-          </h2>
+                  <div>
+                    <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Applies?</label>
+                    <select
+                      id={`${item.id}_yn`}
+                      {...register(`${item.id}_yn`)}
+                      className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-2 font-body text-sm font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                    >
+                      <option value="">-</option>
+                      <option value="Y">Y</option>
+                      <option value="N">N</option>
+                    </select>
+                  </div>
 
-          {visibleReductionItems.length === 0 && (
-            <div className="mb-4">
-              <FormEmptyState
-                title="No tax reductions apply to your income profile yet."
-                addons={['Property Sale']}
-                note='Capital-gain reductions on immovable property appear when you add Property Sale. Click "Show advanced" below to reveal teacher/researcher and Behbood-certificate reductions.'
-              />
+                  <div>
+                    <label htmlFor={item.amount} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                      <input
+                        id={item.amount}
+                        type="number"
+                        step="0.01"
+                        inputMode="numeric"
+                        aria-invalid={errors[item.amount] ? true : undefined}
+                        {...register(item.amount, {
+                          min: { value: 0, message: 'Amount cannot be negative' },
+                          valueAsNumber: true
+                        })}
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        placeholder="0"
+                      />
+                    </div>
+                    {errors[item.amount] && (
+                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[item.amount].message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor={item.taxReduction} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax reduction</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                      <input
+                        id={item.taxReduction}
+                        type="number"
+                        step="0.01"
+                        inputMode="numeric"
+                        aria-invalid={errors[item.taxReduction] ? true : undefined}
+                        {...register(item.taxReduction, {
+                          min: { value: 0, message: 'Amount cannot be negative' },
+                          valueAsNumber: true
+                        })}
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        placeholder="0"
+                        title={item.autoCalc ? 'Auto-calculated — editable' : undefined}
+                      />
+                    </div>
+                    {item.autoCalc && (parseFloat(watchedValues[item.taxReduction]) || 0) > 0 && (
+                      <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated — editable</p>
+                    )}
+                    {errors[item.taxReduction] && (
+                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[item.taxReduction].message}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+          </>
+        )}
 
-          {visibleReductionItems.map((item, index) => (
-            <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-green-200 last:border-b-0">
-              <div className="col-span-5">
-                <p className="text-sm font-medium text-gray-700">
-                  {item.description}
-                  <HelpHint fieldId={item.id} source={reductionsHelp} />
-                </p>
-              </div>
-              <div className="col-span-1 text-center">
-                <select
-                  {...register(`${item.id}_yn`)}
-                  className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                >
-                  <option value="">-</option>
-                  <option value="Y">Y</option>
-                  <option value="N">N</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register(item.amount, {
-                    min: { value: 0, message: 'Amount cannot be negative' },
-                    valueAsNumber: true
-                  })}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-                {errors[item.amount] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.amount].message}</p>
-                )}
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register(item.taxReduction, {
-                    min: { value: 0, message: 'Amount cannot be negative' },
-                    valueAsNumber: true
-                  })}
-                  className={`${inputClasses} ${item.autoCalc ? 'bg-green-50 border-green-300' : ''}`}
-                  placeholder="0"
-                  title={item.autoCalc ? 'Auto-calculated — editable' : undefined}
-                />
-                {item.autoCalc && (parseFloat(watchedValues[item.taxReduction]) || 0) > 0 && (
-                  <p className="mt-0.5 text-xs text-green-700">Auto-calculated</p>
-                )}
-                {errors[item.taxReduction] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.taxReduction].message}</p>
-                )}
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs text-gray-600 p-2 bg-gray-50 rounded border">{item.limits}</p>
-              </div>
-            </div>
-          ))}
-
-          {/* Advanced toggle: reveals teacher/researcher + Behbood
-              certificate reductions (both ADVANCED in the manifest). */}
-          {advancedExtraCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 text-sm font-medium text-green-700 bg-green-100 border border-green-200 rounded-lg hover:bg-green-200 transition-colors"
-            >
-              {showAdvanced ? (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Hide advanced reduction fields
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Show {advancedExtraCount} more advanced reduction item{advancedExtraCount === 1 ? '' : 's'}
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Total Tax Reduction */}
-          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-green-100 rounded-lg px-4 font-semibold">
-            <div className="col-span-5">
-              <p className="text-green-800">Total Tax Reduction</p>
-            </div>
-            <div className="col-span-1"></div>
-            <div className="col-span-2"></div>
-            <div className="col-span-2 text-right">
-              <p className="text-xl font-bold text-green-800">{formatCurrency(totalReduction)}</p>
-            </div>
-            <div className="col-span-2"></div>
-          </div>
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
+        {/* Advanced toggle: reveals teacher/researcher + Behbood
+            certificate reductions (both ADVANCED in the manifest). */}
+        {advancedExtraCount > 0 && (
           <button
             type="button"
-            onClick={() => navigate('/income-tax/adjustable-tax')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Adjustable Tax
+            {showAdvanced
+              ? (<><ChevronDown size={16} aria-hidden="true" /> Hide advanced reduction fields</>)
+              : (<><Plus size={16} aria-hidden="true" /> Show {advancedExtraCount} more advanced reduction item{advancedExtraCount === 1 ? '' : 's'}</>)}
           </button>
+        )}
 
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        <AmountRow variant="total" label="Total tax reduction" amount={totalReduction} />
+      </TaxFormShell>
+    </form>
   );
 };
 

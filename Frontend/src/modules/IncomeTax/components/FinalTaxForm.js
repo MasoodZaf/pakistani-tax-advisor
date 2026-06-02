@@ -6,9 +6,6 @@ import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   Building2,
   Info
 } from 'lucide-react';
@@ -16,7 +13,7 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalTaxHelp from '../../../help/finalTaxHelp';
-import { formatCurrency } from '../../../utils/currency';
+import { TaxFormShell, AmountRow, FormNav } from '../../../components/forms';
 
 // Final Tax items. Rates are NOT stored here — they live in tax_rates_config
 // (rate_type='final_tax', rate_category=item.id) and are resolved per-year
@@ -204,191 +201,162 @@ const FinalTaxForm = () => {
       navigate('/income-tax/capital-gains');
     }
   };
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
 
-  // Group items for display
+  // Display grouping — purely presentational.
   const groups = [
-    { title: 'Prize Bonds & Winnings', color: 'yellow', ids: ['prize_bond_winnings', 'lottery_crossword_winnings'] },
-    { title: 'Government Securities Profit', color: 'green', ids: ['profit_govt_securities', 'profit_defence_savings'] },
-    { title: 'Dividend Income', color: 'blue', ids: ['dividend_listed_companies', 'dividend_other'] },
-    { title: 'Capital Gain (Final Tax)', color: 'purple', ids: ['capital_gain_securities_less_12m', 'capital_gain_securities_over_12m'] },
-    { title: 'Other Final Tax', color: 'gray', ids: ['commission_agents', 'other_final_tax'] }
+    { title: 'Prize bonds & winnings', ids: ['prize_bond_winnings', 'lottery_crossword_winnings'] },
+    { title: 'Government securities profit', ids: ['profit_govt_securities', 'profit_defence_savings'] },
+    { title: 'Dividend income', ids: ['dividend_listed_companies', 'dividend_other'] },
+    { title: 'Capital gain (final tax)', ids: ['capital_gain_securities_less_12m', 'capital_gain_securities_over_12m'] },
+    { title: 'Other final tax', ids: ['commission_agents', 'other_final_tax'] },
   ];
 
-  const colorMap = {
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    green:  'bg-green-50 border-green-200 text-green-800',
-    blue:   'bg-blue-50 border-blue-200 text-blue-800',
-    purple: 'bg-purple-50 border-purple-200 text-purple-800',
-    gray:   'bg-gray-50 border-gray-200 text-gray-800'
-  };
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="final-tax-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="final-tax-help">
+      <h3 className="font-display text-sm font-bold text-navy">About final tax</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>Final tax is the complete liability on these income types — no further computation, no refund.</li>
+        <li>These amounts are not added to your taxable income for normal slab calculation.</li>
+        <li>Tax is auto-calculated for fixed-rate items; enter the gross amount received.</li>
+        <li>Rates follow Finance Act 2025 / ITO 2001.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-red-600" />
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Final tax"
+        subtitle="Income taxed at fixed rates, outside normal computation"
+        icon={Building2}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/deductions')}
+            backLabel="Deductions"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {hasPriorFT && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-body text-sm text-navy">Prior-year final tax data is available. Pre-fill this form?</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorFT} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
+              <button type="button" onClick={applyPriorFT} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Final Tax</h1>
-              <p className="text-gray-600">Income taxed at fixed rates — not included in normal income computation</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Final Tax Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Final tax</strong> is the complete tax liability on these income types — no further computation, no refund</li>
-              <li>• These amounts are NOT added to your taxable income for normal slab calculation</li>
-              <li>• Tax is auto-calculated for fixed-rate items; enter the gross amount received</li>
-              <li>• Rates are per Finance Act 2025 / ITO 2001</li>
-            </ul>
           </div>
         )}
-      </div>
 
-      {hasPriorFT && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <span className="text-sm text-indigo-800">Prior year final tax data available — apply to pre-fill?</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorFT} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
-            <button type="button" onClick={applyPriorFT} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Column Headers */}
-        <div className="bg-red-600 text-white rounded-lg">
-          <div className="grid grid-cols-12 gap-3 items-center py-3 px-4 font-semibold text-sm">
-            <div className="col-span-1">Section</div>
-            <div className="col-span-4">Description</div>
-            <div className="col-span-2 text-center">Rate</div>
-            <div className="col-span-2 text-center">Gross Amount (Rs)</div>
-            <div className="col-span-2 text-center">Tax (Rs)</div>
-            <div className="col-span-1 text-center">Remarks</div>
-          </div>
+        {/* Column headers (desktop) */}
+        <div className="hidden grid-cols-[1fr_150px_150px] gap-4 px-1 md:grid">
+          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Gross amount</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax</span>
         </div>
 
-        {groups.map(group => {
-          const items = FINAL_TAX_ITEMS.filter(i => group.ids.includes(i.id));
+        {groups.map((group) => {
+          const items = FINAL_TAX_ITEMS.filter((i) => group.ids.includes(i.id));
           return (
-            <div key={group.title} className={`border rounded-lg overflow-hidden ${colorMap[group.color]}`}>
-              <div className={`px-4 py-2 font-semibold text-sm border-b ${colorMap[group.color]}`}>
-                {group.title}
+            <div key={group.title}>
+              <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">{group.title}</h2>
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+                {items.map((item) => {
+                  const r = item.manual ? null : finalTaxRate(item.id);
+                  const isAutoCalc = !item.manual && r !== null;
+                  const ratePct = r !== null ? (r * 100).toFixed(1) : null;
+                  return (
+                    <div key={item.id} className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_150px_150px] md:items-start md:gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
+                          <HelpHint fieldId={item.id} source={finalTaxHelp} />
+                        </div>
+                        <p className="mt-0.5 font-body text-xs text-slate-400">
+                          {item.section !== 'Other' && <span className="mr-1">{item.section}</span>}
+                          {item.remark}
+                          {item.manual
+                            ? ' · rate entered manually'
+                            : ratePct !== null
+                              ? ` · ${ratePct}%`
+                              : ''}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Gross amount</span>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                          <input
+                            id={item.amountField}
+                            type="number"
+                            step="1"
+                            min="0"
+                            inputMode="numeric"
+                            aria-label={`${item.description} — gross amount`}
+                            {...register(item.amountField, { valueAsNumber: true, min: 0 })}
+                            className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax</span>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                          <input
+                            id={item.taxField}
+                            type="number"
+                            step="1"
+                            min="0"
+                            inputMode="numeric"
+                            aria-label={`${item.description} — tax`}
+                            {...register(item.taxField, { valueAsNumber: true, min: 0 })}
+                            className={`w-full rounded-brand border-[1.5px] py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 ${isAutoCalc ? 'cursor-default border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-300 bg-white text-navy'}`}
+                            placeholder="0"
+                            readOnly={isAutoCalc}
+                            title={isAutoCalc ? 'Auto-calculated — read-only' : 'Enter manually'}
+                          />
+                        </div>
+                        {isAutoCalc && (parseFloat(watchedValues[item.amountField]) || 0) > 0 && (
+                          <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated @ {ratePct}%</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {items.map(item => {
-                const r = item.manual ? null : finalTaxRate(item.id);
-                const isAutoCalc = !item.manual && r !== null;
-                return (
-                <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 px-4 border-b border-opacity-50 last:border-b-0 bg-white hover:bg-gray-50">
-                  <div className="col-span-1">
-                    <span className="text-xs font-mono text-gray-500">{item.section}</span>
-                  </div>
-                  <div className="col-span-4">
-                    <p className="text-sm font-medium text-gray-700">
-                      {item.description}
-                      <HelpHint fieldId={item.id} source={finalTaxHelp} />
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{item.remark}</p>
-                  </div>
-                  <div className="col-span-2 text-center">
-                    {item.manual ? (
-                      <span className="text-xs text-gray-400">Manual</span>
-                    ) : r !== null ? (
-                      <span className="text-sm font-semibold text-red-700">{(r * 100).toFixed(1)}%</span>
-                    ) : (
-                      <span className="text-xs text-gray-400">…</span>
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      {...register(item.amountField, { valueAsNumber: true, min: 0 })}
-                      className={inputClasses}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      {...register(item.taxField, { valueAsNumber: true, min: 0 })}
-                      className={`${inputClasses} ${isAutoCalc ? 'bg-red-50 border-red-200' : ''}`}
-                      placeholder="0"
-                      readOnly={isAutoCalc}
-                      title={isAutoCalc ? 'Auto-calculated — read-only' : 'Enter manually'}
-                    />
-                    {isAutoCalc && (parseFloat(watchedValues[item.amountField]) || 0) > 0 && (
-                      <p className="mt-0.5 text-xs text-red-600">Auto @ {(r * 100).toFixed(1)}%</p>
-                    )}
-                  </div>
-                  <div className="col-span-1"></div>
-                </div>
-                );
-              })}
             </div>
           );
         })}
 
-        {/* Total */}
-        <div className="grid grid-cols-12 gap-3 items-center py-4 px-4 bg-red-100 border-2 border-red-300 rounded-lg font-bold">
-          <div className="col-span-7 text-red-900">Total Final Tax</div>
-          <div className="col-span-2"></div>
-          <div className="col-span-2 text-right text-xl text-red-900">
-            {formatCurrency(totalFinalTax)}
-          </div>
-          <div className="col-span-1"></div>
+        {/* Total — navy emphasis band (this is final tax owed, not a refund). */}
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <AmountRow label="Total final tax" amount={totalFinalTax} variant="total" />
         </div>
-
-        {/* Navigation */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/income-tax/deductions')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Deductions
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </TaxFormShell>
+    </form>
   );
 };
 

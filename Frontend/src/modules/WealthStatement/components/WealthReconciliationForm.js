@@ -3,20 +3,23 @@ import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   Scale,
   AlertTriangle,
   CheckCircle,
   Info,
   Calculator,
-  FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import wealthReconciliationHelp from '../../../help/wealthReconciliationHelp';
 import { formatCurrency } from '../../../utils/currency';
+import {
+  TaxFormShell,
+  FormStateScreen,
+  TaxFormRow,
+  AmountRow,
+  FormNav,
+} from '../../../components/forms';
 
 const WealthReconciliationForm = () => {
   const navigate = useNavigate();
@@ -166,99 +169,111 @@ const WealthReconciliationForm = () => {
       navigate('/income-tax/tax-computation');
     }
   };
-  const inputClasses = "form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right";
-  const readOnlyClasses = "form-input w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-right text-gray-700";
-
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Calculator className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Calculating wealth reconciliation...</p>
-          </div>
-        </div>
-      </div>
+      <FormStateScreen
+        icon={Calculator}
+        spinning
+        title="Calculating reconciliation…"
+        message="Pulling figures from your wealth statement and income forms."
+      />
     );
   }
 
+  const balanced = Math.abs(unreconciledDifference) < 0.01;
+
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="wealth-recon-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="wealth-recon-help">
+      <h3 className="font-display text-sm font-bold text-navy">About wealth reconciliation</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>The unreconciled difference must be zero before you can submit.</li>
+        <li>It reconciles your net-worth increase with declared income and expenses.</li>
+        <li>Figures are pulled automatically from your wealth statement and income forms.</li>
+        <li>Adjust personal expenses or other items to balance the reconciliation.</li>
+        <li>Any unexplained increase in wealth may trigger an FBR audit.</li>
+      </ul>
+    </div>
+  ) : null;
+
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Scale className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Wealth Reconciliation</h1>
-              <p className="text-gray-600">Critical FBR compliance requirement - unreconciled difference must be zero</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Wealth reconciliation"
+        subtitle="Reconcile your net-worth increase with declared income and expenses"
+        icon={Scale}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/wealth-statement/wealth-statement')}
+            backLabel="Wealth statement"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel={
+              saving ? 'Completing…' : balanced ? 'Complete reconciliation' : 'Balance required'
+            }
+          />
+        }
+      >
+        {/* Hidden registered fields — keep the computed values wired into the
+            form payload (display is handled by the read-only AmountRows below). */}
+        <input type="hidden" {...register('net_assets_current_year')} />
+        <input type="hidden" {...register('net_assets_previous_year')} />
+        <input type="hidden" {...register('income_normal_tax')} />
+        <input type="hidden" {...register('income_exempt_from_tax')} />
+        <input type="hidden" {...register('income_final_tax')} />
 
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Wealth Reconciliation Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Critical:</strong> Unreconciled difference MUST be zero for FBR submission</li>
-              <li>• This reconciles your net worth increase with declared income and expenses</li>
-              <li>• Auto-calculated from your wealth statement and income forms</li>
-              <li>• Adjust personal expenses or other items to balance the reconciliation</li>
-              <li>• Any unexplained wealth increase may trigger tax authority scrutiny</li>
-            </ul>
-          </div>
-        )}
-
-        {/* FBR Compliance Alert */}
-        <div className={`mt-4 p-4 rounded-lg border ${
-          Math.abs(unreconciledDifference) < 0.01
-            ? 'bg-green-50 border-green-200'
-            : 'bg-red-50 border-red-200'
-        }`}>
-          <div className="flex items-center space-x-3">
-            {Math.abs(unreconciledDifference) < 0.01 ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            ) : (
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            )}
-            <div>
-              <h4 className={`font-semibold ${
-                Math.abs(unreconciledDifference) < 0.01 ? 'text-green-900' : 'text-red-900'
-              }`}>
-                {Math.abs(unreconciledDifference) < 0.01 ? 'FBR Compliance: PASSED' : 'FBR Compliance: FAILED'}
-              </h4>
-              <p className={`text-sm ${
-                Math.abs(unreconciledDifference) < 0.01 ? 'text-green-800' : 'text-red-800'
-              }`}>
-                Unreconciled Difference: <strong>{formatCurrency(unreconciledDifference)}</strong>
-                {Math.abs(unreconciledDifference) >= 0.01 && ' - Must be zero to submit tax return'}
-              </p>
-            </div>
+        {/* Compliance status banner */}
+        <div
+          role={balanced ? 'status' : 'alert'}
+          className={`flex items-start gap-3 rounded-brand-lg border px-4 py-3 ${
+            balanced
+              ? 'border-green-600/30 bg-green-600/[0.06]'
+              : 'border-red-500/30 bg-red-500/[0.06]'
+          }`}
+        >
+          {balanced ? (
+            <CheckCircle size={22} className="mt-0.5 shrink-0 text-green-700" aria-hidden="true" />
+          ) : (
+            <AlertTriangle size={22} className="mt-0.5 shrink-0 text-red-600" aria-hidden="true" />
+          )}
+          <div className="min-w-0">
+            <h2 className={`font-display text-sm font-bold ${balanced ? 'text-green-800' : 'text-red-700'}`}>
+              {balanced ? 'Reconciliation balanced' : 'Reconciliation not balanced'}
+            </h2>
+            <p className={`font-body text-sm ${balanced ? 'text-green-800/90' : 'text-red-700/90'}`}>
+              Unreconciled difference: <strong className="tabular-nums">{formatCurrency(unreconciledDifference)}</strong>
+              {!balanced && ' — must be zero before you can submit.'}
+            </p>
           </div>
         </div>
 
-        {/* Auto-balance helper — shows when reconciliation is broken. The
-            user picks a likely bucket and we plug the difference into that
-            field. Doesn't auto-submit; the user can review and edit. */}
-        {Math.abs(unreconciledDifference) >= 0.01 && (
-          <div className="mt-3 p-4 rounded-lg border border-amber-200 bg-amber-50">
-            <h4 className="font-semibold text-amber-900 text-sm mb-1">Quick balance</h4>
-            <p className="text-xs text-amber-800 mb-3">
+        {/* Quick balance helper — pick a likely bucket and we add the difference. */}
+        {!balanced && (
+          <div className="rounded-brand-lg border border-navy/20 bg-navy/[0.03] px-4 py-3">
+            <h2 className="font-display text-sm font-bold text-navy">Quick balance</h2>
+            <p className="mt-1 font-body text-xs text-slate-600">
               {unreconciledDifference > 0
                 ? `Your asset increase exceeds declared inflows by ${formatCurrency(unreconciledDifference)}. The most likely sources are below — pick one and we'll add the difference to it.`
                 : `Your declared inflows exceed your asset increase by ${formatCurrency(Math.abs(unreconciledDifference))}. Either reduce an inflow or add to outflows below.`}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {(unreconciledDifference > 0
                 ? [
                     { field: 'foreign_remittance',       label: 'Foreign Remittance' },
@@ -281,397 +296,125 @@ const WealthReconciliationForm = () => {
                     key={field}
                     type="button"
                     onClick={() => setValue(field, Math.round(next * 100) / 100)}
-                    className="text-xs font-semibold px-3 py-2 rounded-md border border-amber-300 bg-white text-amber-900 hover:bg-amber-100 transition-colors"
+                    className="rounded-brand border-[1.5px] border-navy/30 bg-white px-3 py-2 text-left font-body text-xs font-semibold text-navy transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20"
                   >
                     Add to {label}
-                    <span className="block text-[11px] font-normal text-amber-700 mt-0.5">
+                    <span className="mt-0.5 block font-body text-[11px] font-normal tabular-nums text-slate-500">
                       {formatCurrency(current)} → {formatCurrency(next)}
                     </span>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[11px] text-amber-700 mt-3 italic">
-              Only use a category that reflects your actual financial activity. Picking the wrong bucket here is worse than leaving it unbalanced — FBR can audit-flag inflated remittances or inheritances.
+            <p className="mt-3 font-body text-[11px] italic text-slate-500">
+              Only use a category that reflects your actual financial activity. Picking the wrong bucket is worse than leaving it unbalanced — FBR can audit-flag inflated remittances or inheritances.
             </p>
           </div>
         )}
-      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Wealth Reconciliation Table */}
-        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          <div className="bg-blue-600 text-white py-3 px-4">
-            <h2 className="text-lg font-semibold flex items-center">
-              <FileText className="w-5 h-5 mr-2" />
-              Wealth Reconciliation
-            </h2>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            {/* Header Row */}
-            <div className="bg-blue-100 grid grid-cols-12 gap-4 py-3 px-4 font-semibold text-blue-900">
-              <div className="col-span-8">Description</div>
-              <div className="col-span-4 text-right">Amount in PKR</div>
-            </div>
-
-            {/* Net Assets Section */}
-            <div className="py-2 px-4 bg-blue-50">
-              <h3 className="font-semibold text-blue-900">Net Assets</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Net Assets Current Year</div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('net_assets_current_year')}
-                  className={readOnlyClasses}
-                  value={reconciliationData?.net_assets_current_year || 0}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Net Assets Previous Year</div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('net_assets_previous_year')}
-                  className={readOnlyClasses}
-                  value={reconciliationData?.net_assets_previous_year || 0}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900">Increase / (Decrease) in Assets</div>
-              <div className="col-span-4">
-                <div className={`p-3 text-right font-bold text-lg ${
-                  (reconciliationData?.net_assets_increase || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
-                }`}>
-                  {formatCurrency(reconciliationData?.net_assets_increase || 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Inflows Section */}
-            <div className="py-2 px-4 bg-green-50">
-              <h3 className="font-semibold text-green-900">Inflows</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Income Declared as per Return for the year subject to Normal Tax</div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('income_normal_tax')}
-                  className={readOnlyClasses}
-                  value={reconciliationData?.income_normal_tax || 0}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Income Declared as per Return for the year Exempt from Tax</div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('income_exempt_from_tax')}
-                  className={readOnlyClasses}
-                  value={reconciliationData?.income_exempt_from_tax || 0}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">Income Attributable to Receipts Declared as per Return for the year subject to Final / Fixed Tax and CGT</div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('income_final_tax')}
-                  className={readOnlyClasses}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Foreign Remittance
-                <HelpHint fieldId="foreign_remittance" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('foreign_remittance')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Inheritance
-                <HelpHint fieldId="inheritance" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('inheritance')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Gift (Value declard in gift deed)
-                <HelpHint fieldId="gift_value" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('gift_value')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Gain/(Loss) on Disposal of Assets (Excluding capital gain)
-                <HelpHint fieldId="asset_disposal_gain_loss" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('asset_disposal_gain_loss')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Others
-                <HelpHint fieldId="other_inflows" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('other_inflows')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-green-50 font-semibold">
-              <div className="col-span-8 text-green-900">Total Inflows</div>
-              <div className="col-span-4">
-                <div className="p-3 text-right font-bold text-lg text-green-900">
-                  {formatCurrency(reconciliationData?.total_inflows || 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Outflows Section */}
-            <div className="py-2 px-4 bg-red-50">
-              <h3 className="font-semibold text-red-900">Outflows</h3>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Personal Expenses
-                <HelpHint fieldId="personal_expenses" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('personal_expenses')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Adjustments in Outflows
-                <HelpHint fieldId="adjustments_outflows" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('adjustments_outflows')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Gift
-                <HelpHint fieldId="gift_outflow" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('gift_outflow')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 hover:bg-gray-50">
-              <div className="col-span-8 text-gray-700">
-                Loss on Disposal of Assets
-                <HelpHint fieldId="loss_on_disposal" source={wealthReconciliationHelp} />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('loss_on_disposal')}
-                  className={inputClasses}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-12 gap-4 py-2 px-4 bg-red-50 font-semibold">
-              <div className="col-span-8 text-red-900">Total Outflows</div>
-              <div className="col-span-4">
-                <div className="p-3 text-right font-bold text-lg text-red-900">
-                  {formatCurrency(reconciliationData?.total_outflows || 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Final Calculation */}
-            <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-blue-50 font-semibold">
-              <div className="col-span-8 text-blue-900 text-lg">Net Increase/(Decrease) in Assets</div>
-              <div className="col-span-4">
-                <div className={`p-3 text-right font-bold text-xl ${
-                  (reconciliationData?.calculated_net_increase || 0) >= 0 ? 'text-blue-900' : 'text-red-600'
-                }`}>
-                  {formatCurrency(reconciliationData?.calculated_net_increase || 0)}
-                </div>
-              </div>
-            </div>
-            
-            {/* Critical: Unreconciled Difference */}
-            <div className={`grid grid-cols-12 gap-4 py-4 px-4 font-bold border-4 ${
-              Math.abs(unreconciledDifference) < 0.01 
-                ? 'bg-green-50 border-green-300' 
-                : 'bg-red-50 border-red-300'
-            }`}>
-              <div className={`col-span-8 text-xl flex items-center ${
-                Math.abs(unreconciledDifference) < 0.01 ? 'text-green-900' : 'text-red-900'
-              }`}>
-                {Math.abs(unreconciledDifference) < 0.01 ? (
-                  <CheckCircle className="w-6 h-6 mr-2" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 mr-2" />
-                )}
-                Unreconciled difference
-              </div>
-              <div className="col-span-4">
-                <div className={`p-4 text-right font-bold text-2xl ${
-                  Math.abs(unreconciledDifference) < 0.01 ? 'text-green-900' : 'text-red-900'
-                }`}>
-                  {formatCurrency(unreconciledDifference)}
-                </div>
-              </div>
-            </div>
+        {/* Net assets */}
+        <div>
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+            Net assets
+          </h2>
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+            <AmountRow variant="calculated" label="Net assets — current year" amount={reconciliationData?.net_assets_current_year || 0} />
+            <AmountRow variant="calculated" label="Net assets — previous year" amount={reconciliationData?.net_assets_previous_year || 0} />
+            <AmountRow variant="subtotal" label="Increase / (decrease) in assets" amount={reconciliationData?.net_assets_increase || 0} />
           </div>
         </div>
 
-        {/* FBR Submission Requirements */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <div className="flex items-start space-x-3">
-            <Info className="w-6 h-6 text-yellow-600 mt-1" />
-            <div>
-              <h3 className="font-semibold text-yellow-900 mb-2">FBR Submission Requirements</h3>
-              <ul className="text-sm text-yellow-800 space-y-2">
-                <li>• <strong>Critical:</strong> Unreconciled difference must be exactly zero (0) for successful submission</li>
-                <li>• Adjust your personal expenses or other reconciliation items to balance the difference</li>
-                <li>• This reconciliation ensures your wealth increase matches your declared income</li>
-                <li>• Any significant unreconciled difference may trigger FBR audit and penalties</li>
-                <li>• Save progress frequently while adjusting the reconciliation values</li>
-              </ul>
-            </div>
+        {/* Inflows */}
+        <div>
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+            Inflows
+          </h2>
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 px-3">
+            <AmountRow variant="calculated" label="Income declared subject to normal tax" amount={reconciliationData?.income_normal_tax || 0} />
+            <AmountRow variant="calculated" label="Income declared exempt from tax" amount={reconciliationData?.income_exempt_from_tax || 0} />
+            <AmountRow variant="calculated" label="Income attributable to receipts under final / fixed tax and CGT" amount={reconciliationData?.income_final_tax || 0} />
+            <TaxFormRow
+              name="foreign_remittance"
+              label="Foreign remittance"
+              help={<HelpHint fieldId="foreign_remittance" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('foreign_remittance') }}
+            />
+            <TaxFormRow
+              name="inheritance"
+              label="Inheritance"
+              help={<HelpHint fieldId="inheritance" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('inheritance') }}
+            />
+            <TaxFormRow
+              name="gift_value"
+              label="Gift received"
+              sublabel="Value declared in gift deed"
+              help={<HelpHint fieldId="gift_value" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('gift_value') }}
+            />
+            <TaxFormRow
+              name="asset_disposal_gain_loss"
+              label="Gain / (loss) on disposal of assets"
+              sublabel="Excluding capital gain"
+              help={<HelpHint fieldId="asset_disposal_gain_loss" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('asset_disposal_gain_loss') }}
+            />
+            <TaxFormRow
+              name="other_inflows"
+              label="Other inflows"
+              help={<HelpHint fieldId="other_inflows" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('other_inflows') }}
+            />
+            <AmountRow variant="subtotal" label="Total inflows" amount={reconciliationData?.total_inflows || 0} />
           </div>
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/wealth-statement/wealth-statement')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Wealth Statement
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Progress'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving || Math.abs(unreconciledDifference) >= 0.01}
-              className={`flex items-center px-6 py-3 rounded-lg transition-colors disabled:opacity-50 ${
-                Math.abs(unreconciledDifference) < 0.01
-                  ? 'text-white bg-green-600 hover:bg-green-700'
-                  : 'text-gray-500 bg-gray-300 cursor-not-allowed'
-              }`}
-            >
-              {Math.abs(unreconciledDifference) < 0.01 ? (
-                <CheckCircle className="w-4 h-4 mr-2" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 mr-2" />
-              )}
-              {saving ? 'Completing...' : 
-               Math.abs(unreconciledDifference) < 0.01 ? 'Complete Reconciliation' : 'Balance Required'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
+        {/* Outflows */}
+        <div>
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+            Outflows
+          </h2>
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 px-3">
+            <TaxFormRow
+              name="personal_expenses"
+              label="Personal expenses"
+              help={<HelpHint fieldId="personal_expenses" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('personal_expenses') }}
+            />
+            <TaxFormRow
+              name="adjustments_outflows"
+              label="Adjustments in outflows"
+              help={<HelpHint fieldId="adjustments_outflows" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('adjustments_outflows') }}
+            />
+            <TaxFormRow
+              name="gift_outflow"
+              label="Gift given"
+              help={<HelpHint fieldId="gift_outflow" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('gift_outflow') }}
+            />
+            <TaxFormRow
+              name="loss_on_disposal"
+              label="Loss on disposal of assets"
+              help={<HelpHint fieldId="loss_on_disposal" source={wealthReconciliationHelp} />}
+              inputProps={{ type: 'number', step: '0.01', ...register('loss_on_disposal') }}
+            />
+            <AmountRow variant="subtotal" label="Total outflows" amount={reconciliationData?.total_outflows || 0} />
           </div>
         </div>
-      </form>
-    </div>
+
+        {/* Result */}
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <AmountRow variant="total" label="Net increase / (decrease) in assets" amount={reconciliationData?.calculated_net_increase || 0} />
+          <AmountRow
+            variant={balanced ? 'subtotal' : 'payable'}
+            label="Unreconciled difference"
+            sublabel={balanced ? 'Balanced — ready to submit' : 'Must be zero to submit your tax return'}
+            amount={unreconciledDifference}
+          />
+        </div>
+      </TaxFormShell>
+    </form>
   );
 };
 

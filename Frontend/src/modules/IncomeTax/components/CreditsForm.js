@@ -6,9 +6,6 @@ import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
 import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
   Gift,
   Info,
   ChevronDown,
@@ -19,6 +16,7 @@ import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import creditsHelp from '../../../help/creditsHelp';
 import { formatCurrency } from '../../../utils/currency';
+import { TaxFormShell, TaxFormRow, AmountRow, FormNav } from '../../../components/forms';
 
 const CreditsForm = () => {
   const navigate = useNavigate();
@@ -244,231 +242,174 @@ const CreditsForm = () => {
       navigate('/income-tax/deductions');
     }
   };
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="credits-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="credits-help">
+      <h3 className="font-display text-sm font-bold text-navy">About tax credits</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>A <strong className="text-navy">rebate at your average tax rate</strong> is allowed on donations to approved non-profit organisations.</li>
+        <li>General donations: lower of the donation and 30% of taxable income.</li>
+        <li>Donations to an associate are restricted to 15% of taxable income.</li>
+        <li>Pension contributions: up to 20% of taxable income (2% extra per year for late joiners above 40).</li>
+        <li>Tax credits reduce your final tax liability after calculation.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Gift className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tax Credits</h1>
-              <p className="text-gray-600">Enter eligible tax credits for charitable donations and investments</p>
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Tax credits"
+        subtitle="Charitable donations and approved pension contributions"
+        icon={Gift}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/reductions')}
+            backLabel="Tax reductions"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save data'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {/* Auto-calc context banner — navy info band. */}
+        {taxableIncome > 0 ? (
+          <div className="flex items-start gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-navy" aria-hidden="true" />
+            <span className="font-body text-sm text-navy">
+              Credits are auto-calculated using a taxable income of <strong>{formatCurrency(taxableIncome)}</strong> and
+              an average tax rate of <strong>{(avgRate * 100).toFixed(2)}%</strong> (normal tax: {formatCurrency(normalTax)}).
+              Enter the donation amount and the credit is computed automatically — values stay editable.
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Tax Credits Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Rebate at average rate</strong> is allowed on donations to approved non-profit organisations</li>
-              <li>• <strong>General donations</strong>: Lower of donation value and 30% of taxable income</li>
-              <li>• <strong>Associate donations</strong>: Restricted to 15% of taxable income</li>
-              <li>• <strong>Pension contributions</strong>: 20% of taxable income (2% per year for late joiners above 40)</li>
-              <li>• <strong>Tax credits</strong> reduce your final tax liability after calculation</li>
-            </ul>
+        ) : (
+          <div className="flex items-start gap-2 rounded-brand border border-slate-200 bg-slate-50 px-4 py-3">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" aria-hidden="true" />
+            <span className="font-body text-sm text-slate-600">Income data not loaded yet. Save your Income form first for automatic credit calculation, or enter tax credits manually.</span>
           </div>
         )}
-      </div>
 
-      {/* Auto-calc context banner */}
-      {taxableIncome > 0 ? (
-        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-center gap-2">
-          <Info className="w-4 h-4 flex-shrink-0" />
-          <span>
-            Auto-calculating credits using taxable income of <strong>{formatCurrency(taxableIncome)}</strong> and
-            average tax rate of <strong>{(avgRate * 100).toFixed(2)}%</strong> (normal tax: {formatCurrency(normalTax)}).
-            Credits are editable — enter the donation amount and the credit is computed automatically.
-          </span>
-        </div>
-      ) : (
-        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center gap-2">
-          <Info className="w-4 h-4 flex-shrink-0" />
-          <span>Income form data not yet loaded. Save your Income form first for automatic credit calculation. You can also enter tax credits manually.</span>
-        </div>
-      )}
-
-      {hasPriorCredits && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <span className="text-sm text-indigo-800">Prior year donation/contribution data available — apply to pre-fill?</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorCredits} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
-            <button type="button" onClick={applyPriorCredits} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+        {hasPriorCredits && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-body text-sm text-navy">Prior-year donation / contribution data is available. Pre-fill this form?</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorCredits} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
+              <button type="button" onClick={applyPriorCredits} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Column Headers */}
-        <div className="bg-blue-600 text-white rounded-lg">
-          <div className="grid grid-cols-12 gap-3 items-center py-3 px-4 font-semibold">
-            <div className="col-span-5">Description</div>
-            <div className="col-span-1 text-center">Y/N</div>
-            <div className="col-span-2 text-center">Amount</div>
-            <div className="col-span-2 text-center">Tax Credit</div>
-            <div className="col-span-2 text-center">Limits/Remarks</div>
-          </div>
-        </div>
-
-        {/* Tax Credits Section */}
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
-            <Gift className="w-5 h-5 mr-2" />
-            Tax Credits
-          </h2>
-
-          {visibleCreditItems.map((item, index) => (
-            <div key={item.id} className="grid grid-cols-12 gap-3 items-center py-3 border-b border-purple-200 last:border-b-0">
-              <div className="col-span-5">
-                <p className="text-sm font-medium text-gray-700">
-                  {item.description}
-                  <HelpHint fieldId={item.id} source={creditsHelp} />
-                </p>
-              </div>
-              <div className="col-span-1 text-center">
-                {item.yesNo === '-' ? (
-                  <span className="text-gray-400">-</span>
-                ) : (
-                  <select
-                    {...register(`${item.id}_yn`)}
-                    className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                  >
-                    <option value="">-</option>
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
+        {/* Credit rows — flat list. Each item carries a Y/N selector, a donation
+            amount input and an editable computed-credit input. */}
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          {visibleCreditItems.map((item) => {
+            const donated = parseFloat(watchedValues[item.amount]) || 0;
+            const eligible = item.autoCalc && taxableIncome > 0 ? Math.min(donated, taxableIncome * item.limitPct) : 0;
+            const creditHint =
+              item.autoCalc && taxableIncome > 0 && donated > 0
+                ? `Auto: eligible Rs ${eligible.toLocaleString('en-PK')} × ${(avgRate * 100).toFixed(2)}%`
+                : undefined;
+            return (
+              <div key={item.id} className="px-3 py-3">
+                <div className="flex items-start gap-1.5">
+                  <p className="font-body text-sm font-medium leading-snug text-slate-700">
+                    {item.description}
+                    <HelpHint fieldId={item.id} source={creditsHelp} />
+                  </p>
+                </div>
+                {item.yesNo !== '-' && (
+                  <div className="mt-2">
+                    <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-500">Claiming this credit?</label>
+                    <select
+                      id={`${item.id}_yn`}
+                      {...register(`${item.id}_yn`)}
+                      className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                    >
+                      <option value="">—</option>
+                      <option value="Y">Yes</option>
+                      <option value="N">No</option>
+                    </select>
+                  </div>
                 )}
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register(item.amount, {
-                    min: { value: 0, message: 'Amount cannot be negative' },
-                    valueAsNumber: true
-                  })}
-                  className={inputClasses}
-                  placeholder="0"
+                <TaxFormRow
+                  name={item.amount}
+                  label="Amount donated / contributed"
+                  error={errors[item.amount]?.message}
+                  inputProps={{
+                    type: 'number',
+                    step: '0.01',
+                    ...register(item.amount, {
+                      min: { value: 0, message: 'Amount cannot be negative' },
+                      valueAsNumber: true
+                    })
+                  }}
                 />
-                {errors[item.amount] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.amount].message}</p>
-                )}
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register(item.taxReduction, {
-                    min: { value: 0, message: 'Amount cannot be negative' },
-                    valueAsNumber: true
-                  })}
-                  className={`${inputClasses} ${item.autoCalc && taxableIncome > 0 ? 'bg-emerald-50 border-emerald-300' : ''}`}
-                  placeholder="0"
+                <TaxFormRow
+                  name={item.taxReduction}
+                  label="Tax credit"
+                  sublabel={item.autoCalc ? 'Auto-calculated — editable' : 'Manual entry'}
+                  hint={creditHint}
+                  error={errors[item.taxReduction]?.message}
+                  inputProps={{
+                    type: 'number',
+                    step: '0.01',
+                    ...register(item.taxReduction, {
+                      min: { value: 0, message: 'Amount cannot be negative' },
+                      valueAsNumber: true
+                    })
+                  }}
                 />
-                {item.autoCalc && taxableIncome > 0 && (() => {
-                  const donated = parseFloat(watchedValues[item.amount]) || 0;
-                  const eligible = Math.min(donated, taxableIncome * item.limitPct);
-                  return donated > 0 ? (
-                    <p className="mt-1 text-xs text-emerald-700">
-                      Auto: eligible Rs {eligible.toLocaleString('en-PK')} × {(avgRate * 100).toFixed(2)}%
-                    </p>
-                  ) : null;
-                })()}
-                {errors[item.taxReduction] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.taxReduction].message}</p>
-                )}
               </div>
-              <div className="col-span-2">
-                <p className="text-xs text-gray-600 p-2 bg-gray-50 rounded border">{item.limits}</p>
-              </div>
-            </div>
-          ))}
-
-          {/* Advanced toggle: reveals less-common credit lines (donations
-              to associate, surrender of tax credit). Only shown when
-              there's an extra to reveal — pension / charitable already in
-              the always-or-addon set are filtered above. */}
-          {advancedExtraCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-200 rounded-lg hover:bg-purple-200 transition-colors"
-            >
-              {showAdvanced ? (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Hide advanced credit fields
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Show {advancedExtraCount} more advanced credit item{advancedExtraCount === 1 ? '' : 's'}
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Total Tax Credits */}
-          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-purple-100 rounded-lg px-4 font-semibold">
-            <div className="col-span-5">
-              <p className="text-purple-800">Total Tax Credit</p>
-            </div>
-            <div className="col-span-1"></div>
-            <div className="col-span-2"></div>
-            <div className="col-span-2 text-right">
-              <p className="text-xl font-bold text-purple-800">{formatCurrency(totalCredit)}</p>
-            </div>
-            <div className="col-span-2"></div>
-          </div>
+            );
+          })}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
+        {/* Advanced toggle: reveals less-common credit lines (donations
+            to associate, surrender of tax credit). Only shown when
+            there's an extra to reveal — pension / charitable already in
+            the always-or-addon set are filtered above. */}
+        {advancedExtraCount > 0 && (
           <button
             type="button"
-            onClick={() => navigate('/income-tax/reductions')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Tax Reductions
+            {showAdvanced ? (
+              <>
+                <ChevronDown size={16} aria-hidden="true" />
+                Hide advanced credit fields
+              </>
+            ) : (
+              <>
+                <Plus size={16} aria-hidden="true" />
+                Show {advancedExtraCount} more advanced credit item{advancedExtraCount === 1 ? '' : 's'}
+              </>
+            )}
           </button>
+        )}
 
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        {/* Total tax credit — navy total band. */}
+        <AmountRow label="Total tax credit" amount={totalCredit} variant="total" />
+      </TaxFormShell>
+    </form>
   );
 };
 

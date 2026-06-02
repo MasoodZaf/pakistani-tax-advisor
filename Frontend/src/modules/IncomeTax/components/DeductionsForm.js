@@ -4,20 +4,19 @@ import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
-import {
-  Save,
-  ArrowRight,
-  ArrowLeft,
-  CreditCard,
-  FileText,
-  Info
-} from 'lucide-react';
+import { CreditCard, Info, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import deductionsHelp from '../../../help/deductionsHelp';
 import { formatCurrency } from '../../../utils/currency';
 import MobileExpensesWidget from '../../../components/MobileExpenses/MobileExpensesWidget';
+import {
+  TaxFormShell,
+  TaxFormRow,
+  AmountRow,
+  FormNav,
+} from '../../../components/forms';
 
 const DeductionsForm = () => {
   const navigate = useNavigate();
@@ -151,23 +150,6 @@ const DeductionsForm = () => {
     }
   ];
 
-  // Additional limits/remarks from the Excel
-  const limitsRemarks = [
-    '25% of tax payable on his income from salary',
-    'Tax shall not exceed 5% of such profit',
-    '',
-    '50% of the normal tax on capital gain',
-    '75% of the normal tax on capital gain',
-    '',
-    '30% of the taxable income',
-    '15% of the taxable income',
-    '20% of the taxable income (2% per year for above 40 years if he joined at or above 41 years of age)',
-    '',
-    '',
-    'Total education Expense',
-    'No. of Children for whom tuition fee is paid'
-  ];
-
   // Calculate total deduction
   const calculateTotalDeduction = () => {
     return deductionItems.reduce((total, item) => {
@@ -213,266 +195,219 @@ const DeductionsForm = () => {
       navigate('/income-tax/final-tax');
     }
   };
-  const inputClasses = "form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right text-sm";
+  const headerActions = (
+    <button
+      type="button"
+      onClick={() => setShowHelp((v) => !v)}
+      aria-label="Toggle help"
+      aria-expanded={showHelp}
+      aria-controls="deductions-help"
+      className="grid h-9 w-9 place-items-center rounded-brand text-white/80 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-lime/50"
+    >
+      <Info size={18} aria-hidden="true" />
+    </button>
+  );
+
+  const helpPanel = showHelp ? (
+    <div id="deductions-help">
+      <h3 className="font-display text-sm font-bold text-navy">About deductible allowances</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+        <li>Professional expenses: for taxpayers with POS and taxable income up to Rs 1.5M.</li>
+        <li>Zakat: a straight deduction for Zakat paid under the Zakat and Usher Ordinance.</li>
+        <li>Professional expenses are the lower of 5% of the amount paid or 25% of taxable income.</li>
+        <li>Deductible allowances reduce your taxable income before tax is calculated.</li>
+      </ul>
+    </div>
+  ) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-orange-600" />
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <TaxFormShell
+        title="Deductible allowances"
+        subtitle="Eligible allowances that reduce your taxable income"
+        icon={CreditCard}
+        taxYear={currentTaxYear}
+        headerActions={headerActions}
+        help={helpPanel}
+        footer={
+          <FormNav
+            onBack={() => navigate('/income-tax/credits')}
+            backLabel="Tax credits"
+            onSave={onSaveAndContinue}
+            saveLabel={saving ? 'Saving…' : 'Save & continue'}
+            saving={saving}
+            nextType="submit"
+            submitting={saving}
+            nextLabel="Complete & next"
+          />
+        }
+      >
+        {hasPriorDed && (
+          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 font-body text-sm text-navy">
+              <Upload size={16} aria-hidden="true" />
+              <span>Prior-year deduction data is available. Pre-fill this form?</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Deductible Allowance</h1>
-              <p className="text-gray-600">Enter eligible deductible allowances to reduce your taxable income</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={dismissPriorDed}
+                className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                Dismiss
+              </button>
+              <button type="button" onClick={applyPriorDed}
+                className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">
+                Apply prior year
+              </button>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowHelp(!showHelp)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Deductible Allowances Help</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Professional expenses</strong>: For taxpayers with POS 600 and taxable income ≤ Rs 1.5m</li>
-              <li>• <strong>Zakat deduction</strong>: Special straight deduction for Zakat paid under Zakat and Usher Ordinance</li>
-              <li>• <strong>Calculation</strong>: 5% of amount paid OR 25% of taxable income (whichever is lower)</li>
-              <li>• <strong>Deductible allowances</strong> reduce your taxable income before tax calculation</li>
-            </ul>
           </div>
         )}
-      </div>
 
-      {hasPriorDed && (
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <span className="text-sm text-indigo-800">Prior year deduction data available — apply to pre-fill?</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button type="button" onClick={dismissPriorDed} className="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-100">Dismiss</button>
-            <button type="button" onClick={applyPriorDed} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">Apply Prior Year Data</button>
+        {/* Mobile-captured expenses for this tax year. Zakat is the only direct
+            deduction field; the rest are surfaced so the user knows about them
+            and can copy to the right form (credits, etc.). */}
+        <MobileExpensesWidget
+          taxYear={currentTaxYear || '2025-26'}
+          setValue={setValue}
+          getValues={getValues}
+          fieldMap={{
+            zakat: { field: 'zakat_paid_amount', yn: 'zakat_paid_yn' },
+          }}
+        />
+
+        {taxableIncome > 0 && (
+          <div className="rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm text-navy">
+            Taxable income from your Income form: <strong className="tabular-nums">{formatCurrency(taxableIncome)}</strong>.
+            {taxableIncome > PROF_EXP_THRESHOLD && (
+              <span className="mt-1 block text-slate-500">
+                Professional expenses and education deduction are not applicable — income exceeds the Rs 1.5M threshold.
+              </span>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Mobile-captured expenses for this tax year. Zakat is the only direct
-          deduction field; the rest are surfaced so the user knows about them
-          and can copy to the right form (credits, etc.). */}
-      <MobileExpensesWidget
-        taxYear={currentTaxYear || '2025-26'}
-        setValue={setValue}
-        getValues={getValues}
-        fieldMap={{
-          zakat: { field: 'zakat_paid_amount', yn: 'zakat_paid_yn' },
-        }}
-      />
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Column Headers */}
-        <div className="bg-orange-600 text-white rounded-lg">
-          <div className="grid grid-cols-12 gap-3 items-center py-3 px-4 font-semibold">
-            <div className="col-span-6">Description</div>
-            <div className="col-span-1 text-center">Y/N</div>
-            <div className="col-span-2 text-center">Amount</div>
-            <div className="col-span-3 text-center">Limits/Remarks</div>
-          </div>
-        </div>
-
-        {/* Deductible Allowance Section */}
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-orange-800 mb-4 flex items-center">
-            <CreditCard className="w-5 h-5 mr-2" />
-            Deductible Allowance
-          </h2>
-
-          {/* Income context banner */}
-          {taxableIncome > 0 && (
-            <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-              Taxable income from Income form: <strong>{formatCurrency(taxableIncome)}</strong>.
-              {taxableIncome > PROF_EXP_THRESHOLD && (
-                <span className="text-amber-700 ml-2">Professional expenses &amp; education deduction not applicable (income exceeds Rs 1.5M threshold).</span>
-              )}
-            </div>
-          )}
-
-          {deductionItems.map((item) => (
-            <div key={item.id} className={`grid grid-cols-12 gap-3 items-start py-3 border-b border-orange-200 last:border-b-0 ${!item.eligible && taxableIncome > 0 ? 'opacity-40' : ''}`}>
-              <div className="col-span-6">
-                <p className="text-sm font-medium text-gray-700">
-                  {item.description}
-                  <HelpHint fieldId={item.id} source={deductionsHelp} />
-                </p>
-                {/* Professional expenses: show POS amount input for auto-calc */}
-                {item.id === 'professional_expenses' && item.eligible && (
-                  <div className="mt-2">
-                    <label className="text-xs text-gray-500">
-                      Total POS payments (for auto-calc)
-                      <HelpHint fieldId="professional_expenses_pos_amount" source={deductionsHelp} />
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      {...register('professional_expenses_pos_amount', { valueAsNumber: true })}
-                      className="mt-1 form-input w-full px-2 py-1 border border-gray-300 rounded text-right text-xs"
-                      placeholder="Enter total POS amount paid"
-                    />
-                    {(() => {
-                      const pos = parseFloat(watchedValues.professional_expenses_pos_amount) || 0;
-                      if (pos > 0 && taxableIncome > 0 && PROF_EXP_POS_PCT && PROF_EXP_TAXABLE_PCT) {
-                        const a = Math.round(pos * PROF_EXP_POS_PCT);
-                        const b = Math.round(taxableIncome * PROF_EXP_TAXABLE_PCT);
-                        const posPctDisplay = (PROF_EXP_POS_PCT * 100).toFixed(0);
-                        const taxPctDisplay = (PROF_EXP_TAXABLE_PCT * 100).toFixed(0);
-                        return (
-                          <p className="text-xs text-emerald-700 mt-0.5">
-                            Auto: MIN({posPctDisplay}% of Rs {pos.toLocaleString('en-PK')} = Rs {a.toLocaleString('en-PK')},
-                            {' '}{taxPctDisplay}% of income = Rs {b.toLocaleString('en-PK')}) = Rs {Math.min(a, b).toLocaleString('en-PK')}
-                          </p>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
-                {/* Education: show number-of-children input */}
-                {item.id === 'education_expense' && item.eligible && (
-                  <div className="mt-2">
-                    <label className="text-xs text-gray-500">
-                      Number of children (max 2)
-                      <HelpHint fieldId="education_expense_children_count" source={deductionsHelp} />
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="2"
-                      {...register('education_expense_children_count', { valueAsNumber: true, min: 0, max: 2 })}
-                      className="mt-1 form-input w-48 px-2 py-1 border border-gray-300 rounded text-right text-xs"
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-                {!item.eligible && taxableIncome > 0 && (
-                  <p className="text-xs text-amber-600 mt-1">Not applicable — taxable income exceeds Rs 1.5M</p>
-                )}
-              </div>
-              <div className="col-span-1 text-center">
-                <select
-                  {...register(`${item.id}_yn`)}
-                  className="form-select w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                  disabled={!item.eligible && taxableIncome > 0}
-                >
-                  <option value="">-</option>
-                  <option value="Y">Y</option>
-                  <option value="N">N</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register(item.amount, {
-                    min: { value: 0, message: 'Amount cannot be negative' },
-                    valueAsNumber: true
-                  })}
-                  className={`${inputClasses} ${item.computed ? 'bg-emerald-50 border-emerald-300' : ''}`}
-                  placeholder="0"
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          {deductionItems.map((item) => {
+            const ineligible = !item.eligible && taxableIncome > 0;
+            return (
+              <div key={item.id} className={`px-3 py-3 sm:px-4 ${ineligible ? 'opacity-50' : ''}`}>
+                <TaxFormRow
+                  name={item.amount}
+                  label={item.description}
+                  sublabel={item.limits}
+                  help={<HelpHint fieldId={item.id} source={deductionsHelp} />}
+                  error={errors[item.amount]?.message}
+                  hint={item.computed ? 'Auto-calculated' : undefined}
                   readOnly={item.computed}
-                  title={item.computed ? 'Auto-calculated' : undefined}
+                  inputProps={{
+                    type: 'number',
+                    step: '0.01',
+                    readOnly: item.computed,
+                    title: item.computed ? 'Auto-calculated' : undefined,
+                    ...register(item.amount, {
+                      min: { value: 0, message: 'Amount cannot be negative' },
+                      valueAsNumber: true
+                    }),
+                  }}
                 />
-                {item.computed && (
-                  <p className="mt-0.5 text-xs text-emerald-700">Auto-calculated</p>
+
+                {/* Y/N applicability selector */}
+                <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-center md:gap-4">
+                  <label htmlFor={`${item.id}_yn`} className="font-body text-sm leading-snug text-slate-700">
+                    Claim this allowance?
+                  </label>
+                  <div className="md:w-[220px] md:justify-self-end">
+                    <select
+                      id={`${item.id}_yn`}
+                      {...register(`${item.id}_yn`)}
+                      className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 font-body text-sm text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500"
+                      disabled={ineligible}
+                    >
+                      <option value="">—</option>
+                      <option value="Y">Yes</option>
+                      <option value="N">No</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Professional expenses: POS amount input for auto-calc */}
+                {item.id === 'professional_expenses' && item.eligible && (
+                  <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-start md:gap-4">
+                    <div className="flex items-start gap-1.5">
+                      <label htmlFor="professional_expenses_pos_amount" className="font-body text-sm leading-snug text-slate-700">
+                        Total POS payments
+                        <span className="block font-body text-xs text-slate-400">Used to auto-calculate the deduction above</span>
+                      </label>
+                      <HelpHint fieldId="professional_expenses_pos_amount" source={deductionsHelp} />
+                    </div>
+                    <div className="md:w-[220px] md:justify-self-end">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                        <input
+                          id="professional_expenses_pos_amount"
+                          type="number"
+                          step="1"
+                          min="0"
+                          inputMode="numeric"
+                          {...register('professional_expenses_pos_amount', { valueAsNumber: true })}
+                          className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                          placeholder="0"
+                        />
+                      </div>
+                      {(() => {
+                        const pos = parseFloat(watchedValues.professional_expenses_pos_amount) || 0;
+                        if (pos > 0 && taxableIncome > 0 && PROF_EXP_POS_PCT && PROF_EXP_TAXABLE_PCT) {
+                          const a = Math.round(pos * PROF_EXP_POS_PCT);
+                          const b = Math.round(taxableIncome * PROF_EXP_TAXABLE_PCT);
+                          const posPctDisplay = (PROF_EXP_POS_PCT * 100).toFixed(0);
+                          const taxPctDisplay = (PROF_EXP_TAXABLE_PCT * 100).toFixed(0);
+                          return (
+                            <p className="mt-1 text-right font-body text-xs text-slate-500">
+                              Lower of {posPctDisplay}% of POS (Rs {a.toLocaleString('en-PK')}) and {taxPctDisplay}% of income (Rs {b.toLocaleString('en-PK')}) = Rs {Math.min(a, b).toLocaleString('en-PK')}
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
                 )}
-                {errors[item.amount] && (
-                  <p className="mt-1 text-xs text-red-600">{errors[item.amount].message}</p>
+
+                {/* Education: number-of-children input */}
+                {item.id === 'education_expense' && item.eligible && (
+                  <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-start md:gap-4">
+                    <div className="flex items-start gap-1.5">
+                      <label htmlFor="education_expense_children_count" className="font-body text-sm leading-snug text-slate-700">
+                        Number of children
+                        <span className="block font-body text-xs text-slate-400">Maximum 2</span>
+                      </label>
+                      <HelpHint fieldId="education_expense_children_count" source={deductionsHelp} />
+                    </div>
+                    <div className="md:w-[220px] md:justify-self-end">
+                      <input
+                        id="education_expense_children_count"
+                        type="number"
+                        step="1"
+                        min="0"
+                        max="2"
+                        inputMode="numeric"
+                        {...register('education_expense_children_count', { valueAsNumber: true, min: 0, max: 2 })}
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {ineligible && (
+                  <p className="mt-1 font-body text-xs text-slate-500">Not applicable — taxable income exceeds Rs 1.5M.</p>
                 )}
               </div>
-              <div className="col-span-3">
-                <p className="text-xs text-gray-600 p-2 bg-gray-50 rounded border">{item.limits}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {/* Total Deduction */}
-          <div className="grid grid-cols-12 gap-3 items-center py-4 mt-4 bg-orange-100 rounded-lg px-4 font-semibold">
-            <div className="col-span-6">
-              <p className="text-orange-800">Total Deduction from Income</p>
-            </div>
-            <div className="col-span-1"></div>
-            <div className="col-span-2 text-right">
-              <p className="text-xl font-bold text-orange-800">{formatCurrency(totalDeduction)}</p>
-            </div>
-            <div className="col-span-3"></div>
-          </div>
+          <AmountRow variant="total" label="Total deduction from income" amount={totalDeduction} />
         </div>
-
-        {/* Additional Limits/Remarks Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
-            <FileText className="w-5 h-5 mr-2" />
-            Limits/Remarks
-          </h2>
-          
-          <div className="grid grid-cols-1 gap-2">
-            {limitsRemarks.map((remark, index) => (
-              <div key={index} className="py-2 border-b border-blue-100 last:border-b-0">
-                <p className="text-sm text-blue-800">{remark || '—'}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Special Notes */}
-          <div className="mt-6 p-4 bg-blue-100 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2">Special Notes:</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Total education Expense</strong></li>
-              <li>• <strong>No. of Children for whom tuition fee is paid</strong></li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/income-tax/credits')}
-            className="flex items-center px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous: Tax Credits
-          </button>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onSaveAndContinue}
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-primary-600 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save & Continue'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center px-6 py-3 text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-            >
-              Complete & Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </TaxFormShell>
+    </form>
   );
 };
 
