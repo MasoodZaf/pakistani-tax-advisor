@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, X, BookOpen, Lightbulb, ExternalLink } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 /**
  * Inline ⓘ icon that opens a side drawer with FBR-cited plain-language help.
@@ -19,13 +20,9 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
   const [open, setOpen] = useState(false);
   const entry = source?.[fieldId];
 
-  // Close on Escape so it doesn't trap keyboard users.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  // Trap focus inside the drawer while it's open, close on Escape, and return
+  // focus to the ⓘ trigger on close. Ref attaches to the <aside> below.
+  const drawerRef = useFocusTrap(open, { onEscape: () => setOpen(false) });
 
   // No content authored for this field yet → render nothing rather than a
   // broken icon. Keeps the UI clean while we roll content out form by form.
@@ -47,7 +44,9 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
 
           {/* Drawer */}
           <aside
+            ref={drawerRef}
             role="dialog"
+            aria-modal="true"
             aria-label={entry.title}
             style={{
               position: 'fixed',
