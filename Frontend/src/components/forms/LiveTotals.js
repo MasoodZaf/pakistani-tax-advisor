@@ -45,3 +45,13 @@ export function LiveAmount({ component: Component, field, ...rest }) {
   const totals = useLiveTotals();
   return <Component amount={totals?.[field] ?? 0} {...rest} />;
 }
+
+/**
+ * Renders `children` only while form field `field` parses to a positive number.
+ * Self-subscribes to just that one field, so a per-row "auto-calculated" hint
+ * updates without re-rendering the rest of the form.
+ */
+export function LiveWhen({ control, field, children }) {
+  const value = useWatch({ control, name: field });
+  return (parseFloat(value) || 0) > 0 ? children : null;
+}

@@ -1,6 +1,5 @@
-/* eslint-disable react-hooks/exhaustive-deps -- auto-calc effect uses a spread of watched values; adding watchedValues/cgtRate to deps would loop */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -16,7 +15,7 @@ import HelpHint from '../../../components/Help/HelpHint';
 import capitalGainsHelp from '../../../help/capitalGainsHelp';
 import { formatCurrency } from '../../../utils/currency';
 import FormEmptyState from './FormEmptyState';
-import { TaxFormShell, FormNav } from '../../../components/forms';
+import { TaxFormShell, FormNav, LiveTotalsProvider, LiveWhen, useLiveTotals } from '../../../components/forms';
 
 // Capital-gain category definitions. Rates are NOT in this array any more —
 // they come from tax_rates_config via useTaxRates() (rate_type='capital_gains',
@@ -41,6 +40,84 @@ const capitalGainItems = [
   { id: 'securities_12_5_percent_before_july_2022', description: 'Capital Gain on Securities u/s 37A — acquired before 1-Jul-2022 (any holding period)', taxableAmount: 'securities_12_5_percent_before_july_2022_taxable', taxField: 'securities_12_5_percent_before_july_2022_cgt', taxDeducted: 'securities_12_5_percent_before_july_2022_deducted', taxCarryable: 'securities_12_5_percent_before_july_2022_carryable' },
   { id: 'securities_15_percent',                  description: 'Capital Gain on Securities u/s 37A',                                                   taxableAmount: 'securities_15_percent_taxable',                  taxField: 'securities_15_percent_cgt',                  taxDeducted: 'securities_15_percent_deducted',                  taxCarryable: 'securities_15_percent_carryable' },
 ];
+
+// Pure: sum the four columns across all categories. Same reduce as before.
+const computeCgTotals = (values) =>
+  capitalGainItems.reduce((acc, item) => {
+    acc.taxable      += parseFloat(values[item.taxableAmount]) || 0;
+    acc.cgt          += parseFloat(values[item.taxField])      || 0;
+    acc.taxDeducted  += parseFloat(values[item.taxDeducted])   || 0;
+    acc.taxCarryable += parseFloat(values[item.taxCarryable])  || 0;
+    return acc;
+  }, { taxable: 0, cgt: 0, taxDeducted: 0, taxCarryable: 0 });
+
+// PERF-02: auto-calc effect runs here (headless). Watches ONLY the taxable
+// amount fields; current CGT (for the no-loop guard) is read one-shot via
+// getValues. Logic byte-identical to the former in-component effect.
+const CapitalGainsAutoCalc = ({ control, getValues, setValue, rates, isLoadingFromDB }) => {
+  const taxables = useWatch({ control, name: capitalGainItems.map(i => i.taxableAmount) });
+  useEffect(() => {
+    if (isLoadingFromDB.current) return;
+    if (!rates?.capitalGains) return;
+    capitalGainItems.forEach((item, idx) => {
+      const rate = rates.capitalGains[item.id]?.rate ?? null;
+      if (rate === null) return; // missing seed — leave the field alone
+      if (rate === 0) { setValue(item.taxField, 0); return; }
+      const gain = parseFloat(taxables[idx]) || 0;
+      const calculated = gain > 0 ? Math.round(gain * rate) : 0;
+      const current = parseFloat(getValues(item.taxField)) || 0;
+      if (Math.abs(current - calculated) > 0.01) {
+        setValue(item.taxField, calculated);
+      }
+    });
+  }, [...taxables, rates, getValues, setValue, isLoadingFromDB]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+};
+
+// Totals band (navy) — context consumer so only it re-renders on change.
+const CapitalGainsTotalsBand = () => {
+  const totals = useLiveTotals();
+  return (
+    <div className="rounded-brand-lg bg-navy p-5">
+      <h3 className="mb-3 font-body text-xs font-bold uppercase tracking-wider text-white/60">Total capital gain</h3>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-brand bg-white/5 p-3">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gain amount</span>
+          <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxable)}</span>
+        </div>
+        <div className="rounded-brand bg-white/5 p-3">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gross CGT</span>
+          <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.cgt)}</span>
+        </div>
+        <div className="rounded-brand bg-white/5 p-3">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Tax deducted</span>
+          <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxDeducted)}</span>
+        </div>
+        <div className="rounded-brand bg-white/5 p-3">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Carryable</span>
+          <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxCarryable)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Net-CGT-payable headline — shown only when gross CGT > 0. Context consumer.
+const NetCgtHeadline = () => {
+  const totals = useLiveTotals();
+  if (!(totals.cgt > 0)) return null;
+  return (
+    <div className="flex flex-col gap-1 rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="font-body text-sm font-bold text-red-700">Net CGT payable</div>
+      <div className="font-body text-xs text-slate-500 sm:text-right">
+        Gross CGT {formatCurrency(totals.cgt)} − tax deducted {formatCurrency(totals.taxDeducted)}
+      </div>
+      <div className="font-mono text-base font-bold tabular-nums text-red-600 sm:text-right">
+        {formatCurrency(Math.max(0, totals.cgt - totals.taxDeducted))}
+      </div>
+    </div>
+  );
+};
 
 const CapitalGainsForm = () => {
   const navigate = useNavigate();
@@ -67,6 +144,8 @@ const CapitalGainsForm = () => {
     watch,
     reset,
     setValue,
+    control,
+    getValues,
     formState: { errors }
   } = useForm({
     defaultValues: getStepData('capital_gain')
@@ -82,51 +161,20 @@ const CapitalGainsForm = () => {
     }
   }, [contextFormData, reset]);
 
-  const watchedValues = watch();
+  // PERF-02: no bare watch() at render. The auto-calc effect runs in the
+  // headless <CapitalGainsAutoCalc> child; the totals band + net-CGT headline
+  // are context consumers of <LiveTotalsProvider>; each row's CGT hint
+  // self-subscribes via <LiveWhen>.
 
   // Prior year pre-fill
   const { hasPriorData: hasPriorCG, applyPriorYear: applyPriorCG, dismissPriorYear: dismissPriorCG } = usePriorYearData('capital_gain', setValue);
-
-  // Auto-calculate CGT for each item: gain × DB-sourced rate.
-  // Gated on `rates` — skip until tax_rates_config rows are available.
-  useEffect(() => {
-    if (isLoadingFromDB.current) return;
-    if (!rates?.capitalGains) return;
-    capitalGainItems.forEach(item => {
-      const rate = cgtRate(item.id);
-      if (rate === null) return; // missing seed — leave the field alone
-      if (rate === 0) {
-        setValue(item.taxField, 0);
-        return;
-      }
-      const gain = parseFloat(watchedValues[item.taxableAmount]) || 0;
-      const calculated = gain > 0 ? Math.round(gain * rate) : 0;
-      const current = parseFloat(watchedValues[item.taxField]) || 0;
-      if (Math.abs(current - calculated) > 0.01) {
-        setValue(item.taxField, calculated);
-      }
-    });
-  }, [
-    // Watch all taxable amount fields and re-fire when DB rates arrive.
-    ...capitalGainItems.map(i => watchedValues[i.taxableAmount]),
-    rates,
-    setValue,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Compute totals
-  const totals = capitalGainItems.reduce((acc, item) => {
-    acc.taxable    += parseFloat(watchedValues[item.taxableAmount]) || 0;
-    acc.cgt        += parseFloat(watchedValues[item.taxField])      || 0;
-    acc.taxDeducted+= parseFloat(watchedValues[item.taxDeducted])   || 0;
-    acc.taxCarryable+=parseFloat(watchedValues[item.taxCarryable])  || 0;
-    return acc;
-  }, { taxable: 0, cgt: 0, taxDeducted: 0, taxCarryable: 0 });
 
   // Fields computed client-side (rate × gain) that have no matching DB column —
   // strip before save to avoid PostgreSQL "column does not exist" errors.
   const CGT_EPHEMERAL = new Set(capitalGainItems.map(i => i.taxField));
 
   const buildFormData = (data) => {
+    const t = computeCgTotals(data);
     // Remove ephemeral *_cgt fields from the form state
     const sanitized = Object.fromEntries(
       Object.entries(data).filter(([k]) => !CGT_EPHEMERAL.has(k))
@@ -134,9 +182,9 @@ const CapitalGainsForm = () => {
     return {
       ...sanitized,
       // total_capital_gain — writable column (DB also has computed DEFAULT from *_taxable)
-      total_capital_gain:           totals.taxable,
+      total_capital_gain:           t.taxable,
       // capital_gains_tax_chargeable — net CGT after WHT offset; correct DB column name
-      capital_gains_tax_chargeable: Math.max(0, totals.cgt - totals.taxDeducted),
+      capital_gains_tax_chargeable: Math.max(0, t.cgt - t.taxDeducted),
       // NOTE: total_capital_gain_tax (gross CGT) is intentionally excluded here.
       // It requires migration add-capital-gain-tax-column.sql. Until that runs,
       // TaxComputationSummary reconstructs gross CGT from capital_gains_tax_chargeable
@@ -154,7 +202,7 @@ const CapitalGainsForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const success = await saveFormStep('capital_gain', buildFormData(watchedValues), false);
+    const success = await saveFormStep('capital_gain', buildFormData(watch()), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/expenses');
@@ -186,7 +234,6 @@ const CapitalGainsForm = () => {
       </div>
       <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
         {items.map(item => {
-          const gain = parseFloat(watchedValues[item.taxableAmount]) || 0;
           const r = cgtRate(item.id);
           return (
             <div key={item.id} className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_72px_140px_140px_140px_120px] md:items-start md:gap-3">
@@ -249,8 +296,10 @@ const CapitalGainsForm = () => {
                   readOnly
                   title="Auto-calculated — read-only"
                 />
-                {gain > 0 && r !== null && r > 0 && (
-                  <p className="mt-1 text-right font-body text-xs text-slate-400">Auto @ {(r * 100).toFixed(1)}%</p>
+                {r !== null && r > 0 && (
+                  <LiveWhen control={control} field={item.taxableAmount}>
+                    <p className="mt-1 text-right font-body text-xs text-slate-400">Auto @ {(r * 100).toFixed(1)}%</p>
+                  </LiveWhen>
                 )}
               </div>
 
@@ -318,6 +367,8 @@ const CapitalGainsForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <CapitalGainsAutoCalc control={control} getValues={getValues} setValue={setValue} rates={rates} isLoadingFromDB={isLoadingFromDB} />
+      <LiveTotalsProvider control={control} compute={computeCgTotals}>
       <TaxFormShell
         title="Capital gains"
         subtitle="Gains from property and securities"
@@ -372,43 +423,14 @@ const CapitalGainsForm = () => {
             {securitiesItems.length > 0 && renderGroup('Securities & mutual funds', 'u/s 37A', securitiesItems)}
 
             {/* Totals — navy emphasis band; net CGT payable shown as a red headline. */}
-            <div className="rounded-brand-lg bg-navy p-5">
-              <h3 className="mb-3 font-body text-xs font-bold uppercase tracking-wider text-white/60">Total capital gain</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-brand bg-white/5 p-3">
-                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gain amount</span>
-                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxable)}</span>
-                </div>
-                <div className="rounded-brand bg-white/5 p-3">
-                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Gross CGT</span>
-                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.cgt)}</span>
-                </div>
-                <div className="rounded-brand bg-white/5 p-3">
-                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Tax deducted</span>
-                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxDeducted)}</span>
-                </div>
-                <div className="rounded-brand bg-white/5 p-3">
-                  <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Carryable</span>
-                  <span className="mt-1 block break-all font-mono text-base font-bold tabular-nums text-white">{formatCurrency(totals.taxCarryable)}</span>
-                </div>
-              </div>
-            </div>
+            <CapitalGainsTotalsBand />
           </>
         )}
 
         {/* Net CGT payable headline */}
-        {totals.cgt > 0 && (
-          <div className="flex flex-col gap-1 rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="font-body text-sm font-bold text-red-700">Net CGT payable</div>
-            <div className="font-body text-xs text-slate-500 sm:text-right">
-              Gross CGT {formatCurrency(totals.cgt)} − tax deducted {formatCurrency(totals.taxDeducted)}
-            </div>
-            <div className="font-mono text-base font-bold tabular-nums text-red-600 sm:text-right">
-              {formatCurrency(Math.max(0, totals.cgt - totals.taxDeducted))}
-            </div>
-          </div>
-        )}
+        <NetCgtHeadline />
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -15,69 +15,21 @@ import toast from 'react-hot-toast';
 import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import reductionsHelp from '../../../help/reductionsHelp';
-import { TaxFormShell, AmountRow, FormNav } from '../../../components/forms';
+import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount, LiveWhen } from '../../../components/forms';
 import FormEmptyState from './FormEmptyState';
 
-const ReductionsForm = () => {
-  const navigate = useNavigate();
-  const {
-    saveFormStep,
-    getStepData,
-    formData: contextFormData,
-    saving,
-    incomeProfile,
-  } = useTaxForm();
+// PERF-02: the two auto-calc effects run here (headless) so their field
+// subscriptions don't re-render the whole form. Each watches only the field(s)
+// it needs; current values (for the guards) are read one-shot via getValues.
+// Logic is byte-identical to the former in-component effects.
+const ReductionsAutoCalc = ({ control, getValues, setValue, contextFormData, rates, teacherReductionRate, behboodMaxRate }) => {
+  const teacherYN = useWatch({ control, name: 'teacher_researcher_reduction_yn' });
+  const behboodYN = useWatch({ control, name: 'behbood_certificates_reduction_yn' });
+  const behboodAmount = useWatch({ control, name: 'behbood_certificates_amount' });
 
-  const [showHelp, setShowHelp] = useState(false);
-  const { currentTaxYear } = useTaxYear();
-  const { rates } = useTaxRates(currentTaxYear);
-
-  // DB-sourced reduction rates (rate_type='reduction' in tax_rates_config).
-  const teacherReductionRate = rates?.reductions?.teacher_researcher?.rate;
-  const behboodMaxRate       = rates?.reductions?.behbood_certificate_max_rate?.rate;
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    setValue,
-    formState: { errors }
-  } = useForm({
-    defaultValues: getStepData('reductions')
-  });
-
-  // Sync form when saved data loads from API (handles page refresh / navigation back).
-  // Reverse-map DB column names → form field names for capital gain reductions,
-  // since buildReductionsPayload renamed them on save.
+  // Teacher/researcher reduction (u/s 100C).
   useEffect(() => {
-    const savedData = contextFormData['reductions'];
-    if (savedData && Object.keys(savedData).length > 0) {
-      const normalized = {
-        ...savedData,
-        capital_gain_immovable_tax_reduction: savedData.capital_gain_immovable_50_reduction || 0,
-        capital_gain_clause9a_tax_reduction:  savedData.capital_gain_immovable_75_reduction  || 0,
-      };
-      reset(normalized);
-    }
-  }, [contextFormData, reset]);
-
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
-
-  // Prior year pre-fill
-  const { hasPriorData: hasPriorRed, applyPriorYear: applyPriorRed, dismissPriorYear: dismissPriorRed } = usePriorYearData('reductions', setValue);
-
-  // Teacher/researcher reduction (u/s 100C). Rate sourced from DB
-  // (tax_rates_config.rate_type='reduction', rate_category='teacher_researcher').
-  //
-  // Prefer the explicit `salary_u_s_12_7_tax_chargeable` from the Final/Min
-  // form (matches what FBR records). When that form hasn't been visited yet,
-  // fall back to the slab-walk × (salary / total taxable income) share so
-  // the rebate isn't silently dropped to zero for a salaried teacher who
-  // never opens the Final/Min form.
-  useEffect(() => {
-    if (watchedValues.teacher_researcher_reduction_yn !== 'Y') return;
+    if (teacherYN !== 'Y') return;
     if (!teacherReductionRate) return; // wait for rates
 
     const finalMinData = contextFormData['final_min_income'] || {};
@@ -109,28 +61,83 @@ const ReductionsForm = () => {
 
     if (salaryTax > 0) {
       const reduction = Math.round(salaryTax * teacherReductionRate);
-      const current = parseFloat(watchedValues.teacher_researcher_tax_reduction) || 0;
+      const current = parseFloat(getValues('teacher_researcher_tax_reduction')) || 0;
       if (Math.abs(current - reduction) > 0.5) {
         setValue('teacher_researcher_tax_reduction', reduction);
       }
     }
-  }, [watchedValues.teacher_researcher_reduction_yn, contextFormData, teacherReductionRate, rates, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teacherYN, contextFormData, teacherReductionRate, rates, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Behbood certificate cap (2nd Sched Pt III cl.6) — tax not to exceed the
-  // DB-sourced rate × profit amount.
+  // Behbood certificate cap (2nd Sched Pt III cl.6).
   useEffect(() => {
-    if (watchedValues.behbood_certificates_reduction_yn !== 'Y') return;
+    if (behboodYN !== 'Y') return;
     if (!behboodMaxRate) return;
 
-    const profitAmount = parseFloat(watchedValues.behbood_certificates_amount) || 0;
+    const profitAmount = parseFloat(behboodAmount) || 0;
     if (profitAmount <= 0) return;
 
     const maxTax = Math.round(profitAmount * behboodMaxRate);
-    const current = parseFloat(watchedValues.behbood_certificates_tax_reduction) || 0;
+    const current = parseFloat(getValues('behbood_certificates_tax_reduction')) || 0;
     if (current === 0) {
       setValue('behbood_certificates_tax_reduction', maxTax);
     }
-  }, [watchedValues.behbood_certificates_reduction_yn, watchedValues.behbood_certificates_amount, behboodMaxRate, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [behboodYN, behboodAmount, behboodMaxRate, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+};
+
+const ReductionsForm = () => {
+  const navigate = useNavigate();
+  const {
+    saveFormStep,
+    getStepData,
+    formData: contextFormData,
+    saving,
+    incomeProfile,
+  } = useTaxForm();
+
+  const [showHelp, setShowHelp] = useState(false);
+  const { currentTaxYear } = useTaxYear();
+  const { rates } = useTaxRates(currentTaxYear);
+
+  // DB-sourced reduction rates (rate_type='reduction' in tax_rates_config).
+  const teacherReductionRate = rates?.reductions?.teacher_researcher?.rate;
+  const behboodMaxRate       = rates?.reductions?.behbood_certificate_max_rate?.rate;
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    control,
+    getValues,
+    formState: { errors }
+  } = useForm({
+    defaultValues: getStepData('reductions')
+  });
+
+  // Sync form when saved data loads from API (handles page refresh / navigation back).
+  // Reverse-map DB column names → form field names for capital gain reductions,
+  // since buildReductionsPayload renamed them on save.
+  useEffect(() => {
+    const savedData = contextFormData['reductions'];
+    if (savedData && Object.keys(savedData).length > 0) {
+      const normalized = {
+        ...savedData,
+        capital_gain_immovable_tax_reduction: savedData.capital_gain_immovable_50_reduction || 0,
+        capital_gain_clause9a_tax_reduction:  savedData.capital_gain_immovable_75_reduction  || 0,
+      };
+      reset(normalized);
+    }
+  }, [contextFormData, reset]);
+
+  // PERF-02: no bare watch() at render. The two auto-calc effects run in the
+  // headless <ReductionsAutoCalc> child; the total is isolated in
+  // <LiveTotalsProvider>; each row's hint self-subscribes via <LiveWhen>.
+
+  // Prior year pre-fill
+  const { hasPriorData: hasPriorRed, applyPriorYear: applyPriorRed, dismissPriorYear: dismissPriorRed } = usePriorYearData('reductions', setValue);
 
   // Define comprehensive tax reduction structure matching Excel
   const reductionItems = [
@@ -197,14 +204,9 @@ const ReductionsForm = () => {
     return itemsWithAdv - visibleReductionItems.length;
   }, [addons, reductionItems, visibleReductionItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Calculate total tax reduction
-  const calculateTotalReduction = () => {
-    return reductionItems.reduce((total, item) => {
-      return total + (parseFloat(watchedValues[item.taxReduction]) || 0);
-    }, 0);
-  };
-
-  const totalReduction = calculateTotalReduction();
+  // Sum of all per-item tax-reduction fields. Pure.
+  const sumReductions = (values) =>
+    reductionItems.reduce((total, item) => total + (parseFloat(values[item.taxReduction]) || 0), 0);
 
   // Map frontend field names to DB column names and strip non-existent columns
   const buildReductionsPayload = (data) => {
@@ -224,7 +226,7 @@ const ReductionsForm = () => {
       ...rest,
       capital_gain_immovable_50_reduction: capital_gain_immovable_tax_reduction || 0,
       capital_gain_immovable_75_reduction: capital_gain_clause9a_tax_reduction || 0,
-      total_tax_reductions: totalReduction,  // DB column is plural (total_tax_reductions)
+      total_tax_reductions: sumReductions(data),  // DB column is plural (total_tax_reductions)
     };
   };
 
@@ -237,7 +239,7 @@ const ReductionsForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const success = await saveFormStep('reductions', buildReductionsPayload(watchedValues), false);
+    const success = await saveFormStep('reductions', buildReductionsPayload(watch()), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/credits');
@@ -270,6 +272,8 @@ const ReductionsForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <ReductionsAutoCalc control={control} getValues={getValues} setValue={setValue} contextFormData={contextFormData} rates={rates} teacherReductionRate={teacherReductionRate} behboodMaxRate={behboodMaxRate} />
+      <LiveTotalsProvider control={control} compute={(v) => ({ total: sumReductions(v) })}>
       <TaxFormShell
         title="Tax reductions"
         subtitle="Reductions that lower your calculated tax liability"
@@ -377,8 +381,10 @@ const ReductionsForm = () => {
                         title={item.autoCalc ? 'Auto-calculated — editable' : undefined}
                       />
                     </div>
-                    {item.autoCalc && (parseFloat(watchedValues[item.taxReduction]) || 0) > 0 && (
-                      <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated — editable</p>
+                    {item.autoCalc && (
+                      <LiveWhen control={control} field={item.taxReduction}>
+                        <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated — editable</p>
+                      </LiveWhen>
                     )}
                     {errors[item.taxReduction] && (
                       <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[item.taxReduction].message}</p>
@@ -404,8 +410,9 @@ const ReductionsForm = () => {
           </button>
         )}
 
-        <AmountRow variant="total" label="Total tax reduction" amount={totalReduction} />
+        <LiveAmount component={AmountRow} variant="total" field="total" label="Total tax reduction" />
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
