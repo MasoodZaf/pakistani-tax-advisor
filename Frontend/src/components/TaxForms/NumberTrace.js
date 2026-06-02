@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calculator } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 /**
  * NumberTrace — wraps a headline computation number with a click-to-expand
@@ -35,18 +36,20 @@ const NumberTrace = ({
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  // Close on outside click and on Escape so the popover doesn't trap focus.
+  // Move focus into the breakdown popover while it's open, close on Escape, and
+  // return focus to the calculator trigger on close. Ref attaches to the
+  // role="dialog" element below.
+  const dialogRef = useFocusTrap(open, { onEscape: () => setOpen(false) });
+
+  // Close on outside click. (Escape is handled by the focus trap above.)
   useEffect(() => {
     if (!open) return undefined;
     const onClick = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
     };
   }, [open]);
 
@@ -72,8 +75,11 @@ const NumberTrace = ({
 
       {open && hasTrace && (
         <div
+          ref={dialogRef}
           role="dialog"
-          className="absolute right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl"
+          aria-modal="true"
+          aria-label="Calculation breakdown"
+          className="absolute right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl outline-none"
           style={{ minWidth: 320, maxWidth: 420 }}
         >
           <div className="px-4 py-3 border-b border-gray-100">

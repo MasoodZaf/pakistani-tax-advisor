@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -35,6 +36,11 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
   const [result,       setResult]       = useState(null);   // upload response
   const [showWarnings, setShowWarnings] = useState(true);
   const fileInputRef = useRef(null);
+
+  // This modal is mounted only while open (parent-controlled), so the trap is
+  // always active. It pulls focus into the dialog, cycles Tab within it, closes
+  // on Escape, and restores focus to the trigger on unmount.
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -90,7 +96,13 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prior-year-upload-title"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto outline-none"
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -99,7 +111,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
               <Upload className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Import Prior Year Return</h2>
+              <h2 id="prior-year-upload-title" className="text-lg font-semibold text-gray-900">Import Prior Year Return</h2>
               <p className="text-sm text-gray-500">Upload PDF / Excel / JSON export from FBR Iris</p>
             </div>
           </div>
