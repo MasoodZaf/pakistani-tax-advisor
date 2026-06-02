@@ -79,6 +79,9 @@ jobs:
           # ensureTaxReturn upserts tax_returns ON CONFLICT (user_id, tax_year_id);
           # schema.sql only has (user_id, tax_year). Add the id-based one prod has.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='tax_returns_user_year_id_unique') THEN ALTER TABLE tax_returns ADD CONSTRAINT tax_returns_user_year_id_unique UNIQUE (user_id, tax_year_id); END IF; END \$\$;"
+          # tax_returns.fk_user lacks ON DELETE CASCADE in schema.sql (prod has it);
+          # make it cascade so admin user-delete works.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE tax_returns DROP CONSTRAINT IF EXISTS fk_user; ALTER TABLE tax_returns ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE;"
           # filing_deadline + effective_from are NOT NULL; slab insert UPSERTs to
           # force the exact FA-2025 values (schema.sql + phases already seed slabs).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "

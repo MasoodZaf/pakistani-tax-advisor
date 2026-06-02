@@ -109,6 +109,10 @@ jobs:
           # (user_id, tax_year) unique. Add the id-based one prod has so form
           # saves work.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='tax_returns_user_year_id_unique') THEN ALTER TABLE tax_returns ADD CONSTRAINT tax_returns_user_year_id_unique UNIQUE (user_id, tax_year_id); END IF; END \$\$;"
+          # schema.sql ships tax_returns.fk_user (user_id→users) WITHOUT cascade
+          # (prod has cascade; phase-p assumed it already did). Make it cascade so
+          # admin user-delete works. NOTE: real fix is schema.sql — drift flagged.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE tax_returns DROP CONSTRAINT IF EXISTS fk_user; ALTER TABLE tax_returns ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE;"
 
       - name: Seed tax years + slabs
         run: |
