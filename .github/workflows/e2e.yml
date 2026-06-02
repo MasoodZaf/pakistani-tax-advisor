@@ -92,6 +92,14 @@ jobs:
               min_income=EXCLUDED.min_income, max_income=EXCLUDED.max_income, tax_rate=EXCLUDED.tax_rate,
               fixed_amount=EXCLUDED.fixed_amount, slab_name=EXCLUDED.slab_name, effective_from=EXCLUDED.effective_from;
           "
+          # Seed the super_admin that adminFlows/ratesAdmin specs log in as
+          # (globalSetup.js never created it). Hash with the backend's bcrypt.
+          HASH=$(node -e "console.log(require('bcrypt').hashSync(process.env.E2E_SUPER_PASSWORD || 'PaktaxAdmin2026!', 12))")
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+            INSERT INTO users (id, email, name, password_hash, user_type, role, is_active)
+            VALUES (gen_random_uuid(), '${E2E_SUPER_EMAIL:-superadmin@paktax.com}', 'E2E Super Admin', '$HASH', 'individual', 'super_admin', true)
+            ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, role='super_admin', is_active=true;
+          "
 
       - name: Boot backend
         run: |
