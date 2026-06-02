@@ -139,3 +139,49 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Cross-cutting accessibility baseline (A11Y).
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Skip-to-content link — hidden until focused, then pinned top-left so keyboard
+   users can jump past the header/sidebar straight to <main id="main-content">. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 1000;
+  padding: 9px 16px;
+  background: var(--brand-navy);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: top 0.18s ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* Visible focus ring for keyboard users only (mouse clicks don't trigger
+   :focus-visible). Components that set their own focus ring still win on
+   specificity; this is the global fallback so nothing is left unindicated. */
+:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+}
+
+/* Respect the OS "reduce motion" setting — neutralise animations, transitions
+   and smooth-scroll for users who get motion sick. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

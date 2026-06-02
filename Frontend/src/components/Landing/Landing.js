@@ -89,6 +89,10 @@ const FontLoader = () => (
 
     /* Nav */
     .nav-link {
+      /* Reset so a real <button> renders identically to the old <span>. */
+      background: none;
+      border: none;
+      font-family: inherit;
       color: #4b4d45;
       font-size: 15px;
       font-weight: 600;
@@ -258,19 +262,19 @@ function Navbar() {
     }}>
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <button type="button" aria-label="PakTax — back to top" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div style={{ width: 34, height: 34, background: '#28396C', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FileText size={17} color="#fff" />
           </div>
           <span className="display" style={{ fontSize: 17, fontWeight: 700, color: '#1c1d1a', letterSpacing: '-0.02em' }}>
             Pak<span style={{ color: '#28396C' }}>Tax</span>
           </span>
-        </div>
+        </button>
 
         {/* Desktop nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} className="hide-mobile">
           {[['features','Features'],['profiles','Tax Profiles'],['how','How It Works'],['faq','FAQ']].map(([id, label]) => (
-            <span key={id} className="nav-link underline-grow" onClick={() => scroll(id)}>{label}</span>
+            <button type="button" key={id} className="nav-link underline-grow" onClick={() => scroll(id)}>{label}</button>
           ))}
         </div>
 
@@ -295,7 +299,7 @@ function Navbar() {
       {mobileOpen && (
         <div style={{ background: '#fdfcf8', borderTop: '1px solid #e5e4de', padding: '16px 24px 24px' }}>
           {[['features','Features'],['profiles','Tax Profiles'],['how','How It Works'],['faq','FAQ']].map(([id, label]) => (
-            <div key={id} onClick={() => scroll(id)} style={{ padding: '12px 0', fontWeight: 600, color: '#4b4d45', cursor: 'pointer', borderBottom: '1px solid #f0efeb', fontSize: 15 }}>{label}</div>
+            <button type="button" key={id} onClick={() => scroll(id)} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f0efeb', padding: '12px 0', fontFamily: 'inherit', fontWeight: 600, color: '#4b4d45', cursor: 'pointer', fontSize: 15 }}>{label}</button>
           ))}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
             <Link to="/login" className="btn-secondary" style={{ justifyContent: 'center' }}>Sign in</Link>

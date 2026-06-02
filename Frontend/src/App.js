@@ -109,16 +109,20 @@ const Layout = ({ children }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f4f0' }}>
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <Header />
       <div style={{ display: 'flex', paddingTop: 56 }}>
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
         <main
+          id="main-content"
+          tabIndex={-1}
           style={{
             flex: 1,
             padding: '28px 28px',
             marginLeft: collapsed ? 60 : 220,
             transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1)',
             minWidth: 0,
+            outline: 'none',
           }}
         >
           {children}
