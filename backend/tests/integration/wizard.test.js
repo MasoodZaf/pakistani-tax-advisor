@@ -68,13 +68,21 @@ function buildApp() {
 }
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
-const SESSION_ID = '44444444-4444-4444-4444-444444444444';
+const SESSION_ID = '44444444-4444-4444-8444-444444444444';
 
 beforeEach(() => {
   mockQuery.mockReset();
   mockConnect.mockReset();
   mockExtract.mockReset();
 });
+
+// /start seeds from existing form rows BEFORE the archived-session seed:
+// seedFromExistingForms() fires 6 best-effort lookups (income_forms,
+// adjustable_tax_forms, deductions_forms, credits_forms, capital_gain_forms,
+// final_min_income_forms). Queue 6 empty results for the "nothing on file" case.
+function noSeedForms() {
+  for (let i = 0; i < 6; i++) mockQuery.mockResolvedValueOnce({ rows: [] });
+}
 
 // Helper: a tx client mock that just records the calls.
 function txClient() {
@@ -135,9 +143,11 @@ describe('POST /api/wizard/start', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     // 3. loadAddons (no income_profile)
     mockQuery.mockResolvedValueOnce({ rows: [] });
-    // 4. lastArchivedSeed: no prior session → returns {}
+    // 4–9. seedFromExistingForms: 6 best-effort form lookups (nothing on file)
+    noSeedForms();
+    // 10. lastArchivedSeed: no prior session → returns {}
     mockQuery.mockResolvedValueOnce({ rows: [] });
-    // 5. sessions.create
+    // 11. sessions.create
     mockQuery.mockResolvedValueOnce({
       rows: [{
         id: SESSION_ID,
@@ -199,6 +209,8 @@ describe('POST /api/wizard/start', () => {
     mockQuery.mockResolvedValueOnce({
       rows: [{ income_profile: { addons: ['rental'] } }],
     });
+    // seedFromExistingForms: 6 best-effort form lookups (nothing on file)
+    noSeedForms();
     // lastArchivedSeed: no prior session
     mockQuery.mockResolvedValueOnce({ rows: [] });
     mockQuery.mockResolvedValueOnce({
@@ -221,9 +233,11 @@ describe('POST /api/wizard/start', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     // 3. loadAddons (none)
     mockQuery.mockResolvedValueOnce({ rows: [] });
-    // 4. lastArchivedSeed → returns the prior session's captured_data
+    // 4–9. seedFromExistingForms: 6 best-effort form lookups (nothing on file)
+    noSeedForms();
+    // 10. lastArchivedSeed → returns the prior session's captured_data
     mockQuery.mockResolvedValueOnce({ rows: [{ captured_data: priorSeed }] });
-    // 5. sessions.create — echoes back the seed it was given
+    // 11. sessions.create — echoes back the seed it was given
     mockQuery.mockResolvedValueOnce({
       rows: [{
         id: SESSION_ID,
@@ -241,7 +255,9 @@ describe('POST /api/wizard/start', () => {
     expect(res.body.captured_data.salary_wht.salary_tax_deducted).toBe(75000);
 
     // The INSERT call passed the seed as the 5th param (captured_data column).
-    const insertCall = mockQuery.mock.calls[4];
+    // calls: currentTaxYear(0), getStatus(1), loadAddons(2), 6×seedForms(3-8),
+    // lastArchivedSeed(9), create INSERT(10).
+    const insertCall = mockQuery.mock.calls[10];
     expect(insertCall[0]).toMatch(/INSERT INTO wizard_sessions/);
     expect(JSON.parse(insertCall[1][4])).toEqual(priorSeed);
   });
