@@ -7,5 +7,6 @@ export { default as CollapsibleSection } from './CollapsibleSection';
 export { default as TaxFormRow } from './TaxFormRow';
 export { default as AmountRow, CalculatedRow } from './AmountRow';
 export { default as FormNav } from './FormNav';
+export { LiveTotalsProvider, LiveAmount, useLiveTotals } from './LiveTotals';
 export { formatCurrency, formatNumber } from '../../utils/currency';
 export { parseAmount, handleCurrencyInput } from './formatCurrency';

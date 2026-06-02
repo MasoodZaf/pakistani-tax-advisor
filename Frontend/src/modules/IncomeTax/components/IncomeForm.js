@@ -18,6 +18,8 @@ import {
   AmountRow,
   CalculatedRow,
   FormNav,
+  LiveTotalsProvider,
+  LiveAmount,
 } from '../../../components/forms';
 
 const IncomeForm = () => {
@@ -118,12 +120,15 @@ const IncomeForm = () => {
     handleSubmit,
     watch,
     reset,
-    setValue
+    setValue,
+    control
   } = useForm({
     defaultValues: processIncomeData(incomeData)
   });
 
-  const watchedValues = watch();
+  // PERF-02: no bare `watch()` at render — it would re-render the whole form on
+  // every keystroke. The live totals are isolated in <LiveTotalsProvider> below
+  // (subscribes via useWatch); inputs use register() and don't re-render.
 
   // Prior year pre-fill
   const { hasPriorData, applyPriorYear, dismissPriorYear } = usePriorYearData('income', setValue);
@@ -154,7 +159,7 @@ const IncomeForm = () => {
   }, [reset]);
 
   // Calculate totals based on Excel formula logic - EXACTLY matching XlCal.md
-  const calculateTotals = (sourceValues = watchedValues) => {
+  const calculateTotals = (sourceValues) => {
     const src = sourceValues || {};
     // Parse all input values - converting monthly to annual where needed
     const monthlyBasicSalary = parseToInteger(src.monthly_basic_salary) || 0;
@@ -221,8 +226,6 @@ const IncomeForm = () => {
       totalOtherIncomeNoMinTax
     };
   };
-
-  const totals = calculateTotals();
 
   const onSubmit = async (data) => {
     const liveTotals = calculateTotals(data);
@@ -321,6 +324,7 @@ const IncomeForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
+      <LiveTotalsProvider control={control} compute={calculateTotals}>
       <TaxFormShell
         title="Income"
         subtitle="Income subject to normal taxation — enter your annual amounts"
@@ -363,8 +367,8 @@ const IncomeForm = () => {
         <CollapsibleSection title="Payments by employer" open={expandedSections.paymentsEmployer} onToggle={() => toggleSection('paymentsEmployer')}>
           <TaxFormRow name="monthly_basic_salary" label="Monthly basic salary" hint="Monthly — converted to annual" help={<HelpHint fieldId="monthly_basic_salary" source={incomeFormHelp} />} inputProps={reg('monthly_basic_salary')} />
           <TaxFormRow name="monthly_allowances" label="Monthly allowances (excluding bonus & medical)" hint="Monthly — converted to annual" help={<HelpHint fieldId="monthly_allowances" source={incomeFormHelp} />} inputProps={reg('monthly_allowances')} />
-          <CalculatedRow label="Annual basic salary (monthly × 12)" amount={totals.annualBasicSalary} />
-          <CalculatedRow label="Annual allowances (monthly × 12)" amount={totals.allowances} />
+          <LiveAmount component={CalculatedRow} field="annualBasicSalary" label="Annual basic salary (monthly × 12)" />
+          <LiveAmount component={CalculatedRow} field="allowances" label="Annual allowances (monthly × 12)" />
           <TaxFormRow name="bonus" label="Bonus" help={<HelpHint fieldId="bonus" source={incomeFormHelp} />} inputProps={reg('bonus')} />
           <TaxFormRow name="medical_allowance" label="Medical allowance (where facility not provided by employer)" help={<HelpHint fieldId="medical_allowance" source={incomeFormHelp} />} inputProps={reg('medical_allowance')} />
           <TaxFormRow name="pension_from_ex_employer" label="Pension received from ex-employer" help={<HelpHint fieldId="pension_received" source={incomeFormHelp} />} inputProps={reg('pension_from_ex_employer')} />
@@ -372,31 +376,32 @@ const IncomeForm = () => {
           <TaxFormRow name="retirement_from_approved_funds" label="Amount received on retirement from approved funds (provident, pension, gratuity)" help={<HelpHint fieldId="amount_received_on_retirement" source={incomeFormHelp} />} inputProps={reg('retirement_from_approved_funds')} />
           <TaxFormRow name="directorship_fee" label="Directorship fee" sublabel="u/s 149(3)" help={<HelpHint fieldId="directorship_fee" source={incomeFormHelp} />} inputProps={reg('directorship_fee')} />
           <TaxFormRow name="other_cash_benefits" label="Other cash benefits (LFA, children education, etc.)" help={<HelpHint fieldId="other_cash_benefits" source={incomeFormHelp} />} inputProps={reg('other_cash_benefits')} />
-          <CalculatedRow label="Income exempt from tax" amount={totals.incomeExemptFromTax} help={<HelpHint fieldId="income_exempt_from_tax" source={incomeFormHelp} />} />
-          <AmountRow variant="subtotal" label="Annual salary & wages total" amount={totals.annualSalaryWagesTotal} />
+          <LiveAmount component={CalculatedRow} field="incomeExemptFromTax" label="Income exempt from tax" help={<HelpHint fieldId="income_exempt_from_tax" source={incomeFormHelp} />} />
+          <LiveAmount component={AmountRow} variant="subtotal" field="annualSalaryWagesTotal" label="Annual salary & wages total" />
         </CollapsibleSection>
 
         <CollapsibleSection title="Non-cash benefits" open={expandedSections.nonCashBenefits} onToggle={() => toggleSection('nonCashBenefits')}>
           <TaxFormRow name="employer_contribution_provident" label="Employer contribution to approved provident funds" help={<HelpHint fieldId="employer_provident_fund_contribution" source={incomeFormHelp} />} inputProps={reg('employer_contribution_provident')} />
           <TaxFormRow name="taxable_car_value" label="Taxable value of car provided by employer" help={<HelpHint fieldId="taxable_value_of_car" source={incomeFormHelp} />} inputProps={reg('taxable_car_value')} />
           <TaxFormRow name="other_taxable_subsidies" label="Other taxable subsidies & non-cash benefits" help={<HelpHint fieldId="other_taxable_subsidies" source={incomeFormHelp} />} inputProps={reg('other_taxable_subsidies')} />
-          <CalculatedRow label="Non-cash benefit exempt from tax" sublabel="Up to Rs 150,000 of provident contribution is exempt" amount={totals.providentExemption} help={<HelpHint fieldId="non_cash_benefit_exempt" source={incomeFormHelp} />} />
-          <AmountRow variant="subtotal" label="Total non-cash benefits" amount={totals.totalNonCashBenefits} />
-          <AmountRow variant="total" label="Total employment income" amount={totals.totalEmploymentIncome} />
+          <LiveAmount component={CalculatedRow} field="providentExemption" label="Non-cash benefit exempt from tax" sublabel="Up to Rs 150,000 of provident contribution is exempt" help={<HelpHint fieldId="non_cash_benefit_exempt" source={incomeFormHelp} />} />
+          <LiveAmount component={AmountRow} variant="subtotal" field="totalNonCashBenefits" label="Total non-cash benefits" />
+          <LiveAmount component={AmountRow} variant="total" field="totalEmploymentIncome" label="Total employment income" />
         </CollapsibleSection>
 
         <CollapsibleSection title="Other income (subject to minimum tax)" open={expandedSections.otherIncomeMinTax} onToggle={() => toggleSection('otherIncomeMinTax')}>
           <TaxFormRow name="profit_on_debt_15_percent" label="Profit on debt @ 15% (profit on debt exceeding Rs 5M)" sublabel="u/s 151" help={<HelpHint fieldId="profit_on_debt_151" source={incomeFormHelp} />} inputProps={reg('profit_on_debt_15_percent')} />
           <TaxFormRow name="profit_on_debt_12_5_percent" label="Profit on debt @ 12.5% (sukook exceeding Rs 5M)" sublabel="u/s 151A" help={<HelpHint fieldId="profit_on_debt_151A" source={incomeFormHelp} />} inputProps={reg('profit_on_debt_12_5_percent')} />
-          <AmountRow variant="subtotal" label="Total other income (subject to minimum tax)" amount={totals.totalOtherIncomeMinTax} />
+          <LiveAmount component={AmountRow} variant="subtotal" field="totalOtherIncomeMinTax" label="Total other income (subject to minimum tax)" />
         </CollapsibleSection>
 
         <CollapsibleSection title="Other income (not subject to minimum tax)" open={expandedSections.otherIncomeNoMinTax} onToggle={() => toggleSection('otherIncomeNoMinTax')}>
           <TaxFormRow name="other_taxable_income_rent" label="Other taxable income — rent" help={<HelpHint fieldId="rent_income" source={incomeFormHelp} />} inputProps={reg('other_taxable_income_rent')} />
           <TaxFormRow name="other_taxable_income_others" label="Other taxable income — others" help={<HelpHint fieldId="other_taxable_income_others" source={incomeFormHelp} />} inputProps={reg('other_taxable_income_others')} />
-          <AmountRow variant="subtotal" label="Other taxable income — total" amount={totals.totalOtherIncomeNoMinTax} />
+          <LiveAmount component={AmountRow} variant="subtotal" field="totalOtherIncomeNoMinTax" label="Other taxable income — total" />
         </CollapsibleSection>
       </TaxFormShell>
+      </LiveTotalsProvider>
     </form>
   );
 };
