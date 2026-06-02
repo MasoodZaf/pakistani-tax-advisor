@@ -67,7 +67,9 @@ describe('previewTaxComputation — FA 2025 salaried individual', () => {
       TCS.previewTaxComputation('2099-00', {
         income: { annual_salary_wages_total: 1000000 },
       })
-    ).rejects.toThrow(/not configured/);
+    // Fails loudly — the exact message depends on which rate lookup trips first
+    // (tax-year row, slabs, surcharge, credit caps…), so match either phrasing.
+    ).rejects.toThrow(/not configured|configured for tax year/i);
   });
 });
 
