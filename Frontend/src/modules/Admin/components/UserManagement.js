@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
 import UserTaxRecords from './UserTaxRecords';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -422,6 +423,7 @@ const UserManagement = () => {
 
 // Add User Modal Component
 const AddUserModal = ({ onClose, onSuccess }) => {
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -450,8 +452,8 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Add New User</h2>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-add-user-title" className="bg-white rounded-lg p-6 w-full max-w-md outline-none">
+        <h2 id="admin-add-user-title" className="text-xl font-bold mb-4">Add New User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -536,6 +538,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 // Edit User Modal Component
 const EditUserModal = ({ user, onClose, onSuccess }) => {
   const { user: currentUser } = useAuth();
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
@@ -564,8 +567,8 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Edit User</h2>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-edit-user-title" className="bg-white rounded-lg p-6 w-full max-w-md outline-none">
+        <h2 id="admin-edit-user-title" className="text-xl font-bold mb-4">Edit User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

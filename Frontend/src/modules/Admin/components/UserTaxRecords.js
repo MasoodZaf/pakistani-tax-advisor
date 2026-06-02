@@ -4,8 +4,11 @@ import { FileText, Edit, Save, X, User, TrendingUp, CheckCircle } from 'lucide-r
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../../utils/currency';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const UserTaxRecords = ({ userId, userName, onClose }) => {
+  // Trap focus inside the dialog while it's mounted; Escape closes it.
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [userTaxData, setUserTaxData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingForm, setEditingForm] = useState(null);
@@ -117,14 +120,20 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-user-tax-records-title"
+        className="bg-white rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto outline-none"
+      >
         {/* Header */}
         <div className="p-6 border-b bg-blue-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <User className="w-6 h-6 text-blue-600" />
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{user.name} - Tax Records</h2>
+                <h2 id="admin-user-tax-records-title" className="text-xl font-bold text-gray-900">{user.name} - Tax Records</h2>
                 <p className="text-gray-600">{user.email} • Tax Consultant View</p>
               </div>
             </div>

@@ -4,9 +4,12 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { formatCurrency } from '../../../utils/currency';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const TaxCalculator = ({ onClose }) => {
   const { currentTaxYear, availableYears } = useTaxYear();
+  // Trap focus inside the dialog while it's mounted; Escape closes it.
+  const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [formData, setFormData] = useState({
     income: '',
     allowances: '',
@@ -52,12 +55,18 @@ const TaxCalculator = ({ onClose }) => {
   };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-tax-calc-title"
+        className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
+      >
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Calculator className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900">Tax Calculator</h2>
+              <h2 id="admin-tax-calc-title" className="text-xl font-bold text-gray-900">Tax Calculator</h2>
             </div>
             <button
               onClick={onClose}
