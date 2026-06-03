@@ -14,7 +14,10 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowDownCircle,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Sparkles,
+  Lightbulb,
+  ShieldCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/currency';
@@ -33,6 +36,11 @@ const Reports = () => {
   // Loaded alongside the summary tab so the headline panel always reflects
   // the same numbers the Tax Computation form shows.
   const [computation, setComputation] = useState(null);
+  // AI tax-efficiency analysis (on-demand; not tied to the report-fetch flow).
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiRaw, setAiRaw] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
   // The IRIS export needs the user's profile + every form's raw payload.
   const { user } = useAuth();
   const { formData } = useTaxForm();
@@ -113,6 +121,28 @@ const Reports = () => {
       setLoading(false);
     }
   };
+  // On-demand AI tax-efficiency analysis. The backend gathers the authoritative
+  // DB computation and asks the grounded consultant for legal reliefs the user
+  // hasn't claimed; we render the structured result (or a raw fallback).
+  const loadOptimization = async () => {
+    if (!selectedYear) { toast.error('Select a tax year first'); return; }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await axios.post('/api/ai-consultant/optimize', { taxYear: selectedYear, includePII: false });
+      if (res.data?.success) {
+        setAiAnalysis(res.data.analysis || null);
+        setAiRaw(res.data.analysis ? null : (res.data.raw || null));
+      } else {
+        setAiError(res.data?.message || 'The analysis could not be completed.');
+      }
+    } catch (e) {
+      setAiError(e.response?.data?.message || 'Could not run the analysis — please try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // PDF export — produces an FBR Acknowledgement-Slip-format document with
   // every IRIS field code visible in column 1. The layout mirrors the real
   // IRIS slip (see Return.pdf at the repo root) so a consultant can re-key
@@ -768,6 +798,107 @@ const Reports = () => {
     );
   };
 
+  const TaxEfficiencyReport = () => {
+    const a = aiAnalysis;
+    return (
+      <div className="space-y-6">
+        {/* Intro + action */}
+        <div className="rounded-brand-lg bg-navy p-6 text-white">
+          <div className="flex flex-wrap items-start gap-4">
+            <span className="inline-grid place-items-center rounded-brand bg-lime/25 p-2">
+              <Sparkles className="w-6 h-6 text-lime" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-display text-lg font-bold">AI Tax Efficiency Review</h3>
+              <p className="mt-1 text-sm text-white/70">
+                Reviews your return for <strong className="text-lime">legal</strong> reliefs, credits and allowances you may not have
+                claimed — grounded in the Income Tax Ordinance &amp; FBR rules. Suggestions only; nothing is changed on your return.
+              </p>
+            </div>
+            <button
+              onClick={loadOptimization}
+              disabled={aiLoading}
+              className="shrink-0 flex items-center gap-2 rounded-brand bg-lime px-4 py-2 font-semibold text-navy transition-colors hover:bg-lime/80 disabled:opacity-50"
+            >
+              {aiLoading
+                ? (<><RefreshCw className="w-4 h-4 animate-spin" /> Analysing…</>)
+                : (<><Sparkles className="w-4 h-4" /> {a ? 'Re-run analysis' : 'Analyse my return'}</>)}
+            </button>
+          </div>
+        </div>
+
+        {aiError && (
+          <div className="rounded-brand border border-red-200 bg-red-50 p-4 text-sm text-red-700">{aiError}</div>
+        )}
+
+        {aiLoading && !a && (
+          <div className="text-center py-12">
+            <RefreshCw className="w-8 h-8 text-navy animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">The AI is reviewing your numbers against FBR rules…</p>
+          </div>
+        )}
+
+        {a && (
+          <>
+            {a.summary && (
+              <div className="rounded-brand border border-navy/15 bg-navy/[0.03] p-4 text-sm leading-relaxed text-gray-700">{a.summary}</div>
+            )}
+
+            {(a.opportunities || []).length === 0 ? (
+              <div className="flex items-center gap-2 rounded-brand border border-lime/40 bg-lime/15 p-4 text-sm font-medium text-navy">
+                <CheckCircle className="w-5 h-5" /> Your return already looks well-optimised — no additional legal reliefs identified.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(a.opportunities || []).map((o, i) => (
+                  <div key={i} className="rounded-brand-lg border border-navy/12 bg-white p-5 shadow-brand">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <Lightbulb className="w-5 h-5 shrink-0 text-lime mt-0.5" />
+                        <h4 className="font-semibold leading-snug text-navy">{o.title}</h4>
+                      </div>
+                      {o.confidence && (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          o.confidence === 'high' ? 'bg-lime/25 text-navy'
+                            : o.confidence === 'medium' ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-500'}`}>{o.confidence}</span>
+                      )}
+                    </div>
+                    {o.section && <p className="mt-1 font-mono text-xs text-navy/60">{o.section}</p>}
+                    {o.rationale && <p className="mt-2 text-sm text-gray-600">{o.rationale}</p>}
+                    {o.action && <p className="mt-2 text-sm text-navy"><span className="font-semibold">Action:</span> {o.action}</p>}
+                    {o.estimatedSavingPKR != null && Number(o.estimatedSavingPKR) > 0 && (
+                      <div className="mt-3 inline-flex items-center gap-1 rounded-brand bg-lime/15 px-2.5 py-1 text-sm font-semibold text-navy">
+                        <ArrowDownCircle className="w-4 h-4" /> Est. saving {formatCurrency(o.estimatedSavingPKR)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {a.disclaimer && (
+              <div className="flex items-start gap-2 rounded-brand border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" /><span>{a.disclaimer}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {aiRaw && (
+          <pre className="whitespace-pre-wrap rounded-brand bg-gray-50 p-4 text-xs text-gray-600">{aiRaw}</pre>
+        )}
+
+        {!a && !aiLoading && !aiError && (
+          <div className="text-center py-10 text-gray-500">
+            <Sparkles className="w-10 h-10 mx-auto mb-3 text-navy/30" />
+            <p className="text-sm">Click <strong className="text-navy">Analyse my return</strong> for personalised, legal tax-saving suggestions.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (availableYears.length === 0) {
     return (
       <div className="space-y-8">
@@ -830,13 +961,14 @@ const Reports = () => {
               { id: 'summary', label: 'Tax Summary', icon: BarChart3, endpoint: 'tax-calculation-summary' },
               { id: 'income', label: 'Income Analysis', icon: TrendingUp, endpoint: 'income-analysis' },
               { id: 'adjustable', label: 'Adjustable Tax', icon: Calculator, endpoint: 'adjustable-tax-report' },
-              { id: 'wealth', label: 'Wealth Report', icon: Wallet, endpoint: 'wealth-reconciliation' }
+              { id: 'wealth', label: 'Wealth Report', icon: Wallet, endpoint: 'wealth-reconciliation' },
+              { id: 'efficiency', label: 'Tax Efficiency', icon: Sparkles, endpoint: null }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
-                  loadReport(tab.endpoint);
+                  if (tab.endpoint) loadReport(tab.endpoint);
                 }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
@@ -863,6 +995,7 @@ const Reports = () => {
               {activeTab === 'income' && <IncomeAnalysisReport data={reportData} />}
               {activeTab === 'adjustable' && <AdjustableTaxReport data={reportData} />}
               {activeTab === 'wealth' && <WealthReport data={reportData} />}
+              {activeTab === 'efficiency' && <TaxEfficiencyReport />}
             </>
           )}
         </div>
