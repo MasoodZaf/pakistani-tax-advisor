@@ -44,6 +44,7 @@ const Reports = () => {
   const [aiRaw, setAiRaw] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [aiMeta, setAiMeta] = useState(null); // { cached, analysedAt, needsRun }
   // The IRIS export needs the user's profile + every form's raw payload.
   const { user } = useAuth();
   const { formData } = useTaxForm();
@@ -86,6 +87,15 @@ const Reports = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, activeTab]);
 
+  // On opening the Tax Efficiency tab, silently surface any cached analysis
+  // (no AI run) so returning users see their results instantly.
+  useEffect(() => {
+    if (activeTab === 'efficiency' && selectedYear && !aiAnalysis && !aiLoading) {
+      loadOptimization({ cacheOnly: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedYear]);
+
   const loadAvailableYears = async () => {
     try {
       const response = await axios.get('/api/reports/available-years');
@@ -127,22 +137,30 @@ const Reports = () => {
   // On-demand AI tax-efficiency analysis. The backend gathers the authoritative
   // DB computation and asks the grounded consultant for legal reliefs the user
   // hasn't claimed; we render the structured result (or a raw fallback).
-  const loadOptimization = async () => {
-    if (!selectedYear) { toast.error('Select a tax year first'); return; }
-    setAiLoading(true);
+  // opts.cacheOnly: silent probe (no spinner, never triggers the ~10s AI run) —
+  // used on tab-open to show a prior cached analysis instantly.
+  // opts.refresh: force a fresh run ignoring the cache.
+  const loadOptimization = async (opts = {}) => {
+    if (!selectedYear) { if (!opts.cacheOnly) toast.error('Select a tax year first'); return; }
+    if (!opts.cacheOnly) setAiLoading(true);
     setAiError(null);
     try {
-      const res = await axios.post('/api/ai-consultant/optimize', { taxYear: selectedYear, includePII: false });
+      const res = await axios.post('/api/ai-consultant/optimize', {
+        taxYear: selectedYear, includePII: false,
+        refresh: !!opts.refresh, cacheOnly: !!opts.cacheOnly,
+      });
       if (res.data?.success) {
+        if (opts.cacheOnly && res.data.needsRun) { setAiMeta({ needsRun: true }); return; }
         setAiAnalysis(res.data.analysis || null);
         setAiRaw(res.data.analysis ? null : (res.data.raw || null));
-      } else {
+        setAiMeta({ cached: res.data.cached, analysedAt: res.data.analysedAt });
+      } else if (!opts.cacheOnly) {
         setAiError(res.data?.message || 'The analysis could not be completed.');
       }
     } catch (e) {
-      setAiError(e.response?.data?.message || 'Could not run the analysis — please try again.');
+      if (!opts.cacheOnly) setAiError(e.response?.data?.message || 'Could not run the analysis — please try again.');
     } finally {
-      setAiLoading(false);
+      if (!opts.cacheOnly) setAiLoading(false);
     }
   };
 
@@ -801,6 +819,15 @@ const Reports = () => {
     );
   };
 
+  const timeAgo = (iso) => {
+    const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
   const TaxEfficiencyReport = () => {
     const a = aiAnalysis;
     return (
@@ -818,15 +845,22 @@ const Reports = () => {
                 claimed — grounded in the Income Tax Ordinance &amp; FBR rules. Suggestions only; nothing is changed on your return.
               </p>
             </div>
-            <button
-              onClick={loadOptimization}
-              disabled={aiLoading}
-              className="shrink-0 flex items-center gap-2 rounded-brand bg-lime px-4 py-2 font-semibold text-navy transition-colors hover:bg-lime/80 disabled:opacity-50"
-            >
-              {aiLoading
-                ? (<><RefreshCw className="w-4 h-4 animate-spin" /> Analysing…</>)
-                : (<><Sparkles className="w-4 h-4" /> {a ? 'Re-run analysis' : 'Analyse my return'}</>)}
-            </button>
+            <div className="shrink-0 text-right">
+              <button
+                onClick={() => loadOptimization(a ? { refresh: true } : {})}
+                disabled={aiLoading}
+                className="flex items-center gap-2 rounded-brand bg-lime px-4 py-2 font-semibold text-navy transition-colors hover:bg-lime/80 disabled:opacity-50"
+              >
+                {aiLoading
+                  ? (<><RefreshCw className="w-4 h-4 animate-spin" /> Analysing…</>)
+                  : (<><Sparkles className="w-4 h-4" /> {a ? 'Re-run analysis' : 'Analyse my return'}</>)}
+              </button>
+              {a && aiMeta?.analysedAt && (
+                <p className="mt-1 text-xs text-white/60">
+                  Analysed {timeAgo(aiMeta.analysedAt)}{aiMeta.cached ? ' · cached' : ''}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 

@@ -7,8 +7,42 @@ const logger = require('../utils/logger');
 const service = require('../services/aiConsultant/consultantService');
 const kb = require('../services/aiConsultant/knowledgeBase');
 const { isConfigured } = require('../services/aiConsultant/deepseekClient');
+const crypto = require('crypto');
 const TaxCalculationService = require('../services/taxCalculationService');
+const TaxRateService = require('../services/taxRateService');
 const { pool } = require('../config/database');
+
+// v3: compute the EXACT statutory headroom for the capped credits (donations
+// s.61 @ 30% of taxable income, pension s.63 @ 20%) from DB-sourced caps + the
+// authoritative average tax rate, so the AI quotes precise rupee savings rather
+// than estimating. Caps come from tax_rates_config (rate_type='credit_cap').
+function computeReliefHeadroom(computation, claimedReliefs, creditCaps) {
+  const taxable = Number(computation?.income?.taxableIncomeIncludingCG) || 0;
+  const taxBefore = Number(computation?.tax?.totalTaxBeforeAdjustments) || 0;
+  if (taxable <= 0 || !creditCaps) return null;
+  const avgRate = taxBefore / taxable;   // s.61/63 credit ratio = tax assessed / taxable income
+  const credits = claimedReliefs?.credits || {};
+  const items = [];
+  const add = (relief, section, capCat, claimedFields) => {
+    const cap = creditCaps[capCat];
+    if (!cap) return;
+    const capPct = Number(cap.rate);
+    const claimed = claimedFields.reduce((s, f) => s + (Number(credits[f]) || 0), 0);
+    const eligibleCap = capPct * taxable;
+    const additionalEligible = Math.max(0, eligibleCap - claimed);
+    items.push({
+      relief, section,
+      cap: `${(capPct * 100).toFixed(0)}% of taxable income`,
+      eligibleCapPKR: Math.round(eligibleCap),
+      alreadyClaimedPKR: Math.round(claimed),
+      additionalEligiblePKR: Math.round(additionalEligible),
+      maxAdditionalCreditPKR: Math.round(additionalEligible * avgRate),
+    });
+  };
+  add('charitable_donations', 's.61', 'donation_u61', ['charitable_donations_amount', 'charitable_donation']);
+  add('voluntary_pension', 's.63', 'pension_u63', ['pension_contribution_amount', 'pension_contribution']);
+  return { taxableIncomePKR: Math.round(taxable), averageTaxRate: `${(avgRate * 100).toFixed(1)}%`, cappedCredits: items };
+}
 
 const router = express.Router();
 
@@ -153,11 +187,52 @@ router.post('/optimize', auth, async (req, res) => {
       logger.warn('optimize: could not load granular reliefs, using aggregate only', { message: e.message });
     }
 
+    // v3: precise statutory headroom for the capped credits (DB-sourced caps).
+    let reliefHeadroom = null;
+    try {
+      const creditCaps = await TaxRateService.getCreditCaps(taxYear);
+      reliefHeadroom = computeReliefHeadroom(breakdown, claimedReliefs, creditCaps);
+    } catch (e) {
+      logger.warn('optimize: credit caps unavailable, skipping precise headroom', { message: e.message });
+    }
+
+    // v3: cache by an input hash of the figures that drive the analysis, so the
+    // ~10s AI call only re-runs when the user's relevant numbers actually change.
+    const inputHash = crypto.createHash('sha256').update(JSON.stringify({
+      tc: breakdown?.tax?.totalTaxChargeable,
+      np: breakdown?.tax?.netTaxPayable,
+      cr: breakdown?.tax?.totalCredits,
+      rd: breakdown?.tax?.totalReductions,
+      da: breakdown?.income?.deductibleAllowances,
+      ti: breakdown?.income?.taxableIncomeIncludingCG,
+      reliefs: claimedReliefs,
+    })).digest('hex');
+
+    if (!req.body.refresh) {
+      const cached = await pool.query(
+        'SELECT analysis, updated_at FROM ai_optimizations WHERE user_id = $1 AND tax_year = $2 AND input_hash = $3',
+        [req.user.id, taxYear, inputHash]
+      );
+      if (cached.rows[0]?.analysis) {
+        return res.json({
+          success: true, taxYear, cached: true,
+          analysedAt: cached.rows[0].updated_at,
+          analysis: cached.rows[0].analysis,
+          reliefHeadroom,
+        });
+      }
+      // cacheOnly: a cheap "is there a fresh analysis?" probe for tab-open —
+      // never triggers the ~10s AI run; the UI shows the CTA instead.
+      if (req.body.cacheOnly) {
+        return res.json({ success: true, taxYear, cached: false, needsRun: true, analysis: null, reliefHeadroom });
+      }
+    }
+
     const out = await service.taxOptimization({
       userId: req.user.id,
       taxYear,
       includePII: !!includePII,
-      taxData: { computation: breakdown, claimedReliefs },
+      taxData: { computation: breakdown, claimedReliefs, reliefHeadroom },
     });
 
     // The model is asked for pure JSON; be defensive and extract the object.
@@ -167,11 +242,27 @@ router.post('/optimize', auth, async (req, res) => {
       if (m) analysis = JSON.parse(m[0]);
     } catch { analysis = null; }
 
+    // Persist for next time (only a clean parse is worth caching).
+    if (analysis) {
+      try {
+        await pool.query(
+          `INSERT INTO ai_optimizations (user_id, tax_year, input_hash, analysis, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (user_id, tax_year)
+           DO UPDATE SET input_hash = EXCLUDED.input_hash, analysis = EXCLUDED.analysis, updated_at = NOW()`,
+          [req.user.id, taxYear, inputHash, JSON.stringify(analysis)]
+        );
+      } catch (e) { logger.warn('optimize: failed to cache analysis', { message: e.message }); }
+    }
+
     res.json({
       success: true,
       taxYear,
+      cached: false,
+      analysedAt: new Date().toISOString(),
       analysis,                          // {summary, opportunities[], disclaimer} or null
       raw: analysis ? undefined : out.reply,   // fall back to raw text if parse failed
+      reliefHeadroom,
       sources: out.sources,
       conversationId: out.conversationId,
       blocked: out.blocked || undefined,
