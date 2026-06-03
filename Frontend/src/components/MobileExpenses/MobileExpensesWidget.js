@@ -125,19 +125,19 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
   if (data && buckets.length === 0 && !loading) return null;
 
   return (
-    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+    <div className="bg-navy/5 border border-navy/15 rounded-brand p-4 mb-4">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center justify-between w-full text-left"
       >
         <div className="flex items-center">
-          <Smartphone className="h-5 w-5 text-indigo-600 mr-2" />
-          <span className="font-semibold text-indigo-900">
+          <Smartphone className="h-5 w-5 text-navy mr-2" />
+          <span className="font-semibold text-navy">
             From your mobile expenses
           </span>
           {data ? (
-            <span className="ml-3 text-sm text-indigo-700">
+            <span className="ml-3 text-sm text-navy">
               {formatPkr(data.total_captured_pkr)} captured for {taxYear}
             </span>
           ) : null}
@@ -146,15 +146,15 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); load(); }}
-            className="p-1 hover:bg-indigo-100 rounded"
+            className="p-1 hover:bg-navy/10 rounded"
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 text-indigo-600 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 text-navy ${loading ? 'animate-spin' : ''}`} />
           </button>
           {expanded ? (
-            <ChevronUp className="h-5 w-5 text-indigo-600 ml-1" />
+            <ChevronUp className="h-5 w-5 text-navy ml-1" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-indigo-600 ml-1" />
+            <ChevronDown className="h-5 w-5 text-navy ml-1" />
           )}
         </div>
       </button>
@@ -167,10 +167,10 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
             return (
               <div
                 key={b.key}
-                className="flex items-center justify-between bg-white border border-indigo-100 rounded px-3 py-2"
+                className="flex items-center justify-between bg-white border border-navy/15 rounded px-3 py-2"
               >
                 <div>
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-navy">
                     {labels[b.key] || b.key}
                   </div>
                   <div className="text-xs text-gray-500">
@@ -186,7 +186,7 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
                   <button
                     type="button"
                     onClick={() => apply(b.key, b)}
-                    className="px-3 py-1 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
+                    className="px-3 py-1 bg-navy text-white rounded text-sm font-medium hover:bg-navy-dark"
                   >
                     Apply
                   </button>

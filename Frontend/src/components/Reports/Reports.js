@@ -331,7 +331,7 @@ const Reports = () => {
       <div className="space-y-6">
         {/* Bottom Line — the headline numbers the user actually came here for */}
         {computation && (
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-brand border border-gray-200 bg-white shadow-brand overflow-hidden">
             <div className={`px-6 py-5 ${isPayable ? 'bg-red-50 border-b border-red-100' : isRefund ? 'bg-green-50 border-b border-green-100' : 'bg-gray-50 border-b border-gray-100'}`}>
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
@@ -344,7 +344,7 @@ const Reports = () => {
                     <p className={`text-xs font-bold uppercase tracking-wider ${isPayable ? 'text-red-700' : isRefund ? 'text-green-700' : 'text-gray-600'}`}>
                       {isPayable ? 'Tax payable to FBR' : isRefund ? 'Refund due to you' : 'Tax position'}
                     </p>
-                    <p className={`text-3xl font-bold ${isPayable ? 'text-red-900' : isRefund ? 'text-green-900' : 'text-gray-900'}`}>
+                    <p className={`text-3xl font-bold ${isPayable ? 'text-red-900' : isRefund ? 'text-green-900' : 'text-navy'}`}>
                       {formatCurrency(Math.abs(balance || 0))}
                     </p>
                   </div>
@@ -361,17 +361,17 @@ const Reports = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
               <div className="px-6 py-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total tax chargeable</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalTaxChargeable)}</p>
+                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(totalTaxChargeable)}</p>
                 <p className="text-xs text-gray-500 mt-1">Normal + surcharge + CGT + super tax</p>
               </div>
               <div className="px-6 py-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax already paid</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(taxAlreadyPaid)}</p>
+                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(taxAlreadyPaid)}</p>
                 <p className="text-xs text-gray-500 mt-1">Withholding + advance tax u/s 147</p>
               </div>
               <div className="px-6 py-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Taxable income</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(computation?.income?.taxableIncomeIncludingCG)}</p>
+                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(computation?.income?.taxableIncomeIncludingCG)}</p>
                 <p className="text-xs text-gray-500 mt-1">Including capital gains</p>
               </div>
             </div>
@@ -379,17 +379,17 @@ const Reports = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg">
+          <div className="bg-navy   text-white p-6 rounded-brand">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Total Taxable Income</p>
+                <p className="text-white/70 text-sm">Total Taxable Income</p>
                 <p className="text-2xl font-bold">{formatCurrency(totalTaxableIncome)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-blue-200" />
+              <DollarSign className="w-8 h-8 text-lime" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+          <div className="bg-navy   text-white p-6 rounded-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm">Adjustable Tax Paid</p>
@@ -399,17 +399,17 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
+          <div className="bg-navy   text-white p-6 rounded-brand">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm">Tax Credits</p>
+                <p className="text-white/70 text-sm">Tax Credits</p>
                 <p className="text-2xl font-bold">{formatCurrency(totalCredits)}</p>
               </div>
-              <PieChart className="w-8 h-8 text-purple-200" />
+              <PieChart className="w-8 h-8 text-lime" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-lg">
+          <div className="bg-navy   text-white p-6 rounded-brand">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-red-100 text-sm">Tax Deductions</p>
@@ -420,8 +420,8 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Income Breakdown</h3>
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy mb-4">Income Breakdown</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Monthly Salary</span>
@@ -440,8 +440,8 @@ const Reports = () => {
               <span className="font-medium">{formatCurrency(incomeRow.other_taxable)}</span>
             </div>
             <div className="flex justify-between items-center py-2 bg-gray-50 font-semibold">
-              <span className="text-gray-900">Total Taxable Income</span>
-              <span className="text-primary-600">{formatCurrency(totalTaxableIncome)}</span>
+              <span className="text-navy">Total Taxable Income</span>
+              <span className="text-navy">{formatCurrency(totalTaxableIncome)}</span>
             </div>
           </div>
         </div>
@@ -459,31 +459,31 @@ const Reports = () => {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Regular Income</h4>
-            <p className="text-3xl font-bold text-blue-600">{formatCurrency(regularIncome)}</p>
+          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
+            <h4 className="text-lg font-semibold text-navy mb-2">Regular Income</h4>
+            <p className="text-3xl font-bold text-navy">{formatCurrency(regularIncome)}</p>
             <p className="text-sm text-gray-600 mt-1">Salary, business income, etc.</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Capital Gains</h4>
+          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-green-500">
+            <h4 className="text-lg font-semibold text-navy mb-2">Capital Gains</h4>
             <p className="text-3xl font-bold text-green-600">{formatCurrency(capitalGains)}</p>
             <p className="text-sm text-gray-600 mt-1">Property, securities sales</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Final Tax Income</h4>
-            <p className="text-3xl font-bold text-purple-600">{formatCurrency(finalTaxIncome)}</p>
+          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
+            <h4 className="text-lg font-semibold text-navy mb-2">Final Tax Income</h4>
+            <p className="text-3xl font-bold text-navy">{formatCurrency(finalTaxIncome)}</p>
             <p className="text-sm text-gray-600 mt-1">Sukuk, bonds, etc.</p>
           </div>
         </div>
 
         {data.regularIncome && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Regular Income Details</h3>
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy mb-4">Regular Income Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Taxable Income</h4>
+                <h4 className="font-medium text-navy mb-3">Taxable Income</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Monthly Salary</span>
@@ -500,7 +500,7 @@ const Reports = () => {
                 </div>
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Exempt Income</h4>
+                <h4 className="font-medium text-navy mb-3">Exempt Income</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Medical Allowance</span>
@@ -530,18 +530,18 @@ const Reports = () => {
 
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-brand shadow-brand p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Total Adjustable Tax</h3>
-            <span className="text-2xl font-bold text-primary-600">{formatCurrency(data.totalAdjustableTax)}</span>
+            <h3 className="text-lg font-semibold text-navy">Total Adjustable Tax</h3>
+            <span className="text-2xl font-bold text-navy">{formatCurrency(data.totalAdjustableTax)}</span>
           </div>
           <p className="text-gray-600">This represents all withholding taxes and advance tax payments made during the tax year.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Building className="w-5 h-5 mr-2 text-blue-500" />
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy mb-3 flex items-center">
+              <Building className="w-5 h-5 mr-2 text-navy" />
               Employment
             </h4>
             <div className="space-y-2">
@@ -556,8 +556,8 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy mb-3 flex items-center">
               <Calculator className="w-5 h-5 mr-2 text-green-500" />
               Utilities
             </h4>
@@ -577,9 +577,9 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Wallet className="w-5 h-5 mr-2 text-purple-500" />
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy mb-3 flex items-center">
+              <Wallet className="w-5 h-5 mr-2 text-navy" />
               Motor Vehicle
             </h4>
             <div className="space-y-2">
@@ -598,8 +598,8 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy mb-3 flex items-center">
               <Building className="w-5 h-5 mr-2 text-red-500" />
               Property
             </h4>
@@ -615,8 +615,8 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy mb-3 flex items-center">
               <DollarSign className="w-5 h-5 mr-2 text-yellow-500" />
               Financial
             </h4>
@@ -652,8 +652,8 @@ const Reports = () => {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Assets Comparison</h3>
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy mb-4">Assets Comparison</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Previous Year</span>
@@ -664,7 +664,7 @@ const Reports = () => {
                 <span className="font-medium">{formatCurrency(wealth.total_assets_current_year)}</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
-                <span className="text-gray-900 font-semibold">Change</span>
+                <span className="text-navy font-semibold">Change</span>
                 <span className={`font-semibold ${
                   (wealth.total_assets_current_year - wealth.total_assets_previous_year) >= 0 
                     ? 'text-green-600' 
@@ -676,8 +676,8 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Liabilities Comparison</h3>
+          <div className="bg-white rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy mb-4">Liabilities Comparison</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Previous Year</span>
@@ -688,7 +688,7 @@ const Reports = () => {
                 <span className="font-medium">{formatCurrency(wealth.total_liabilities_current_year)}</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
-                <span className="text-gray-900 font-semibold">Change</span>
+                <span className="text-navy font-semibold">Change</span>
                 <span className={`font-semibold ${
                   (wealth.total_liabilities_current_year - wealth.total_liabilities_previous_year) >= 0 
                     ? 'text-red-600' 
@@ -701,16 +701,16 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Net Worth Analysis</h3>
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy mb-4">Net Worth Analysis</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <p className="text-gray-600 mb-1">Previous Year Net Worth</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(wealth.net_worth_previous_year)}</p>
+              <p className="text-2xl font-bold text-navy">{formatCurrency(wealth.net_worth_previous_year)}</p>
             </div>
             <div className="text-center">
               <p className="text-gray-600 mb-1">Current Year Net Worth</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(wealth.net_worth_current_year)}</p>
+              <p className="text-2xl font-bold text-navy">{formatCurrency(wealth.net_worth_current_year)}</p>
             </div>
             <div className="text-center">
               <p className="text-gray-600 mb-1">Wealth Increase</p>
@@ -723,8 +723,8 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Income vs. Wealth Reconciliation</h3>
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy mb-4">Income vs. Wealth Reconciliation</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Total Taxable Income</span>
@@ -739,11 +739,11 @@ const Reports = () => {
               <span className="font-medium">{formatCurrency(data.totalTaxableIncome - data.totalExpenses)}</span>
             </div>
             <div className="flex justify-between border-t pt-2">
-              <span className="text-gray-900 font-semibold">Wealth Increase</span>
+              <span className="text-navy font-semibold">Wealth Increase</span>
               <span className="font-semibold">{formatCurrency(wealth.wealth_increase)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-900 font-semibold">Difference</span>
+              <span className="text-navy font-semibold">Difference</span>
               <span className={`font-semibold ${
                 Math.abs((data.totalTaxableIncome - data.totalExpenses) - wealth.wealth_increase) < 1000
                   ? 'text-green-600' 
@@ -761,22 +761,22 @@ const Reports = () => {
   if (availableYears.length === 0) {
     return (
       <div className="space-y-8">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Tax Reports & Analysis</h1>
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <h1 className="text-2xl font-bold text-navy mb-2">Tax Reports & Analysis</h1>
           <p className="text-gray-600">
             View your tax calculations, summaries, and detailed reports
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+        <div className="bg-white rounded-brand shadow-brand p-12 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Tax Data Available</h2>
+          <h2 className="text-xl font-semibold text-navy mb-2">No Tax Data Available</h2>
           <p className="text-gray-600 mb-6">
             Complete your tax forms to generate detailed reports and analysis.
           </p>
           <button 
             onClick={() => window.location.href = '/tax-forms'}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+            className="bg-navy text-white px-6 py-2 rounded-brand hover:bg-navy-dark transition-colors"
           >
             Go to Tax Forms
           </button>
@@ -788,10 +788,10 @@ const Reports = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-brand shadow-brand p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Tax Reports & Analysis</h1>
+            <h1 className="text-2xl font-bold text-navy mb-2">Tax Reports & Analysis</h1>
             <p className="text-gray-600">
               View your tax calculations, summaries, and detailed reports
             </p>
@@ -800,7 +800,7 @@ const Reports = () => {
             <select 
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="form-select border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="form-select border border-gray-300 rounded-brand px-3 py-2 focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               {availableYears.map(year => (
                 <option key={year.tax_year} value={year.tax_year}>
@@ -813,7 +813,7 @@ const Reports = () => {
       </div>
 
       {/* Report Type Tabs */}
-      <div className="bg-white rounded-lg shadow-sm">
+      <div className="bg-white rounded-brand shadow-brand">
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
             {[
@@ -830,7 +830,7 @@ const Reports = () => {
                 }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
+                    ? 'border-navy/40 text-navy'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -844,7 +844,7 @@ const Reports = () => {
         <div className="p-6" id="paktax-report-print">
           {loading ? (
             <div className="text-center py-12">
-              <RefreshCw className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
+              <RefreshCw className="w-8 h-8 text-navy animate-spin mx-auto mb-4" />
               <p className="text-gray-600">Loading report data...</p>
             </div>
           ) : (
@@ -860,27 +860,27 @@ const Reports = () => {
 
       {/* Export Options */}
       {reportData && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Options</h3>
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy mb-4">Export Options</h3>
           <p className="text-gray-600 mb-4">Download your tax reports in various formats</p>
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={exportToPDF}
-              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-brand hover:bg-red-700 transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Export PDF</span>
             </button>
             <button 
               onClick={exportToExcel}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-brand hover:bg-green-700 transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Export Excel</span>
             </button>
             <button 
               onClick={exportToCSV}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center space-x-2 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Export CSV</span>

@@ -82,7 +82,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
+        <div className="bg-white rounded-brand p-6">
           <div className="flex items-center space-x-3">
             <div className="spinner"></div>
             <span>Loading tax records...</span>
@@ -95,7 +95,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
   if (!userTaxData) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
+        <div className="bg-white rounded-brand p-6">
           <p className="text-red-600">Failed to load user tax records</p>
           <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-500 text-white rounded">
             Close
@@ -125,15 +125,15 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-user-tax-records-title"
-        className="bg-white rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto outline-none"
+        className="bg-white rounded-brand w-full max-w-6xl max-h-[95vh] overflow-y-auto outline-none"
       >
         {/* Header */}
-        <div className="p-6 border-b bg-blue-50">
+        <div className="p-6 border-b bg-navy/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <User className="w-6 h-6 text-blue-600" />
+              <User className="w-6 h-6 text-navy" />
               <div>
-                <h2 id="admin-user-tax-records-title" className="text-xl font-bold text-gray-900">{user.name} - Tax Records</h2>
+                <h2 id="admin-user-tax-records-title" className="text-xl font-bold text-navy">{user.name} - Tax Records</h2>
                 <p className="text-gray-600">{user.email} • Tax Consultant View</p>
               </div>
             </div>
@@ -149,15 +149,15 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
         <div className="p-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="bg-navy/5 p-4 rounded-brand border border-navy/15">
               <div className="flex items-center space-x-2 mb-2">
-                <FileText className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Total Returns</span>
+                <FileText className="w-4 h-4 text-navy" />
+                <span className="text-sm font-medium text-navy">Total Returns</span>
               </div>
-              <div className="text-2xl font-bold text-blue-900">{summary.total_returns}</div>
+              <div className="text-2xl font-bold text-navy">{summary.total_returns}</div>
             </div>
 
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="bg-green-50 p-4 rounded-brand border border-green-200">
               <div className="flex items-center space-x-2 mb-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium text-green-900">Completed</span>
@@ -165,7 +165,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
               <div className="text-2xl font-bold text-green-900">{summary.completed_returns}</div>
             </div>
 
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <div className="bg-yellow-50 p-4 rounded-brand border border-yellow-200">
               <div className="flex items-center space-x-2 mb-2">
                 <Edit className="w-4 h-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-900">Draft</span>
@@ -173,20 +173,20 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
               <div className="text-2xl font-bold text-yellow-900">{summary.draft_returns}</div>
             </div>
 
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div className="bg-navy/5 p-4 rounded-brand border border-navy/15">
               <div className="flex items-center space-x-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-900">Progress</span>
+                <TrendingUp className="w-4 h-4 text-navy" />
+                <span className="text-sm font-medium text-navy">Progress</span>
               </div>
-              <div className="text-2xl font-bold text-purple-900">{summary.current_year_completion || 0}%</div>
+              <div className="text-2xl font-bold text-navy">{summary.current_year_completion || 0}%</div>
             </div>
           </div>
 
           {/* Current Year Tax Return */}
           {currentReturn && (
-            <div className="bg-white border rounded-lg mb-6">
+            <div className="bg-white border rounded-brand mb-6">
               <div className="p-4 border-b bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-navy">
                   Current Tax Year: {currentReturn.tax_year}
                 </h3>
                 <p className="text-gray-600">
@@ -197,9 +197,9 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
               {/* Editable Forms */}
               <div className="p-4 space-y-6">
                 {/* Income Form */}
-                <div className="border rounded-lg">
-                  <div className="p-4 border-b bg-blue-50 flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-900">Income Information</h4>
+                <div className="border rounded-brand">
+                  <div className="p-4 border-b bg-navy/5 flex items-center justify-between">
+                    <h4 className="font-semibold text-navy">Income Information</h4>
                     {editingForm === 'income' ? (
                       <div className="space-x-2">
                         <button
@@ -219,7 +219,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                     ) : (
                       <button
                         onClick={() => handleEditForm('income', formsData.income)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                        className="px-3 py-1 bg-navy text-white rounded text-sm hover:bg-navy-dark"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -238,7 +238,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                             name="salary_income"
                             value={formData.salary_income || ''}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-navy/30"
                           />
                         </div>
                         <div>
@@ -250,7 +250,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                             name="other_income"
                             value={formData.other_income || ''}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-navy/30"
                           />
                         </div>
                         <div>
@@ -262,7 +262,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                             name="total_income"
                             value={formData.total_income || ''}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-navy/30"
                           />
                         </div>
                       </div>
@@ -287,9 +287,9 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
 
                 {/* Similar pattern for Deductions and Final Tax forms */}
                 {/* Deductions Form */}
-                <div className="border rounded-lg">
+                <div className="border rounded-brand">
                   <div className="p-4 border-b bg-green-50 flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-900">Deductions & Allowances</h4>
+                    <h4 className="font-semibold text-navy">Deductions & Allowances</h4>
                     {editingForm === 'deductions' ? (
                       <div className="space-x-2">
                         <button
@@ -392,9 +392,9 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                 </div>
 
                 {/* Tax Liability Form */}
-                <div className="border rounded-lg">
-                  <div className="p-4 border-b bg-purple-50 flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-900">Tax Calculation & Payment</h4>
+                <div className="border rounded-brand">
+                  <div className="p-4 border-b bg-navy/5 flex items-center justify-between">
+                    <h4 className="font-semibold text-navy">Tax Calculation & Payment</h4>
                     {editingForm === 'final_tax' ? (
                       <div className="space-x-2">
                         <button
@@ -414,7 +414,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                     ) : (
                       <button
                         onClick={() => handleEditForm('final_tax', formsData.final_tax)}
-                        className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                        className="px-3 py-1 bg-navy text-white rounded text-sm hover:bg-navy-dark"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -433,7 +433,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                             name="total_tax_liability"
                             value={formData.total_tax_liability || ''}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-navy/30"
                           />
                         </div>
                         <div>
@@ -445,7 +445,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                             name="advance_tax_paid"
                             value={formData.advance_tax_paid || ''}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-navy/30"
                           />
                         </div>
                       </div>
@@ -468,9 +468,9 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
           )}
 
           {/* All Tax Returns History */}
-          <div className="bg-white border rounded-lg">
+          <div className="bg-white border rounded-brand">
             <div className="p-4 border-b bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900">Tax Returns History</h3>
+              <h3 className="text-lg font-semibold text-navy">Tax Returns History</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -495,18 +495,18 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {tax_returns.map((taxReturn) => (
-                    <tr key={taxReturn.id} className={taxReturn.is_current ? 'bg-blue-50' : ''}>
+                    <tr key={taxReturn.id} className={taxReturn.is_current ? 'bg-navy/5' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <span className="font-medium text-gray-900">{taxReturn.tax_year}</span>
+                          <span className="font-medium text-navy">{taxReturn.tax_year}</span>
                           {taxReturn.is_current && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                            <span className="ml-2 px-2 py-1 text-xs bg-navy/10 text-navy rounded-full">
                               Current
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
                         {taxReturn.return_number}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -518,7 +518,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                           {taxReturn.filing_status.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
                         {formatCurrency(taxReturn.total_tax_liability)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

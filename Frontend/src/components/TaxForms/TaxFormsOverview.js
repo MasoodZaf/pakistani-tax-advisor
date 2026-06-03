@@ -92,16 +92,16 @@ const TaxFormsOverview = () => {
     <>
     <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-brand shadow-brand p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Tax Return 2025-26</h1>
+            <h1 className="text-3xl font-bold text-navy mb-2">Tax Return 2025-26</h1>
             <p className="text-gray-600">
               Complete your Pakistani tax return for the financial year 2024-25
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-primary-600">{completionPercentage}%</div>
+            <div className="text-2xl font-bold text-navy">{completionPercentage}%</div>
             <div className="text-sm text-gray-500">Complete</div>
           </div>
         </div>
@@ -110,7 +110,7 @@ const TaxFormsOverview = () => {
         <div className="mt-6">
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500"
+              className="bg-navy   h-3 rounded-full transition-all duration-500"
               style={{ width: `${completionPercentage}%` }}
             />
           </div>
@@ -143,13 +143,13 @@ const TaxFormsOverview = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-100 rounded-brand flex items-center justify-center">
               <Play className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">
+              <h3 className="font-semibold text-navy">
                 {completionPercentage === 0 ? 'Start Tax Return' : 'Continue Tax Return'}
               </h3>
               <p className="text-sm text-gray-600">
@@ -160,7 +160,7 @@ const TaxFormsOverview = () => {
           <div className="mt-auto">
             <button
               onClick={nextStep ? () => navigate(getRoutePath(nextStep.id)) : handleStartForm}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-brand hover:bg-green-700 transition-colors"
               disabled={!nextStep && completionPercentage === 0}
             >
               {nextStep ? 'Continue' : completionPercentage === 0 ? 'Start Now' : 'Review Forms'}
@@ -168,13 +168,13 @@ const TaxFormsOverview = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
+            <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Calculate Tax</h3>
+              <h3 className="font-semibold text-navy">Calculate Tax</h3>
               <p className="text-sm text-gray-600">Calculate your tax liability</p>
             </div>
           </div>
@@ -182,20 +182,20 @@ const TaxFormsOverview = () => {
             <button
               onClick={handleCalculateTax}
               disabled={completionPercentage < 50 || loading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Calculating...' : 'Calculate Tax'}
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-purple-600" />
+            <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Tax Summary</h3>
+              <h3 className="font-semibold text-navy">Tax Summary</h3>
               <p className="text-sm text-gray-600">View tax computation summary</p>
             </div>
           </div>
@@ -203,20 +203,20 @@ const TaxFormsOverview = () => {
             <button
               onClick={() => navigate('/income-tax/tax-computation')}
               disabled={completionPercentage < 25}
-              className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
+              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
             >
               View Summary
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-primary-600" />
+            <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Submit Return</h3>
+              <h3 className="font-semibold text-navy">Submit Return</h3>
               <p className="text-sm text-gray-600">File your tax return</p>
             </div>
           </div>
@@ -224,7 +224,7 @@ const TaxFormsOverview = () => {
             <button
               onClick={handleSubmitReturn}
               disabled={!allStepsCompleted || loading}
-              className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400"
+              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Submitting...' : 'Submit Return'}
             </button>
@@ -232,20 +232,20 @@ const TaxFormsOverview = () => {
         </div>
 
         {/* Prior Year Upload */}
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col h-full">
+        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Upload className="w-6 h-6 text-indigo-600" />
+            <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
+              <Upload className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Import Prior Year</h3>
+              <h3 className="font-semibold text-navy">Import Prior Year</h3>
               <p className="text-sm text-gray-600">Pre-fill from TY 2024-25 return</p>
             </div>
           </div>
           <div className="mt-auto">
             <button
               onClick={() => setShowUploadModal(true)}
-              className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors"
             >
               Upload Prior Return
             </button>
@@ -254,8 +254,8 @@ const TaxFormsOverview = () => {
       </div>
 
       {/* Form Steps Grid */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Tax Return Sections</h2>
+      <div className="bg-white rounded-brand shadow-brand p-6">
+        <h2 className="text-xl font-semibold text-navy mb-6">Tax Return Sections</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {FORM_STEPS.map((step, index) => {
             const isCompleted = completedSteps.has(step.id);
@@ -267,11 +267,11 @@ const TaxFormsOverview = () => {
                 key={step.id}
                 to={getRoutePath(step.id)}
                 className={`
-                  flex flex-col p-5 rounded-lg border-2 transition-all duration-200 hover:shadow-md h-full
+                  flex flex-col p-5 rounded-brand border-2 transition-all duration-200 hover:shadow-md h-full
                   ${isCompleted 
                     ? 'border-green-200 bg-green-50 hover:border-green-300 hover:bg-green-100' 
                     : isCurrent 
-                    ? 'border-primary-200 bg-primary-50 hover:border-primary-300 hover:bg-primary-100'
+                    ? 'border-navy/15 bg-navy/5 hover:border-navy/15 hover:bg-navy/10'
                     : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
                   }
                 `}
@@ -283,7 +283,7 @@ const TaxFormsOverview = () => {
                       ${isCompleted 
                         ? 'bg-green-100 text-green-800' 
                         : isCurrent 
-                        ? 'bg-primary-100 text-primary-800'
+                        ? 'bg-navy/10 text-navy'
                         : 'bg-gray-100 text-gray-600'
                       }
                     `}>
@@ -306,8 +306,8 @@ const TaxFormsOverview = () => {
                     ${isCompleted 
                       ? 'text-green-900' 
                       : isCurrent 
-                      ? 'text-primary-900'
-                      : 'text-gray-900'
+                      ? 'text-navy'
+                      : 'text-navy'
                     }
                   `}>
                     {step.title}
@@ -318,7 +318,7 @@ const TaxFormsOverview = () => {
                     ${isCompleted 
                       ? 'text-green-700' 
                       : isCurrent 
-                      ? 'text-primary-700'
+                      ? 'text-navy'
                       : 'text-gray-600'
                     }
                   `}>
@@ -334,7 +334,7 @@ const TaxFormsOverview = () => {
                   )}
 
                   {isCurrent && !isCompleted && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy">
                       ⏳ In Progress
                     </span>
                   )}
@@ -352,9 +352,9 @@ const TaxFormsOverview = () => {
       </div>
 
       {/* Help Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-3">Need Help?</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+      <div className="bg-navy/5 border border-navy/15 rounded-brand p-6">
+        <h3 className="font-semibold text-navy mb-3">Need Help?</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-navy">
           <div>
             <h4 className="font-medium mb-2">Getting Started</h4>
             <ul className="space-y-1">

@@ -60,13 +60,13 @@ const TaxCalculator = ({ onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-tax-calc-title"
-        className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
+        className="bg-white rounded-brand w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
       >
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Calculator className="w-6 h-6 text-blue-600" />
-              <h2 id="admin-tax-calc-title" className="text-xl font-bold text-gray-900">Tax Calculator</h2>
+              <Calculator className="w-6 h-6 text-navy" />
+              <h2 id="admin-tax-calc-title" className="text-xl font-bold text-navy">Tax Calculator</h2>
             </div>
             <button
               onClick={onClose}
@@ -84,7 +84,7 @@ const TaxCalculator = ({ onClose }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Input Form */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-navy mb-4">
                 Tax Calculation Input
               </h3>
               
@@ -98,7 +98,7 @@ const TaxCalculator = ({ onClose }) => {
                     name="income"
                     value={formData.income}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                     placeholder="e.g., 1200000"
                     required
                   />
@@ -113,7 +113,7 @@ const TaxCalculator = ({ onClose }) => {
                     name="allowances"
                     value={formData.allowances}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                     placeholder="e.g., 600000"
                   />
                 </div>
@@ -126,7 +126,7 @@ const TaxCalculator = ({ onClose }) => {
                     name="tax_year"
                     value={formData.tax_year}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                   >
                     {(availableYears.length ? availableYears : ['2025-26', '2024-25']).map(yr => (
                       <option key={yr} value={yr}>{yr}</option>
@@ -137,7 +137,7 @@ const TaxCalculator = ({ onClose }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {loading ? (
                     <div className="spinner w-4 h-4"></div>
@@ -151,7 +151,7 @@ const TaxCalculator = ({ onClose }) => {
 
             {/* Results */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-navy mb-4">
                 Tax Calculation Results
               </h3>
               
@@ -159,17 +159,17 @@ const TaxCalculator = ({ onClose }) => {
                 <div className="space-y-4">
                   {/* Summary Cards */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="bg-navy/5 p-4 rounded-brand border border-navy/15">
                       <div className="flex items-center space-x-2 mb-2">
-                        <DollarSign className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-900">Gross Income</span>
+                        <DollarSign className="w-4 h-4 text-navy" />
+                        <span className="text-sm font-medium text-navy">Gross Income</span>
                       </div>
-                      <div className="text-xl font-bold text-blue-900">
+                      <div className="text-xl font-bold text-navy">
                         {formatCurrency(result.gross_income)}
                       </div>
                     </div>
 
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="bg-green-50 p-4 rounded-brand border border-green-200">
                       <div className="flex items-center space-x-2 mb-2">
                         <TrendingUp className="w-4 h-4 text-green-600" />
                         <span className="text-sm font-medium text-green-900">Net Income</span>
@@ -179,7 +179,7 @@ const TaxCalculator = ({ onClose }) => {
                       </div>
                     </div>
 
-                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div className="bg-red-50 p-4 rounded-brand border border-red-200">
                       <div className="flex items-center space-x-2 mb-2">
                         <FileText className="w-4 h-4 text-red-600" />
                         <span className="text-sm font-medium text-red-900">Total Tax</span>
@@ -189,29 +189,29 @@ const TaxCalculator = ({ onClose }) => {
                       </div>
                     </div>
 
-                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div className="bg-navy/5 p-4 rounded-brand border border-navy/15">
                       <div className="flex items-center space-x-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-purple-900">Tax Rate</span>
+                        <TrendingUp className="w-4 h-4 text-navy" />
+                        <span className="text-sm font-medium text-navy">Tax Rate</span>
                       </div>
-                      <div className="text-xl font-bold text-purple-900">
+                      <div className="text-xl font-bold text-navy">
                         {result.effective_tax_rate}%
                       </div>
                     </div>
                   </div>
 
                   {/* Detailed Breakdown */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-3">Tax Breakdown by Slabs</h4>
+                  <div className="bg-gray-50 p-4 rounded-brand">
+                    <h4 className="font-semibold text-navy mb-3">Tax Breakdown by Slabs</h4>
                     <div className="space-y-2">
                       {result.breakdown.map((slab, index) => (
                         <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
                           <div>
-                            <div className="font-medium text-gray-900">{slab.range}</div>
+                            <div className="font-medium text-navy">{slab.range}</div>
                             <div className="text-sm text-gray-600">Rate: {slab.rate}</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-navy">
                               {formatCurrency(slab.tax_amount)}
                             </div>
                             <div className="text-sm text-gray-600">
@@ -224,8 +224,8 @@ const TaxCalculator = ({ onClose }) => {
                   </div>
 
                   {/* Summary */}
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div className="text-sm text-blue-900 space-y-1">
+                  <div className="bg-navy/5 p-4 rounded-brand border border-navy/15">
+                    <div className="text-sm text-navy space-y-1">
                       <div className="flex justify-between">
                         <span>Gross Income:</span>
                         <span className="font-medium">{formatCurrency(result.gross_income)}</span>
@@ -234,7 +234,7 @@ const TaxCalculator = ({ onClose }) => {
                         <span>Less: Allowances:</span>
                         <span className="font-medium">({formatCurrency(result.allowances)})</span>
                       </div>
-                      <div className="flex justify-between border-t border-blue-200 pt-1">
+                      <div className="flex justify-between border-t border-navy/15 pt-1">
                         <span>Taxable Income:</span>
                         <span className="font-medium">{formatCurrency(result.taxable_income)}</span>
                       </div>
@@ -242,7 +242,7 @@ const TaxCalculator = ({ onClose }) => {
                         <span>Income Tax:</span>
                         <span className="font-medium">({formatCurrency(result.total_tax)})</span>
                       </div>
-                      <div className="flex justify-between border-t border-blue-200 pt-1 text-lg font-bold">
+                      <div className="flex justify-between border-t border-navy/15 pt-1 text-lg font-bold">
                         <span>Net Income:</span>
                         <span>{formatCurrency(result.net_income)}</span>
                       </div>

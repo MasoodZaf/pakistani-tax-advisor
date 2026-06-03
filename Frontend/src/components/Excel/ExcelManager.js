@@ -181,7 +181,7 @@ const ExcelManager = () => {
     if (!validation) return null;
 
     return (
-      <div className="mt-4 p-4 border rounded-lg">
+      <div className="mt-4 p-4 border rounded-brand">
         <div className="flex items-center space-x-2 mb-3">
           {validation.valid ? (
             <CheckCircle className="w-5 h-5 text-green-500" />
@@ -194,8 +194,8 @@ const ExcelManager = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="text-center p-3 bg-blue-50 rounded">
-            <div className="text-2xl font-bold text-blue-600">{validation.summary.totalSheets}</div>
+          <div className="text-center p-3 bg-navy/5 rounded">
+            <div className="text-2xl font-bold text-navy">{validation.summary.totalSheets}</div>
             <div className="text-sm text-gray-600">Total Sheets</div>
           </div>
           <div className="text-center p-3 bg-green-50 rounded">
@@ -259,10 +259,10 @@ const ExcelManager = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-brand shadow-brand p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Excel Import/Export</h1>
+            <h1 className="text-2xl font-bold text-navy mb-2">Excel Import/Export</h1>
             <p className="text-gray-600">
               Export your tax data to Excel for analysis or import updated data from Excel
             </p>
@@ -271,7 +271,7 @@ const ExcelManager = () => {
             <select 
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="form-select border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="form-select border border-gray-300 rounded-brand px-3 py-2 focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               {availableYears.map(year => (
                 <option key={year.tax_year} value={year.tax_year}>
@@ -281,7 +281,7 @@ const ExcelManager = () => {
             </select>
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-brand hover:bg-gray-50"
             >
               <History className="w-4 h-4" />
               <span>History</span>
@@ -291,7 +291,7 @@ const ExcelManager = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm">
+      <div className="bg-white rounded-brand shadow-brand">
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
             {[
@@ -303,7 +303,7 @@ const ExcelManager = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
+                    ? 'border-navy/40 text-navy'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -318,14 +318,14 @@ const ExcelManager = () => {
           {activeTab === 'export' && (
             <div className="space-y-6">
               {/* Export Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="bg-navy/5 border border-navy/15 rounded-brand p-6">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <FileSpreadsheet className="w-8 h-8 text-blue-600" />
+                    <FileSpreadsheet className="w-8 h-8 text-navy" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-blue-900 mb-2">Export Tax Data to Excel</h3>
-                    <p className="text-blue-800 mb-4">
+                    <h3 className="font-semibold text-navy mb-2">Export Tax Data to Excel</h3>
+                    <p className="text-navy mb-4">
                       Download all your tax form data as a comprehensive Excel workbook with modern formatting.
                       The workbook includes separate sheets for each tax form with all your data.
                     </p>
@@ -333,7 +333,7 @@ const ExcelManager = () => {
                       <button
                         onClick={handleExport}
                         disabled={loading || !selectedYear}
-                        className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                        className="flex items-center space-x-2 bg-navy text-white px-6 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
                       >
                         {loading ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />
@@ -342,7 +342,7 @@ const ExcelManager = () => {
                         )}
                         <span>{loading ? 'Exporting...' : 'Export to Excel'}</span>
                       </button>
-                      <div className="text-sm text-blue-700">
+                      <div className="text-sm text-navy">
                         <Info className="w-4 h-4 inline mr-1" />
                         Excel file will include user details and all tax forms
                       </div>
@@ -353,21 +353,21 @@ const ExcelManager = () => {
 
               {/* Export Features */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-green-50 p-4 rounded-lg">
+                <div className="bg-green-50 p-4 rounded-brand">
                   <h4 className="font-medium text-green-900 mb-2">Modern Styling</h4>
                   <p className="text-green-700 text-sm">
                     Professional formatting with colors, borders, and proper alignment
                   </p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-purple-900 mb-2">Complete Data</h4>
-                  <p className="text-purple-700 text-sm">
+                <div className="bg-navy/5 p-4 rounded-brand">
+                  <h4 className="font-medium text-navy mb-2">Complete Data</h4>
+                  <p className="text-navy text-sm">
                     All forms including Income, Deductions, Credits, and Wealth Statement
                   </p>
                 </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-orange-900 mb-2">Ready to Edit</h4>
-                  <p className="text-orange-700 text-sm">
+                <div className="bg-navy/5 p-4 rounded-brand">
+                  <h4 className="font-medium text-navy mb-2">Ready to Edit</h4>
+                  <p className="text-navy text-sm">
                     Structured format that you can modify and import back
                   </p>
                 </div>
@@ -378,7 +378,7 @@ const ExcelManager = () => {
           {activeTab === 'import' && (
             <div className="space-y-6">
               {/* Import Section */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-brand p-6">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <Upload className="w-8 h-8 text-green-600" />
@@ -401,13 +401,13 @@ const ExcelManager = () => {
                           id="excel-file-input"
                           accept=".xlsx"
                           onChange={handleFileSelect}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-navy/5 file:text-navy hover:file:bg-navy/10"
                         />
                       </div>
 
                       {/* Selected File Info */}
                       {selectedFile && (
-                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="bg-white p-4 rounded-brand border border-gray-200">
                           <div className="flex items-center space-x-3">
                             <FileCheck className="w-5 h-5 text-green-500" />
                             <div>
@@ -425,7 +425,7 @@ const ExcelManager = () => {
                         <button
                           onClick={handleValidate}
                           disabled={loading || !selectedFile}
-                          className="flex items-center space-x-2 bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors disabled:bg-gray-400"
+                          className="flex items-center space-x-2 bg-yellow-600 text-white px-6 py-2 rounded-brand hover:bg-yellow-700 transition-colors disabled:bg-gray-400"
                         >
                           {loading ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -438,7 +438,7 @@ const ExcelManager = () => {
                         <button
                           onClick={handleImport}
                           disabled={loading || !selectedFile || (validationResult && !validationResult.valid)}
-                          className="flex items-center space-x-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
+                          className="flex items-center space-x-2 bg-green-600 text-white px-6 py-2 rounded-brand hover:bg-green-700 transition-colors disabled:bg-gray-400"
                         >
                           {loading ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -457,7 +457,7 @@ const ExcelManager = () => {
               <ValidationResults validation={validationResult} />
 
               {/* Import Guidelines */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-brand p-6">
                 <h4 className="font-medium text-yellow-900 mb-3">Import Guidelines</h4>
                 <ul className="list-disc list-inside space-y-1 text-yellow-800 text-sm">
                   <li>Use only Excel files (.xlsx) exported from this system</li>
@@ -475,7 +475,7 @@ const ExcelManager = () => {
       {/* History Modal */}
       {showHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-96 overflow-hidden">
+          <div className="bg-white rounded-brand p-6 w-full max-w-2xl max-h-96 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Import/Export History</h3>
               <button
@@ -492,10 +492,10 @@ const ExcelManager = () => {
               ) : (
                 <div className="space-y-3">
                   {history.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-brand">
                       <div className="flex items-center space-x-3">
                         {item.action === 'EXCEL_EXPORT' ? (
-                          <Download className="w-4 h-4 text-blue-500" />
+                          <Download className="w-4 h-4 text-navy" />
                         ) : (
                           <Upload className="w-4 h-4 text-green-500" />
                         )}

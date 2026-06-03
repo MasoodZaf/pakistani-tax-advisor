@@ -127,24 +127,24 @@ const TaxArchiveView = () => {
     <div className="max-w-5xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-            <Archive className="w-5 h-5 text-indigo-600" />
+          <div className="w-10 h-10 bg-navy/10 rounded-brand flex items-center justify-center">
+            <Archive className="w-5 h-5 text-navy" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Tax History</h1>
+            <h1 className="text-2xl font-semibold text-navy">Tax History</h1>
             <p className="text-sm text-gray-500">Read-only archives of returns from previous years</p>
           </div>
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm font-medium"
         >
           <Upload className="w-4 h-4" />
           Upload Prior Year
         </button>
       </div>
 
-      <div className="mb-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+      <div className="mb-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-brand text-sm text-amber-900">
         <Lock className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <span>
           Archives are <strong>read-only reference records</strong>. Filing is available for the current
@@ -156,12 +156,12 @@ const TaxArchiveView = () => {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Loading…</div>
       ) : archives.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
+        <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-brand">
           <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-600 mb-3">No prior year returns archived yet.</p>
           <button
             onClick={() => setShowUpload(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm"
           >
             <Upload className="w-4 h-4" />
             Upload a prior year return
@@ -174,7 +174,7 @@ const TaxArchiveView = () => {
             const d = detail[a.tax_year];
             const stepKeys = d?.mapped_data ? Object.keys(d.mapped_data) : [];
             return (
-              <div key={a.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <div key={a.id} className="border border-gray-200 rounded-brand overflow-hidden bg-white">
                 <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
                   <button onClick={() => toggleExpand(a.tax_year)} className="flex-1 flex items-center gap-4 text-left">
                     <div className="flex items-center gap-2 text-gray-700 font-medium">
@@ -218,7 +218,7 @@ const TaxArchiveView = () => {
                               <div className="text-xs text-gray-500">
                                 {k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
                               </div>
-                              <div className="font-medium text-gray-900">{formatPKR(v)}</div>
+                              <div className="font-medium text-navy">{formatPKR(v)}</div>
                             </div>
                           ))}
                         </div>
@@ -261,7 +261,7 @@ const TaxArchiveView = () => {
                                 key={step}
                                 onClick={() => copyForwardStep(a.tax_year, step)}
                                 disabled={busy || fieldCount === 0}
-                                className="px-3 py-1.5 text-xs border border-indigo-300 text-indigo-700 rounded-md hover:bg-indigo-50 disabled:opacity-50"
+                                className="px-3 py-1.5 text-xs border border-navy/15 text-navy rounded-md hover:bg-navy/5 disabled:opacity-50"
                               >
                                 {busy ? 'Copying…' : step} {fieldCount > 0 && <span className="text-gray-400">({fieldCount})</span>}
                               </button>

@@ -57,8 +57,8 @@ const UserManagement = () => {
 
   const getRoleColor = (role) => {
     const colors = {
-      user: 'bg-blue-100 text-blue-800',
-      admin: 'bg-purple-100 text-purple-800',
+      user: 'bg-navy/10 text-navy',
+      admin: 'bg-navy/10 text-navy',
       super_admin: 'bg-red-100 text-red-800'
     };
     return colors[role] || colors.user;
@@ -176,17 +176,17 @@ const UserManagement = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-brand shadow-brand p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+            <h1 className="text-2xl font-bold text-navy">User Management</h1>
             <p className="text-gray-600 mt-1">
               Manage user accounts, roles, and permissions
             </p>
           </div>
           <button 
             onClick={() => setShowAddUser(true)}
-            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
+            className="bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
             <span>Add User</span>
@@ -195,7 +195,7 @@ const UserManagement = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white rounded-brand shadow-brand p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -205,13 +205,13 @@ const UserManagement = () => {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               />
             </div>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="all">All Roles</option>
               <option value="user">Users</option>
@@ -221,7 +221,7 @@ const UserManagement = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -232,7 +232,7 @@ const UserManagement = () => {
             {selectedUsers.length > 0 && (
               <button
                 onClick={handleBulkDelete}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                className="bg-red-600 text-white px-4 py-2 rounded-brand hover:bg-red-700 transition-colors flex items-center space-x-2"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete Selected ({selectedUsers.length})</span>
@@ -246,7 +246,7 @@ const UserManagement = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-brand shadow-brand overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -256,7 +256,7 @@ const UserManagement = () => {
                     type="checkbox"
                     checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-gray-300 text-navy focus:ring-navy/30"
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -300,16 +300,16 @@ const UserManagement = () => {
                         type="checkbox"
                         checked={selectedUsers.includes(user.id)}
                         onChange={() => handleSelectUser(user.id)}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 text-navy focus:ring-navy/30"
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="font-medium text-gray-900">{user.name}</div>
+                        <div className="font-medium text-navy">{user.name}</div>
                         <div className="text-sm text-gray-600">{user.email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
                       {user.user_type || 'individual'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -325,14 +325,14 @@ const UserManagement = () => {
                         {user.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => setViewingUserTax({ id: user.id, name: user.name })}
-                          className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                          className="text-navy hover:text-navy flex items-center space-x-1"
                           title="View Tax Records"
                         >
                           <FileText className="w-4 h-4" />
@@ -340,7 +340,7 @@ const UserManagement = () => {
                         </button>
                         <button 
                           onClick={() => setEditingUser(user)}
-                          className="text-primary-600 hover:text-primary-900 flex items-center space-x-1"
+                          className="text-navy hover:text-navy flex items-center space-x-1"
                         >
                           <Edit className="w-4 h-4" />
                           <span>Edit</span>
@@ -366,20 +366,20 @@ const UserManagement = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.users?.total_users || 0}</div>
+        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy">{stats.users?.total_users || 0}</div>
           <div className="text-sm text-gray-600">Total Users</div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
           <div className="text-2xl font-bold text-green-600">{stats.users?.active_users || 0}</div>
           <div className="text-sm text-gray-600">Active Users</div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <div className="text-2xl font-bold text-purple-600">{stats.users?.admin_users || 0}</div>
+        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy">{stats.users?.admin_users || 0}</div>
           <div className="text-sm text-gray-600">Admins</div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <div className="text-2xl font-bold text-orange-600">{stats.users?.new_users_30d || 0}</div>
+        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy">{stats.users?.new_users_30d || 0}</div>
           <div className="text-sm text-gray-600">New This Month</div>
         </div>
       </div>
@@ -452,7 +452,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-add-user-title" className="bg-white rounded-lg p-6 w-full max-w-md outline-none">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-add-user-title" className="bg-white rounded-brand p-6 w-full max-w-md outline-none">
         <h2 id="admin-add-user-title" className="text-xl font-bold mb-4">Add New User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -462,7 +462,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
@@ -473,7 +473,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
@@ -484,7 +484,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
@@ -494,7 +494,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             <select
               value={formData.role}
               onChange={(e) => setFormData({...formData, role: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -506,7 +506,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             <select
               value={formData.user_type}
               onChange={(e) => setFormData({...formData, user_type: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="individual">Individual</option>
               <option value="business">Business</option>
@@ -517,14 +517,14 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-brand hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              className="flex-1 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create User'}
             </button>
@@ -567,7 +567,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-edit-user-title" className="bg-white rounded-lg p-6 w-full max-w-md outline-none">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-edit-user-title" className="bg-white rounded-brand p-6 w-full max-w-md outline-none">
         <h2 id="admin-edit-user-title" className="text-xl font-bold mb-4">Edit User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -577,7 +577,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
@@ -588,7 +588,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
@@ -599,7 +599,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -613,7 +613,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
             <select
               value={formData.user_type}
               onChange={(e) => setFormData({...formData, user_type: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="individual">Individual</option>
               <option value="business">Business</option>
@@ -626,7 +626,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                 type="checkbox"
                 checked={formData.is_active}
                 onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="rounded border-gray-300 text-navy focus:ring-navy/30"
               />
               <span className="text-sm font-medium text-gray-700">Active</span>
             </label>
@@ -636,14 +636,14 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-brand hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              className="flex-1 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50"
             >
               {loading ? 'Updating...' : 'Update User'}
             </button>
