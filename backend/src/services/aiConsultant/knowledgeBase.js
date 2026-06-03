@@ -220,15 +220,16 @@ function retrieve(query, k = 5) {
     }
     // Slight boost for short, header-rich chunks (more likely to be definitions).
     if (c.title && c.title.length < 80) score *= 1.1;
-    // Curated playbook chunks are concise, vetted strategy summaries — surface
-    // them above raw statute when they match (the Ordinance PDF's sheer chunk
-    // volume would otherwise always crowd them out). Only matching chunks (score>0)
-    // are boosted, so this never injects irrelevant playbook entries.
-    if (score > 0 && /playbook/i.test(c.source || '')) score *= 3;
     return { c, score };
   });
-  scored.sort((a, b) => b.score - a.score);
-  return scored.filter((s) => s.score > 0).slice(0, k).map((s) => ({
+  const matches = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score);
+  // Reserve up to 2 slots for the best-matching CURATED PLAYBOOK chunks so vetted
+  // strategies always surface alongside (not instead of) the raw statute — the
+  // 2700-chunk Ordinance PDF would otherwise crowd the concise playbook out.
+  const isPlaybook = (s) => /playbook/i.test(s.c.source || '');
+  const reserved = matches.filter(isPlaybook).slice(0, 2);
+  const rest = matches.filter((s) => !reserved.includes(s)).slice(0, Math.max(0, k - reserved.length));
+  return [...reserved, ...rest].slice(0, k).map((s) => ({
     source: s.c.source,
     title: s.c.title,
     text: s.c.text,
