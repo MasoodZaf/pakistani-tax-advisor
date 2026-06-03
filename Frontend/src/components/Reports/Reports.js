@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   BarChart3,
@@ -24,8 +25,10 @@ import { formatCurrency } from '../../utils/currency';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import { generateIrisPdf } from '../../utils/irisPdf';
+import { formatCnic } from '../../utils/cnic';
 
 const Reports = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState('');
   const [availableYears, setAvailableYears] = useState([]);
@@ -172,8 +175,8 @@ const Reports = () => {
         profile: {
           name:    user?.name,
           email:   user?.email,
-          cnic:    user?.cnic,
-          ntn:     user?.ntn || user?.cnic,
+          cnic:    user?.cnic ? formatCnic(user.cnic) : user?.cnic,
+          ntn:     user?.ntn || (user?.cnic ? formatCnic(user.cnic) : user?.cnic),
           phone:   user?.phone,
           address: user?.address,
         },
@@ -867,11 +870,22 @@ const Reports = () => {
                     {o.section && <p className="mt-1 font-mono text-xs text-navy/60">{o.section}</p>}
                     {o.rationale && <p className="mt-2 text-sm text-gray-600">{o.rationale}</p>}
                     {o.action && <p className="mt-2 text-sm text-navy"><span className="font-semibold">Action:</span> {o.action}</p>}
-                    {o.estimatedSavingPKR != null && Number(o.estimatedSavingPKR) > 0 && (
-                      <div className="mt-3 inline-flex items-center gap-1 rounded-brand bg-lime/15 px-2.5 py-1 text-sm font-semibold text-navy">
-                        <ArrowDownCircle className="w-4 h-4" /> Est. saving {formatCurrency(o.estimatedSavingPKR)}
-                      </div>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {o.estimatedSavingPKR != null && Number(o.estimatedSavingPKR) > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-brand bg-lime/15 px-2.5 py-1 text-sm font-semibold text-navy">
+                          <ArrowDownCircle className="w-4 h-4" /> Est. saving {formatCurrency(o.estimatedSavingPKR)}
+                        </span>
+                      )}
+                      {o.formStep && (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/income-tax/${o.formStep}`)}
+                          className="inline-flex items-center gap-1 rounded-brand bg-navy px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-navy-dark"
+                        >
+                          Open {o.formStep.replace(/-/g, ' ')} form →
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
