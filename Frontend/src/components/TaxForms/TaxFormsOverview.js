@@ -182,7 +182,7 @@ const TaxFormsOverview = () => {
             <button
               onClick={handleCalculateTax}
               disabled={completionPercentage < 50 || loading}
-              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
+              className="w-full bg-lime text-navy py-2 px-4 rounded-brand hover:bg-lime/80 transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Calculating...' : 'Calculate Tax'}
             </button>
@@ -203,7 +203,7 @@ const TaxFormsOverview = () => {
             <button
               onClick={() => navigate('/income-tax/tax-computation')}
               disabled={completionPercentage < 25}
-              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
+              className="w-full bg-lime text-navy py-2 px-4 rounded-brand hover:bg-lime/80 transition-colors disabled:bg-gray-400"
             >
               View Summary
             </button>
@@ -224,7 +224,7 @@ const TaxFormsOverview = () => {
             <button
               onClick={handleSubmitReturn}
               disabled={!allStepsCompleted || loading}
-              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
+              className="w-full bg-lime text-navy py-2 px-4 rounded-brand hover:bg-lime/80 transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Submitting...' : 'Submit Return'}
             </button>
@@ -245,7 +245,7 @@ const TaxFormsOverview = () => {
           <div className="mt-auto">
             <button
               onClick={() => setShowUploadModal(true)}
-              className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors"
+              className="w-full bg-lime text-navy py-2 px-4 rounded-brand hover:bg-lime/80 transition-colors"
             >
               Upload Prior Return
             </button>

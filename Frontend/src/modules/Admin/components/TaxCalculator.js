@@ -137,7 +137,7 @@ const TaxCalculator = ({ onClose }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-navy text-white py-2 px-4 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  className="w-full bg-lime text-navy py-2 px-4 rounded-brand hover:bg-lime/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {loading ? (
                     <div className="spinner w-4 h-4"></div>

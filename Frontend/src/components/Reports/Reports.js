@@ -776,7 +776,7 @@ const Reports = () => {
           </p>
           <button 
             onClick={() => window.location.href = '/tax-forms'}
-            className="bg-navy text-white px-6 py-2 rounded-brand hover:bg-navy-dark transition-colors"
+            className="bg-lime text-navy px-6 py-2 rounded-brand hover:bg-lime/80 transition-colors"
           >
             Go to Tax Forms
           </button>
@@ -830,8 +830,8 @@ const Reports = () => {
                 }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-navy/40 text-navy'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-lime text-navy'
+                    : 'border-transparent text-gray-500 hover:text-navy'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -880,7 +880,7 @@ const Reports = () => {
             </button>
             <button 
               onClick={exportToCSV}
-              className="flex items-center space-x-2 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors"
+              className="flex items-center space-x-2 bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Export CSV</span>

@@ -39,7 +39,7 @@ function FloatingChatWidget() {
               <Link
                 to="/consultant"
                 onClick={() => setOpen(false)}
-                className="p-1 rounded hover:bg-navy-dark transition"
+                className="p-1 rounded hover:bg-lime/80 transition"
                 title="Open full page"
               >
                 <Maximize2 size={16} />
@@ -47,7 +47,7 @@ function FloatingChatWidget() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-1 rounded hover:bg-navy-dark transition"
+                className="p-1 rounded hover:bg-lime/80 transition"
                 aria-label="Close"
               >
                 <X size={16} />
@@ -66,7 +66,7 @@ function FloatingChatWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="bg-navy hover:bg-navy-dark text-white rounded-full
+          className="bg-lime hover:bg-lime/80 text-navy rounded-full
                      w-14 h-14 shadow-lg flex items-center justify-center
                      transition transform hover:scale-105"
           aria-label="Open tax consultant"
