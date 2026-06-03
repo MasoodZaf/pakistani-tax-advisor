@@ -90,7 +90,7 @@ const NumberTrace = ({
               <p className="text-sm text-gray-800 mt-1 font-mono">{formula}</p>
             )}
           </div>
-          <div className="px-4 py-3">
+          <div className="overflow-x-auto px-4 py-3">
             <table className="w-full text-sm">
               <tbody>
                 {visibleTrace.map((row, i) => {
