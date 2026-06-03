@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
+import { formatCnic, stripCnic } from '../../utils/cnic';
 
 const PersonalInfoForm = () => {
   const { user } = useAuth();
@@ -79,9 +80,11 @@ const PersonalInfoForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // CNIC auto-formats to the ID-card mask XXXXX-XXXXXXX-X as the user types.
+    const next = name === 'cnic' ? formatCnic(value) : value;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: next
     }));
     // Clear error for this field
     if (errors[name]) {
@@ -145,7 +148,11 @@ const PersonalInfoForm = () => {
 
     try {
       setSaving(true);
-      const response = await axios.post(`/api/personal-info/${currentTaxYear}`, formData);
+      // Store CNIC digits-only (canonical) — the dashes are display formatting.
+      const response = await axios.post(`/api/personal-info/${currentTaxYear}`, {
+        ...formData,
+        cnic: stripCnic(formData.cnic),
+      });
 
       if (response.data.success) {
         toast.success('Personal information saved successfully!');

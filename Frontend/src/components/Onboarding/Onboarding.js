@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { formatCnic, stripCnic, isValidCnic } from '../../utils/cnic';
 
 /* ─── Global styles ─────────────────────────────────────────────────────────── */
 const Styles = () => (
@@ -265,19 +266,20 @@ function StepPersonal({ form, setForm, errors, setErrors, onNext, onBack, loadin
   const validate = () => {
     const e = {};
     if (!form.cnic?.trim()) e.cnic = 'CNIC is required';
-    else if (!/^\d{13}$/.test(form.cnic.replace(/-/g, ''))) e.cnic = '13 digits only, no dashes';
+    else if (!isValidCnic(form.cnic)) e.cnic = 'Enter a valid 13-digit CNIC';
     if (!form.mobile?.trim()) e.mobile = 'Mobile number is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+  // CNIC auto-formats to the ID-card mask XXXXX-XXXXXXX-X as the user types.
+  const set = k => e => setForm(p => ({ ...p, [k]: k === 'cnic' ? formatCnic(e.target.value) : e.target.value }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field label="CNIC" error={errors.cnic}>
-          <IconInput icon={CreditCard} placeholder="3520112345671" maxLength={13} value={form.cnic || ''} error={errors.cnic} onChange={set('cnic')} />
+          <IconInput icon={CreditCard} placeholder="XXXXX-XXXXXXX-X" maxLength={15} value={form.cnic || ''} error={errors.cnic} onChange={set('cnic')} />
         </Field>
         <Field label="Mobile" error={errors.mobile}>
           <IconInput icon={Phone} type="tel" placeholder="03001234567" value={form.mobile || ''} error={errors.mobile} onChange={set('mobile')} />
@@ -482,7 +484,7 @@ export default function Onboarding() {
     try {
       await axios.post(`/api/personal-info/${currentTaxYear}`, {
         full_name: accountForm.name,
-        cnic: personalForm.cnic,
+        cnic: stripCnic(personalForm.cnic),
         mobile_number: personalForm.mobile,
         father_name: personalForm.father_name,
         ntn: personalForm.ntn,
