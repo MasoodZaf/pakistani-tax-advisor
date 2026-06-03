@@ -76,8 +76,8 @@ function ConsultantPage() {
           <button
             type="button"
             onClick={onNew}
-            className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700
-                       text-white rounded-lg py-2 transition"
+            className="w-full flex items-center justify-center gap-2 bg-navy hover:bg-navy-dark
+                       text-white rounded-brand py-2 transition"
           >
             <Plus size={16} /> New conversation
           </button>
@@ -92,7 +92,7 @@ function ConsultantPage() {
                 key={c.id}
                 className={`group flex items-center justify-between px-3 py-2 cursor-pointer
                             border-b border-gray-100 hover:bg-white ${
-                              activeId === c.id ? 'bg-white border-l-2 border-l-primary-600' : ''
+                              activeId === c.id ? 'bg-white border-l-2 border-l-navy' : ''
                             }`}
                 onClick={() => setActiveId(c.id)}
               >

@@ -172,8 +172,8 @@ function ConsultantChat({
             onKeyDown={onKeyDown}
             rows={compact ? 2 : 3}
             placeholder="Ask a tax question…"
-            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2
-                       focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+            className="flex-1 resize-none border border-gray-300 rounded-brand px-3 py-2
+                       focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-transparent
                        text-sm"
             disabled={sending}
           />
@@ -181,8 +181,8 @@ function ConsultantChat({
             type="button"
             onClick={() => send()}
             disabled={sending || !input.trim()}
-            className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300
-                       text-white rounded-lg p-2 transition"
+            className="bg-navy hover:bg-navy-dark disabled:bg-gray-300
+                       text-white rounded-brand p-2 transition"
             aria-label="Send"
           >
             {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
@@ -200,10 +200,10 @@ function MessageBubble({ message }) {
       <div
         className={`max-w-[85%] rounded-2xl px-3 py-2 whitespace-pre-wrap break-words ${
           isUser
-            ? 'bg-primary-600 text-white rounded-br-sm'
+            ? 'bg-navy text-white rounded-br-sm'
             : message.isError
             ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-sm'
-            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-sm'
+            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-brand'
         }`}
       >
         <div className="text-sm">{message.content}</div>
