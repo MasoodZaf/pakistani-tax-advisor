@@ -309,6 +309,29 @@ Keep it under 200 words. Current value entered: ${currentValue ?? '(blank)'}.`;
   return chat({ userId, message: q, includePII, formContext, taxYear });
 }
 
+// Proactive tax-efficiency analysis of the user's OWN return data. Reuses
+// chat() so it inherits the same grounding (FBR knowledge base + live slabs),
+// the prompt-injection guards, PII handling, and conversation persistence.
+// The persona already refuses investment advice, so this stays squarely in the
+// "eligible statutory reliefs on the return" lane — legal and ethical by design.
+async function taxOptimization({ userId, taxYear, includePII = false, taxData }) {
+  const q = [
+    `TASK: Analyse THIS taxpayer's return for tax year ${taxYear} (their computed figures are in the USER FORM CONTEXT below) and identify LEGAL, ETHICAL tax-efficiency opportunities they have NOT yet fully claimed.`,
+    ``,
+    `Consider ONLY legitimate reliefs available under the Income Tax Ordinance 2001 / Finance Act 2025 — e.g. tax credits (charitable donations s.61, contribution to an approved pension fund s.63), deductible allowances (Zakat s.60, education expenses s.60C, profit on house-building loan s.60C/64), and exemptions/reductions the taxpayer's income profile makes them eligible for — but which their current numbers show as zero or unusually low.`,
+    ``,
+    `HARD RULES (non-negotiable):`,
+    `- Suggest ONLY lawful reliefs the taxpayer could genuinely be eligible for. NEVER suggest tax evasion, under-declaring income, fabricating expenses/donations, or any aggressive or grey-area scheme.`,
+    `- This is filing guidance about statutory reliefs — NOT investment advice. Do not tell them to buy any financial product; you may note a relief exists and that eligibility must be confirmed.`,
+    `- If the return already looks well-optimised, say so honestly in the summary and return an empty opportunities array rather than inventing items.`,
+    `- Use the LIVE TAX DATA rates as the source of truth; cite the Ordinance section for every item.`,
+    ``,
+    `OUTPUT: Return ONLY valid JSON — no prose before or after — of exactly this shape:`,
+    `{"summary":"<one short plain-language paragraph>","opportunities":[{"title":"<short>","section":"<Ordinance section, e.g. s.63>","rationale":"<why they may qualify, referencing their figures>","estimatedSavingPKR":<number or null>,"action":"<what to enter / do on the return>","confidence":"high|medium|low"}],"disclaimer":"<one line: informational only, confirm with a licensed tax adviser>"}`,
+  ].join('\n');
+  return chat({ userId, message: q, includePII, formContext: taxData, taxYear });
+}
+
 async function listConversations(userId) {
   const r = await pool.query(
     `SELECT id, title, include_pii, created_at, updated_at,
@@ -353,6 +376,7 @@ async function deleteConversation(userId, conversationId) {
 module.exports = {
   chat,
   fieldHelp,
+  taxOptimization,
   listConversations,
   getConversation,
   deleteConversation,

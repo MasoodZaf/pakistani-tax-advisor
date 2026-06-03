@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const service = require('../services/aiConsultant/consultantService');
 const kb = require('../services/aiConsultant/knowledgeBase');
 const { isConfigured } = require('../services/aiConsultant/deepseekClient');
+const TaxCalculationService = require('../services/taxCalculationService');
 
 const router = express.Router();
 
@@ -92,6 +93,56 @@ router.post('/field-help', auth, async (req, res) => {
       taxYear,
     });
     res.json({ success: true, ...out });
+  } catch (e) { sendErr(res, e); }
+});
+
+// Proactive tax-efficiency analysis of the signed-in user's own return.
+// Gathers the AUTHORITATIVE DB-backed computation server-side (never trusts a
+// client-supplied figure), hands it to the grounded consultant, and returns a
+// structured list of legal reliefs the user hasn't claimed.
+router.post('/optimize', auth, async (req, res) => {
+  if (!ensureConfigured(res)) return;
+  try {
+    const { taxYear, includePII } = req.body || {};
+    if (!taxYear) {
+      return res.status(400).json({ success: false, message: 'taxYear is required' });
+    }
+
+    // Authoritative figures — computed from saved form data in the DB.
+    let breakdown;
+    try {
+      breakdown = await TaxCalculationService.calculateTaxComputation(req.user.id, taxYear);
+    } catch (e) {
+      return res.status(404).json({
+        success: false,
+        code: 'NO_RETURN',
+        message: 'No computable return found for this tax year yet — fill in your income forms first.',
+      });
+    }
+
+    const out = await service.taxOptimization({
+      userId: req.user.id,
+      taxYear,
+      includePII: !!includePII,
+      taxData: breakdown,
+    });
+
+    // The model is asked for pure JSON; be defensive and extract the object.
+    let analysis = null;
+    try {
+      const m = (out.reply || '').match(/\{[\s\S]*\}/);
+      if (m) analysis = JSON.parse(m[0]);
+    } catch { analysis = null; }
+
+    res.json({
+      success: true,
+      taxYear,
+      analysis,                          // {summary, opportunities[], disclaimer} or null
+      raw: analysis ? undefined : out.reply,   // fall back to raw text if parse failed
+      sources: out.sources,
+      conversationId: out.conversationId,
+      blocked: out.blocked || undefined,
+    });
   } catch (e) { sendErr(res, e); }
 });
 
