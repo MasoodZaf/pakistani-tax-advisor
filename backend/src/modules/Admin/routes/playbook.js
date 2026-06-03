@@ -84,22 +84,33 @@ async function parseXlsx(buffer) {
 }
 
 // The SIMPLE path consultants use: a markdown file of "## Strategy: <title>"
-// blocks with `Field: value` lines. Easiest to copy-paste and fill.
+// blocks with `Field: value` lines. Easiest to copy-paste and fill. All regexes
+// are line-anchored (m flag, horizontal whitespace only) so the instructions'
+// inline `## Strategy:` and the blank template block are ignored — only real
+// line-start headings with a non-empty title become strategies.
 function parseMarkdownStrategies(text) {
-  const get = (b, re) => { const m = b.match(re); return m ? m[1].trim() : ''; };
+  const line = (b, label) => {
+    const m = b.match(new RegExp(`^[ \\t]*${label}[^:\\n]*:[ \\t]*(.+?)[ \\t]*$`, 'im'));
+    return m ? m[1].trim() : '';
+  };
+  const titleOf = (b) => {
+    const m = b.match(/^##[ \t]+Strategy[ \t]*:[ \t]*(.+?)[ \t]*$/im);
+    return m ? m[1].trim() : '';
+  };
   return text
-    .split(/\n(?=##\s*Strategy\s*:)/i)
-    .filter((b) => /##\s*Strategy\s*:/i.test(b))
+    .split(/\n(?=##[ \t]+Strategy[ \t]*:)/i)
+    .filter((b) => /^##[ \t]+Strategy[ \t]*:/im.test(b))
     .map((b) => ({
-      title:     get(b, /##\s*Strategy\s*:\s*(.+)/i),
-      profile:   get(b, /(?:^|\n)\s*(?:Who|When|Who\s*\/\s*when)[^:\n]*:\s*(.+)/i),
-      relief:    get(b, /(?:^|\n)\s*Relief\s*:\s*(.+)/i),
-      section:   get(b, /(?:^|\n)\s*Section\s*:\s*(.+)/i),
-      cap_note:  get(b, /(?:^|\n)\s*(?:Cap|Statutory cap)[^:\n]*:\s*(.+)/i),
-      how_to:    get(b, /(?:^|\n)\s*How[^:\n]*:\s*(.+)/i),
-      caveat:    get(b, /(?:^|\n)\s*(?:Caveat|Eligibility)[^:\n]*:\s*(.+)/i),
-      form_step: get(b, /(?:^|\n)\s*(?:App\s*form|Form)[^:\n]*:\s*([a-z-]+)/i),
-    }));
+      title:     titleOf(b),
+      profile:   line(b, '(?:Who|When|Who[ \\t]*/[ \\t]*when)'),
+      relief:    line(b, 'Relief'),
+      section:   line(b, 'Section'),
+      cap_note:  line(b, '(?:Cap|Statutory cap)'),
+      how_to:    line(b, 'How'),
+      caveat:    line(b, '(?:Caveat|Eligibility)'),
+      form_step: (line(b, '(?:App[ \\t]*form|Form)').match(/[a-z-]+/) || [''])[0],
+    }))
+    .filter((s) => s.title);
 }
 
 // CSV/Excel rows → strategy objects (header-mapped, order-tolerant).
