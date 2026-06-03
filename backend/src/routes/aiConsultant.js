@@ -8,6 +8,7 @@ const service = require('../services/aiConsultant/consultantService');
 const kb = require('../services/aiConsultant/knowledgeBase');
 const { isConfigured } = require('../services/aiConsultant/deepseekClient');
 const TaxCalculationService = require('../services/taxCalculationService');
+const { pool } = require('../config/database');
 
 const router = express.Router();
 
@@ -120,11 +121,43 @@ router.post('/optimize', auth, async (req, res) => {
       });
     }
 
+    // v2: also gather the GRANULAR per-relief amounts the user has already
+    // claimed (deductions / credits / reductions) so the model can tell
+    // "already claimed" from "could top up" — the aggregate breakdown alone
+    // can't distinguish them. Only non-zero fields are passed (concise context).
+    let claimedReliefs = {};
+    try {
+      const tr = await pool.query(
+        'SELECT id FROM tax_returns WHERE user_id = $1 AND tax_year = $2',
+        [req.user.id, taxYear]
+      );
+      const trId = tr.rows[0]?.id;
+      if (trId) {
+        const [ded, cred, red] = await Promise.all([
+          pool.query('SELECT * FROM deductions_forms WHERE tax_return_id = $1', [trId]),
+          pool.query('SELECT * FROM credits_forms WHERE tax_return_id = $1', [trId]),
+          pool.query('SELECT * FROM reductions_forms WHERE tax_return_id = $1', [trId]),
+        ]);
+        const claimedOnly = (row) => row
+          ? Object.fromEntries(Object.entries(row).filter(([k, v]) =>
+              !/^(id|user_id|user_email|tax_return_id|tax_year|tax_year_id|created_at|updated_at|is_complete|completion|last_updated)/.test(k)
+              && Number(v) > 0))
+          : {};
+        claimedReliefs = {
+          deductions: claimedOnly(ded.rows[0]),
+          credits: claimedOnly(cred.rows[0]),
+          reductions: claimedOnly(red.rows[0]),
+        };
+      }
+    } catch (e) {
+      logger.warn('optimize: could not load granular reliefs, using aggregate only', { message: e.message });
+    }
+
     const out = await service.taxOptimization({
       userId: req.user.id,
       taxYear,
       includePII: !!includePII,
-      taxData: breakdown,
+      taxData: { computation: breakdown, claimedReliefs },
     });
 
     // The model is asked for pure JSON; be defensive and extract the object.

@@ -6,6 +6,7 @@ import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Chec
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConnectedAccounts from './ConnectedAccounts';
+import { formatCnic } from '../../utils/cnic';
 import { wizardAPI } from '../../services/wizardAPI';
 
 /* ─── Income stream definitions (mirrors Onboarding) ─────────────────────── */
@@ -423,7 +424,7 @@ const Settings = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">CNIC</label>
             <input 
               type="text" 
-              value={user?.cnic || ''} 
+              value={user?.cnic ? formatCnic(user.cnic) : ''}
               disabled
               className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
             />

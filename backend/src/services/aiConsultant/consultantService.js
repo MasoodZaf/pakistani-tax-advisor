@@ -316,9 +316,13 @@ Keep it under 200 words. Current value entered: ${currentValue ?? '(blank)'}.`;
 // "eligible statutory reliefs on the return" lane — legal and ethical by design.
 async function taxOptimization({ userId, taxYear, includePII = false, taxData }) {
   const q = [
-    `TASK: Analyse THIS taxpayer's return for tax year ${taxYear} (their computed figures are in the USER FORM CONTEXT below) and identify LEGAL, ETHICAL tax-efficiency opportunities they have NOT yet fully claimed.`,
+    `TASK: Analyse THIS taxpayer's return for tax year ${taxYear} and identify LEGAL, ETHICAL tax-efficiency opportunities. The USER FORM CONTEXT below contains "computation" (their computed income/tax) and "claimedReliefs" (the per-relief amounts they have ALREADY entered — deductions, credits, reductions; only non-zero items are listed).`,
     ``,
-    `Consider ONLY legitimate reliefs available under the Income Tax Ordinance 2001 / Finance Act 2025 — e.g. tax credits (charitable donations s.61, contribution to an approved pension fund s.63), deductible allowances (Zakat s.60, education expenses s.60C, profit on house-building loan s.60C/64), and exemptions/reductions the taxpayer's income profile makes them eligible for — but which their current numbers show as zero or unusually low.`,
+    `Consider ONLY legitimate reliefs under the Income Tax Ordinance 2001 / Finance Act 2025 — tax credits (charitable donations s.61, contribution to an approved pension fund s.63), deductible allowances (Zakat s.60, education expenses s.60C, profit on house-building loan s.60C/64), and exemptions/reductions the taxpayer's income profile makes them eligible for.`,
+    ``,
+    `CRUCIAL — use "claimedReliefs" to distinguish "already claimed" from "could increase":`,
+    `- If a relief is ABSENT from claimedReliefs (or zero), treat it as UNCLAIMED — suggest claiming it if eligible.`,
+    `- If a relief IS present in claimedReliefs, do NOT tell them to "claim" it. Only mention it if there is statutory HEADROOM to claim MORE (e.g. they've claimed below the s.63 / s.61 cap) — and phrase it as "you've claimed PKR X; the cap allows up to PKR Y, so you could add PKR Z". If there's no headroom, omit it.`,
     ``,
     `HARD RULES (non-negotiable):`,
     `- Suggest ONLY lawful reliefs the taxpayer could genuinely be eligible for. NEVER suggest tax evasion, under-declaring income, fabricating expenses/donations, or any aggressive or grey-area scheme.`,
@@ -326,8 +330,10 @@ async function taxOptimization({ userId, taxYear, includePII = false, taxData })
     `- If the return already looks well-optimised, say so honestly in the summary and return an empty opportunities array rather than inventing items.`,
     `- Use the LIVE TAX DATA rates as the source of truth; cite the Ordinance section for every item.`,
     ``,
+    `Each opportunity must include a "formStep" — the app form the user edits to act on it — chosen from EXACTLY: "deductions" (Zakat/education/foreign-tax/profit-on-loan), "credits" (donations/pension/insurance/shares), "reductions" (teacher/behbood/export/industrial), "income" (salary/exempt-allowance structuring), "adjustable-tax" (WHT claims), "final-min-income", or "capital-gains". Use "" if none applies.`,
+    ``,
     `OUTPUT: Return ONLY valid JSON — no prose before or after — of exactly this shape:`,
-    `{"summary":"<one short plain-language paragraph>","opportunities":[{"title":"<short>","section":"<Ordinance section, e.g. s.63>","rationale":"<why they may qualify, referencing their figures>","estimatedSavingPKR":<number or null>,"action":"<what to enter / do on the return>","confidence":"high|medium|low"}],"disclaimer":"<one line: informational only, confirm with a licensed tax adviser>"}`,
+    `{"summary":"<one short plain-language paragraph that notes what they've ALREADY claimed>","opportunities":[{"title":"<short>","section":"<Ordinance section, e.g. s.63>","rationale":"<why they may qualify, referencing their figures and what's already claimed>","estimatedSavingPKR":<number or null>,"action":"<what to enter / do on the return>","formStep":"<one of the allowed values>","confidence":"high|medium|low"}],"disclaimer":"<one line: informational only, confirm with a licensed tax adviser>"}`,
   ].join('\n');
   return chat({ userId, message: q, includePII, formContext: taxData, taxYear });
 }
