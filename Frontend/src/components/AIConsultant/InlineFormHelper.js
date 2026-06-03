@@ -61,7 +61,7 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
       <button
         type="button"
         onClick={toggle}
-        className="text-gray-400 hover:text-primary-600 transition align-middle ml-1"
+        className="text-gray-400 hover:text-navy transition align-middle ml-1"
         title="Ask the AI consultant about this field"
         aria-label="Field help"
       >
@@ -71,7 +71,7 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
         <div
           ref={panelRef}
           className="absolute z-40 left-0 mt-1 w-80 bg-white border border-gray-200
-                     rounded-lg shadow-xl p-3 text-sm text-gray-700"
+                     rounded-brand shadow-xl p-3 text-sm text-gray-700"
         >
           <div className="flex items-start justify-between mb-2">
             <div className="font-medium text-gray-800 text-xs uppercase tracking-wide">
@@ -99,7 +99,7 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
             <button
               type="button"
               onClick={fetchHelp}
-              className="mt-2 text-xs text-primary-600 hover:underline"
+              className="mt-2 text-xs text-navy hover:underline"
             >
               Re-ask
             </button>

@@ -30,7 +30,7 @@ function FloatingChatWidget() {
         <div className="w-[380px] h-[560px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)]
                         bg-white rounded-2xl shadow-2xl border border-gray-200
                         flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-primary-600 text-white">
+          <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
             <div className="flex items-center gap-2">
               <MessageCircle size={18} />
               <span className="font-medium">Tax Consultant</span>
@@ -39,7 +39,7 @@ function FloatingChatWidget() {
               <Link
                 to="/consultant"
                 onClick={() => setOpen(false)}
-                className="p-1 rounded hover:bg-primary-700 transition"
+                className="p-1 rounded hover:bg-navy-dark transition"
                 title="Open full page"
               >
                 <Maximize2 size={16} />
@@ -47,7 +47,7 @@ function FloatingChatWidget() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-1 rounded hover:bg-primary-700 transition"
+                className="p-1 rounded hover:bg-navy-dark transition"
                 aria-label="Close"
               >
                 <X size={16} />
@@ -66,7 +66,7 @@ function FloatingChatWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="bg-primary-600 hover:bg-primary-700 text-white rounded-full
+          className="bg-navy hover:bg-navy-dark text-white rounded-full
                      w-14 h-14 shadow-lg flex items-center justify-center
                      transition transform hover:scale-105"
           aria-label="Open tax consultant"
