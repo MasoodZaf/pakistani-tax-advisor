@@ -164,6 +164,41 @@ async function ingestFile(absPath, label) {
   }
 }
 
+// Ingest APPROVED admin-managed playbook strategies as retrievable chunks.
+// Source name contains "playbook" so the reserved-slot logic in retrieve()
+// surfaces them like the bundled playbook. Non-fatal if the table is absent.
+async function ingestApprovedStrategies() {
+  try {
+    const r = await pool.query(
+      `SELECT title, profile, relief, section, cap_note, how_to, caveat, form_step
+         FROM playbook_strategies WHERE status = 'approved' ORDER BY updated_at DESC`
+    );
+    let added = 0;
+    for (const s of r.rows) {
+      const text = [
+        `## Strategy: ${s.title}`,
+        s.profile ? `Who / when: ${s.profile}` : '',
+        [s.relief && `Relief: ${s.relief}`, s.section && `Section: ${s.section}`, s.cap_note && `Cap: ${s.cap_note}`].filter(Boolean).join(' · '),
+        s.how_to ? `How: ${s.how_to}` : '',
+        s.caveat ? `Caveat: ${s.caveat}` : '',
+        s.form_step ? `App form (formStep): ${s.form_step}` : '',
+      ].filter(Boolean).join('\n');
+      chunks.push({
+        id: `admin-playbook#${added}`,
+        source: 'admin-playbook',
+        title: s.title,
+        text,
+        terms: termFreq(text),
+      });
+      added++;
+    }
+    return added;
+  } catch (e) {
+    logger.warn(`AI KB: approved-strategy ingest skipped: ${e.message}`);
+    return 0;
+  }
+}
+
 async function loadAll() {
   chunks = [];
   let total = 0;
@@ -197,6 +232,10 @@ async function loadAll() {
       logger.warn(`AI KB: dir access failed (${dir}): ${e.message}`);
     }
   }
+
+  // 3. Admin-managed playbook strategies (APPROVED only). The dynamic half of
+  //    the master file — added via the admin Playbook screen, no code deploy.
+  total += await ingestApprovedStrategies();
 
   lastLoadedAt = new Date();
   logger.info(`AI KB: loaded ${total} chunks from ${chunks.reduce(

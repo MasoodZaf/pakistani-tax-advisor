@@ -8,6 +8,7 @@ import UserTaxRecords from './components/UserTaxRecords';
 import TaxRatesManager from './components/TaxRatesManager';
 import AdminManagement from './components/AdminManagement';
 import AuditLogs from './components/AuditLogs';
+import PlaybookManager from './components/PlaybookManager';
 
 const SuperAdminRoute = ({ children }) => {
   const { user } = useAuth();
@@ -47,6 +48,14 @@ const AdminModule = () => {
         element={
           <SuperAdminRoute>
             <AdminManagement />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="playbook"
+        element={
+          <SuperAdminRoute>
+            <PlaybookManager />
           </SuperAdminRoute>
         }
       />
