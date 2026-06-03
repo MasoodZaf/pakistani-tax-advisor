@@ -190,7 +190,8 @@ const Reports = () => {
       const incomeRow = reportData.rawData?.income || reportData.income || {};
       summaryRows.push(
         ['Income breakdown', ''],
-        ['Monthly salary',          Number(incomeRow.monthly_salary)        || 0],
+        ['Basic salary',            Number(incomeRow.annual_basic_salary)   || 0],
+        ['Allowances',              Number(incomeRow.allowances)            || 0],
         ['Bonus',                   Number(incomeRow.bonus)                 || 0],
         ['Car allowance',           Number(incomeRow.car_allowance)         || 0],
         ['Other taxable income',    Number(incomeRow.other_taxable)         || 0],
@@ -207,7 +208,8 @@ const Reports = () => {
         ['Tax Year', selectedYear],
         [],
         ['Section', 'Amount (PKR)'],
-        ['Monthly salary',         Number(ri.monthly_salary)        || 0],
+        ['Basic salary',           Number(ri.annual_basic_salary)   || 0],
+        ['Allowances',             Number(ri.allowances)            || 0],
         ['Bonus',                  Number(ri.bonus)                 || 0],
         ['Car allowance',          Number(ri.car_allowance)         || 0],
         ['Medical allowance',      Number(ri.medical_allowance)     || 0],
@@ -282,7 +284,7 @@ const Reports = () => {
     } else if (activeTab === 'income') {
       lines.push('Source,Amount (PKR)');
       const ri = reportData.regularIncome || {};
-      ['monthly_salary', 'bonus', 'car_allowance', 'medical_allowance', 'employer_contribution', 'other_exempt']
+      ['annual_basic_salary', 'allowances', 'bonus', 'car_allowance', 'medical_allowance', 'employer_contribution', 'other_exempt']
         .forEach((k) => lines.push(`${k},${Number(ri[k]) || 0}`));
     } else if (activeTab === 'adjustable') {
       lines.push('Category,Subcategory,Amount (PKR)');
@@ -424,8 +426,12 @@ const Reports = () => {
           <h3 className="text-lg font-semibold text-navy mb-4">Income Breakdown</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Monthly Salary</span>
-              <span className="font-medium">{formatCurrency(incomeRow.monthly_salary)}</span>
+              <span className="text-gray-700">Basic Salary</span>
+              <span className="font-medium">{formatCurrency(incomeRow.annual_basic_salary)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-gray-700">Allowances</span>
+              <span className="font-medium">{formatCurrency(incomeRow.allowances)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-700">Bonus</span>
@@ -486,8 +492,12 @@ const Reports = () => {
                 <h4 className="font-medium text-navy mb-3">Taxable Income</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Monthly Salary</span>
-                    <span>{formatCurrency(data.regularIncome.monthly_salary)}</span>
+                    <span className="text-gray-600">Basic Salary</span>
+                    <span>{formatCurrency(data.regularIncome.annual_basic_salary)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Allowances</span>
+                    <span>{formatCurrency(data.regularIncome.allowances)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bonus</span>
