@@ -27,7 +27,9 @@ function computeReliefHeadroom(computation, claimedReliefs, creditCaps) {
     const cap = creditCaps[capCat];
     if (!cap) return;
     const capPct = Number(cap.rate);
-    const claimed = claimedFields.reduce((s, f) => s + (Number(credits[f]) || 0), 0);
+    // The candidate fields are ALTERNATE columns for the same relief (new
+    // _amount vs legacy flat) — take the max, never sum (would double-count).
+    const claimed = Math.max(0, ...claimedFields.map((f) => Number(credits[f]) || 0));
     const eligibleCap = capPct * taxable;
     const additionalEligible = Math.max(0, eligibleCap - claimed);
     items.push({
