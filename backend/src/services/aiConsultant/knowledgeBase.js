@@ -21,11 +21,16 @@ const logger = require('../../utils/logger');
 const BACKEND_DIR = path.resolve(__dirname, '../../../');
 const REPO_ROOT = path.resolve(BACKEND_DIR, '..');   // only valid in dev checkout
 
-// Where uploaded / curated knowledge-base files live. In production this
-// should be a mounted volume so docs survive container rebuilds.
+// Where uploaded knowledge-base files live. In production this is a mounted
+// volume (AI_KB_DIR) so admin-uploaded docs survive container rebuilds.
 const KB_DIR = process.env.AI_KB_DIR
   ? path.resolve(process.env.AI_KB_DIR)
   : path.join(BACKEND_DIR, 'data', 'knowledge-base');
+
+// Curated docs committed to the repo (e.g. the tax-efficiency playbook) ship
+// inside the image here. In prod a volume overrides AI_KB_DIR, which would
+// otherwise SHADOW these bundled docs — so we always scan this dir too.
+const BUNDLED_KB_DIR = path.join(BACKEND_DIR, 'data', 'knowledge-base');
 
 // MD files at repo root that ship as default knowledge — these are the
 // FBR / compliance / roadmap docs already in the repo. Only loaded when
@@ -175,14 +180,22 @@ async function loadAll() {
   // 2. Anything dropped into the configured KB directory. In production this
   //    should be a mounted volume so admin-uploaded docs persist across
   //    container rebuilds.
-  try {
-    if (!fs.existsSync(KB_DIR)) fs.mkdirSync(KB_DIR, { recursive: true });
-    for (const entry of fs.readdirSync(KB_DIR)) {
-      const full = path.join(KB_DIR, entry);
-      if (fs.statSync(full).isFile()) total += await ingestFile(full, entry);
+  // Scan the bundled (image) dir AND the volume dir — deduped so dev (where
+  // they're the same path) doesn't double-load. Bundled = curated repo docs;
+  // KB_DIR = admin uploads persisted on a volume.
+  for (const dir of [...new Set([BUNDLED_KB_DIR, KB_DIR])]) {
+    try {
+      if (!fs.existsSync(dir)) {
+        if (dir === KB_DIR) fs.mkdirSync(dir, { recursive: true });
+        continue;
+      }
+      for (const entry of fs.readdirSync(dir)) {
+        const full = path.join(dir, entry);
+        if (fs.statSync(full).isFile()) total += await ingestFile(full, entry);
+      }
+    } catch (e) {
+      logger.warn(`AI KB: dir access failed (${dir}): ${e.message}`);
     }
-  } catch (e) {
-    logger.warn(`AI KB: KB_DIR access failed (${KB_DIR}): ${e.message}`);
   }
 
   lastLoadedAt = new Date();
