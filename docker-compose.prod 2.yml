@@ -1,0 +1,134 @@
+version: '3.8'
+
+# PRODUCTION: runs full stack (DB + backend + frontend).
+# Start with: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  database:
+    image: postgres:15
+    container_name: tax_advisor_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tax_advisor}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # DO NOT expose the DB port on the host. The backend reaches it over the
+    # internal docker network (host=database, port=5432). If you need psql
+    # access from the host, use `docker compose exec database psql …`
+    # or bind to 127.0.0.1 explicitly ("127.0.0.1:5432:5432").
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # First-boot init scripts. Postgres runs files in /docker-entrypoint-initdb.d/
+      # in alphabetical order, then NEVER again (subsequent boots skip them).
+      # 01-schema.sql — base schema + 2024-25 / 2025-26 tax year seed.
+      # 02-migrations.sh — applies every .sql in /db-migrations/ (see below).
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./scripts/db-init-migrations.sh:/docker-entrypoint-initdb.d/02-migrations.sh:ro
+      - ./backend/database/migrations:/db-migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      # Build context is the repo root, not ./backend, so the Dockerfile can
+      # COPY the sibling /shared/ directory (single source of truth for the
+      # expense-schema enums consumed by both backend and mobile).
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: tax_advisor_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-tax_advisor}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Prisma also needs DATABASE_URL — built from the parts above so .env
+      # stays the single source of truth for credentials.
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@database:5432/${DB_NAME:-tax_advisor}?schema=public
+      # The internal docker-network Postgres doesn't negotiate SSL; the default
+      # NODE_ENV=production codepath would try and fail. Override to disabled.
+      DB_SSL: "false"
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      # Browser-facing origin(s) → must be in the CORS allowlist.
+      # Set both in .env for production. FRONTEND_URL is a single origin;
+      # CORS_ORIGINS is a comma-separated list (for staging + prod, www + apex, etc).
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # AI Tax Consultant (DeepSeek). Empty key disables the feature gracefully.
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      # Tells the knowledge-base service where to look for uploaded docs.
+      # Matches the mounted volume below — admin uploads land here and
+      # survive container rebuilds.
+      AI_KB_DIR: /app/data/knowledge-base
+      # Where the nightly Postgres dump writes (see services/cron/postgresBackup.js).
+      # Empty / unset disables the backup cron entirely.
+      BACKUP_DIR: /backups
+      # Mobile clients: minimum supported version + where to send users to
+      # upgrade. Backend now refuses to start in production if MOBILE_UPGRADE_URL
+      # is unset (see mobileApi.js).
+      MOBILE_MIN_SUPPORTED_VERSION: ${MOBILE_MIN_SUPPORTED_VERSION:-1.0.0}
+      MOBILE_UPGRADE_URL: ${MOBILE_UPGRADE_URL}
+      # SMTP for Finance-Act admin reminders (leave blank to keep audit-only).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Sentry — leave SENTRY_DSN blank to disable error reporting.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+    volumes:
+      # Persist admin-uploaded knowledge-base docs across rebuilds.
+      - ai_kb_data:/app/data/knowledge-base
+      # Nightly DB dump destination. Separate volume so a corrupted
+      # postgres_data doesn't take backups down with it.
+      - tax_advisor_backups:/backups
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
+    container_name: tax_advisor_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  ai_kb_data:
+    driver: local
+  tax_advisor_backups:
+    driver: local
+
+networks:
+  default:
+    name: tax_advisor_network
