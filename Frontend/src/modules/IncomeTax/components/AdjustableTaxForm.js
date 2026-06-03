@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps -- auto-calc effects intentionally watch specific field values; adding watchedValues/whtRate to deps would cause re-render loops */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -29,148 +29,50 @@ import { formatCurrency } from '../../../utils/currency';
 import { TaxFormShell, CollapsibleSection, FormNav } from '../../../components/forms';
 
 
-const AdjustableTaxForm = () => {
-  const navigate = useNavigate();
-  const {
-    saveFormStep,
-    getStepData,
-    formData,
-    saving,
-    incomeProfile,
-  } = useTaxForm();
-
-  // Field-level visibility — pulled from the shared manifest so the same
-  // declarations work across web + (eventually) mobile. Pure salaried
-  // users see ~10 WHT lines instead of all 54. Advanced toggle reveals
-  // the rest in one click for the rare cases.
-  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const visibleFields = useMemo(
-    () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: showAdvanced }),
-    [addons, showAdvanced]
-  );
-  const { currentTaxYear } = useTaxYear();
-  const { rates } = useTaxRates(currentTaxYear);
-
-  // Shorthand: look up a WHT rate by its tax_rates_config.rate_category key.
-  // Returns null until rates are loaded — callers should early-return.
-  const whtRate = (category) => rates?.withholding?.[category]?.rate ?? null;
-
-  // Map form tax_collected field name → DB rate_category. Used by the Reset
-  // button and display labels so they pull the authoritative rate from DB.
-  // Auto-calc effects above hardcode the same mapping inline for readability.
-  const TAX_FIELD_TO_WHT_CATEGORY = {
-    directorship_fee_149_3_tax_collected:        'directorship_fee',
-    motor_vehicle_leasing_231b1a_tax_collected:  'motor_vehicle_leasing_231b1a',
-    telephone_bill_236_1e_tax_collected:         'telephone_bill_236_1e',
-    cellphone_bill_236_1f_tax_collected:         'cellphone_bill',
-    prepaid_telephone_card_236_1b_tax_collected: 'prepaid_telephone_card_236_1b',
-    phone_unit_236_1c_tax_collected:             'phone_unit_236_1c',
-    internet_bill_236_1d_tax_collected:          'internet_bill_236_1d',
-    prepaid_internet_card_236_1e_tax_collected:  'prepaid_internet_card_236_1e',
-    profit_debt_151_15_tax_collected:            'profit_debt_151_20',
-    profit_debt_sukook_151a_tax_collected:       'sukook_151a',
-    tax_deducted_rent_section_155_tax_collected: 'rent_section_155_individual',
-    electricity_bill_domestic_235_tax_collected: 'electricity_bill_235',
-    motor_vehicle_transfer_fee_231b2_tax_collected: 'motor_vehicle_transfer_231b2',
-  };
-
-  const resolveFieldRate = (field, atlStatus) => {
-    if (field.atlStatusField) {
-      return whtRate(
-        atlStatus === 'NONATL' ? 'functions_gatherings_236cb_nonatl' : 'functions_gatherings_236cb_atl'
-      ) ?? field.taxRate;
-    }
-    return whtRate(TAX_FIELD_TO_WHT_CATEGORY[field.taxField]) ?? field.taxRate;
-  };
-
-  const [showHelp, setShowHelp] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({});
-  const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
-
-  // Ref to suppress auto-calc effects while form is being loaded/reset from DB.
-  // Prevents auto-calc from overwriting user-saved 0s when gross changes during reset().
-  const isLoadingFromDB = useRef(false);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    getValues,
-    reset,
-    formState: { errors }
-  } = useForm({
-    defaultValues: getStepData('adjustable_tax')
-  });
-
-  // Sync form when context formData updates (handles page load, navigation back, and post-save).
-  // This is the sole data-loading path — the previous standalone axios loadFromAPI was removed
-  // to eliminate the race condition where two concurrent loads would overwrite each other.
-  useEffect(() => {
-    const savedData = formData['adjustable_tax'];
-    const incomeData = formData['income'] || {};
-
-    if (savedData && Object.keys(savedData).length > 0) {
-      // Patch salary gross receipt from income form (authoritative source)
-      const correctSalary =
-        parseFloat(incomeData.annual_salary_wages_total) ||
-        parseFloat(incomeData.total_employment_income) ||
-        parseFloat(savedData.salary_employees_149_gross_receipt) ||
-        0;
-
-      const patchedData = { ...savedData };
-      if (correctSalary > 0) {
-        patchedData.salary_employees_149_gross_receipt = correctSalary;
-      }
-
-      // Suppress auto-calc effects while resetting from DB so saved 0s are not overwritten
-      isLoadingFromDB.current = true;
-      reset(patchedData);
-      // Delay refreshKey so reset() state propagates before inputs remount with defaultValue
-      setTimeout(() => {
-        setRefreshKey(k => k + 1);
-        isLoadingFromDB.current = false;
-      }, 0);
-    }
-  }, [formData, reset]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Prior year pre-fill
-  const { hasPriorData: hasPriorAdjustable, applyPriorYear: applyPriorAdjustable, dismissPriorYear: dismissPriorAdjustable } = usePriorYearData('adjustable_tax', setValue);
-
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
-
-  // Auto-populate income-linked gross receipt fields when no saved adjustable_tax data exists yet
-  // (fires when context loads income data — handles fresh form or out-of-sequence navigation)
-  useEffect(() => {
-    const incomeData = formData['income'] || {};
-    if (!incomeData || Object.keys(incomeData).length === 0) return;
-
-    // Only auto-populate if adjustable_tax hasn't been saved yet — avoid overwriting user edits
-    const savedAdjustable = formData['adjustable_tax'] || {};
-    if (Object.keys(savedAdjustable).length > 0) return;
-
-    const autoFetchMappings = {
-      'salary_employees_149_gross_receipt': incomeData.annual_salary_wages_total || 0,
-      'directorship_fee_149_3_gross_receipt': incomeData.directorship_fee || 0,
-      'profit_debt_151_15_gross_receipt': incomeData.profit_on_debt_15_percent || 0,
-      'profit_debt_sukook_151a_gross_receipt': incomeData.profit_on_debt_12_5_percent || 0,
-      'tax_deducted_rent_section_155_gross_receipt': incomeData.other_taxable_income_rent || 0
-    };
-
-    let anySet = false;
-    Object.entries(autoFetchMappings).forEach(([fieldName, value]) => {
-      if (value && value > 0) {
-        setValue(fieldName, value);
-        anySet = true;
-      }
+// Sum gross + tax across all field groups. Pure — callers pass a values
+// snapshot (handleSubmit data / getValues()). The live summary card and the
+// save handlers share this arithmetic.
+const computeAdjustableTotals = (vals, fieldGroups) => {
+  let totalGrossReceipt = 0;
+  let totalTaxCollected = 0;
+  Object.values(fieldGroups).forEach((group) => {
+    group.fields.forEach((field) => {
+      totalGrossReceipt += parseFloat(vals[field.grossField]) || 0;
+      totalTaxCollected += parseFloat(vals[field.taxField]) || 0;
     });
+  });
+  return { totalGrossReceipt, totalTaxCollected };
+};
 
-    if (anySet) {
-      setTimeout(() => setRefreshKey(k => k + 1), 0);
-    }
-  }, [formData, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+// Live summary card — the only subscriber to the whole form (cheap: it sums and
+// renders two numbers), isolated so the inputs don't re-render per keystroke.
+const AdjustableTotals = ({ control, fieldGroups }) => {
+  const values = useWatch({ control });
+  const { totalGrossReceipt, totalTaxCollected } = computeAdjustableTotals(values || {}, fieldGroups);
+  return (
+    <div className="rounded-brand-lg bg-navy p-5">
+      <h3 className="mb-3 font-body text-xs font-bold uppercase tracking-wider text-white/60">Summary total</h3>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-brand bg-white/5 p-3">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Amount on certificate</span>
+          <span className="mt-1 block break-all font-mono text-lg font-bold tabular-nums text-white">{formatCurrency(totalGrossReceipt)}</span>
+        </div>
+        <div className="rounded-brand bg-lime/15 p-3 ring-1 ring-lime/30">
+          <span className="block font-body text-xs font-medium uppercase tracking-wider text-lime">Tax collected (credit)</span>
+          <span className="mt-1 block break-all font-mono text-lg font-bold tabular-nums text-lime">{formatCurrency(totalTaxCollected)}</span>
+        </div>
+      </div>
+      <p className="mt-3 text-center font-body text-xs text-white/60">Tax collected is adjusted against your final tax liability.</p>
+    </div>
+  );
+};
+
+// Headless: per-field auto-calc (gross × WHT rate, only when the tax cell is
+// still empty). Self-subscribes via useWatch so the effects run without the
+// form body re-rendering. Renders nothing. (Logic moved verbatim from the
+// parent — same rates, same "only fill if empty" guard, same ATL handling.)
+const AdjustableAutoCalc = ({ control, setValue, rates, whtRate, isLoadingFromDB }) => {
+  const watchedValues = useWatch({ control });
 
   // Auto-calculate tax for Directorship Fee at 20%
   useEffect(() => {
@@ -371,6 +273,154 @@ const AdjustableTaxForm = () => {
       }
     }
   }, [watchedValues['functions_gatherings_charges_236cb_gross_receipt'], watchedValues['functions_gatherings_charges_236cb_atl_status'], setValue, rates]);
+
+  return null;
+};
+
+const AdjustableTaxForm = () => {
+  const navigate = useNavigate();
+  const {
+    saveFormStep,
+    getStepData,
+    formData,
+    saving,
+    incomeProfile,
+  } = useTaxForm();
+
+  // Field-level visibility — pulled from the shared manifest so the same
+  // declarations work across web + (eventually) mobile. Pure salaried
+  // users see ~10 WHT lines instead of all 54. Advanced toggle reveals
+  // the rest in one click for the rare cases.
+  const addons = useMemo(() => incomeProfile?.addons || [], [incomeProfile]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const visibleFields = useMemo(
+    () => visibleFieldsFor('adjustable_tax_forms', addons, { advanced: showAdvanced }),
+    [addons, showAdvanced]
+  );
+  const { currentTaxYear } = useTaxYear();
+  const { rates } = useTaxRates(currentTaxYear);
+
+  // Shorthand: look up a WHT rate by its tax_rates_config.rate_category key.
+  // Returns null until rates are loaded — callers should early-return.
+  const whtRate = (category) => rates?.withholding?.[category]?.rate ?? null;
+
+  // Map form tax_collected field name → DB rate_category. Used by the Reset
+  // button and display labels so they pull the authoritative rate from DB.
+  // Auto-calc effects above hardcode the same mapping inline for readability.
+  const TAX_FIELD_TO_WHT_CATEGORY = {
+    directorship_fee_149_3_tax_collected:        'directorship_fee',
+    motor_vehicle_leasing_231b1a_tax_collected:  'motor_vehicle_leasing_231b1a',
+    telephone_bill_236_1e_tax_collected:         'telephone_bill_236_1e',
+    cellphone_bill_236_1f_tax_collected:         'cellphone_bill',
+    prepaid_telephone_card_236_1b_tax_collected: 'prepaid_telephone_card_236_1b',
+    phone_unit_236_1c_tax_collected:             'phone_unit_236_1c',
+    internet_bill_236_1d_tax_collected:          'internet_bill_236_1d',
+    prepaid_internet_card_236_1e_tax_collected:  'prepaid_internet_card_236_1e',
+    profit_debt_151_15_tax_collected:            'profit_debt_151_20',
+    profit_debt_sukook_151a_tax_collected:       'sukook_151a',
+    tax_deducted_rent_section_155_tax_collected: 'rent_section_155_individual',
+    electricity_bill_domestic_235_tax_collected: 'electricity_bill_235',
+    motor_vehicle_transfer_fee_231b2_tax_collected: 'motor_vehicle_transfer_231b2',
+  };
+
+  const resolveFieldRate = (field, atlStatus) => {
+    if (field.atlStatusField) {
+      return whtRate(
+        atlStatus === 'NONATL' ? 'functions_gatherings_236cb_nonatl' : 'functions_gatherings_236cb_atl'
+      ) ?? field.taxRate;
+    }
+    return whtRate(TAX_FIELD_TO_WHT_CATEGORY[field.taxField]) ?? field.taxRate;
+  };
+
+  const [showHelp, setShowHelp] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
+
+  // Ref to suppress auto-calc effects while form is being loaded/reset from DB.
+  // Prevents auto-calc from overwriting user-saved 0s when gross changes during reset().
+  const isLoadingFromDB = useRef(false);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    getValues,
+    reset,
+    formState: { errors }
+  } = useForm({
+    defaultValues: getStepData('adjustable_tax')
+  });
+
+  // Sync form when context formData updates (handles page load, navigation back, and post-save).
+  // This is the sole data-loading path — the previous standalone axios loadFromAPI was removed
+  // to eliminate the race condition where two concurrent loads would overwrite each other.
+  useEffect(() => {
+    const savedData = formData['adjustable_tax'];
+    const incomeData = formData['income'] || {};
+
+    if (savedData && Object.keys(savedData).length > 0) {
+      // Patch salary gross receipt from income form (authoritative source)
+      const correctSalary =
+        parseFloat(incomeData.annual_salary_wages_total) ||
+        parseFloat(incomeData.total_employment_income) ||
+        parseFloat(savedData.salary_employees_149_gross_receipt) ||
+        0;
+
+      const patchedData = { ...savedData };
+      if (correctSalary > 0) {
+        patchedData.salary_employees_149_gross_receipt = correctSalary;
+      }
+
+      // Suppress auto-calc effects while resetting from DB so saved 0s are not overwritten
+      isLoadingFromDB.current = true;
+      reset(patchedData);
+      // Delay refreshKey so reset() state propagates before inputs remount with defaultValue
+      setTimeout(() => {
+        setRefreshKey(k => k + 1);
+        isLoadingFromDB.current = false;
+      }, 0);
+    }
+  }, [formData, reset]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prior year pre-fill
+  const { hasPriorData: hasPriorAdjustable, applyPriorYear: applyPriorAdjustable, dismissPriorYear: dismissPriorAdjustable } = usePriorYearData('adjustable_tax', setValue);
+
+  // PERF-02: the per-field auto-calc effects that used to read a bare watch()
+  // here now live in the headless <AdjustableAutoCalc> child (self-subscribing
+  // via useWatch), so the parent no longer re-renders on every keystroke.
+
+  // Auto-populate income-linked gross receipt fields when no saved adjustable_tax data exists yet
+  // (fires when context loads income data — handles fresh form or out-of-sequence navigation)
+  useEffect(() => {
+    const incomeData = formData['income'] || {};
+    if (!incomeData || Object.keys(incomeData).length === 0) return;
+
+    // Only auto-populate if adjustable_tax hasn't been saved yet — avoid overwriting user edits
+    const savedAdjustable = formData['adjustable_tax'] || {};
+    if (Object.keys(savedAdjustable).length > 0) return;
+
+    const autoFetchMappings = {
+      'salary_employees_149_gross_receipt': incomeData.annual_salary_wages_total || 0,
+      'directorship_fee_149_3_gross_receipt': incomeData.directorship_fee || 0,
+      'profit_debt_151_15_gross_receipt': incomeData.profit_on_debt_15_percent || 0,
+      'profit_debt_sukook_151a_gross_receipt': incomeData.profit_on_debt_12_5_percent || 0,
+      'tax_deducted_rent_section_155_gross_receipt': incomeData.other_taxable_income_rent || 0
+    };
+
+    let anySet = false;
+    Object.entries(autoFetchMappings).forEach(([fieldName, value]) => {
+      if (value && value > 0) {
+        setValue(fieldName, value);
+        anySet = true;
+      }
+    });
+
+    if (anySet) {
+      setTimeout(() => setRefreshKey(k => k + 1), 0);
+    }
+  }, [formData, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // Define comprehensive field groups matching the Excel structure exactly
   const fieldGroups = {
@@ -662,26 +712,12 @@ const AdjustableTaxForm = () => {
     }
   };
 
-  // Calculate totals
-  const calculateTotals = () => {
-    let totalGrossReceipt = 0;
-    let totalTaxCollected = 0;
-
-    Object.values(fieldGroups).forEach(group => {
-      group.fields.forEach(field => {
-        const grossValue = parseFloat(watchedValues[field.grossField]) || 0;
-        const taxValue = parseFloat(watchedValues[field.taxField]) || 0;
-        totalGrossReceipt += grossValue;
-        totalTaxCollected += taxValue;
-      });
-    });
-
-    return { totalGrossReceipt, totalTaxCollected };
-  };
-
-  const { totalGrossReceipt, totalTaxCollected } = calculateTotals();
+  // Totals are computed by the module-scope computeAdjustableTotals() — the live
+  // summary card uses it via <AdjustableTotals> (self-subscribing), and the save
+  // handlers below call it on their values snapshot.
 
   const onSubmit = async (data) => {
+    const { totalGrossReceipt, totalTaxCollected } = computeAdjustableTotals(data, fieldGroups);
     // Structure the data to match backend API expectations
     const structuredData = {
       // Employment and Salary
@@ -844,6 +880,7 @@ const AdjustableTaxForm = () => {
     await syncInputsToForm();
 
     const data = getValues();
+    const { totalGrossReceipt, totalTaxCollected } = computeAdjustableTotals(data, fieldGroups);
 
     // Structure the data to match backend API expectations
     const structuredData = {
@@ -1090,6 +1127,15 @@ const AdjustableTaxForm = () => {
         handleSubmit(onSubmit)(e);
       }}
     >
+      {/* Headless: per-field auto-calc (gross × WHT rate) via useWatch. */}
+      <AdjustableAutoCalc
+        control={control}
+        setValue={setValue}
+        rates={rates}
+        whtRate={whtRate}
+        isLoadingFromDB={isLoadingFromDB}
+      />
+
       <TaxFormShell
         title="Adjustable tax"
         subtitle="Withholding tax from your certificates"
@@ -1140,9 +1186,9 @@ const AdjustableTaxForm = () => {
               onToggle={() => toggleSection(key)}
             >
               {fields.map((field) => {
-                const grossVal = watchedValues[field.grossField];
+                const grossVal = getValues(field.grossField);
                 const isAutoFetched = field.autoFetch && grossVal > 0;
-                const autoRate = field.autoCalculateTax ? resolveFieldRate(field, watchedValues[field.atlStatusField]) : null;
+                const autoRate = field.autoCalculateTax ? resolveFieldRate(field, getValues(field.atlStatusField)) : null;
                 return (
                   <div key={field.key} className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_150px_150px] md:items-start md:gap-4">
                     <div className="min-w-0">
@@ -1157,7 +1203,7 @@ const AdjustableTaxForm = () => {
                             id={field.atlStatusField}
                             key={`${field.atlStatusField}-${refreshKey}`}
                             {...register(field.atlStatusField)}
-                            defaultValue={watchedValues[field.atlStatusField] || 'ATL'}
+                            defaultValue={getValues(field.atlStatusField) || 'ATL'}
                             className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                           >
                             <option value="ATL">Filer (ATL) — 10%</option>
@@ -1178,7 +1224,7 @@ const AdjustableTaxForm = () => {
                         aria-invalid={errors[field.grossField] ? true : undefined}
                         placeholder="0"
                         readOnly={isAutoFetched}
-                        defaultValue={formatNumber(watchedValues[field.grossField])}
+                        defaultValue={formatNumber(getValues(field.grossField))}
                         onFocus={(e) => handleNumberFocus(field.grossField, e)}
                         onChange={(e) => handleNumberInput(field.grossField, e)}
                         onBlur={(e) => handleNumberBlur(field.grossField, e)}
@@ -1199,7 +1245,7 @@ const AdjustableTaxForm = () => {
                           aria-label={`${field.label} — tax collected`}
                           aria-invalid={errors[field.taxField] ? true : undefined}
                           placeholder="0"
-                          defaultValue={formatNumber(watchedValues[field.taxField])}
+                          defaultValue={formatNumber(getValues(field.taxField))}
                           onFocus={(e) => handleNumberFocus(field.taxField, e)}
                           onChange={(e) => handleNumberInput(field.taxField, e)}
                           onBlur={(e) => handleNumberBlur(field.taxField, e)}
@@ -1211,8 +1257,8 @@ const AdjustableTaxForm = () => {
                             aria-label="Reset to auto-calculated value"
                             title="Reset to auto-calculated value"
                             onClick={() => {
-                              const gross = parseFloat(watchedValues[field.grossField]) || 0;
-                              const rate = resolveFieldRate(field, watchedValues[field.atlStatusField]);
+                              const gross = parseFloat(getValues(field.grossField)) || 0;
+                              const rate = resolveFieldRate(field, getValues(field.atlStatusField));
                               setValue(field.taxField, Math.round(gross * rate));
                               setRefreshKey((k) => k + 1);
                             }}
@@ -1254,20 +1300,7 @@ const AdjustableTaxForm = () => {
         })()}
 
         {/* Totals — navy card; tax collected shown as a lime credit. */}
-        <div className="rounded-brand-lg bg-navy p-5">
-          <h3 className="mb-3 font-body text-xs font-bold uppercase tracking-wider text-white/60">Summary total</h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-brand bg-white/5 p-3">
-              <span className="block font-body text-xs font-medium uppercase tracking-wider text-white/60">Amount on certificate</span>
-              <span className="mt-1 block break-all font-mono text-lg font-bold tabular-nums text-white">{formatCurrency(totalGrossReceipt)}</span>
-            </div>
-            <div className="rounded-brand bg-lime/15 p-3 ring-1 ring-lime/30">
-              <span className="block font-body text-xs font-medium uppercase tracking-wider text-lime">Tax collected (credit)</span>
-              <span className="mt-1 block break-all font-mono text-lg font-bold tabular-nums text-lime">{formatCurrency(totalTaxCollected)}</span>
-            </div>
-          </div>
-          <p className="mt-3 text-center font-body text-xs text-white/60">Tax collected is adjusted against your final tax liability.</p>
-        </div>
+        <AdjustableTotals control={control} fieldGroups={fieldGroups} />
       </TaxFormShell>
     </form>
   );
