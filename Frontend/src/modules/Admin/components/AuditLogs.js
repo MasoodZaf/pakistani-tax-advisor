@@ -17,16 +17,16 @@ const S = () => (
 );
 
 const ACTION_COLORS = {
-  login:              'bg-blue-50 text-blue-700',
-  admin_assisted_login: 'bg-purple-50 text-purple-700',
+  login:              'bg-navy/5 text-navy',
+  admin_assisted_login: 'bg-navy/5 text-navy',
   create:             'bg-green-50 text-green-700',
   update:             'bg-yellow-50 text-yellow-700',
   delete:             'bg-red-50 text-red-700',
-  password_change:    'bg-orange-50 text-orange-700',
-  password_reset:     'bg-orange-50 text-orange-700',
-  clone:              'bg-teal-50 text-teal-700',
-  EXCEL_IMPORT:       'bg-indigo-50 text-indigo-700',
-  EXCEL_EXPORT:       'bg-indigo-50 text-indigo-700',
+  password_change:    'bg-navy/5 text-navy',
+  password_reset:     'bg-navy/5 text-navy',
+  clone:              'bg-navy/5 text-navy',
+  EXCEL_IMPORT:       'bg-navy/5 text-navy',
+  EXCEL_EXPORT:       'bg-navy/5 text-navy',
 };
 
 const formatTime = d => new Date(d).toLocaleString('en-PK', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
@@ -65,14 +65,14 @@ export default function AuditLogs() {
       <S />
 
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-brand p-6 border border-gray-100">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-xl bg-navy/5 border border-navy/15 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-navy" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Audit Logs</h1>
+              <h1 className="text-xl font-bold text-navy">Audit Logs</h1>
               <p className="text-sm text-gray-500">{pagination.total.toLocaleString()} total entries</p>
             </div>
           </div>

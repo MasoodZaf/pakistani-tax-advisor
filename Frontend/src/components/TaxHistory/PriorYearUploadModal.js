@@ -91,7 +91,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
   const severityColor = (severity) => {
     if (severity === 'high')   return 'text-red-700 bg-red-50 border-red-200';
     if (severity === 'medium') return 'text-amber-700 bg-amber-50 border-amber-200';
-    return 'text-blue-700 bg-blue-50 border-blue-200';
+    return 'text-navy bg-navy/5 border-navy/15';
   };
 
   return (
@@ -107,15 +107,15 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Upload className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-navy/10 rounded-brand flex items-center justify-center">
+              <Upload className="w-5 h-5 text-navy" />
             </div>
             <div>
-              <h2 id="prior-year-upload-title" className="text-lg font-semibold text-gray-900">Import Prior Year Return</h2>
+              <h2 id="prior-year-upload-title" className="text-lg font-semibold text-navy">Import Prior Year Return</h2>
               <p className="text-sm text-gray-500">Upload PDF / Excel / JSON export from FBR Iris</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-brand hover:bg-gray-100">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -123,7 +123,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
         <div className="px-6 py-5 space-y-5">
 
           {/* Info banner */}
-          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          <div className="flex items-start gap-3 p-3 bg-navy/5 border border-navy/15 rounded-brand text-sm text-navy">
             <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>
               Your prior year return is stored as a <strong>read-only archive</strong> for reference.
@@ -138,7 +138,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             <select
               value={taxYear}
               onChange={e => setTaxYear(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-navy/30"
             >
               <option value="2024-25">TY 2024-25</option>
               <option value="2023-24">TY 2023-24</option>
@@ -147,15 +147,15 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
           </div>
 
           {/* Template download */}
-          <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
-            <span className="text-indigo-900">
+          <div className="flex items-center justify-between px-3 py-2 bg-navy/5 border border-navy/15 rounded-brand text-sm">
+            <span className="text-navy">
               Don't have an FBR export? Download a blank template to fill in.
             </span>
             <a
               href={`${API_BASE}/api/tax-history/template?taxYear=${taxYear}`}
               target="_blank"
               rel="noreferrer"
-              className="ml-3 px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium whitespace-nowrap"
+              className="ml-3 px-3 py-1.5 bg-navy text-white rounded-md hover:bg-navy-dark font-medium whitespace-nowrap"
             >
               Download .xlsx
             </a>
@@ -169,7 +169,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             onClick={() => fileInputRef.current?.click()}
             className={`
               border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-              ${dragOver ? 'border-indigo-400 bg-indigo-50' : 'border-gray-300 hover:border-indigo-300 hover:bg-gray-50'}
+              ${dragOver ? 'border-navy/40 bg-navy/5' : 'border-gray-300 hover:border-navy/15 hover:bg-gray-50'}
               ${file ? 'border-green-400 bg-green-50' : ''}
             `}
           >
@@ -200,7 +200,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-navy text-white rounded-brand hover:bg-navy-dark disabled:opacity-50 font-medium"
             >
               {uploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {uploading ? 'Parsing file...' : 'Upload & Parse'}
@@ -217,7 +217,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
                   { label: 'Unmatched',        value: result.summary.unmatchedFields, color: 'text-gray-700 bg-gray-50' },
                   { label: 'Rate Flags',       value: result.summary.rateFlagCount,  color: result.summary.rateFlagCount > 0 ? 'text-red-700 bg-red-50' : 'text-gray-700 bg-gray-50' },
                 ].map(stat => (
-                  <div key={stat.label} className={`rounded-lg p-3 text-center border ${stat.color}`}>
+                  <div key={stat.label} className={`rounded-brand p-3 text-center border ${stat.color}`}>
                     <div className="text-2xl font-bold">{stat.value}</div>
                     <div className="text-xs mt-0.5">{stat.label}</div>
                   </div>
@@ -226,7 +226,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
 
               {/* Rate-change warnings */}
               {result.warnings && result.warnings.length > 0 && (
-                <div className="border border-amber-200 rounded-lg overflow-hidden">
+                <div className="border border-amber-200 rounded-brand overflow-hidden">
                   <button
                     onClick={() => setShowWarnings(w => !w)}
                     className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 text-amber-800 text-sm font-medium"
@@ -255,7 +255,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
 
               {/* No warnings case */}
               {(!result.warnings || result.warnings.length === 0) && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-brand text-sm text-green-800">
                   <CheckCircle className="w-4 h-4 flex-shrink-0" />
                   No rate-change warnings — all mapped fields are safe to carry forward.
                 </div>
@@ -265,13 +265,13 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => { setResult(null); setFile(null); }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-brand hover:bg-gray-50 text-sm"
                 >
                   Upload Different File
                 </button>
                 <button
                   onClick={handleDone}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm font-medium"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Done

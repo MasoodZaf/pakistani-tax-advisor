@@ -124,8 +124,8 @@ const UserImpersonation = ({ onClose }) => {
 
   const getRoleColor = (role) => {
     const colors = {
-      'user': 'bg-blue-100 text-blue-800',
-      'admin': 'bg-purple-100 text-purple-800',
+      'user': 'bg-navy/10 text-navy',
+      'admin': 'bg-navy/10 text-navy',
       'super_admin': 'bg-red-100 text-red-800'
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
@@ -145,11 +145,11 @@ const UserImpersonation = ({ onClose }) => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="admin-impersonation-denied-title"
-          className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4 outline-none"
+          className="bg-white p-8 rounded-brand shadow-xl max-w-md w-full mx-4 outline-none"
         >
           <div className="text-center">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-navy mb-2">Access Denied</h2>
             <p className="text-gray-600 mb-6">
               Only Super Admin can access user impersonation features.
             </p>
@@ -172,10 +172,10 @@ const UserImpersonation = ({ onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-impersonation-title"
-        className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden outline-none"
+        className="bg-white rounded-brand shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden outline-none"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+        <div className="bg-navy   px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Shield className="w-6 h-6 text-white" />
@@ -217,7 +217,7 @@ const UserImpersonation = ({ onClose }) => {
                   placeholder="Search users by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ const UserImpersonation = ({ onClose }) => {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="all">All Roles</option>
                 <option value="user">Users</option>
@@ -236,7 +236,7 @@ const UserImpersonation = ({ onClose }) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -246,7 +246,7 @@ const UserImpersonation = ({ onClose }) => {
               <button
                 onClick={loadUserCredentials}
                 disabled={loading}
-                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-brand hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -295,7 +295,7 @@ const UserImpersonation = ({ onClose }) => {
                           <User className="w-5 h-5 text-gray-500" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-navy">
                             {targetUser.name}
                           </div>
                           <div className="text-sm text-gray-500">
@@ -317,12 +317,12 @@ const UserImpersonation = ({ onClose }) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-1">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-navy">
                             {targetUser.total_tax_returns} returns
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                             <div 
-                              className="bg-blue-500 h-2 rounded-full" 
+                              className="bg-navy h-2 rounded-full" 
                               style={{ width: `${targetUser.completion_percentage}%` }}
                             ></div>
                           </div>
@@ -342,7 +342,7 @@ const UserImpersonation = ({ onClose }) => {
                       <button
                         onClick={() => handleImpersonateUser(targetUser)}
                         disabled={!targetUser.is_active || impersonating}
-                        className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center px-3 py-2 bg-red-600 text-white rounded-brand hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <LogIn className="w-4 h-4 mr-2" />
                         {impersonating ? 'Switching...' : 'Login As User'}
