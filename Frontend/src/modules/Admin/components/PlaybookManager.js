@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X } from 'lucide-react';
+import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X, Download, Upload } from 'lucide-react';
 
 const FORM_STEPS = ['', 'deductions', 'credits', 'reductions', 'income', 'adjustable-tax', 'final-min-income', 'capital-gains'];
 const EMPTY = { title: '', profile: '', relief: '', section: '', cap_note: '', how_to: '', caveat: '', form_step: '' };
@@ -19,6 +19,40 @@ const PlaybookManager = () => {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const downloadTemplate = async () => {
+    try {
+      const res = await axios.get('/api/admin/playbook/template', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'tax-efficiency-strategy-template.md';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Could not download the template');
+    }
+  };
+
+  const importFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await axios.post('/api/admin/playbook/import', fd);
+      const { imported = 0, skipped = 0 } = res.data || {};
+      toast.success(`Imported ${imported} strateg${imported === 1 ? 'y' : 'ies'} as drafts${skipped ? ` (${skipped} skipped)` : ''} — review & approve below.`);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Import failed — use the provided template.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,6 +130,13 @@ const PlaybookManager = () => {
             <button onClick={load} className="flex items-center gap-2 text-sm text-gray-500 hover:text-navy px-3 py-1.5 border border-gray-200 rounded-brand">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
+            <button onClick={downloadTemplate} title="Download the file to send to consultants" className="flex items-center gap-2 text-sm text-navy px-3 py-1.5 border border-navy/15 rounded-brand hover:bg-navy/5">
+              <Download className="w-4 h-4" /> Template
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="flex items-center gap-2 text-sm font-semibold text-navy px-3 py-1.5 border border-navy/15 rounded-brand hover:bg-navy/5 disabled:opacity-50">
+              {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import
+            </button>
+            <input ref={fileInputRef} type="file" accept=".md,.txt,.csv,.xlsx,.xls" onChange={importFile} className="hidden" />
             <button onClick={startAdd} className="flex items-center gap-2 rounded-brand bg-lime px-4 py-2 font-semibold text-navy hover:bg-lime/80">
               <Plus className="w-4 h-4" /> Add strategy
             </button>

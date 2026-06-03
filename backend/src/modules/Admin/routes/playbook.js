@@ -14,6 +14,8 @@
  */
 
 const express = require('express');
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
 const jwtAuth = require('../../../middleware/auth');
@@ -23,6 +25,95 @@ const kb = require('../../../services/aiConsultant/knowledgeBase');
 const router = express.Router();
 
 const FORM_STEPS = ['', 'deductions', 'credits', 'reductions', 'income', 'adjustable-tax', 'final-min-income', 'capital-gains'];
+
+// The consultant template: column header (human label) → strategy field + a
+// match regex used to map a filled file's headers back to fields (order-tolerant).
+const TEMPLATE_COLUMNS = [
+  { header: 'Title (required)',            field: 'title',     match: /title/i,           example: 'Voluntary pension (VPS) contribution tax credit' },
+  { header: 'Who / when it applies',       field: 'profile',   match: /who|when|profile/i, example: 'Salaried individuals who can contribute to an approved pension fund' },
+  { header: 'Relief',                      field: 'relief',    match: /relief/i,          example: 'Tax credit for pension contribution' },
+  { header: 'Section',                     field: 'section',   match: /section/i,         example: 's.63' },
+  { header: 'Statutory cap',               field: 'cap_note',  match: /cap/i,             example: '20% of taxable income' },
+  { header: 'How to claim',                field: 'how_to',    match: /how/i,             example: 'Contribute to an SECP-approved pension fund and enter it in the Credits form.' },
+  { header: 'Caveat / eligibility',        field: 'caveat',    match: /caveat|eligib/i,   example: 'Must be an SECP-approved VPS fund; confirm eligibility.' },
+  { header: 'App form (one of: deductions/credits/reductions/income/adjustable-tax/final-min-income/capital-gains)', field: 'form_step', match: /form|step|app/i, example: 'credits' },
+];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /\.(csv|xlsx|xls)$/i.test(file.originalname);
+    cb(ok ? null : new Error('Please upload a .csv or .xlsx file'), ok);
+  },
+});
+
+// Minimal RFC-4180-ish CSV parser (handles quoted fields with commas/newlines).
+function parseCsv(text) {
+  const rows = []; let row = []; let field = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((x) => x && String(x).trim()));
+}
+
+async function parseXlsx(buffer) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer);
+  const sheet = wb.worksheets[0];
+  const rows = [];
+  sheet.eachRow((r) => {
+    const cells = [];
+    r.eachCell({ includeEmpty: true }, (cell) => {
+      const v = cell.value;
+      cells.push(v == null ? '' : (typeof v === 'object' ? (v.text || v.result || '') : String(v)));
+    });
+    rows.push(cells);
+  });
+  return rows.filter((r) => r.some((x) => x && String(x).trim()));
+}
+
+// The SIMPLE path consultants use: a markdown file of "## Strategy: <title>"
+// blocks with `Field: value` lines. Easiest to copy-paste and fill.
+function parseMarkdownStrategies(text) {
+  const get = (b, re) => { const m = b.match(re); return m ? m[1].trim() : ''; };
+  return text
+    .split(/\n(?=##\s*Strategy\s*:)/i)
+    .filter((b) => /##\s*Strategy\s*:/i.test(b))
+    .map((b) => ({
+      title:     get(b, /##\s*Strategy\s*:\s*(.+)/i),
+      profile:   get(b, /(?:^|\n)\s*(?:Who|When|Who\s*\/\s*when)[^:\n]*:\s*(.+)/i),
+      relief:    get(b, /(?:^|\n)\s*Relief\s*:\s*(.+)/i),
+      section:   get(b, /(?:^|\n)\s*Section\s*:\s*(.+)/i),
+      cap_note:  get(b, /(?:^|\n)\s*(?:Cap|Statutory cap)[^:\n]*:\s*(.+)/i),
+      how_to:    get(b, /(?:^|\n)\s*How[^:\n]*:\s*(.+)/i),
+      caveat:    get(b, /(?:^|\n)\s*(?:Caveat|Eligibility)[^:\n]*:\s*(.+)/i),
+      form_step: get(b, /(?:^|\n)\s*(?:App\s*form|Form)[^:\n]*:\s*([a-z-]+)/i),
+    }));
+}
+
+// CSV/Excel rows → strategy objects (header-mapped, order-tolerant).
+function rowsToStrategies(rows) {
+  if (!rows.length) return [];
+  const headers = rows[0].map((h) => String(h || '').trim());
+  const idx = {};
+  TEMPLATE_COLUMNS.forEach((col) => { idx[col.field] = headers.findIndex((h) => col.match.test(h)); });
+  return rows.slice(1).map((r) => {
+    const o = {};
+    TEMPLATE_COLUMNS.forEach((col) => { o[col.field] = idx[col.field] >= 0 ? String(r[idx[col.field]] || '').trim() : ''; });
+    return o;
+  });
+}
 
 function requireSuperAdmin(req, res, next) {
   if (req.user?.role !== 'super_admin') {
@@ -132,6 +223,55 @@ router.delete('/:id', jwtAuth, requireSuperAdmin, async (req, res) => {
   } catch (e) {
     logger.error('playbook delete failed', { message: e.message });
     res.status(500).json({ error: 'Failed to delete strategy' });
+  }
+});
+
+// Download the consultant template (the file admins pass to tax consultants).
+router.get('/template', jwtAuth, requireSuperAdmin, (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const file = path.join(__dirname, '../../../../data/playbook-templates/consultant-strategy-template.md');
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Template not found' });
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="tax-efficiency-strategy-template.md"');
+  fs.createReadStream(file).on('error', () => res.status(500).end()).pipe(res);
+});
+
+// Import a filled file (.md copy-paste blocks, or .csv/.xlsx). Every parsed
+// strategy lands as a DRAFT so the admin reviews + approves before it goes live.
+router.post('/import', jwtAuth, requireSuperAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+    const name = req.file.originalname.toLowerCase();
+    let parsed = [];
+    if (name.endsWith('.md') || name.endsWith('.txt')) {
+      parsed = parseMarkdownStrategies(req.file.buffer.toString('utf8'));
+    } else if (name.endsWith('.csv')) {
+      parsed = rowsToStrategies(parseCsv(req.file.buffer.toString('utf8')));
+    } else {
+      parsed = rowsToStrategies(await parseXlsx(req.file.buffer));
+    }
+    let imported = 0;
+    let skipped = 0;
+    for (const s of parsed) {
+      if (!s.title || !String(s.title).trim()) { skipped++; continue; }
+      const formStep = FORM_STEPS.includes(s.form_step) ? (s.form_step || null) : null;
+      await pool.query(
+        `INSERT INTO playbook_strategies (title, profile, relief, section, cap_note, how_to, caveat, form_step, status, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9)`,
+        [clean(s.title, 200), clean(s.profile, 2000), clean(s.relief, 200), clean(s.section, 120),
+         clean(s.cap_note, 200), clean(s.how_to, 2000), clean(s.caveat, 2000), formStep, req.user.id]
+      );
+      imported++;
+    }
+    await insertAudit(pool, { userId: req.user.id, userEmail: req.user.email, action: 'import',
+      tableName: 'playbook_strategies', category: 'tax_rate_admin', severity: 'medium',
+      ipAddress: req.ip, userAgent: req.headers['user-agent'] }).catch(() => {});
+    res.json({ success: true, imported, skipped,
+      note: 'Imported as DRAFTS — review and Approve each one to make it live in the AI.' });
+  } catch (e) {
+    logger.error('playbook import failed', { message: e.message });
+    res.status(400).json({ error: 'Could not parse the file — please use the provided template.' });
   }
 });
 
