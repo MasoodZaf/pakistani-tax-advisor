@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X, Download, Upload } from 'lucide-react';
+import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X, Download, Upload, Info, ChevronDown, Library, Lock } from 'lucide-react';
 
 const FORM_STEPS = ['', 'deductions', 'credits', 'reductions', 'income', 'adjustable-tax', 'final-min-income', 'capital-gains'];
 const EMPTY = { title: '', profile: '', relief: '', section: '', cap_note: '', how_to: '', caveat: '', form_step: '' };
@@ -20,7 +20,26 @@ const PlaybookManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [showHow, setShowHow] = useState(false);
+  const [seeded, setSeeded] = useState(null);
+  const [seededLoading, setSeededLoading] = useState(false);
+  const [showSeeded, setShowSeeded] = useState(false);
   const fileInputRef = useRef(null);
+
+  const loadSeeded = useCallback(async () => {
+    setShowSeeded((v) => !v);
+    if (seeded !== null) return;
+    setSeededLoading(true);
+    try {
+      const r = await axios.get('/api/admin/playbook/seeded');
+      if (r.data.success) setSeeded(r.data.strategies || []);
+    } catch {
+      toast.error('Could not load the seeded library');
+      setSeeded([]);
+    } finally {
+      setSeededLoading(false);
+    }
+  }, [seeded]);
 
   const downloadTemplate = async () => {
     try {
@@ -130,6 +149,9 @@ const PlaybookManager = () => {
             <button onClick={load} className="flex items-center gap-2 text-sm text-gray-500 hover:text-navy px-3 py-1.5 border border-gray-200 rounded-brand">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
+            <button onClick={loadSeeded} title="View the built-in curated strategies the AI already uses" className={`flex items-center gap-2 text-sm px-3 py-1.5 border rounded-brand ${showSeeded ? 'bg-navy text-white border-navy' : 'text-navy border-navy/15 hover:bg-navy/5'}`}>
+              <Library className="w-4 h-4" /> Seeded library
+            </button>
             <button onClick={downloadTemplate} title="Download the file to send to consultants" className="flex items-center gap-2 text-sm text-navy px-3 py-1.5 border border-navy/15 rounded-brand hover:bg-navy/5">
               <Download className="w-4 h-4" /> Template
             </button>
@@ -143,6 +165,88 @@ const PlaybookManager = () => {
           </div>
         </div>
       </div>
+
+      {/* How this works */}
+      <div className="bg-white rounded-brand shadow-brand overflow-hidden">
+        <button onClick={() => setShowHow((v) => !v)} className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left hover:bg-navy/[0.02]">
+          <span className="flex items-center gap-2 text-sm font-semibold text-navy">
+            <Info className="w-4 h-4 text-navy/60" /> How does the AI “learn” these strategies?
+          </span>
+          <ChevronDown className={`w-4 h-4 text-navy/50 transition-transform ${showHow ? 'rotate-180' : ''}`} />
+        </button>
+        {showHow && (
+          <div className="border-t border-navy/10 px-6 py-5 text-sm leading-relaxed text-gray-600 space-y-3">
+            <p>
+              The AI doesn’t need to be re-trained. Approved strategies are stored in a <strong className="text-navy">knowledge
+              base</strong> that the AI <strong className="text-navy">reads from live</strong> at the moment a taxpayer asks —
+              so the instant you <strong className="text-navy">Approve</strong> a strategy, it’s available in the next answer.
+              No training run, no waiting.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-brand bg-lime/10 p-3">
+                <p className="font-semibold text-navy">⚡ Instant</p>
+                <p className="mt-1 text-xs text-gray-600">Approve → live on the very next question. Archive → gone immediately.</p>
+              </div>
+              <div className="rounded-brand bg-lime/10 p-3">
+                <p className="font-semibold text-navy">📌 Grounded</p>
+                <p className="mt-1 text-xs text-gray-600">The AI answers <em>from</em> your text, so it can cite the section and cap — not a black-box guess.</p>
+              </div>
+              <div className="rounded-brand bg-lime/10 p-3">
+                <p className="font-semibold text-navy">🛡️ Gated</p>
+                <p className="mt-1 text-xs text-gray-600">Imported &amp; new entries start as <strong>drafts</strong> — nothing reaches taxpayers until you approve it.</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              This is called <em>retrieval</em> (RAG). It’s the right fit for tax advice, where suggestions must be accurate,
+              current, citable, and instantly retractable — all things a re-trained model can’t guarantee per-entry.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Seeded library (read-only, built-in baseline the AI already uses) */}
+      {showSeeded && (
+        <div className="bg-white rounded-brand shadow-brand p-6">
+          <div className="flex items-start gap-3 mb-1">
+            <span className="inline-grid place-items-center rounded-brand bg-navy/5 p-2 text-navy"><Library className="w-5 h-5" /></span>
+            <div>
+              <h2 className="text-lg font-semibold text-navy flex items-center gap-2">
+                Built-in seeded library
+                {seeded && <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs font-semibold text-navy">{seeded.length}</span>}
+                <span className="inline-flex items-center gap-1 rounded-full bg-lime/25 px-2 py-0.5 text-xs font-semibold text-navy"><Check className="w-3 h-3" /> live in AI</span>
+              </h2>
+              <p className="text-sm text-gray-600 mt-0.5 max-w-2xl flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                The curated baseline shipped with the app — already used by the AI. Read-only; add your own (or import) above to extend it.
+              </p>
+            </div>
+          </div>
+          {seededLoading ? (
+            <div className="text-center py-10"><RefreshCw className="w-7 h-7 text-navy animate-spin mx-auto" /></div>
+          ) : !seeded || seeded.length === 0 ? (
+            <p className="text-sm text-gray-500 py-6 text-center">No seeded strategies found.</p>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+              {seeded.map((s, i) => (
+                <div key={i} className="rounded-brand-lg border border-navy/10 bg-navy/[0.015] p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-semibold text-navy leading-snug">{s.title}</h3>
+                    <span className="shrink-0 rounded-full bg-navy/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy/70">built-in</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-navy/60 font-mono">
+                    {s.section && <span className="truncate max-w-full">{s.section}</span>}
+                    {s.form_step && <span>· {s.form_step}</span>}
+                  </div>
+                  {s.profile && <p className="mt-2 text-sm text-gray-600"><span className="font-medium text-navy">Who:</span> {s.profile}</p>}
+                  {s.why && <p className="mt-1 text-sm text-gray-600"><span className="font-medium text-navy">Why it saves:</span> {s.why}</p>}
+                  {s.how_to && <p className="mt-1 text-sm text-gray-600"><span className="font-medium text-navy">How:</span> {s.how_to}</p>}
+                  {s.caveat && <p className="mt-1 text-xs text-gray-500"><span className="font-medium">Caveat:</span> {s.caveat}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add/Edit form */}
       {showForm && (

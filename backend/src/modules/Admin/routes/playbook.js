@@ -113,6 +113,36 @@ function parseMarkdownStrategies(text) {
     .filter((s) => s.title);
 }
 
+// The CURATED seeded playbook (backend/data/knowledge-base/tax-efficiency-playbook.md)
+// uses a `**Label:**` bold format with wrapped multi-line values, and packs
+// `**formStep:** x · **Caveat:** y` onto one line. This parser reads those blocks
+// for a READ-ONLY "seeded library" view so admins can see the baseline the AI
+// already uses. (The editable DB list is separate; this file is image-baked.)
+function parseSeededPlaybook(text) {
+  return text
+    .split(/\n(?=##[ \t]+Strategy[ \t]*:)/i)
+    .filter((b) => /^##[ \t]+Strategy[ \t]*:/im.test(b))
+    .map((b) => {
+      const title = (b.match(/^##[ \t]+Strategy[ \t]*:[ \t]*(.+?)[ \t]*$/im) || [])[1]?.trim() || '';
+      const f = {};
+      const re = /\*\*([^:*]+):\*\*\s*([\s\S]*?)(?=\*\*[^:*]+:\*\*|$)/g;
+      let m;
+      while ((m = re.exec(b)) !== null) {
+        f[m[1].trim().toLowerCase()] = m[2].replace(/\s*·\s*$/, '').replace(/\s+/g, ' ').trim();
+      }
+      return {
+        title,
+        profile: f.who || '',
+        why: f['why it saves'] || f['why it matters'] || '',
+        how_to: f.how || '',
+        section: f.section || '',
+        form_step: ((f.formstep || '').match(/[a-z-]+/) || [''])[0],
+        caveat: f.caveat || '',
+      };
+    })
+    .filter((s) => s.title);
+}
+
 // CSV/Excel rows → strategy objects (header-mapped, order-tolerant).
 function rowsToStrategies(rows) {
   if (!rows.length) return [];
@@ -152,6 +182,22 @@ router.get('/', jwtAuth, requireSuperAdmin, async (req, res) => {
   } catch (e) {
     logger.error('playbook list failed', { message: e.message });
     res.status(500).json({ error: 'Failed to load playbook' });
+  }
+});
+
+// The curated, image-baked seeded playbook the AI already uses (read-only).
+// Lets admins see the built-in baseline alongside the editable DB list.
+router.get('/seeded', jwtAuth, requireSuperAdmin, (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const file = path.join(kb.BUNDLED_KB_DIR, 'tax-efficiency-playbook.md');
+  try {
+    if (!fs.existsSync(file)) return res.json({ success: true, strategies: [] });
+    const strategies = parseSeededPlaybook(fs.readFileSync(file, 'utf8'));
+    res.json({ success: true, strategies });
+  } catch (e) {
+    logger.error('playbook seeded read failed', { message: e.message });
+    res.status(500).json({ error: 'Failed to read the seeded playbook' });
   }
 });
 
