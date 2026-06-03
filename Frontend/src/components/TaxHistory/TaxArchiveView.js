@@ -137,7 +137,7 @@ const TaxArchiveView = () => {
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-lime text-navy rounded-brand hover:bg-lime/80 text-sm font-medium"
         >
           <Upload className="w-4 h-4" />
           Upload Prior Year
@@ -161,7 +161,7 @@ const TaxArchiveView = () => {
           <p className="text-gray-600 mb-3">No prior year returns archived yet.</p>
           <button
             onClick={() => setShowUpload(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-lime text-navy rounded-brand hover:bg-lime/80 text-sm"
           >
             <Upload className="w-4 h-4" />
             Upload a prior year return

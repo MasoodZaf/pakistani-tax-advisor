@@ -181,7 +181,7 @@ function ConsultantChat({
             type="button"
             onClick={() => send()}
             disabled={sending || !input.trim()}
-            className="bg-navy hover:bg-navy-dark disabled:bg-gray-300
+            className="bg-lime hover:bg-lime/80 disabled:bg-gray-300
                        text-white rounded-brand p-2 transition"
             aria-label="Send"
           >

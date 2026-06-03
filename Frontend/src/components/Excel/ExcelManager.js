@@ -333,7 +333,7 @@ const ExcelManager = () => {
                       <button
                         onClick={handleExport}
                         disabled={loading || !selectedYear}
-                        className="flex items-center space-x-2 bg-navy text-white px-6 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:bg-gray-400"
+                        className="flex items-center space-x-2 bg-lime text-navy px-6 py-2 rounded-brand hover:bg-lime/80 transition-colors disabled:bg-gray-400"
                       >
                         {loading ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />

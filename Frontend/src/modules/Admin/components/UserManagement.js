@@ -186,7 +186,7 @@ const UserManagement = () => {
           </div>
           <button 
             onClick={() => setShowAddUser(true)}
-            className="bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors flex items-center space-x-2"
+            className="bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
             <span>Add User</span>
@@ -524,7 +524,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50"
+              className="flex-1 bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create User'}
             </button>
@@ -643,7 +643,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-navy text-white px-4 py-2 rounded-brand hover:bg-navy-dark transition-colors disabled:opacity-50"
+              className="flex-1 bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors disabled:opacity-50"
             >
               {loading ? 'Updating...' : 'Update User'}
             </button>

@@ -76,7 +76,7 @@ function ConsultantPage() {
           <button
             type="button"
             onClick={onNew}
-            className="w-full flex items-center justify-center gap-2 bg-navy hover:bg-navy-dark
+            className="w-full flex items-center justify-center gap-2 bg-lime hover:bg-lime/80
                        text-white rounded-brand py-2 transition"
           >
             <Plus size={16} /> New conversation

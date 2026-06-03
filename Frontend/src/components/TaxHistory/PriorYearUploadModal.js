@@ -155,7 +155,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
               href={`${API_BASE}/api/tax-history/template?taxYear=${taxYear}`}
               target="_blank"
               rel="noreferrer"
-              className="ml-3 px-3 py-1.5 bg-navy text-white rounded-md hover:bg-navy-dark font-medium whitespace-nowrap"
+              className="ml-3 px-3 py-1.5 bg-lime text-navy rounded-md hover:bg-lime/80 font-medium whitespace-nowrap"
             >
               Download .xlsx
             </a>
@@ -200,7 +200,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-navy text-white rounded-brand hover:bg-navy-dark disabled:opacity-50 font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-lime text-navy rounded-brand hover:bg-lime/80 disabled:opacity-50 font-medium"
             >
               {uploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {uploading ? 'Parsing file...' : 'Upload & Parse'}
@@ -271,7 +271,7 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
                 </button>
                 <button
                   onClick={handleDone}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-navy text-white rounded-brand hover:bg-navy-dark text-sm font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-lime text-navy rounded-brand hover:bg-lime/80 text-sm font-medium"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Done

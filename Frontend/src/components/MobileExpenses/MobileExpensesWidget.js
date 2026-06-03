@@ -186,7 +186,7 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
                   <button
                     type="button"
                     onClick={() => apply(b.key, b)}
-                    className="px-3 py-1 bg-navy text-white rounded text-sm font-medium hover:bg-navy-dark"
+                    className="px-3 py-1 bg-lime text-navy rounded text-sm font-medium hover:bg-lime/80"
                   >
                     Apply
                   </button>

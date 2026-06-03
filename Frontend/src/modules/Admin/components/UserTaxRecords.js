@@ -219,7 +219,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                     ) : (
                       <button
                         onClick={() => handleEditForm('income', formsData.income)}
-                        className="px-3 py-1 bg-navy text-white rounded text-sm hover:bg-navy-dark"
+                        className="px-3 py-1 bg-lime text-navy rounded text-sm hover:bg-lime/80"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -414,7 +414,7 @@ const UserTaxRecords = ({ userId, userName, onClose }) => {
                     ) : (
                       <button
                         onClick={() => handleEditForm('final_tax', formsData.final_tax)}
-                        className="px-3 py-1 bg-navy text-white rounded text-sm hover:bg-navy-dark"
+                        className="px-3 py-1 bg-lime text-navy rounded text-sm hover:bg-lime/80"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
