@@ -124,3 +124,12 @@ backend/data/knowledge-base/*.xlsx
 AUDIT_REPORT_2026-06-01_FULL.md
 AUDIT_LIVE_VERIFICATION_2026-06-01.md
 AUDIT_P0_FIXES_2026-06-01.md
+
+# iCloud conflict-copy files (Documents/ is iCloud-synced) — e.g. "Foo 2.js".
+# The space before the number is the tell; don't match legit "phase2.js".
+* [0-9].js
+* [0-9].jsx
+* [0-9].ts
+* [0-9].tsx
+* [0-9].yml
+* [0-9].json
