@@ -334,4 +334,5 @@ module.exports = {
   getLiveTaxRates,
   status,
   KB_DIR,
+  BUNDLED_KB_DIR,
 };
