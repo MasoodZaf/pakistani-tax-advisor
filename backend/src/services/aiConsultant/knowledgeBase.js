@@ -220,6 +220,11 @@ function retrieve(query, k = 5) {
     }
     // Slight boost for short, header-rich chunks (more likely to be definitions).
     if (c.title && c.title.length < 80) score *= 1.1;
+    // Curated playbook chunks are concise, vetted strategy summaries — surface
+    // them above raw statute when they match (the Ordinance PDF's sheer chunk
+    // volume would otherwise always crowd them out). Only matching chunks (score>0)
+    // are boosted, so this never injects irrelevant playbook entries.
+    if (score > 0 && /playbook/i.test(c.source || '')) score *= 3;
     return { c, score };
   });
   scored.sort((a, b) => b.score - a.score);
