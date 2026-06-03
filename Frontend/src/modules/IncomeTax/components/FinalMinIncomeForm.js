@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
@@ -214,6 +214,316 @@ const FIELD_DEFINITIONS = [
   }
 ];
 
+const INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15";
+const READONLY_INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-200 bg-slate-100 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500";
+
+const formatNumber = (num) => {
+  if (!num || isNaN(num)) return '';
+  return new Intl.NumberFormat('en-PK').format(num);
+};
+
+// Module-scope pure totals so both the live <TotalsCard> and onSubmit compute
+// from the same arithmetic (was an in-component closure over watch()).
+const computeTotals = (vals) => {
+  let subtotal = 0;
+  FIELD_DEFINITIONS.forEach((section) => {
+    section.fields.forEach((field) => {
+      subtotal += parseFloat(vals[field.taxChargeableField]) || 0;
+    });
+  });
+  const capitalGainTaxChargeable = parseFloat(vals.capital_gain_tax_chargeable) || 0;
+  return { subtotal, capitalGainTaxChargeable, grandTotal: subtotal + capitalGainTaxChargeable };
+};
+
+// ── PERF-02 re-render isolation ──────────────────────────────────────────────
+// These inputs are *controlled* (value bound to form state), so the old bare
+// `watch()` re-rendered the whole 900-line form on every keystroke. Each field
+// now self-subscribes (useWatch) to ONLY its own value, so typing in one row
+// re-renders just that row; the parent form no longer calls watch() at all.
+
+const EditableNum = ({ control, name, setValue, getValues, className, ...rest }) => {
+  const value = useWatch({ control, name });
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      className={className}
+      value={formatNumber(value || 0)}
+      onFocus={(e) => { e.target.value = ((getValues(name)) || 0).toString(); e.target.select(); }}
+      onChange={(e) => setValue(name, parseFloat(e.target.value.replace(/[^\d.-]/g, '')) || 0)}
+      onBlur={(e) => {
+        const numericValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+        setValue(name, numericValue);
+        e.target.value = formatNumber(numericValue);
+      }}
+      {...rest}
+    />
+  );
+};
+
+const ReadonlyNum = ({ control, name, className, ...rest }) => {
+  const value = useWatch({ control, name });
+  return <input type="text" readOnly className={className} value={formatNumber(value || 0)} placeholder="0" {...rest} />;
+};
+
+// One income row (amount / tax deducted / tax chargeable). Self-subscribes to
+// its own amount for the salary slab hint; everything else is delegated to the
+// self-subscribing inputs above.
+const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certWHT }) => {
+  const amount = useWatch({ control, name: field.amountField });
+  return (
+    <div className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-start md:gap-3">
+      {/* Description */}
+      <div className="min-w-0">
+        <div className="flex items-start gap-1.5">
+          <span className="font-body text-sm leading-snug text-slate-700">{field.label}</span>
+          <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
+        </div>
+        {field.description && <p className="mt-0.5 font-body text-xs text-slate-400">{field.description}</p>}
+        {field.slabCalculatedTaxDeducted && (() => {
+          const salary = parseFloat(amount) || 0;
+          if (salary <= 0) return null;
+          const { tax, baseTax, surcharge, slabLabel } = calcSalaryTax(salary);
+          const effectiveRate = ((tax / salary) * 100).toFixed(1);
+          return (
+            <div className="mt-1 space-y-0.5 rounded-brand border border-navy/15 bg-navy/[0.04] px-2 py-1 font-body text-xs">
+              <p className="font-semibold text-navy">FBR Finance Act 2025 slab: {slabLabel}</p>
+              {surcharge > 0 && (
+                <p className="text-slate-500">
+                  Base tax Rs {baseTax.toLocaleString()} + 9% surcharge (income &gt; Rs 10M) Rs {surcharge.toLocaleString()}
+                </p>
+              )}
+              <p className="font-semibold text-navy">
+                Total tax Rs {tax.toLocaleString()} &nbsp;·&nbsp; effective {effectiveRate}%
+              </p>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Amount */}
+      <div>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</span>
+        {field.autoPopulateAmount ? (
+          <ReadonlyNum
+            control={control}
+            name={field.amountField}
+            className={READONLY_INPUT_CLASSES}
+            aria-label={`${field.label} — amount (auto)`}
+            title="Auto-populated from Income form"
+          />
+        ) : (
+          <EditableNum
+            control={control}
+            name={field.amountField}
+            setValue={setValue}
+            getValues={getValues}
+            className={INPUT_CLASSES}
+            placeholder="0"
+            aria-label={`${field.label} — amount`}
+          />
+        )}
+      </div>
+
+      {/* Tax deducted */}
+      <div>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
+        {field.slabCalculatedTaxDeducted ? (
+          <div>
+            <div className="relative">
+              <EditableNum
+                control={control}
+                name={field.taxDeductedField}
+                setValue={setValue}
+                getValues={getValues}
+                className={`${INPUT_CLASSES} pr-8`}
+                placeholder="0"
+                aria-label={`${field.label} — tax deducted`}
+                title="FBR slab-calculated (editable for actual employer deduction)"
+              />
+              <button
+                type="button"
+                aria-label="Reset to FBR slab calculation"
+                title="Reset to FBR slab calculation"
+                onClick={() => {
+                  const salary = parseFloat(getValues(field.amountField)) || 0;
+                  const { tax } = calcSalaryTax(salary);
+                  setValue(field.taxDeductedField, tax);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-navy/50 transition-colors hover:text-navy"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </button>
+            </div>
+            {certWHT > 0 && (
+              <button
+                type="button"
+                title={`Use WHT from employer certificate: ${formatCurrency(certWHT)}`}
+                onClick={() => setValue(field.taxDeductedField, certWHT)}
+                className="mt-1 flex w-full items-center gap-1 rounded-brand border border-lime/40 bg-lime/15 px-2 py-0.5 font-body text-xs text-navy transition-colors hover:bg-lime/25"
+              >
+                <FileCheck className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                <span>Use cert. WHT: {formatCurrency(certWHT)}</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <EditableNum
+            control={control}
+            name={field.taxDeductedField}
+            setValue={setValue}
+            getValues={getValues}
+            className={INPUT_CLASSES}
+            placeholder="0"
+            aria-label={`${field.label} — tax deducted`}
+          />
+        )}
+      </div>
+
+      {/* Tax chargeable — manual for salary/arrears, auto for fixed-rate rows */}
+      <div>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax chargeable</span>
+        {field.taxChargeableManual ? (
+          <EditableNum
+            control={control}
+            name={field.taxChargeableField}
+            setValue={setValue}
+            getValues={getValues}
+            className={INPUT_CLASSES}
+            placeholder="Enter tax"
+            aria-label={`${field.label} — tax chargeable`}
+            title="Manual entry — the actual tax chargeable, for the over/under-deduction check"
+          />
+        ) : (
+          <ReadonlyNum
+            control={control}
+            name={field.taxChargeableField}
+            className={READONLY_INPUT_CLASSES}
+            aria-label={`${field.label} — tax chargeable (auto)`}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Active-taxpayer toggle — self-subscribes to is_atl so flipping filer status
+// (which re-rates every line) doesn't depend on a whole-form watch().
+const AtlToggle = ({ control, setValue }) => {
+  const isAtl = useWatch({ control, name: 'is_atl' });
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {[{ label: 'Yes — Filer', val: true }, { label: 'No — Non-filer', val: false }].map((opt) => {
+        const active = (isAtl !== false) === opt.val;
+        return (
+          <button
+            key={String(opt.val)}
+            type="button"
+            onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
+            className={`rounded-brand border px-4 py-2 font-body text-sm font-semibold transition-colors ${
+              active ? 'border-navy bg-navy text-white' : 'border-slate-300 bg-white text-navy hover:bg-navy/5'
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// Capital-gain row (read-only, auto-populated from the Capital Gain form).
+const CapitalGainRow = ({ control }) => {
+  const [cg, cgTd, cgTc] = useWatch({
+    control,
+    name: ['capital_gain', 'capital_gain_tax_deducted', 'capital_gain_tax_chargeable'],
+  });
+  return (
+    <div>
+      <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Capital gain</h2>
+      <div className="overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-center md:gap-3">
+          <div className="flex items-start gap-2">
+            <Award size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
+            <div className="min-w-0">
+              <span className="font-body text-sm text-slate-700">Capital gain (from Capital Gain form)</span>
+              <p className="font-body text-xs text-slate-400">Auto-populated — fill the Capital Gain form first</p>
+            </div>
+          </div>
+          <input type="text" className={READONLY_INPUT_CLASSES} value={formatNumber(cg)} readOnly placeholder="0" aria-label="Capital gain — amount" />
+          <input type="text" className={READONLY_INPUT_CLASSES} value={formatNumber(cgTd)} readOnly placeholder="0" aria-label="Capital gain — tax deducted" />
+          <input type="text" className={READONLY_INPUT_CLASSES} value={formatNumber(cgTc)} readOnly placeholder="0" aria-label="Capital gain — tax chargeable" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Live totals card — the only place that watches the whole form (cheap: it just
+// sums and renders two numbers), isolated so the inputs above don't re-render.
+const TotalsCard = ({ control }) => {
+  const values = useWatch({ control });
+  const { subtotal, grandTotal } = computeTotals(values || {});
+  return (
+    <div className="space-y-3 rounded-brand-lg bg-navy p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="font-body text-sm font-semibold text-white/80">Subtotal tax chargeable</h3>
+          <p className="font-body text-xs text-white/50">Excluding capital gain</p>
+        </div>
+        <p className="shrink-0 font-mono text-lg font-bold tabular-nums text-white">{formatCurrency(subtotal)}</p>
+      </div>
+      <div className="flex items-center justify-between gap-4 border-t border-white/15 pt-3">
+        <div className="min-w-0">
+          <h3 className="font-body text-sm font-bold text-white">Grand total tax chargeable</h3>
+          <p className="font-body text-xs text-white/50">Subtotal + capital-gain tax chargeable</p>
+        </div>
+        <p className="shrink-0 font-mono text-xl font-bold tabular-nums text-lime">{formatCurrency(grandTotal)}</p>
+      </div>
+    </div>
+  );
+};
+
+// Headless auto-calc — fixed-rate rows derive tax chargeable + tax deducted from
+// amount × rate (ATL-aware ×2). Self-subscribes via useWatch so the effect runs
+// without the form body re-rendering. Renders nothing.
+const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate }) => {
+  const values = useWatch({ control });
+  useEffect(() => {
+    const vals = values || {};
+    FIELD_DEFINITIONS.forEach((section) => {
+      section.fields.forEach((field) => {
+        // Skip salary row — handled by the slab-based effect elsewhere.
+        if (field.autoPopulateAmount || field.slabCalculatedTaxDeducted) return;
+        // Variable-rate rows — user enters tax manually.
+        if (field.taxRate === null) return;
+
+        const amount = parseFloat(vals[field.amountField]) || 0;
+        const baseRate = resolveFinalTaxRate(field);
+        if (baseRate === undefined || baseRate === null) return;
+
+        // ATL-aware preview: non-filers pay the higher final-tax rate. For every
+        // line in the FBR Tax Card 2025-26 the non-filer rate is exactly 2× the
+        // filer rate, so ×2 here mirrors the backend's verified pairs
+        // (config/finalMinTaxRates.js), which recompute chargeable
+        // authoritatively on save. Driven by the "Active Taxpayer?" toggle.
+        const isATL = vals.is_atl !== false;
+        const taxRate = isATL ? baseRate : baseRate * 2;
+
+        const calculatedTax = (taxRate > 0 && amount > 0) ? Math.round(amount * taxRate) : 0;
+
+        if (Math.abs((parseFloat(vals[field.taxChargeableField]) || 0) - calculatedTax) > 0.01) {
+          setValue(field.taxChargeableField, calculatedTax);
+        }
+        if (Math.abs((parseFloat(vals[field.taxDeductedField]) || 0) - calculatedTax) > 0.01) {
+          setValue(field.taxDeductedField, calculatedTax);
+        }
+      });
+    });
+  }, [values, resolveFinalTaxRate, setValue]);
+  return null;
+};
+
 const FinalMinIncomeForm = () => {
   const navigate = useNavigate();
   const {
@@ -230,11 +540,10 @@ const FinalMinIncomeForm = () => {
   const [expandedSections, setExpandedSections] = useState({
     salaryIncome: true, // Expand first section by default
   });
-  const [refreshKey, setRefreshKey] = useState(0); // Used to force re-render after data refresh
 
   const {
     handleSubmit,
-    watch,
+    control,
     setValue,
     getValues,
     reset
@@ -290,12 +599,8 @@ const FinalMinIncomeForm = () => {
     // observe it as true and skip.
     setTimeout(() => {
       isLoadingFromDB.current = false;
-      setRefreshKey((k) => k + 1);
     }, 50);
   }, [formData['final_min_income'], reset]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Watch all values for auto-calculation
-  const watchedValues = watch();
 
   // Auto-populate Capital Gain row — only when the capital-gain numbers actually
   // change, not on every formData tick. Skipped during DB reset.
@@ -388,12 +693,7 @@ const FinalMinIncomeForm = () => {
     setValue('salary_u_s_12_7', salaryAmount);
     const { tax } = calculateFBRSalaryTax(salaryAmount);
     setValue('salary_u_s_12_7_tax_deducted', tax);
-    setTimeout(() => setRefreshKey((k) => k + 1), 0);
   }, [formData['income'], rates, setValue, getStepData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // fieldDefinitions lives at module scope (see FIELD_DEFINITIONS) — no longer
-  // reallocated per render. Alias kept so existing references compile.
-  const fieldDefinitions = FIELD_DEFINITIONS;
 
   // Field-level visibility — driven by the user's income-profile addons via
   // shared/formFieldVisibility.js. Pure salaried sees 0 of the 60 buckets
@@ -412,78 +712,27 @@ const FinalMinIncomeForm = () => {
   // sections (zero visible fields) are dropped entirely so the user
   // doesn't see "Dividend Income" headers with nothing underneath.
   const visibleSections = useMemo(() => {
-    return fieldDefinitions
+    return FIELD_DEFINITIONS
       .map((sectionDef) => ({
         ...sectionDef,
         fields: sectionDef.fields.filter((f) => visibleFields.has(f.taxDeductedField)),
       }))
       .filter((s) => s.fields.length > 0);
-  }, [fieldDefinitions, visibleFields]);
+  }, [visibleFields]);
 
   // Form-accurate count: how many extra ROW items the advanced toggle
   // would reveal here (not raw column count from the manifest).
   const advancedExtraCount = useMemo(() => {
     const withAdv = visibleFieldsFor('final_min_income_forms', addons, { advanced: true });
-    const advRows = fieldDefinitions.reduce(
+    const advRows = FIELD_DEFINITIONS.reduce(
       (sum, sec) => sum + sec.fields.filter((f) => withAdv.has(f.taxDeductedField)).length, 0);
     const baseRows = visibleSections.reduce((sum, sec) => sum + sec.fields.length, 0);
     return advRows - baseRows;
-  }, [addons, fieldDefinitions, visibleSections]);
+  }, [addons, visibleSections]);
 
-  // Auto-calculate tax chargeable AND tax deducted when amount changes
-  // (fixed-rate fields only). Rate resolved via resolveFinalTaxRate which
-  // prefers DB values (rate_type='final_tax') and falls back to field.taxRate.
-  useEffect(() => {
-    fieldDefinitions.forEach(section => {
-      section.fields.forEach(field => {
-        // Skip salary row — handled by the slab-based effect elsewhere.
-        if (field.autoPopulateAmount || field.slabCalculatedTaxDeducted) return;
-        // Variable-rate rows — user enters tax manually.
-        if (field.taxRate === null) return;
-
-        const amount = parseFloat(watchedValues[field.amountField]) || 0;
-        const baseRate = resolveFinalTaxRate(field);
-        if (baseRate === undefined || baseRate === null) return;
-
-        // ATL-aware preview: non-filers pay the higher final-tax rate. For every
-        // line in the FBR Tax Card 2025-26 the non-filer rate is exactly 2× the
-        // filer rate, so ×2 here mirrors the backend's verified pairs
-        // (config/finalMinTaxRates.js), which recompute chargeable
-        // authoritatively on save. Driven by the "Active Taxpayer?" toggle.
-        const isATL = watchedValues.is_atl !== false;
-        const taxRate = isATL ? baseRate : baseRate * 2;
-
-        const calculatedTax = (taxRate > 0 && amount > 0) ? Math.round(amount * taxRate) : 0;
-
-        if (Math.abs((parseFloat(watchedValues[field.taxChargeableField]) || 0) - calculatedTax) > 0.01) {
-          setValue(field.taxChargeableField, calculatedTax);
-        }
-        if (Math.abs((parseFloat(watchedValues[field.taxDeductedField]) || 0) - calculatedTax) > 0.01) {
-          setValue(field.taxDeductedField, calculatedTax);
-        }
-      });
-    });
-  }, [watchedValues, rates, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Calculate totals
-  const calculateTotals = () => {
-    let subtotal = 0;
-
-    fieldDefinitions.forEach(section => {
-      section.fields.forEach(field => {
-        const taxChargeable = parseFloat(watchedValues[field.taxChargeableField]) || 0;
-        subtotal += taxChargeable;
-      });
-    });
-
-    // Capital Gain from separate form
-    const capitalGainTaxChargeable = parseFloat(watchedValues.capital_gain_tax_chargeable) || 0;
-    const grandTotal = subtotal + capitalGainTaxChargeable;
-
-    return { subtotal, capitalGainTaxChargeable, grandTotal };
-  };
-
-  const { subtotal, grandTotal } = calculateTotals();
+  // certificate WHT (from the Adjustable Tax form) — offered as a one-click
+  // fill on the salary tax-deducted input.
+  const certWHT = parseFloat(formData['adjustable_tax']?.salary_employees_149_tax_collected) || 0;
 
   // Helper to sync uncontrolled input values to React Hook Form before saving
   const syncInputsToForm = async () => {
@@ -498,6 +747,7 @@ const FinalMinIncomeForm = () => {
   const onSubmit = async (data) => {
     await syncInputsToForm();
     const finalData = getValues();
+    const { grandTotal } = computeTotals(finalData);
 
     // Structure the data for backend, include computed totals
     const structuredData = {
@@ -516,6 +766,7 @@ const FinalMinIncomeForm = () => {
   const onSaveAndContinue = async () => {
     await syncInputsToForm();
     const data = getValues();
+    const { grandTotal } = computeTotals(data);
 
     const structuredData = {
       ...data,
@@ -537,53 +788,17 @@ const FinalMinIncomeForm = () => {
           }
         });
 
-        // Force re-render to update input defaultValues
-        setRefreshKey(prev => prev + 1);
-
         toast.success('Form refreshed with latest calculations');
       }
     }
   };
 
-  const formatNumber = (num) => {
-    if (!num || isNaN(num)) return '';
-    return new Intl.NumberFormat('en-PK').format(num);
-  };
   const toggleSection = (sectionKey) => {
     setExpandedSections(prev => ({
       ...prev,
       [sectionKey]: !prev[sectionKey]
     }));
   };
-
-  // Input handlers
-  const handleNumberFocus = (fieldName, event) => {
-    // Remove formatting and select all
-    const currentValue = watchedValues[fieldName] || 0;
-    event.target.value = currentValue.toString();
-    event.target.select();
-  };
-
-  const handleNumberInput = (fieldName, event) => {
-    const rawValue = event.target.value;
-    const sanitized = rawValue.replace(/[^\d.-]/g, '');
-    const numericValue = parseFloat(sanitized) || 0;
-    setValue(fieldName, numericValue);
-  };
-
-  const handleNumberBlur = (fieldName, event) => {
-    const rawValue = event.target.value.replace(/,/g, '');
-    const numericValue = parseFloat(rawValue) || 0;
-
-    // Update React Hook Form state
-    setValue(fieldName, numericValue);
-
-    // Format for display
-    event.target.value = formatNumber(numericValue);
-  };
-
-  const inputClasses = "w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15";
-  const readOnlyInputClasses = "w-full rounded-brand border-[1.5px] border-slate-200 bg-slate-100 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500";
 
   const headerActions = (
     <button
@@ -618,6 +833,9 @@ const FinalMinIncomeForm = () => {
         handleSubmit(onSubmit)(e);
       }}
     >
+      {/* Headless: derives fixed-rate tax chargeable/deducted (ATL ×2 aware). */}
+      <FinalMinAutoCalc control={control} setValue={setValue} resolveFinalTaxRate={resolveFinalTaxRate} />
+
       <TaxFormShell
         title="Final / minimum tax income"
         subtitle="Income taxed at fixed or final rates"
@@ -649,23 +867,7 @@ const FinalMinIncomeForm = () => {
                 rate applied to the dividend, sukuk, prize and other income below.
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {[{ label: 'Yes — Filer', val: true }, { label: 'No — Non-filer', val: false }].map((opt) => {
-                const active = (watchedValues.is_atl !== false) === opt.val;
-                return (
-                  <button
-                    key={String(opt.val)}
-                    type="button"
-                    onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
-                    className={`rounded-brand border px-4 py-2 font-body text-sm font-semibold transition-colors ${
-                      active ? 'border-navy bg-navy text-white' : 'border-slate-300 bg-white text-navy hover:bg-navy/5'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
+            <AtlToggle control={control} setValue={setValue} />
           </div>
         </div>
 
@@ -695,160 +897,15 @@ const FinalMinIncomeForm = () => {
             onToggle={() => toggleSection(sectionDef.section)}
           >
             {sectionDef.fields.map((field) => (
-              <div key={field.amountField} className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-start md:gap-3">
-                {/* Description */}
-                <div className="min-w-0">
-                  <div className="flex items-start gap-1.5">
-                    <span className="font-body text-sm leading-snug text-slate-700">{field.label}</span>
-                    <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
-                  </div>
-                  {field.description && <p className="mt-0.5 font-body text-xs text-slate-400">{field.description}</p>}
-                  {field.slabCalculatedTaxDeducted && (() => {
-                    const salary = parseFloat(watchedValues[field.amountField]) || 0;
-                    if (salary <= 0) return null;
-                    const { tax, baseTax, surcharge, slabLabel } = calculateFBRSalaryTax(salary);
-                    const effectiveRate = ((tax / salary) * 100).toFixed(1);
-                    return (
-                      <div className="mt-1 space-y-0.5 rounded-brand border border-navy/15 bg-navy/[0.04] px-2 py-1 font-body text-xs">
-                        <p className="font-semibold text-navy">FBR Finance Act 2025 slab: {slabLabel}</p>
-                        {surcharge > 0 && (
-                          <p className="text-slate-500">
-                            Base tax Rs {baseTax.toLocaleString()} + 9% surcharge (income &gt; Rs 10M) Rs {surcharge.toLocaleString()}
-                          </p>
-                        )}
-                        <p className="font-semibold text-navy">
-                          Total tax Rs {tax.toLocaleString()} &nbsp;·&nbsp; effective {effectiveRate}%
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</span>
-                  {field.autoPopulateAmount ? (
-                    <input
-                      key={`${field.amountField}-${refreshKey}`}
-                      type="text"
-                      className={readOnlyInputClasses}
-                      value={formatNumber(watchedValues[field.amountField] || 0)}
-                      readOnly
-                      placeholder="0"
-                      aria-label={`${field.label} — amount (auto)`}
-                      title="Auto-populated from Income form"
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      className={inputClasses}
-                      placeholder="0"
-                      aria-label={`${field.label} — amount`}
-                      value={formatNumber(watchedValues[field.amountField] || 0)}
-                      onFocus={(e) => handleNumberFocus(field.amountField, e)}
-                      onChange={(e) => handleNumberInput(field.amountField, e)}
-                      onBlur={(e) => handleNumberBlur(field.amountField, e)}
-                    />
-                  )}
-                </div>
-
-                {/* Tax deducted */}
-                <div>
-                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
-                  {field.slabCalculatedTaxDeducted ? (
-                    <div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          className={`${inputClasses} pr-8`}
-                          placeholder="0"
-                          aria-label={`${field.label} — tax deducted`}
-                          value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
-                          onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
-                          onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
-                          onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
-                          title="FBR slab-calculated (editable for actual employer deduction)"
-                        />
-                        <button
-                          type="button"
-                          aria-label="Reset to FBR slab calculation"
-                          title="Reset to FBR slab calculation"
-                          onClick={() => {
-                            const salary = parseFloat(watchedValues[field.amountField]) || 0;
-                            const { tax } = calculateFBRSalaryTax(salary);
-                            setValue(field.taxDeductedField, tax);
-                            setRefreshKey((k) => k + 1);
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-navy/50 transition-colors hover:text-navy"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                        </button>
-                      </div>
-                      {(() => {
-                        const certWHT = parseFloat(formData['adjustable_tax']?.salary_employees_149_tax_collected) || 0;
-                        if (certWHT <= 0) return null;
-                        return (
-                          <button
-                            type="button"
-                            title={`Use WHT from employer certificate: ${formatCurrency(certWHT)}`}
-                            onClick={() => {
-                              setValue(field.taxDeductedField, certWHT);
-                              setRefreshKey((k) => k + 1);
-                            }}
-                            className="mt-1 flex w-full items-center gap-1 rounded-brand border border-lime/40 bg-lime/15 px-2 py-0.5 font-body text-xs text-navy transition-colors hover:bg-lime/25"
-                          >
-                            <FileCheck className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-                            <span>Use cert. WHT: {formatCurrency(certWHT)}</span>
-                          </button>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      className={inputClasses}
-                      placeholder="0"
-                      aria-label={`${field.label} — tax deducted`}
-                      value={formatNumber(watchedValues[field.taxDeductedField] || 0)}
-                      onFocus={(e) => handleNumberFocus(field.taxDeductedField, e)}
-                      onChange={(e) => handleNumberInput(field.taxDeductedField, e)}
-                      onBlur={(e) => handleNumberBlur(field.taxDeductedField, e)}
-                    />
-                  )}
-                </div>
-
-                {/* Tax chargeable — manual for salary/arrears, auto for fixed-rate rows */}
-                <div>
-                  <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax chargeable</span>
-                  {field.taxChargeableManual ? (
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      className={inputClasses}
-                      placeholder="Enter tax"
-                      aria-label={`${field.label} — tax chargeable`}
-                      value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
-                      onFocus={(e) => handleNumberFocus(field.taxChargeableField, e)}
-                      onChange={(e) => handleNumberInput(field.taxChargeableField, e)}
-                      onBlur={(e) => handleNumberBlur(field.taxChargeableField, e)}
-                      title="Manual entry — the actual tax chargeable, for the over/under-deduction check"
-                    />
-                  ) : (
-                    <input
-                      key={`${field.taxChargeableField}-${refreshKey}`}
-                      type="text"
-                      className={readOnlyInputClasses}
-                      value={formatNumber(watchedValues[field.taxChargeableField] || 0)}
-                      readOnly
-                      placeholder="0"
-                      aria-label={`${field.label} — tax chargeable (auto)`}
-                    />
-                  )}
-                </div>
-              </div>
+              <FinalMinRow
+                key={field.amountField}
+                field={field}
+                control={control}
+                setValue={setValue}
+                getValues={getValues}
+                calcSalaryTax={calculateFBRSalaryTax}
+                certWHT={certWHT}
+              />
             ))}
           </CollapsibleSection>
         ))}
@@ -866,43 +923,10 @@ const FinalMinIncomeForm = () => {
         )}
 
         {/* Capital gain row — auto-populated from the Capital Gain form. */}
-        {visibleFields.has('capital_gain_tax_deducted') && (
-          <div>
-            <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Capital gain</h2>
-            <div className="overflow-hidden rounded-brand-lg border border-slate-200">
-              <div className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-center md:gap-3">
-                <div className="flex items-start gap-2">
-                  <Award size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
-                  <div className="min-w-0">
-                    <span className="font-body text-sm text-slate-700">Capital gain (from Capital Gain form)</span>
-                    <p className="font-body text-xs text-slate-400">Auto-populated — fill the Capital Gain form first</p>
-                  </div>
-                </div>
-                <input key={`capital_gain-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain)} readOnly placeholder="0" aria-label="Capital gain — amount" />
-                <input key={`capital_gain_tax_deducted-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain_tax_deducted)} readOnly placeholder="0" aria-label="Capital gain — tax deducted" />
-                <input key={`capital_gain_tax_chargeable-${refreshKey}`} type="text" className={readOnlyInputClasses} value={formatNumber(watchedValues.capital_gain_tax_chargeable)} readOnly placeholder="0" aria-label="Capital gain — tax chargeable" />
-              </div>
-            </div>
-          </div>
-        )}
+        {visibleFields.has('capital_gain_tax_deducted') && <CapitalGainRow control={control} />}
 
         {/* Totals — navy card; grand total in lime. */}
-        <div className="space-y-3 rounded-brand-lg bg-navy p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h3 className="font-body text-sm font-semibold text-white/80">Subtotal tax chargeable</h3>
-              <p className="font-body text-xs text-white/50">Excluding capital gain</p>
-            </div>
-            <p className="shrink-0 font-mono text-lg font-bold tabular-nums text-white">{formatCurrency(subtotal)}</p>
-          </div>
-          <div className="flex items-center justify-between gap-4 border-t border-white/15 pt-3">
-            <div className="min-w-0">
-              <h3 className="font-body text-sm font-bold text-white">Grand total tax chargeable</h3>
-              <p className="font-body text-xs text-white/50">Subtotal + capital-gain tax chargeable</p>
-            </div>
-            <p className="shrink-0 font-mono text-xl font-bold tabular-nums text-lime">{formatCurrency(grandTotal)}</p>
-          </div>
-        </div>
+        <TotalsCard control={control} />
       </TaxFormShell>
     </form>
   );
