@@ -76,12 +76,10 @@ jobs:
           # /api/register's ON CONFLICT (user_id, tax_year) works.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-d-form-unique-constraints.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/phase-m-income-wealth-recon-uniques.sql
-          # ensureTaxReturn upserts tax_returns ON CONFLICT (user_id, tax_year_id);
-          # schema.sql only has (user_id, tax_year). Add the id-based one prod has.
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='tax_returns_user_year_id_unique') THEN ALTER TABLE tax_returns ADD CONSTRAINT tax_returns_user_year_id_unique UNIQUE (user_id, tax_year_id); END IF; END \$\$;"
-          # tax_returns.fk_user lacks ON DELETE CASCADE in schema.sql (prod has it);
-          # make it cascade so admin user-delete works.
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE tax_returns DROP CONSTRAINT IF EXISTS fk_user; ALTER TABLE tax_returns ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE;"
+          # NOTE: the tax_returns (user_id, tax_year_id) unique, fk_user CASCADE,
+          # and tax_rates_config (tax_year, rate_type, rate_category) unique now
+          # live in schema.sql's deploy-reconciliation block (they survive the
+          # phase loop — no phase recreates those tables), so no band-aid here.
           # filing_deadline + effective_from are NOT NULL; slab insert UPSERTs to
           # force the exact FA-2025 values (schema.sql + phases already seed slabs).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
@@ -105,11 +103,14 @@ jobs:
           "
           # Seed the super_admin that adminFlows/ratesAdmin specs log in as
           # (globalSetup.js never created it). Hash with the backend's bcrypt.
+          # onboarding_completed=true models a pre-wizard "existing" user — the
+          # onboarding spec asserts the phase-r backfill flipped such users to
+          # true (this seed runs AFTER phase-r's backfill, so it must set it).
           HASH=$(node -e "console.log(require('bcrypt').hashSync(process.env.E2E_SUPER_PASSWORD || 'PaktaxAdmin2026!', 12))")
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
-            INSERT INTO users (id, email, name, password_hash, user_type, role, is_active)
-            VALUES (gen_random_uuid(), '${E2E_SUPER_EMAIL:-superadmin@paktax.com}', 'E2E Super Admin', '$HASH', 'individual', 'super_admin', true)
-            ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, role='super_admin', is_active=true;
+            INSERT INTO users (id, email, name, password_hash, user_type, role, is_active, onboarding_completed)
+            VALUES (gen_random_uuid(), '${E2E_SUPER_EMAIL:-superadmin@paktax.com}', 'E2E Super Admin', '$HASH', 'individual', 'super_admin', true, true)
+            ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, role='super_admin', is_active=true, onboarding_completed=true;
           "
 
       - name: Boot backend

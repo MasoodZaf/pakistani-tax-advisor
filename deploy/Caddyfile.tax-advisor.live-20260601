@@ -1,0 +1,34 @@
+# CodeArc staging reverse proxy
+# Logs go to journalctl -u caddy (file logging caused permission issues with systemd sandbox)
+
+staging.codearc.aurmak.com {
+    encode gzip zstd
+
+    handle /api/* {
+        reverse_proxy localhost:5001
+    }
+
+    handle /socket.io/* {
+        reverse_proxy localhost:5001
+    }
+
+    handle {
+        reverse_proxy localhost:3000
+    }
+}
+
+# Tax App (Pakistani Tax Advisor) — frontend + backend
+tax.aurmak.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:4000
+}
+
+api.tax.aurmak.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:3001
+}
+
+staging.lab.aurmak.com {
+    encode gzip zstd
+    reverse_proxy 127.0.0.1:3200
+}

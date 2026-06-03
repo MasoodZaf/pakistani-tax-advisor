@@ -132,10 +132,15 @@ test.describe('Excel round-trip — Salaried Individuals 2025 fixture', () => {
         (inc.taxableIncomeIncludingCG || 0) >= (inc.taxableIncomeExcludingCG || 0)
       );
 
-      // Total chargeable = netTax + superTax
+      // Total chargeable = netTax + superTax + final/min-tax chargeable.
+      // (taxCalculationService composes totalTaxChargeable from all three; a
+      // salaried fixture with final/min-tax items has a non-zero third term.)
       assertOK(
-        'totalTaxChargeable === netTaxPayable + superTax',
-        Math.abs((tax.totalTaxChargeable || 0) - ((tax.netTaxPayable || 0) + (tax.superTax || 0))) < 1
+        'totalTaxChargeable === netTaxPayable + superTax + finalMinTaxChargeable',
+        Math.abs(
+          (tax.totalTaxChargeable || 0) -
+            ((tax.netTaxPayable || 0) + (tax.superTax || 0) + (tax.finalMinTaxChargeable || 0))
+        ) < 1
       );
 
       // Balance = chargeable - withholding - advance

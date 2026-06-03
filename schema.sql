@@ -1396,3 +1396,40 @@ CREATE TABLE IF NOT EXISTS wealth_statement_forms (
     CONSTRAINT wealth_statement_forms_pkey PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS idx_wealth_statement_user_year ON wealth_statement_forms (user_id, tax_year);
+
+-- =============================================================================
+-- Deploy reconciliation — constraints the live cluster carries that the table
+-- DDL above never shipped (schema.sql drift). These were hand-applied on prod
+-- one-off, so a FRESH deploy from this file would otherwise break:
+--   * admin user-delete (FK without CASCADE)
+--   * form saves (ensureTaxReturn upserts ON CONFLICT (user_id, tax_year_id))
+--   * tax-rates dedup + rates-bundle apply (ON CONFLICT needs the rates unique)
+-- All guarded so re-running schema.sql is a no-op. ADD CONSTRAINT IF NOT EXISTS
+-- only landed in PG 16; the cluster is PG 15, so we check pg_constraint first.
+-- =============================================================================
+
+-- tax_returns.fk_user must cascade so deleting a user removes their returns.
+DO $$ BEGIN
+  ALTER TABLE tax_returns DROP CONSTRAINT IF EXISTS fk_user;
+  ALTER TABLE tax_returns
+    ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE;
+END $$;
+
+-- ensureTaxReturn upserts ON CONFLICT (user_id, tax_year_id); needs this unique.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tax_returns_user_year_id_unique') THEN
+    ALTER TABLE tax_returns
+      ADD CONSTRAINT tax_returns_user_year_id_unique UNIQUE (user_id, tax_year_id);
+  END IF;
+END $$;
+
+-- taxRates.js (409 dedup) + ratesBundle.js (ON CONFLICT DO UPDATE) both rely on
+-- a unique on tax_rates_config (tax_year, rate_type, rate_category).
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tax_rates_config_year_type_category_unique') THEN
+    ALTER TABLE tax_rates_config
+      ADD CONSTRAINT tax_rates_config_year_type_category_unique
+      UNIQUE (tax_year, rate_type, rate_category);
+  END IF;
+END $$;

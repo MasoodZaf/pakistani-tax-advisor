@@ -876,7 +876,10 @@ router.get('/users/:id/tax-records', requireAdmin, async (req, res) => {
         SELECT 
           'final_tax' as form_type,
           COALESCE(total_final_tax, 0) as total_tax_liability,
-          COALESCE(debt_tax_amount, 0) as advance_tax_paid,
+          -- phase-u dropped the legacy debt_tax_amount column; its successor in
+          -- the *_gross_amount/*_tax_amount family is debt_securities_tax_amount.
+          -- Querying the dropped name 500'd this endpoint in prod.
+          COALESCE(debt_securities_tax_amount, 0) as advance_tax_paid,
           0 as withholding_tax,
           0 as refund_due,
           0 as additional_tax_due
