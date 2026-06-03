@@ -318,7 +318,8 @@ async function taxOptimization({ userId, taxYear, includePII = false, taxData })
   const q = [
     `TASK: Analyse THIS taxpayer's return for tax year ${taxYear} and identify LEGAL, ETHICAL tax-efficiency opportunities. The USER FORM CONTEXT below contains "computation" (their computed income/tax) and "claimedReliefs" (the per-relief amounts they have ALREADY entered — deductions, credits, reductions; only non-zero items are listed).`,
     ``,
-    `Consider ONLY legitimate reliefs under the Income Tax Ordinance 2001 / Finance Act 2025 — tax credits (charitable donations s.61, contribution to an approved pension fund s.63), deductible allowances (Zakat s.60, education expenses s.60C, profit on house-building loan s.60C/64), and exemptions/reductions the taxpayer's income profile makes them eligible for.`,
+    `Consider ONLY legitimate reliefs under the Income Tax Ordinance 2001 / Finance Act 2025 — tax credits (charitable donations s.61, contribution to an approved pension fund s.63), deductible allowances (Zakat s.60, education expenses, profit on house-building loan), and exemptions/reductions the taxpayer's income profile makes them eligible for.`,
+    `The KNOWLEDGE BASE EXCERPTS may include a CURATED TAX-EFFICIENCY PLAYBOOK of vetted, legal strategies (each names the relief, section, cap and the app form). When a playbook strategy fits this taxpayer's profile, PREFER it and cite it — it is the curated master reference.`,
     ``,
     `CRUCIAL — use "claimedReliefs" to distinguish "already claimed" from "could increase":`,
     `- If a relief is ABSENT from claimedReliefs (or zero), treat it as UNCLAIMED — suggest claiming it if eligible.`,
