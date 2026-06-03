@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X, Download, Upload, Info, ChevronDown, Library, Lock } from 'lucide-react';
+import { BookOpen, Plus, Check, Archive, Trash2, Edit2, RefreshCw, Sparkles, X, Download, Upload, Info, ChevronDown, Library, Lock, Copy } from 'lucide-react';
 
 const FORM_STEPS = ['', 'deductions', 'credits', 'reductions', 'income', 'adjustable-tax', 'final-min-income', 'capital-gains'];
 const EMPTY = { title: '', profile: '', relief: '', section: '', cap_note: '', how_to: '', caveat: '', form_step: '' };
@@ -86,6 +86,26 @@ const PlaybookManager = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Clone a built-in seeded strategy into the editable list as a draft so the
+  // admin can tweak it (e.g. update a cap for a new Finance Act) without touching
+  // code. The seeded "why it saves" rationale seeds the Relief field — editable.
+  const [copyingTitle, setCopyingTitle] = useState(null);
+  const copyToDraft = async (s) => {
+    setCopyingTitle(s.title);
+    try {
+      await axios.post('/api/admin/playbook', {
+        title: s.title, profile: s.profile, relief: s.why, section: s.section,
+        cap_note: '', how_to: s.how_to, caveat: s.caveat, form_step: s.form_step,
+      });
+      toast.success('Copied to your editable list as a draft — review & approve below.');
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Copy failed');
+    } finally {
+      setCopyingTitle(null);
+    }
+  };
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
@@ -241,6 +261,11 @@ const PlaybookManager = () => {
                   {s.why && <p className="mt-1 text-sm text-gray-600"><span className="font-medium text-navy">Why it saves:</span> {s.why}</p>}
                   {s.how_to && <p className="mt-1 text-sm text-gray-600"><span className="font-medium text-navy">How:</span> {s.how_to}</p>}
                   {s.caveat && <p className="mt-1 text-xs text-gray-500"><span className="font-medium">Caveat:</span> {s.caveat}</p>}
+                  <div className="mt-4">
+                    <button onClick={() => copyToDraft(s)} disabled={copyingTitle === s.title} title="Clone this built-in into your editable list as a draft you can tweak" className="inline-flex items-center gap-1 rounded-brand border border-navy/15 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-navy/5 disabled:opacity-50">
+                      {copyingTitle === s.title ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />} Copy to draft
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
