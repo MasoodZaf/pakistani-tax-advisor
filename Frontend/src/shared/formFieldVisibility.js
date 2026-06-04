@@ -188,6 +188,20 @@ const ALWAYS_VISIBLE = Object.freeze({
     'capital_gains_loss',
     'advance_tax_paid',
   ],
+
+  // final_min_income_forms — the salary lines taxed at the FBR slab / relevant
+  // rate are the salaried baseline (auto-populated from the income form), so
+  // every filer can see + edit them. Other final-tax buckets (dividends, sukuk,
+  // prizes, profit-on-debt) stay addon-gated below. Without these the Salary and
+  // Salary-Arrears rows never rendered, so that income was unenterable (UX-04).
+  final_min_income_forms: [
+    'salary_u_s_12_7',
+    'salary_u_s_12_7_tax_deducted',
+    'salary_u_s_12_7_tax_chargeable',
+    'salary_arrears_12_7_relevant_rate_amount',
+    'salary_arrears_12_7_relevant_rate_tax_deducted',
+    'salary_arrears_12_7_relevant_rate_tax_chargeable',
+  ],
 });
 
 // ───────────────────────────────────────────────────────────────────────
@@ -241,6 +255,9 @@ const ADDON_UNLOCKS = Object.freeze({
       'dividend_u_s_150_31pc_atl',
       'dividend_u_s_150_31pc_atl_tax_deducted',
       'dividend_u_s_150_31pc_atl_tax_chargeable',
+      'dividend_u_s_150_25pc_bf_losses',
+      'dividend_u_s_150_25pc_bf_losses_tax_deducted',
+      'dividend_u_s_150_25pc_bf_losses_tax_chargeable',
     ],
   },
 

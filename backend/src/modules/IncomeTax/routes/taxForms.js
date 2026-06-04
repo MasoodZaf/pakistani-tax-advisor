@@ -859,12 +859,6 @@ router.post('/adjustable-tax', auth, async (req, res) => {
     const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
     const taxYearId = taxYearRow.rows[0].id;
 
-    // Check if adjustable tax form already exists
-    const existingFormResult = await pool.query(
-      'SELECT id FROM adjustable_tax_forms WHERE user_id = $1 AND tax_year = $2',
-      [userId, taxYear]
-    );
-
     // Get FBR tax rates
     const taxRates = await TaxRateService.getWithholdingTaxRates(taxYear);
     logger.info('FBR tax rates loaded:', taxRates);
@@ -1360,49 +1354,27 @@ router.post('/adjustable-tax', auth, async (req, res) => {
       last_updated_by: userId,
     };
 
-    let result;
-    if (existingFormResult.rows.length > 0) {
-      // Update existing form
-      const updateFields = Object.keys(adjustableTaxData)
-        .filter(
-          (key) =>
-            key !== 'tax_return_id' &&
-            key !== 'user_id' &&
-            key !== 'user_email' &&
-            key !== 'tax_year_id' &&
-            key !== 'tax_year'
-        )
-        .map((key, index) => `${key} = $${index + 3}`)
-        .join(', ');
+    // Single atomic upsert (BE-05): the previous SELECT-then-UPDATE/INSERT branch
+    // was a TOCTOU race — two concurrent saves could both miss the row and both
+    // INSERT, hitting the UNIQUE(user_id, tax_year) constraint with a 500. The
+    // upsert collapses it to one statement. is_complete is sticky (BE-06).
+    const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
+    const columns = Object.keys(adjustableTaxData);
+    const values = columns.map((c) => adjustableTaxData[c]);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    const updateAssignments = columns
+      .filter((c) => !identityKeys.has(c))
+      .map((c) => c === 'is_complete'
+        ? `is_complete = adjustable_tax_forms.is_complete OR EXCLUDED.is_complete`
+        : `${c} = EXCLUDED.${c}`)
+      .concat(['updated_at = CURRENT_TIMESTAMP'])
+      .join(', ');
 
-      const updateValues = Object.keys(adjustableTaxData)
-        .filter(
-          (key) =>
-            key !== 'tax_return_id' &&
-            key !== 'user_id' &&
-            key !== 'user_email' &&
-            key !== 'tax_year_id' &&
-            key !== 'tax_year'
-        )
-        .map((key) => adjustableTaxData[key]);
-
-      result = await pool.query(
-        `UPDATE adjustable_tax_forms SET ${updateFields}, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND tax_year = $2 RETURNING *`,
-        [userId, taxYear, ...updateValues]
-      );
-    } else {
-      // Insert new form
-      const insertFields = Object.keys(adjustableTaxData).join(', ');
-      const insertPlaceholders = Object.keys(adjustableTaxData)
-        .map((_, index) => `$${index + 1}`)
-        .join(', ');
-      const insertValues = Object.values(adjustableTaxData);
-
-      result = await pool.query(
-        `INSERT INTO adjustable_tax_forms (${insertFields}) VALUES (${insertPlaceholders}) RETURNING *`,
-        insertValues
-      );
-    }
+    const result = await pool.query(
+      `INSERT INTO adjustable_tax_forms (${columns.join(', ')}) VALUES (${placeholders}) ` +
+      `ON CONFLICT (user_id, tax_year) DO UPDATE SET ${updateAssignments} RETURNING *`,
+      values
+    );
 
     logger.info(`Adjustable tax data saved for user ${userId}, tax year ${taxYear}`, {
       directorship_tax: result.rows[0].directorship_fee_149_3_tax_collected,
@@ -1505,7 +1477,12 @@ const saveFormData = async (tableName, formKey, req, res) => {
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
     const updateAssignments = columns
       .filter((c) => !identityKeys.has(c))
-      .map((c) => `${c} = EXCLUDED.${c}`)
+      // is_complete is sticky (BE-06): a partial "Save data" (is_complete=false)
+      // must not silently un-complete a form the user already finished. Only an
+      // explicit completion flips it true; OR keeps an existing true.
+      .map((c) => c === 'is_complete'
+        ? `is_complete = ${tableName}.is_complete OR EXCLUDED.is_complete`
+        : `${c} = EXCLUDED.${c}`)
       .concat(['updated_at = CURRENT_TIMESTAMP'])
       .join(', ');
 
@@ -2021,7 +1998,12 @@ router.post('/final-min-income', auth, async (req, res) => {
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
     const updateAssignments = columns
       .filter((c) => !identityKeys.has(c))
-      .map((c) => `${c} = EXCLUDED.${c}`)
+      // is_complete is sticky (BE-06): a partial "Save data" (is_complete=false)
+      // must not silently un-complete a form the user already finished. Only an
+      // explicit completion flips it true; OR keeps an existing true.
+      .map((c) => c === 'is_complete'
+        ? `is_complete = final_min_income_forms.is_complete OR EXCLUDED.is_complete`
+        : `${c} = EXCLUDED.${c}`)
       .concat(['updated_at = CURRENT_TIMESTAMP'])
       .join(', ');
 
@@ -2316,8 +2298,11 @@ router.get('/tax-computation', auth, async (req, res) => {
       // B12: Withholding Income Tax = Adjustable Tax B32 (total_adjustable_tax)
       withholding_income_tax: toNum(adjustableTaxData?.total_adjustable_tax),
 
-      // B13: Tax Credits = Credits Form total
-      tax_credits: toNum(creditsData?.total_tax_credits),
+      // B13: Tax Credits = Credits Form total. The surviving generated column is
+      // `total_credits`; `total_tax_credits` was dropped (phase-u), so reading it
+      // returned undefined → credits silently showed Rs 0 (BE-03). Prefer the
+      // real column, keep the old name as a defensive fallback.
+      tax_credits: toNum(creditsData?.total_credits ?? creditsData?.total_tax_credits),
 
       // B14: Total Reductions = Reductions Form total
       total_reductions: toNum(reductionsData?.total_reductions),
