@@ -56,8 +56,15 @@ const RegisterScreen = ({ navigation }) => {
       return false;
     }
 
-    if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+    // Mirror the backend password policy (MSEC-06): >= 12 chars, >= 1 letter,
+    // >= 1 digit. The server enforces this too; matching it client-side gives a
+    // clear error instead of a generic 400.
+    if (formData.password.length < 12) {
+      Alert.alert('Error', 'Password must be at least 12 characters long');
+      return false;
+    }
+    if (!/[A-Za-z]/.test(formData.password) || !/\d/.test(formData.password)) {
+      Alert.alert('Error', 'Password must contain at least one letter and one number');
       return false;
     }
 

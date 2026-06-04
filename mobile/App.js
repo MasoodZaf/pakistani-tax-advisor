@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -29,9 +31,18 @@ function useForegroundSync() {
 export default function App() {
   useForegroundSync();
   return (
-    <AuthProvider>
-      <AppNavigator />
-      <StatusBar style="auto" />
-    </AuthProvider>
+    // GestureHandlerRootView must be the outermost wrapper for RN Gesture
+    // Handler on Android (MOB-07); SafeAreaProvider exposes device insets so
+    // screens stop colliding with the notch / status / nav bars under Android
+    // edge-to-edge (MOB-01).
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <AppNavigator />
+          {/* App is light-themed → dark status-bar content (MOB-06). */}
+          <StatusBar style="dark" />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

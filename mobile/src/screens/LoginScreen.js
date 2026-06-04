@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const passwordRef = useRef(null); // MOB-09: keyboard "next" chaining email→password
   
   const { login, ssoLogin, loading, error } = useAuth();
 
@@ -150,6 +151,9 @@ const LoginScreen = ({ navigation }) => {
                   accessibilityLabel="Email address"
                   textContentType="emailAddress"
                   autoComplete="email"
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
               </View>
             </View>
@@ -159,6 +163,7 @@ const LoginScreen = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <MaterialIcons name="lock" size={20} color="#6b7280" style={styles.inputIcon} />
                 <TextInput
+                  ref={passwordRef}
                   style={styles.input}
                   placeholder="Enter your password"
                   value={password}
@@ -168,6 +173,8 @@ const LoginScreen = ({ navigation }) => {
                   accessibilityLabel="Password"
                   textContentType="password"
                   autoComplete="current-password"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
