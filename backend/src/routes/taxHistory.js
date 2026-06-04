@@ -30,6 +30,9 @@ const { buildTemplate } = require('../services/parsers/excelTemplate');
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },

@@ -6,6 +6,9 @@ const auth = require('../middleware/auth'); // Use standard auth middleware
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 // Get comprehensive tax calculation summary with proper calculations
 router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
   try {

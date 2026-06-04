@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const jwtAuth = require('../middleware/auth'); // JWT middleware for protected routes
 const validate = require('../middleware/validate');
 const { insertAudit } = require('../helpers/auditLog');
-const { validatePasswordPolicy, BCRYPT_ROUNDS } = require('../helpers/passwordPolicy');
+const { validatePasswordPolicy, BCRYPT_ROUNDS, DUMMY_BCRYPT_HASH } = require('../helpers/passwordPolicy');
 const oidc = require('../services/oidcVerifier');
 
 const router = express.Router();
@@ -169,7 +169,8 @@ router.post('/register', validate(registerSchema), async (req, res) => {
         email: newUser.email,
         name: newUser.name,
         role: newUser.role,
-        onboarding_completed: newUser.onboarding_completed
+        onboarding_completed: newUser.onboarding_completed,
+        token_version: newUser.token_version ?? 0
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -212,8 +213,8 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     if (adminBypassToken) {
       try {
         const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(adminBypassToken, process.env.JWT_SECRET);
-        
+        const decoded = jwt.verify(adminBypassToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+
         if (decoded.admin_assisted && decoded.user_email === email) {
           isAdminAssisted = true;
           adminInfo = {
@@ -236,13 +237,19 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 
     // Try to authenticate user (both regular and admin users are in users table)
     const user = await pool.query(`
-      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone
+      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone, token_version
       FROM users
       WHERE email = $1 AND is_active = true
     `, [email]);
 
     if (user.rows.length === 0) {
       logger.warn(`No user found for: ${email}`);
+      // Run a dummy bcrypt comparison so a non-existent account takes the same
+      // time as a wrong password — otherwise response timing leaks which emails
+      // are registered (SEC-07). Skip for admin-assisted login (no password).
+      if (!isAdminAssisted) {
+        await bcrypt.compare(password || '', DUMMY_BCRYPT_HASH);
+      }
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
@@ -271,7 +278,8 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         email: userData.email,
         name: userData.name,
         role: userData.role,
-        onboarding_completed: userData.onboarding_completed
+        onboarding_completed: userData.onboarding_completed,
+        token_version: userData.token_version ?? 0
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -515,8 +523,13 @@ router.post('/change-password', jwtAuth, async (req, res) => {
 
     const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
-    await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+    // Bump token_version so every JWT issued before this password change is
+    // immediately rejected (SEC-01) — a changed password must not leave old
+    // sessions alive on other devices.
+    const upd = await pool.query(
+      `UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
+        WHERE id = $2
+       RETURNING token_version, name, role, onboarding_completed`,
       [hashedNewPassword, userId]
     );
 
@@ -535,7 +548,24 @@ router.post('/change-password', jwtAuth, async (req, res) => {
 
     logger.info(`Password changed successfully for user: ${userEmail}`);
 
-    res.json({ success: true, message: 'Password changed successfully' });
+    // Issue a fresh token carrying the new token_version so the device that just
+    // changed the password stays signed in; every other outstanding token is now
+    // stale and will be rejected on its next request.
+    const freshUser = upd.rows[0];
+    const freshToken = jwt.sign(
+      {
+        userId,
+        email: userEmail,
+        name: freshUser.name,
+        role: freshUser.role,
+        onboarding_completed: freshUser.onboarding_completed,
+        token_version: freshUser.token_version,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ success: true, message: 'Password changed successfully', token: freshToken });
 
   } catch (error) {
     logger.error('Change password error:', error);
@@ -556,7 +586,7 @@ router.post('/onboarding/complete', jwtAuth, async (req, res) => {
     const result = await pool.query(
       `UPDATE users SET onboarding_completed = true, updated_at = NOW()
         WHERE id = $1 AND is_active = true
-       RETURNING id, email, name, role, user_type, onboarding_completed`,
+       RETURNING id, email, name, role, user_type, onboarding_completed, token_version`,
       [userId]
     );
 
@@ -573,6 +603,7 @@ router.post('/onboarding/complete', jwtAuth, async (req, res) => {
         name: u.name,
         role: u.role,
         onboarding_completed: u.onboarding_completed,
+        token_version: u.token_version ?? 0,
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -664,7 +695,7 @@ router.get('/my-activity', jwtAuth, async (req, res) => {
 async function loginViaSso(provider, claims, req) {
   // 1. Try matching by SSO identity first — the strongest signal.
   let result = await pool.query(
-    `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active
+    `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active, token_version
      FROM users
      WHERE sso_provider = $1 AND sso_subject = $2`,
     [provider, claims.sub]
@@ -709,7 +740,7 @@ async function loginViaSso(provider, claims, req) {
         sso_provider, sso_subject, email_verified,
         is_active, created_at, updated_at
        ) VALUES ($1, $2, $3, NULL, $4, $5, TRUE, TRUE, NOW(), NOW())
-       RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active`,
+       RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active, token_version`,
       [claims.email, claims.name || claims.email.split('@')[0], 'individual', provider, claims.sub]
     );
     userData = insertResult.rows[0];
@@ -733,6 +764,7 @@ async function loginViaSso(provider, claims, req) {
       name: userData.name,
       role: userData.role,
       onboarding_completed: userData.onboarding_completed,
+      token_version: userData.token_version ?? 0,
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }

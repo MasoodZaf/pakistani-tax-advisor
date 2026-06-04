@@ -7,6 +7,9 @@ const auth = require('../middleware/auth'); // Standardized JWT middleware
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),

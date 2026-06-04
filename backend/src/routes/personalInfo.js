@@ -5,6 +5,9 @@ const auth = require('../middleware/auth'); // Standardized JWT middleware
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 // GET personal information for a user and tax year
 router.get('/:taxYear', auth, async (req, res) => {
   try {

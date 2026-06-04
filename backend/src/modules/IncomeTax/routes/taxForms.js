@@ -21,6 +21,9 @@ const {
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../../../middleware/validation').validateTaxYearParam);
+
 // Helper function to recalculate form completion from database
 async function recalculateFormCompletion(userId, taxYear) {
   try {
@@ -316,7 +319,7 @@ router.get('/current-return', auth, async (req, res) => {
             finalMinData.salary_u_s_12_7 = parseFloat(
               incomeFormForFinalMin.annual_salary_wages_total
             );
-            logger.info(`Auto-linked salary amount: ${finalMinData.salary_u_s_12_7} from income: ${incomeFormForFinalMin.annual_salary_wages_total}`);
+            logger.info('Auto-linked salary amount from income form'); // amounts omitted (OBS-06)
           }
         }
 
@@ -328,7 +331,7 @@ router.get('/current-return', auth, async (req, res) => {
             finalMinData.salary_u_s_12_7_tax_deducted = parseFloat(
               adjustableTaxForFinalMin.salary_employees_149_tax_collected
             );
-            logger.info(`Auto-linked salary tax deducted: ${finalMinData.salary_u_s_12_7_tax_deducted} from adjustable: ${adjustableTaxForFinalMin.salary_employees_149_tax_collected}`);
+            logger.info('Auto-linked salary tax deducted from adjustable-tax form'); // amounts omitted (OBS-06)
           }
         }
 
@@ -447,7 +450,7 @@ router.get('/current-return', auth, async (req, res) => {
           capital_gain_tax_deducted: 0,
           capital_gain_tax_chargeable: 0,
         };
-        logger.info(`Final/min income auto-linked for user ${userId} (new record): salary=${incomeFormForFinalMin?.annual_salary_wages_total}, tax_deducted=${adjustableTaxForFinalMin?.salary_employees_149_tax_collected}`);
+        logger.info(`Final/min income auto-linked for user ${userId} (new record)`); // amounts omitted (OBS-06)
       }
     } catch (error) {
       logger.error('Error fetching final/min income data:', error);

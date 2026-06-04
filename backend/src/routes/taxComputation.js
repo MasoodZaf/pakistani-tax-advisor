@@ -18,6 +18,9 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 /**
  * GET /api/tax-computation/years/filable
  * Returns the tax years the frontend dropdown may offer. A year is "filable"

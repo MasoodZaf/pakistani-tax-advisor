@@ -6,6 +6,9 @@ const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../../../middleware/validation').validateTaxYearParam);
+
 // GET /api/wealth-statement/form/:taxYear - Get wealth statement form data
 router.get('/:taxYear', auth, async (req, res) => {
   try {

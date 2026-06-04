@@ -33,4 +33,11 @@ function validatePasswordPolicy(password, { email } = {}) {
 // hashes keep validating; only NEW hashes use the higher cost.
 const BCRYPT_ROUNDS = 12;
 
-module.exports = { validatePasswordPolicy, BCRYPT_ROUNDS };
+// A real cost-BCRYPT_ROUNDS hash of a throwaway string. The login route runs
+// bcrypt.compare() against this when the email doesn't exist, so a failed login
+// takes the same wall-clock time whether or not the account exists — closing the
+// user-enumeration timing side-channel (SEC-07). Regenerate if BCRYPT_ROUNDS
+// changes so the dummy cost matches real hashes.
+const DUMMY_BCRYPT_HASH = '$2b$12$OA3eqBiOkZzF9aFfMC3cVu85L1mF4Y4a9Lj0wTO.yUFY0gxwgArI2';
+
+module.exports = { validatePasswordPolicy, BCRYPT_ROUNDS, DUMMY_BCRYPT_HASH };

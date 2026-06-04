@@ -1352,7 +1352,7 @@ router.post('/end-impersonation', async (req, res) => {
     const token = authHeader.substring(7);
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ error: 'Invalid token' });
     }
