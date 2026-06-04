@@ -96,11 +96,11 @@ UPDATE tax_slabs
        slab_name  = v.slab_name
   FROM (VALUES
     (1, 0.00,       600000.00,  0.00, 'Slab 1 — Nil'),
-    (2, 600000.00,  1200000.00, 0.01, 'Slab 2 — 1%'),
-    (3, 1200000.00, 2200000.00, 0.11, 'Slab 3 — 11%'),
-    (4, 2200000.00, 3200000.00, 0.23, 'Slab 4 — 23%'),
-    (5, 3200000.00, 4100000.00, 0.30, 'Slab 5 — 30%'),
-    (6, 4100000.00, NULL,       0.35, 'Slab 6 — 35%')
+    (2, 600001.00,  1200000.00, 0.01, 'Slab 2 — 1%'),
+    (3, 1200001.00, 2200000.00, 0.11, 'Slab 3 — 11%'),
+    (4, 2200001.00, 3200000.00, 0.23, 'Slab 4 — 23%'),
+    (5, 3200001.00, 4100000.00, 0.30, 'Slab 5 — 30%'),
+    (6, 4100001.00, NULL,       0.35, 'Slab 6 — 35%')
   ) AS v(slab_order, min_income, max_income, tax_rate, slab_name)
  WHERE tax_slabs.tax_year_id = (SELECT id FROM ty)
    AND tax_slabs.slab_type   = 'individual'

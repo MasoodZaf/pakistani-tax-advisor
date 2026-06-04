@@ -27,11 +27,11 @@ INSERT INTO tax_slabs (
 )
 SELECT * FROM (VALUES
     ((SELECT id FROM tax_year), 'Slab 1 — Nil',     1, 0.00,      600000.00,  0.00, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
-    ((SELECT id FROM tax_year), 'Slab 2 — 1%',      2, 600000.00, 1200000.00, 0.01, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
-    ((SELECT id FROM tax_year), 'Slab 3 — 11%',     3, 1200000.00,2200000.00, 0.11, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
-    ((SELECT id FROM tax_year), 'Slab 4 — 23%',     4, 2200000.00,3200000.00, 0.23, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
-    ((SELECT id FROM tax_year), 'Slab 5 — 30%',     5, 3200000.00,4100000.00, 0.30, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
-    ((SELECT id FROM tax_year), 'Slab 6 — 35%',     6, 4100000.00,NULL,       0.35, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date)
+    ((SELECT id FROM tax_year), 'Slab 2 — 1%',      2, 600001.00, 1200000.00, 0.01, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
+    ((SELECT id FROM tax_year), 'Slab 3 — 11%',     3, 1200001.00,2200000.00, 0.11, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
+    ((SELECT id FROM tax_year), 'Slab 4 — 23%',     4, 2200001.00,3200000.00, 0.23, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
+    ((SELECT id FROM tax_year), 'Slab 5 — 30%',     5, 3200001.00,4100000.00, 0.30, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date),
+    ((SELECT id FROM tax_year), 'Slab 6 — 35%',     6, 4100001.00,NULL,       0.35, 'individual', '{"individual": true}'::jsonb, '2025-07-01'::date, '2026-06-30'::date)
 ) AS v(tax_year_id, slab_name, slab_order, min_income, max_income, tax_rate, slab_type, applicable_to, effective_from, effective_to)
 WHERE NOT EXISTS (
     SELECT 1 FROM tax_slabs

@@ -51,14 +51,16 @@ const IncomeForm = () => {
   // Format number with commas for display
   const formatNumber = (value) => {
     if (!value || value === 0) return '';
-    const intValue = Math.abs(Math.round(parseFloat(value) || 0));
+    const intValue = Math.max(0, Math.round(parseFloat(value) || 0));
     return new Intl.NumberFormat('en-US').format(intValue);
   };
 
-  // Convert value to integer for storage
+  // Convert value to integer for storage. Negatives CLAMP to 0 (Math.max, not
+  // Math.abs) to match the backend's sanitizeNumber — typing "-100" must mean 0,
+  // not silently 100 (TAX-07).
   const parseToInteger = (value) => {
     if (!value) return 0;
-    return Math.abs(Math.round(parseFloat(String(value).replace(/,/g, '')) || 0));
+    return Math.max(0, Math.round(parseFloat(String(value).replace(/,/g, '')) || 0));
   };
 
   // Process income data to exclude calculated fields and format for display
