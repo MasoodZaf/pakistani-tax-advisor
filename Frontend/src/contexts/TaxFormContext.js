@@ -264,7 +264,13 @@ export const TaxFormProvider = ({ children }) => {
 
       // Handle income form with the working income-form API
       if (step.formType === 'income-form') {
-        response = await axios.post(`/api/income-form/${currentTaxYear || '2025-26'}`, data);
+        // Don't save against a guessed year (FE-02) — bail if it hasn't loaded.
+        if (!currentTaxYear) {
+          toast.error('Tax year is still loading — please try again in a moment.');
+          setSaving(false);
+          return false;
+        }
+        response = await axios.post(`/api/income-form/${currentTaxYear}`, data);
       } else {
         response = await axios.post(`/api/tax-forms/${step.formType}`, {
           taxReturnId: activeTaxReturn.id,

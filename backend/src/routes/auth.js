@@ -437,6 +437,14 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+// Authoritative current user (FE-05). jwtAuth has already verified the token
+// signature + token_version and loaded the user row FROM THE DB, so role here is
+// server-sourced — the client uses this on bootstrap to confirm/correct the role
+// it optimistically decoded from the (locally-unverified) JWT.
+router.get('/me', jwtAuth, async (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
 // Verify session
 router.post('/verify-session', validate(verifySessionSchema), async (req, res) => {
   try {
