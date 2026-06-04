@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }) => {
       // so its `role` is not authoritative for UI gating. Confirm it against the
       // server (which re-reads the DB row) and correct it if it differs; a bad/
       // tampered token 401s here and the response interceptor logs out.
-      axios.get('/api/auth/me')
+      axios.get('/api/me')
         .then((r) => {
           const u = r.data?.user;
           if (u) setUser((prev) => (prev ? { ...prev, role: u.role, email: u.email, name: u.name } : prev));
