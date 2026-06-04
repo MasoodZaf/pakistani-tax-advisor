@@ -150,7 +150,11 @@ const TaxComputationSummary = () => {
       num(incomeData.other_sources) ||
       num(incomeData.income_from_other_sources);
     const incomeFromOtherSources = incomeFromOtherMinTax + incomeFromOtherNoMinTax;
-    const totalIncome = incomeFromSalary + incomeFromOtherSources;
+    // Capital gains computed up-front so "Total Income" can INCLUDE it, matching
+    // the backend's definition (TAX-06). The slab base below still excludes CG
+    // (it's taxed separately), so the computed tax is unchanged.
+    const capitalGainsLoss = num(capitalGainData.total_capital_gain) || num(capitalGainData.total_capital_gains);
+    const totalIncome = incomeFromSalary + incomeFromOtherSources + capitalGainsLoss;
 
     // Deductible Allowances - prefer DB-generated `total_deductions`
     // (sums zakat + ushr + POS + education + advance + other), then the
@@ -165,10 +169,7 @@ const TaxComputationSummary = () => {
        num(deductionsData.other_deductions);
     
     // Taxable Income before Capital Gains
-    const taxableIncomeBeforeCapitalGains = Math.max(0, totalIncome - deductibleAllowances);
-    
-    // Capital Gains/Loss — string-truthiness-safe via `num()`.
-    const capitalGainsLoss = num(capitalGainData.total_capital_gain) || num(capitalGainData.total_capital_gains);
+    const taxableIncomeBeforeCapitalGains = Math.max(0, totalIncome - capitalGainsLoss - deductibleAllowances);
     
     // Final Taxable Income including Capital Gains
     const taxableIncomeIncludingCapitalGains = taxableIncomeBeforeCapitalGains + capitalGainsLoss;
