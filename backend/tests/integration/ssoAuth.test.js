@@ -71,13 +71,21 @@ describe('POST /api/sso/google', () => {
     expect(res.body.error).toBe('idToken_required');
   });
 
+  test('400 when nonce is missing (SEC-03 — nonce is mandatory)', async () => {
+    const res = await request(buildApp())
+      .post('/api/sso/google')
+      .send({ idToken: 'valid' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('nonce_required');
+  });
+
   test('401 when verifier rejects the token', async () => {
     oidc._setVerifierForTests(async () => {
       throw new Error('token_expired');
     });
     const res = await request(buildApp())
       .post('/api/sso/google')
-      .send({ idToken: 'whatever' });
+      .send({ idToken: 'whatever', nonce: 'n-123' });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('token_expired');
   });
@@ -97,7 +105,7 @@ describe('POST /api/sso/google', () => {
 
     const res = await request(buildApp())
       .post('/api/sso/google')
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -129,7 +137,7 @@ describe('POST /api/sso/google', () => {
 
     const res = await request(buildApp())
       .post('/api/sso/google')
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('sso_email_conflict');
@@ -162,7 +170,7 @@ describe('POST /api/sso/google', () => {
 
     const res = await request(buildApp())
       .post('/api/sso/google')
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe('newcomer@example.com');
@@ -186,7 +194,7 @@ describe('POST /api/sso/google', () => {
 
     const res = await request(buildApp())
       .post('/api/sso/google')
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('account_disabled');
@@ -235,7 +243,7 @@ describe('POST /api/sso/link/:provider (authenticated)', () => {
     const res = await request(buildApp())
       .post('/api/sso/link/google')
       .set(authHeader(USER_ID, 'user@example.com'))
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('email_mismatch');
@@ -253,7 +261,7 @@ describe('POST /api/sso/link/:provider (authenticated)', () => {
     const res = await request(buildApp())
       .post('/api/sso/link/google')
       .set(authHeader(USER_ID, 'user@example.com'))
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('sso_already_linked');
@@ -273,7 +281,7 @@ describe('POST /api/sso/link/:provider (authenticated)', () => {
     const res = await request(buildApp())
       .post('/api/sso/link/google')
       .set(authHeader(USER_ID, 'user@example.com'))
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('sso_identity_taken');
@@ -293,7 +301,7 @@ describe('POST /api/sso/link/:provider (authenticated)', () => {
     const res = await request(buildApp())
       .post('/api/sso/link/google')
       .set(authHeader(USER_ID, 'user@example.com'))
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ success: true, provider: 'google' });
@@ -410,7 +418,7 @@ describe('POST /api/sso/apple', () => {
 
     const res = await request(buildApp())
       .post('/api/sso/apple')
-      .send({ idToken: 'valid' });
+      .send({ idToken: 'valid', nonce: 'n-123' });
 
     expect(res.status).toBe(200);
     expect(res.body.sso.provider).toBe('apple');

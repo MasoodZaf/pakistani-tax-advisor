@@ -115,6 +115,16 @@ CREATE TABLE users (
     CONSTRAINT unique_user_id_email UNIQUE (id, email)
 );
 
+-- Single-use privileged tokens — records consumed admin-assisted bypass token
+-- jtis so they can't be replayed (SEC-02 / SEC-08 / phase-z2).
+CREATE TABLE IF NOT EXISTS consumed_tokens (
+    jti         UUID PRIMARY KEY,
+    purpose     VARCHAR(64) NOT NULL,
+    consumed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at  TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_consumed_tokens_expires ON consumed_tokens(expires_at);
+
 -- User sessions table
 CREATE TABLE user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

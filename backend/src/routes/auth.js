@@ -216,6 +216,23 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         const decoded = jwt.verify(adminBypassToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
         if (decoded.admin_assisted && decoded.user_email === email) {
+          // Single-use enforcement (SEC-02): the bypass token must carry a jti
+          // and may only be redeemed once. Record it atomically — ON CONFLICT
+          // DO NOTHING means a replay inserts 0 rows and is rejected.
+          if (!decoded.jti) {
+            logger.warn(`Admin bypass token without jti rejected for ${email}`);
+            return res.status(401).json({ error: 'Invalid or expired admin bypass token' });
+          }
+          const consume = await pool.query(
+            `INSERT INTO consumed_tokens (jti, purpose, expires_at)
+             VALUES ($1, 'admin_assisted_login', to_timestamp($2))
+             ON CONFLICT (jti) DO NOTHING`,
+            [decoded.jti, decoded.exp]
+          );
+          if (consume.rowCount === 0) {
+            logger.warn(`Admin bypass token replay blocked for ${email}`);
+            return res.status(401).json({ error: 'Admin bypass token has already been used' });
+          }
           isAdminAssisted = true;
           adminInfo = {
             admin_id: decoded.admin_id,
@@ -282,7 +299,9 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         token_version: userData.token_version ?? 0
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      // Password-less admin-assisted sessions are short-lived (SEC-02); a normal
+      // password login gets the full day.
+      { expiresIn: isAdminAssisted ? '1h' : '24h' }
     );
 
     // Store session for ALL users (both admin and regular)
@@ -821,10 +840,13 @@ async function handleSsoLogin(provider, req, res) {
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
     }
-    // Nonce is optional today for backwards compatibility with older clients,
-    // but when present it must be a non-empty string. New clients always send
-    // one; once mobile is updated we can flip this to required.
-    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
+    // Nonce is MANDATORY (SEC-03): every SSO ID token must be bound to a
+    // client-generated nonce, or the anti-replay defense is inert. Web + the
+    // updated mobile client both send one; reject anything that doesn't.
+    if (typeof nonce !== 'string' || nonce.length === 0) {
+      return res.status(400).json({ error: 'nonce_required' });
+    }
+    const expectedNonce = nonce;
 
     const claims = await oidc.verify(provider, idToken, expectedNonce);
     const payload = await loginViaSso(provider, claims, req);
@@ -872,7 +894,11 @@ async function handleSsoLink(provider, req, res) {
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
     }
-    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
+    // Nonce mandatory (SEC-03) — same as the login flow.
+    if (typeof nonce !== 'string' || nonce.length === 0) {
+      return res.status(400).json({ error: 'nonce_required' });
+    }
+    const expectedNonce = nonce;
     const claims = await oidc.verify(provider, idToken, expectedNonce);
 
     const userId = req.user.id;

@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
@@ -1180,6 +1181,9 @@ router.get('/user-login-credentials/:userId', requireAdmin, async (req, res) => 
         admin_assisted: true,
         admin_id: req.user.id,
         admin_email: req.user.email,
+        // Single-use marker (SEC-02): consumed once at /api/login so the bypass
+        // token can't be replayed within its 10-minute window.
+        jti: crypto.randomUUID(),
         exp: Math.floor(Date.now() / 1000) + (10 * 60) // 10 minutes only
       },
       process.env.JWT_SECRET
