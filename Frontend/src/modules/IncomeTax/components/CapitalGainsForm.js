@@ -10,7 +10,6 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import capitalGainsHelp from '../../../help/capitalGainsHelp';
 import { formatCurrency } from '../../../utils/currency';
@@ -167,7 +166,6 @@ const CapitalGainsForm = () => {
   // self-subscribes via <LiveWhen>.
 
   // Prior year pre-fill
-  const { hasPriorData: hasPriorCG, applyPriorYear: applyPriorCG, dismissPriorYear: dismissPriorCG } = usePriorYearData('capital_gain', setValue);
 
   // Fields computed client-side (rate × gain) that have no matching DB column —
   // strip before save to avoid PostgreSQL "column does not exist" errors.
@@ -389,15 +387,6 @@ const CapitalGainsForm = () => {
           />
         }
       >
-        {hasPriorCG && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-body text-sm text-navy">Prior-year capital gains data is available. Pre-fill this form? CGT rates will be recalculated at current statutory rates.</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorCG} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
-              <button type="button" onClick={applyPriorCG} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
-            </div>
-          </div>
-        )}
 
         {/* Column headers (desktop) */}
         {(propertyItems.length > 0 || securitiesItems.length > 0) && (

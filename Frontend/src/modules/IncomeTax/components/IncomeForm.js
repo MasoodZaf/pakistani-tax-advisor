@@ -4,9 +4,8 @@ import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { DollarSign, Info, Upload } from 'lucide-react';
+import { DollarSign, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import HelpHint from '../../../components/Help/HelpHint';
 import incomeFormHelp from '../../../help/incomeFormHelp';
@@ -120,7 +119,6 @@ const IncomeForm = () => {
     handleSubmit,
     watch,
     reset,
-    setValue,
     control
   } = useForm({
     defaultValues: processIncomeData(incomeData)
@@ -130,8 +128,6 @@ const IncomeForm = () => {
   // every keystroke. The live totals are isolated in <LiveTotalsProvider> below
   // (subscribes via useWatch); inputs use register() and don't re-render.
 
-  // Prior year pre-fill
-  const { hasPriorData, applyPriorYear, dismissPriorYear } = usePriorYearData('income', setValue);
 
   // Load income form data from API - use the same endpoint that handles saving.
   // Wait for the real tax year (FE-02/03): firing before TaxYearContext resolves
@@ -349,24 +345,6 @@ const IncomeForm = () => {
           />
         }
       >
-        {hasPriorData && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 font-body text-sm text-navy">
-              <Upload size={16} aria-hidden="true" />
-              <span>Prior-year income data is available. Pre-fill this form?</span>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorYear}
-                className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                Dismiss
-              </button>
-              <button type="button" onClick={applyPriorYear}
-                className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">
-                Apply prior year
-              </button>
-            </div>
-          </div>
-        )}
 
         <CollapsibleSection title="Payments by employer" open={expandedSections.paymentsEmployer} onToggle={() => toggleSection('paymentsEmployer')}>
           <TaxFormRow name="monthly_basic_salary" label="Monthly basic salary" hint="Monthly — converted to annual" help={<HelpHint fieldId="monthly_basic_salary" source={incomeFormHelp} />} inputProps={reg('monthly_basic_salary')} />

@@ -9,7 +9,6 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalTaxHelp from '../../../help/finalTaxHelp';
 import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount } from '../../../components/forms';
@@ -145,7 +144,6 @@ const FinalTaxForm = () => {
   // <LiveTotalsProvider>; each row's auto-calc hint self-subscribes.
 
   // Prior year pre-fill
-  const { hasPriorData: hasPriorFT, applyPriorYear: applyPriorFT, dismissPriorYear: dismissPriorFT } = usePriorYearData('final_tax', setValue);
 
   const buildFinalTaxPayload = (data) => {
     const sanitized = Object.fromEntries(
@@ -271,15 +269,6 @@ const FinalTaxForm = () => {
           />
         }
       >
-        {hasPriorFT && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-body text-sm text-navy">Prior-year final tax data is available. Pre-fill this form?</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorFT} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
-              <button type="button" onClick={applyPriorFT} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
-            </div>
-          </div>
-        )}
 
         {/* Column headers (desktop) */}
         <div className="hidden grid-cols-[1fr_150px_150px] gap-4 px-1 md:grid">

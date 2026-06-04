@@ -12,7 +12,6 @@ import {
   Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import creditsHelp from '../../../help/creditsHelp';
 import { formatCurrency } from '../../../utils/currency';
@@ -163,7 +162,6 @@ const CreditsForm = () => {
   // <LiveTotalsProvider>; each row self-subscribes via <CreditItemRow>.
 
   // Prior year pre-fill
-  const { hasPriorData: hasPriorCredits, applyPriorYear: applyPriorCredits, dismissPriorYear: dismissPriorCredits } = usePriorYearData('credits', setValue);
 
   // ── Rebate-at-average-rate auto-calculation (u/s 61, 62, 63) ────────────────
   // Formula (ITO 2001):
@@ -383,15 +381,6 @@ const CreditsForm = () => {
           </div>
         )}
 
-        {hasPriorCredits && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-body text-sm text-navy">Prior-year donation / contribution data is available. Pre-fill this form?</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorCredits} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
-              <button type="button" onClick={applyPriorCredits} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
-            </div>
-          </div>
-        )}
 
         {/* Credit rows — flat list. Each item carries a Y/N selector, a donation
             amount input and an editable computed-credit input. */}

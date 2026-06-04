@@ -3,9 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Upload, Info } from 'lucide-react';
+import { Receipt, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import expensesHelp from '../../../help/expensesHelp';
 import {
@@ -34,7 +33,6 @@ const ExpensesForm = () => {
     handleSubmit,
     watch,
     reset,
-    setValue,
     control,
     formState: { errors }
   } = useForm({
@@ -54,7 +52,6 @@ const ExpensesForm = () => {
   // re-render on keystroke.
 
   // Prior year pre-fill (expenses are good candidates for year-over-year carry-forward)
-  const { hasPriorData: hasPriorExp, applyPriorYear: applyPriorExp, dismissPriorYear: dismissPriorExp } = usePriorYearData('expenses', setValue);
 
   // Auto-calculate total expenses
   const calculateTotal = (values) => {
@@ -171,24 +168,6 @@ const ExpensesForm = () => {
           />
         }
       >
-        {hasPriorExp && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 font-body text-sm text-navy">
-              <Upload size={16} aria-hidden="true" />
-              <span>Prior-year expense data is available. Pre-fill this form? Adjust for any changes in your lifestyle.</span>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorExp}
-                className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                Dismiss
-              </button>
-              <button type="button" onClick={applyPriorExp}
-                className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">
-                Apply prior year
-              </button>
-            </div>
-          </div>
-        )}
 
         <div>
           <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Housing &amp; property</h2>

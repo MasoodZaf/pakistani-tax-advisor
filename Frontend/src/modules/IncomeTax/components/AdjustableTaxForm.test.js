@@ -24,9 +24,6 @@ let mockFormData = {};
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
-jest.mock('../../../hooks/usePriorYearData', () => ({
-  usePriorYearData: () => ({ hasPriorData: false, applyPriorYear: jest.fn(), dismissPriorYear: jest.fn() }),
-}));
 jest.mock('../../../contexts/TaxFormContext', () => ({
   useTaxForm: () => ({
     saveFormStep: mockSaveFormStep,
