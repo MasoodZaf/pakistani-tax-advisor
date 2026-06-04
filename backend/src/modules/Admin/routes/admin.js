@@ -43,14 +43,18 @@ router.get('/users', requireAdmin, async (req, res) => {
       queryParams.push(`%${search}%`);
     }
     
+    // PERF-04: aggregate tax_returns in ONE join+group instead of a correlated
+    // subquery that re-ran per row (up to `limit` = 2000 times per page load).
     const result = await pool.query(`
-      SELECT 
-        id, email, name, user_type, role, is_active,
-        created_at, last_login_at,
-        (SELECT COUNT(*) FROM tax_returns WHERE user_id = users.id) as tax_returns_count
-      FROM users 
+      SELECT
+        u.id, u.email, u.name, u.user_type, u.role, u.is_active,
+        u.created_at, u.last_login_at,
+        COUNT(tr.id) as tax_returns_count
+      FROM users u
+      LEFT JOIN tax_returns tr ON tr.user_id = u.id
       ${whereClause}
-      ORDER BY created_at DESC
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
     
@@ -1088,8 +1092,14 @@ router.get('/user-credentials', requireAdmin, async (req, res) => {
       });
     }
 
+    // PERF-07: paginate — this returned EVERY non-super-admin user's row in one
+    // unbounded result. Capped page size; defaults to 50.
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 2000);
+    const offset = (page - 1) * limit;
+
     const result = await pool.query(`
-      SELECT 
+      SELECT
         u.id,
         u.name,
         u.email,
@@ -1106,7 +1116,8 @@ router.get('/user-credentials', requireAdmin, async (req, res) => {
       WHERE u.role != 'super_admin'
       GROUP BY u.id, u.name, u.email, u.role, u.user_type, u.is_active, u.created_at, u.last_login_at, fcs.completion_percentage
       ORDER BY u.created_at DESC
-    `);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
 
     // Mandatory audit — viewing credentials is privileged; no silent drop.
     await insertAudit(pool, {
@@ -1905,7 +1916,8 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
     return res.status(403).json({ error: 'Super Admin only' });
   }
   try {
-    const { page = 1, limit = 50, table_name, action, user_email, category, search } = req.query;
+    const { page = 1, table_name, action, user_email, category, search } = req.query;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 500); // PERF-07: cap page size
     const offset = (page - 1) * limit;
 
     const params = [];

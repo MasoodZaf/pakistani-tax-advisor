@@ -312,6 +312,12 @@ function gracefulShutdown(signal) {
   }
 
   server.close(async () => {
+    // Close the shared PDF browser (PERF-01 pool) so no Chromium lingers.
+    try {
+      await require('./services/pdf/browserPool').closeBrowser();
+    } catch (e) {
+      logger.error('Error closing PDF browser', { message: e?.message });
+    }
     try {
       await pool.end();
       logger.info('DB pool closed');

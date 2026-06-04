@@ -15,6 +15,16 @@ const logger = require('../utils/logger');
 
 const FILABLE_YEARS_QUERY = `SELECT id, tax_year, is_current FROM tax_years_filable ORDER BY tax_year DESC`;
 
+// ── getAllRates cache (PERF-03) ──────────────────────────────────────────────
+// Rates are once-a-year data, but every tax computation calls getAllRates,
+// which fires ~9 SELECTs. Under deadline-season load that burst repeats for
+// every compute. Cache the assembled bundle per tax year for a short TTL so
+// concurrent/repeat computes share one DB round. Admin rate writes call
+// purgeCache() for immediate consistency; the TTL is the backstop for any
+// write path that forgets to.
+const _rateCache = new Map(); // taxYear -> { data, expiresAt }
+const RATE_CACHE_TTL_MS = parseInt(process.env.TAX_RATE_CACHE_TTL_MS, 10) || 60_000;
+
 class TaxRateService {
   /** Resolve a tax_year string to its UUID, failing loudly if absent. */
   static async resolveTaxYearId(taxYear) {
@@ -185,7 +195,18 @@ class TaxRateService {
    * Load the complete rate set for a tax year in one call. Used by the compute
    * engine so it does ONE burst of DB queries per compute, not one-per-rate.
    */
+  /** Drop cached rate bundles. Call after any write to tax_slabs / tax_rates_config. */
+  static purgeCache(taxYear) {
+    if (taxYear) _rateCache.delete(taxYear);
+    else _rateCache.clear();
+  }
+
   static async getAllRates(taxYear) {
+    const cached = _rateCache.get(taxYear);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const [slabs, surcharge, superTax, creditCaps, deductionThresholds, reductions, finalTax, withholding, capitalGains] =
       await Promise.all([
         this.getSlabs(taxYear),
@@ -208,7 +229,7 @@ class TaxRateService {
         }),
       ]);
 
-    return {
+    const bundle = {
       taxYear,
       slabs,
       surcharge,
@@ -220,6 +241,8 @@ class TaxRateService {
       withholding,
       capitalGains,
     };
+    _rateCache.set(taxYear, { data: bundle, expiresAt: Date.now() + RATE_CACHE_TTL_MS });
+    return bundle;
   }
 
   /** Admin-only: update a single rate value. */
@@ -234,6 +257,7 @@ class TaxRateService {
     if (result.rows.length === 0) {
       throw new Error(`Rate ${rateType}/${rateCategory} not found for ${taxYear}`);
     }
+    this.purgeCache(taxYear);
     logger.info('Tax rate updated', { adminUserId, taxYear, rateType, rateCategory, newRate });
     return result.rows[0];
   }

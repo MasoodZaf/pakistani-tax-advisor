@@ -69,7 +69,18 @@ async function rotate(dir, keepCount) {
   return toRemove;
 }
 
+// In-flight guard (PERF-05): a dump that runs longer than the cron interval
+// must not overlap the next tick (two concurrent pg_dumps double the IO/CPU
+// load and can corrupt rotation). A skipped run is logged, not an error.
+let _running = false;
+
 async function backupOnce(now = new Date()) {
+  if (_running) {
+    logger.warn('postgres_backup skipped — previous run still in progress');
+    return { skipped: true };
+  }
+  _running = true;
+  try {
   await ensureDir();
 
   const isSunday = now.getUTCDay() === 0;
@@ -115,6 +126,9 @@ async function backupOnce(now = new Date()) {
   });
 
   return { path: filePath, size: stat.size, elapsedMs };
+  } finally {
+    _running = false;
+  }
 }
 
 module.exports = { backupOnce };
