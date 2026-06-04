@@ -6,6 +6,9 @@ const CalculationService = require('../services/calculationService');
 
 const router = express.Router();
 
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
+
 // GET /api/income-form/:taxYear - Get income form data for a specific tax year
 router.get('/:taxYear', auth, async (req, res) => {
   try {

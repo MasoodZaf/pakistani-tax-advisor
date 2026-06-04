@@ -118,11 +118,15 @@ async function verifyIdToken(providerKey, idToken, expectedNonce) {
     if (!verified) throw new Error('email_not_verified');
   }
 
-  // Nonce binding. When the caller declares the nonce it generated for this
-  // sign-in attempt, the token must echo it back. Mismatch (or missing nonce
-  // on the token side) indicates replay.
+  // Nonce binding. The token must echo back the nonce the client generated for
+  // this sign-in attempt; a mismatch (or missing token-side nonce) means replay.
+  // Web and native Google echo the RAW nonce; Apple native (Sign in with Apple)
+  // puts SHA-256(nonce) in the claim. Accept either so one client-side raw nonce
+  // works across all platforms without the client knowing the difference.
   if (expectedNonce) {
-    if (!payload.nonce || payload.nonce !== expectedNonce) {
+    const crypto = require('crypto');
+    const hashed = crypto.createHash('sha256').update(expectedNonce).digest('hex');
+    if (!payload.nonce || (payload.nonce !== expectedNonce && payload.nonce !== hashed)) {
       throw new Error('invalid_nonce');
     }
   }

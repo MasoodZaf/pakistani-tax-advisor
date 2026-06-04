@@ -123,6 +123,27 @@ describe('computeUserField()', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────
+// UX-04 regression: these final-min income rows were unenterable because their
+// tax_deducted column was absent from the manifest (the form hides any row
+// whose tax_deducted key isn't visible). Salary + arrears are salaried
+// baseline; the 25%-BF-losses dividend is gated to the dividends addon.
+// ───────────────────────────────────────────────────────────────────────
+describe('UX-04 — final-min income rows are reachable', () => {
+  test('salary + salary-arrears tax_deducted are always visible', () => {
+    const base = visibleFieldsFor('final_min_income_forms', []);
+    expect(base.has('salary_u_s_12_7_tax_deducted')).toBe(true);
+    expect(base.has('salary_arrears_12_7_relevant_rate_tax_deducted')).toBe(true);
+  });
+
+  test('25%-BF-losses dividend visible with the dividends addon, hidden without', () => {
+    const withDiv = visibleFieldsFor('final_min_income_forms', ['dividends']);
+    const without = visibleFieldsFor('final_min_income_forms', []);
+    expect(withDiv.has('dividend_u_s_150_25pc_bf_losses_tax_deducted')).toBe(true);
+    expect(without.has('dividend_u_s_150_25pc_bf_losses_tax_deducted')).toBe(false);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
 // Drift guard: the canonical manifest at /shared/formFieldVisibility.js
 // is also mirrored at /Frontend/src/shared/ because CRA's
 // ModuleScopePlugin blocks imports outside src/. The two files MUST stay

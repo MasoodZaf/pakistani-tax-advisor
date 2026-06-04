@@ -6,12 +6,16 @@ const auth = require('../middleware/auth'); // Use standard auth middleware
 
 const router = express.Router();
 
-// Get comprehensive tax calculation summary with proper calculations
-router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
-  try {
-    const { taxYear } = req.params;
-    const userId = req.user.id;
+// Validate any :taxYear segment up front (SEC-09).
+router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
 
+// Get comprehensive tax calculation summary with proper calculations
+// Build the canonical tax-calculation summary IN-PROCESS. Used by the route
+// below AND the FBR PDF endpoint — the PDF used to HTTP self-call this route
+// (PERF-02/BE-07), which added latency and risked a deadlock when the single
+// event loop was saturated under deadline-season load.
+async function buildTaxCalculationSummary(userId, taxYear) {
+  try {
     logger.info(`Generating tax calculation summary for user ${userId}, tax year ${taxYear}`);
 
     // Get form data for this user and tax year (simplified approach)
@@ -175,14 +179,23 @@ router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
       totalWithholdingTax: summary.totalWithholdingTax
     });
 
+    return reportData;
+  } catch (error) {
+    logger.error('Comprehensive tax calculation summary error:', error);
+    throw error;
+  }
+}
+
+// Thin route wrapper around the in-process helper — same response shape callers expect.
+router.get('/tax-calculation-summary/:taxYear', auth, async (req, res) => {
+  try {
+    const reportData = await buildTaxCalculationSummary(req.user.id, req.params.taxYear);
     res.json({
       success: true,
       data: reportData,
       message: 'Tax calculation summary retrieved successfully'
     });
-
   } catch (error) {
-    logger.error('Comprehensive tax calculation summary error:', error);
     res.status(500).json({
       error: 'Failed to generate comprehensive tax calculation summary',
       message: 'Internal server error: ' + error.message
@@ -478,9 +491,7 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
 
     logger.debug('FBR PDF generation', { taxReturnId, userId, userEmail });
 
-    // Get tax return summary data (reuse the logic from taxForms route)
-    const axios = require('axios');
-    const puppeteer = require('puppeteer');
+    const { renderPdf } = require('../services/pdf/browserPool');
 
     // Accept either the UUID `id` or the human-readable `return_number` so
     // callers from different surfaces (dashboard vs. tax-computation page)
@@ -500,22 +511,10 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
 
     const taxYear = taxReturnResult.rows[0].tax_year;
 
-    // Fetch the canonical calculations from /tax-calculation-summary (which
-    // now delegates to TaxCalculationService.calculateTaxComputation).
-    const summaryResponse = await axios.get(`http://localhost:${process.env.PORT || 3001}/api/reports/tax-calculation-summary/${taxYear}`, {
-      headers: {
-        Authorization: req.headers.authorization
-      }
-    });
-
-    if (!summaryResponse.data.success) {
-      return res.status(404).json({
-        error: 'Tax return not found',
-        message: 'Could not retrieve tax return data'
-      });
-    }
-
-    const apiResponse = summaryResponse.data.data;
+    // Build the canonical calculations IN-PROCESS (PERF-02/BE-07) — no HTTP
+    // self-call to our own server. Delegates to TaxCalculationService inside the
+    // shared helper, same data the summary route returns.
+    const apiResponse = await buildTaxCalculationSummary(userId, taxYear);
 
     // Refuse to stamp a PDF with all-zero tax rows. Previously the calc
     // service's error was swallowed and the PDF showed Rs 0 for every
@@ -609,43 +608,17 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
     // Generate HTML for PDF
     const htmlContent = generateFBRHTML(taxData);
 
-    // Create PDF using Puppeteer. The container uses a distro-installed
-    // Chromium at /usr/bin/chromium exposed via PUPPETEER_EXECUTABLE_PATH
-    // (set in the Dockerfile). Locally the env var is unset and Puppeteer's
-    // bundled Chromium is used.
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-
-    const page = await browser.newPage();
-
-    // Set content and wait for it to load
-    await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
-
-    // Generate PDF with FBR-specific formatting
-    const pdfBuffer = await page.pdf({
+    // Render the PDF via the shared browser pool (PERF-01) — one long-lived
+    // Chromium, a fresh page per request, capped concurrency. The container
+    // uses the distro Chromium at PUPPETEER_EXECUTABLE_PATH (set in the
+    // Dockerfile); locally Puppeteer's bundled Chromium is used. renderPdf
+    // always returns a real Buffer (Express serializes a Uint8Array as JSON).
+    const pdfBytes = await renderPdf(htmlContent, {
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '0.5in',
-        right: '0.5in',
-        bottom: '0.5in',
-        left: '0.5in'
-      },
-      displayHeaderFooter: false
+      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      displayHeaderFooter: false,
     });
-
-    await browser.close();
-
-    // Newer Puppeteer returns a Uint8Array; Express's res.send serializes
-    // typed-arrays as JSON ("{0:37,1:80,...}"). Wrap in a real Buffer so the
-    // browser receives raw PDF bytes.
-    const pdfBytes = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Tax_Return_${taxData.returnNumber || taxReturnId}_FBR.pdf`);

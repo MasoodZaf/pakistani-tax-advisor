@@ -23,12 +23,14 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Verify token — pin the algorithm so a token forged with alg:none or an
+    // asymmetric-key confusion attack (RS256→HS256) can't be accepted. We only
+    // ever sign with the HS256 default, so verification must require it too.
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
 
     // Get user from database
     const userResult = await pool.query(
-      'SELECT id, name, email, role, user_type FROM users WHERE id = $1 AND is_active = true',
+      'SELECT id, name, email, role, user_type, token_version FROM users WHERE id = $1 AND is_active = true',
       [decoded.userId]
     );
 
@@ -39,8 +41,22 @@ const auth = async (req, res, next) => {
       });
     }
 
+    // Revocation check (SEC-01): a token only stays valid while its embedded
+    // token_version matches the user's current one. Bumping the column (on
+    // password change) invalidates every previously-issued token. Tokens minted
+    // before this feature — and short-lived admin/impersonation tokens — carry
+    // no token_version; we skip the check for them so deploying this doesn't log
+    // everyone out (they expire on their own 24h TTL).
+    const u = userResult.rows[0];
+    if (decoded.token_version !== undefined && decoded.token_version !== u.token_version) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please sign in again.'
+      });
+    }
+
     // Add user to request object
-    req.user = userResult.rows[0];
+    req.user = u;
     next();
   } catch (error) {
     logger.error('Auth middleware error:', error);

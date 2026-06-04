@@ -133,13 +133,17 @@ const IncomeForm = () => {
   // Prior year pre-fill
   const { hasPriorData, applyPriorYear, dismissPriorYear } = usePriorYearData('income', setValue);
 
-  // Load income form data from API - use the same endpoint that handles saving
+  // Load income form data from API - use the same endpoint that handles saving.
+  // Wait for the real tax year (FE-02/03): firing before TaxYearContext resolves
+  // used to read a hardcoded '2025-26', risking a wrong-year read; now we skip
+  // until currentTaxYear is set and re-run if it changes.
   useEffect(() => {
+    if (!currentTaxYear) return;
     const loadIncomeData = async () => {
       try {
         setDataLoading(true);
         // Use the working income-form API directly
-        const response = await axios.get(`/api/income-form/${currentTaxYear || '2025-26'}`);
+        const response = await axios.get(`/api/income-form/${currentTaxYear}`);
 
         // Extract income form data from the response
         const incomeFormData = response.data || {};
@@ -156,7 +160,7 @@ const IncomeForm = () => {
     };
 
     loadIncomeData();
-  }, [reset]);
+  }, [currentTaxYear, reset]);
 
   // Calculate totals based on Excel formula logic - EXACTLY matching XlCal.md
   const calculateTotals = (sourceValues) => {

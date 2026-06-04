@@ -9,8 +9,20 @@ const logFormat = winston.format.combine(
   winston.format.json()
 );
 
-// Redact keys that sometimes leak into error objects / request bodies. Defensive —
-// code shouldn't be logging these, but belt-and-suspenders.
+// Mask PII that leaks into log VALUES, not just keys (OBS-06). Many call sites
+// interpolate identifiers straight into the message string
+// (e.g. `Login attempt for: ${email}`), which a key-based redactor can't catch.
+// We mask email addresses and CNIC numbers in every string value, including the
+// `message` field. Email keeps the first char + domain so logs stay correlatable
+// (a***@example.com); CNICs (13 digits, optionally 5-7-1 dashed) are fully masked.
+const EMAIL_RE = /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+const CNIC_RE = /\b\d{5}-?\d{7}-?\d\b/g;
+const maskPII = (s) =>
+  s.replace(EMAIL_RE, '$1***$2').replace(CNIC_RE, '[REDACTED_CNIC]');
+
+// Redact keys that sometimes leak into error objects / request bodies, and mask
+// PII inside string values. Defensive — code shouldn't be logging these, but
+// belt-and-suspenders.
 const redactSensitive = winston.format((info) => {
   const SENSITIVE_KEYS = new Set([
     'password', 'password_hash', 'newPassword', 'currentPassword',
@@ -21,6 +33,8 @@ const redactSensitive = winston.format((info) => {
     for (const k of Object.keys(obj)) {
       if (SENSITIVE_KEYS.has(k)) {
         obj[k] = '[REDACTED]';
+      } else if (typeof obj[k] === 'string') {
+        obj[k] = maskPII(obj[k]);
       } else if (typeof obj[k] === 'object') {
         walk(obj[k]);
       }

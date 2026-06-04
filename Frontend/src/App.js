@@ -7,6 +7,7 @@ import { TaxYearProvider } from './contexts/TaxYearContext';
 // Eager: the persistent shell + the two first-paint views (login / guest
 // landing). Keeping these in the entry bundle avoids a spinner flash on the
 // very first screen.
+import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
@@ -191,6 +192,7 @@ function App() {
               }}
             />
             
+            <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
@@ -344,6 +346,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+            </ErrorBoundary>
 
             {/* Floating tax-consultant bubble — self-renders only for
                 authenticated non-admin users when the server is configured. */}

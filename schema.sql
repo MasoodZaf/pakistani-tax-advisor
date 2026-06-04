@@ -105,6 +105,8 @@ CREATE TABLE users (
     relationship_type VARCHAR(50),
     is_active BOOLEAN DEFAULT true,
     last_login_at TIMESTAMP,
+    -- Bumped to invalidate all of a user's outstanding JWTs (SEC-01).
+    token_version INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -112,6 +114,16 @@ CREATE TABLE users (
     CONSTRAINT fk_parent_user FOREIGN KEY (parent_user_id) REFERENCES users(id),
     CONSTRAINT unique_user_id_email UNIQUE (id, email)
 );
+
+-- Single-use privileged tokens — records consumed admin-assisted bypass token
+-- jtis so they can't be replayed (SEC-02 / SEC-08 / phase-z2).
+CREATE TABLE IF NOT EXISTS consumed_tokens (
+    jti         UUID PRIMARY KEY,
+    purpose     VARCHAR(64) NOT NULL,
+    consumed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at  TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_consumed_tokens_expires ON consumed_tokens(expires_at);
 
 -- User sessions table
 CREATE TABLE user_sessions (
@@ -1433,3 +1445,7 @@ DO $$ BEGIN
       UNIQUE (tax_year, rate_type, rate_category);
   END IF;
 END $$;
+
+-- Revocable-JWT support: every user JWT embeds token_version; bumping it
+-- invalidates all of that user's outstanding tokens (SEC-01 / phase-z1).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;

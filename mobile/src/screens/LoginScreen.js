@@ -14,6 +14,7 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import Constants from 'expo-constants';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -33,7 +34,10 @@ const LoginScreen = ({ navigation }) => {
   // Three distinct credentials (iOS / Android / web fallback) are normal —
   // they map to Google Cloud Console OAuth clients per platform.
   const googleExtra = Constants.expoConfig?.extra?.google || {};
-  const [, googleResponse, promptGoogle] = Google.useIdTokenAuthRequest({
+  // expo-auth-session generates a nonce for the id_token flow and exposes it as
+  // googleRequest.nonce; Google echoes it back in the ID token. We forward that
+  // exact value to the backend, which now REQUIRES a nonce (SEC-03 / MSEC-01).
+  const [googleRequest, googleResponse, promptGoogle] = Google.useIdTokenAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleExtra.iosClientId,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleExtra.androidClientId,
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || googleExtra.webClientId,
@@ -49,12 +53,12 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
     (async () => {
-      const result = await ssoLogin('google', idToken);
+      const result = await ssoLogin('google', idToken, googleRequest?.nonce);
       if (!result.success) {
         Alert.alert('Google sign-in failed', result.error);
       }
     })();
-  }, [googleResponse, ssoLogin]);
+  }, [googleResponse, googleRequest, ssoLogin]);
 
   // Apple Sign-In is iOS-only on mobile (App Store requirement). On Android
   // the native sheet doesn't exist; we hide the button entirely rather than
@@ -69,17 +73,22 @@ const LoginScreen = ({ navigation }) => {
 
   const onApplePress = async () => {
     try {
+      // Apple hashes the supplied nonce (SHA-256) into the ID token's `nonce`
+      // claim; we send the RAW value to the backend, which accepts either the
+      // raw nonce or its SHA-256 (SEC-03 / MSEC-01).
+      const rawNonce = Crypto.randomUUID();
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: rawNonce,
       });
       if (!credential?.identityToken) {
         Alert.alert('Apple sign-in', 'No identity token returned');
         return;
       }
-      const result = await ssoLogin('apple', credential.identityToken);
+      const result = await ssoLogin('apple', credential.identityToken, rawNonce);
       if (!result.success) {
         Alert.alert('Apple sign-in failed', result.error);
       }

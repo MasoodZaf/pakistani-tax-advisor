@@ -119,11 +119,13 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
     }
 
     case 'select': {
+      // A11Y-05: a fieldset+legend names the option group for screen readers,
+      // and aria-pressed conveys which choice is selected.
       return (
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6 }}>
+        <fieldset style={{ marginBottom: 14, border: 'none', margin: 0, padding: 0 }}>
+          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, padding: 0 }}>
             {field.prompt}
-          </label>
+          </legend>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {(field.options || []).map((opt) => {
               const active = value === opt.value;
@@ -131,6 +133,7 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
                 <button
                   key={opt.value}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setValue(field.key, opt.value)}
                   style={{
                     padding: '8px 14px',
@@ -151,18 +154,19 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
             })}
           </div>
           {errMsg && (
-            <p style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{errMsg}</p>
+            <p role="alert" style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{errMsg}</p>
           )}
-        </div>
+        </fieldset>
       );
     }
 
     case 'yn': {
+      // A11Y-05: fieldset+legend group label + aria-pressed selected state.
       return (
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6 }}>
+        <fieldset style={{ marginBottom: 14, border: 'none', margin: 0, padding: 0 }}>
+          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, padding: 0 }}>
             {field.prompt}
-          </label>
+          </legend>
           <div style={{ display: 'flex', gap: 8 }}>
             {[{ v: 'Y', label: 'Yes' }, { v: 'N', label: 'No' }].map((opt) => {
               const active = value === opt.v;
@@ -170,6 +174,7 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
                 <button
                   key={opt.v}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setValue(field.key, opt.v)}
                   style={{
                     flex: 1,
@@ -190,9 +195,9 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
             })}
           </div>
           {errMsg && (
-            <p style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{errMsg}</p>
+            <p role="alert" style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{errMsg}</p>
           )}
-        </div>
+        </fieldset>
       );
     }
 

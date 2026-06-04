@@ -49,21 +49,29 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(compression());
 
-// Configure CORS with security considerations
+// Configure CORS with security considerations (SEC-05).
+//
+// Auth is via the `Authorization: Bearer` header, not cookies, so a no-Origin
+// request cannot ride a victim's session (CSRF needs a browser, and browsers
+// always send Origin). We therefore allow no-Origin for the legitimate
+// non-browser callers — the Expo mobile app (RN fetch omits Origin), curl, and
+// health checks — while still enforcing a strict allowlist for every browser
+// origin. The dev localhost origin is only added outside production so it can't
+// be used as an allowed origin against the live API.
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
       ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
-      'http://localhost:3000',
+      ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
       process.env.FRONTEND_URL,
     ].filter(Boolean);
 
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      logger.warn('CORS: blocked disallowed origin', { origin });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -76,16 +84,23 @@ app.use(cors(corsOptions));
 // Parse JSON bodies — explicit size limit to cap DoS surface.
 app.use(express.json({ limit: '1mb' }));
 
-// Defense-in-depth: in production, strip `error` field from any 5xx JSON response.
-// Individual routes still send error.message today; this middleware prevents that
-// from reaching clients in prod until each route is migrated to sendError().
+// Defense-in-depth (SEC-06): in production, never let a 5xx response body leak
+// internal detail. Many handlers still build their own bodies with
+// `error: err.message` / `message: err.message` / `{ status:'error', error }`
+// instead of going through sendError(). Rather than strip a single field (which
+// missed `message:`-style leaks and nested SQL/stack text), replace the WHOLE
+// 5xx body with a canonical generic envelope. The full error is still logged
+// server-side and shipped to Sentry by sendError/the global handler.
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
     const originalJson = res.json.bind(res);
     res.json = (body) => {
-      if (res.statusCode >= 500 && body && typeof body === 'object' && 'error' in body) {
-        const { error: _stripped, ...rest } = body;
-        return originalJson(rest);
+      if (res.statusCode >= 500) {
+        const safe = { success: false, message: 'Internal server error' };
+        // Preserve a correlation id if the handler set one (sendError does) so
+        // support can still tie a user report to the server-side log entry.
+        if (body && typeof body === 'object' && body.requestId) safe.requestId = body.requestId;
+        return originalJson(safe);
       }
       return originalJson(body);
     };
@@ -297,6 +312,12 @@ function gracefulShutdown(signal) {
   }
 
   server.close(async () => {
+    // Close the shared PDF browser (PERF-01 pool) so no Chromium lingers.
+    try {
+      await require('./services/pdf/browserPool').closeBrowser();
+    } catch (e) {
+      logger.error('Error closing PDF browser', { message: e?.message });
+    }
     try {
       await pool.end();
       logger.info('DB pool closed');

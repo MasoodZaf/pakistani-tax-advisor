@@ -173,8 +173,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // JWT is valid — restore user from payload.
-      // Every subsequent API call will re-validate server-side.
+      // JWT is valid — restore user from payload for an instant first paint.
       setUser({
         id: payload.userId,
         email: payload.email,
@@ -183,6 +182,17 @@ export const AuthProvider = ({ children }) => {
         onboarding_completed: payload.onboarding_completed !== false,
       });
       scheduleExpiryWarning(token);
+
+      // FE-05: the payload above is only base64-decoded, not signature-verified,
+      // so its `role` is not authoritative for UI gating. Confirm it against the
+      // server (which re-reads the DB row) and correct it if it differs; a bad/
+      // tampered token 401s here and the response interceptor logs out.
+      axios.get('/api/auth/me')
+        .then((r) => {
+          const u = r.data?.user;
+          if (u) setUser((prev) => (prev ? { ...prev, role: u.role, email: u.email, name: u.name } : prev));
+        })
+        .catch(() => { /* 401 handled by the response interceptor */ });
     } catch {
       localStorage.removeItem('token');
     } finally {

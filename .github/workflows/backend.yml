@@ -31,6 +31,15 @@ jobs:
           cd backend
           npm ci
 
+      # INFRA-05: fail the build on a HIGH/critical vuln in PRODUCTION deps.
+      # Scoped to --omit=dev so the build/test toolchain's transitive advisories
+      # (not shipped to users) don't block; prod runtime currently has only
+      # 2 moderate (exceljs→uuid), so this gate is green today.
+      - name: Audit production dependencies
+        run: |
+          cd backend
+          npm audit --omit=dev --audit-level=high
+
       - name: Run unit tests
         run: |
           cd backend

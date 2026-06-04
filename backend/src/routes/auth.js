@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const jwtAuth = require('../middleware/auth'); // JWT middleware for protected routes
 const validate = require('../middleware/validate');
 const { insertAudit } = require('../helpers/auditLog');
-const { validatePasswordPolicy, BCRYPT_ROUNDS } = require('../helpers/passwordPolicy');
+const { validatePasswordPolicy, BCRYPT_ROUNDS, DUMMY_BCRYPT_HASH } = require('../helpers/passwordPolicy');
 const oidc = require('../services/oidcVerifier');
 
 const router = express.Router();
@@ -169,7 +169,8 @@ router.post('/register', validate(registerSchema), async (req, res) => {
         email: newUser.email,
         name: newUser.name,
         role: newUser.role,
-        onboarding_completed: newUser.onboarding_completed
+        onboarding_completed: newUser.onboarding_completed,
+        token_version: newUser.token_version ?? 0
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -212,9 +213,26 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     if (adminBypassToken) {
       try {
         const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(adminBypassToken, process.env.JWT_SECRET);
-        
+        const decoded = jwt.verify(adminBypassToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+
         if (decoded.admin_assisted && decoded.user_email === email) {
+          // Single-use enforcement (SEC-02): the bypass token must carry a jti
+          // and may only be redeemed once. Record it atomically — ON CONFLICT
+          // DO NOTHING means a replay inserts 0 rows and is rejected.
+          if (!decoded.jti) {
+            logger.warn(`Admin bypass token without jti rejected for ${email}`);
+            return res.status(401).json({ error: 'Invalid or expired admin bypass token' });
+          }
+          const consume = await pool.query(
+            `INSERT INTO consumed_tokens (jti, purpose, expires_at)
+             VALUES ($1, 'admin_assisted_login', to_timestamp($2))
+             ON CONFLICT (jti) DO NOTHING`,
+            [decoded.jti, decoded.exp]
+          );
+          if (consume.rowCount === 0) {
+            logger.warn(`Admin bypass token replay blocked for ${email}`);
+            return res.status(401).json({ error: 'Admin bypass token has already been used' });
+          }
           isAdminAssisted = true;
           adminInfo = {
             admin_id: decoded.admin_id,
@@ -236,13 +254,19 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 
     // Try to authenticate user (both regular and admin users are in users table)
     const user = await pool.query(`
-      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone
+      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone, token_version
       FROM users
       WHERE email = $1 AND is_active = true
     `, [email]);
 
     if (user.rows.length === 0) {
       logger.warn(`No user found for: ${email}`);
+      // Run a dummy bcrypt comparison so a non-existent account takes the same
+      // time as a wrong password — otherwise response timing leaks which emails
+      // are registered (SEC-07). Skip for admin-assisted login (no password).
+      if (!isAdminAssisted) {
+        await bcrypt.compare(password || '', DUMMY_BCRYPT_HASH);
+      }
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
@@ -271,10 +295,13 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         email: userData.email,
         name: userData.name,
         role: userData.role,
-        onboarding_completed: userData.onboarding_completed
+        onboarding_completed: userData.onboarding_completed,
+        token_version: userData.token_version ?? 0
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      // Password-less admin-assisted sessions are short-lived (SEC-02); a normal
+      // password login gets the full day.
+      { expiresIn: isAdminAssisted ? '1h' : '24h' }
     );
 
     // Store session for ALL users (both admin and regular)
@@ -410,6 +437,14 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+// Authoritative current user (FE-05). jwtAuth has already verified the token
+// signature + token_version and loaded the user row FROM THE DB, so role here is
+// server-sourced — the client uses this on bootstrap to confirm/correct the role
+// it optimistically decoded from the (locally-unverified) JWT.
+router.get('/me', jwtAuth, async (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
 // Verify session
 router.post('/verify-session', validate(verifySessionSchema), async (req, res) => {
   try {
@@ -515,8 +550,13 @@ router.post('/change-password', jwtAuth, async (req, res) => {
 
     const hashedNewPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
-    await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+    // Bump token_version so every JWT issued before this password change is
+    // immediately rejected (SEC-01) — a changed password must not leave old
+    // sessions alive on other devices.
+    const upd = await pool.query(
+      `UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
+        WHERE id = $2
+       RETURNING token_version, name, role, onboarding_completed`,
       [hashedNewPassword, userId]
     );
 
@@ -535,7 +575,24 @@ router.post('/change-password', jwtAuth, async (req, res) => {
 
     logger.info(`Password changed successfully for user: ${userEmail}`);
 
-    res.json({ success: true, message: 'Password changed successfully' });
+    // Issue a fresh token carrying the new token_version so the device that just
+    // changed the password stays signed in; every other outstanding token is now
+    // stale and will be rejected on its next request.
+    const freshUser = upd.rows[0];
+    const freshToken = jwt.sign(
+      {
+        userId,
+        email: userEmail,
+        name: freshUser.name,
+        role: freshUser.role,
+        onboarding_completed: freshUser.onboarding_completed,
+        token_version: freshUser.token_version,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ success: true, message: 'Password changed successfully', token: freshToken });
 
   } catch (error) {
     logger.error('Change password error:', error);
@@ -556,7 +613,7 @@ router.post('/onboarding/complete', jwtAuth, async (req, res) => {
     const result = await pool.query(
       `UPDATE users SET onboarding_completed = true, updated_at = NOW()
         WHERE id = $1 AND is_active = true
-       RETURNING id, email, name, role, user_type, onboarding_completed`,
+       RETURNING id, email, name, role, user_type, onboarding_completed, token_version`,
       [userId]
     );
 
@@ -573,6 +630,7 @@ router.post('/onboarding/complete', jwtAuth, async (req, res) => {
         name: u.name,
         role: u.role,
         onboarding_completed: u.onboarding_completed,
+        token_version: u.token_version ?? 0,
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -664,7 +722,7 @@ router.get('/my-activity', jwtAuth, async (req, res) => {
 async function loginViaSso(provider, claims, req) {
   // 1. Try matching by SSO identity first — the strongest signal.
   let result = await pool.query(
-    `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active
+    `SELECT id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active, token_version
      FROM users
      WHERE sso_provider = $1 AND sso_subject = $2`,
     [provider, claims.sub]
@@ -709,7 +767,7 @@ async function loginViaSso(provider, claims, req) {
         sso_provider, sso_subject, email_verified,
         is_active, created_at, updated_at
        ) VALUES ($1, $2, $3, NULL, $4, $5, TRUE, TRUE, NOW(), NOW())
-       RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active`,
+       RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active, token_version`,
       [claims.email, claims.name || claims.email.split('@')[0], 'individual', provider, claims.sub]
     );
     userData = insertResult.rows[0];
@@ -733,6 +791,7 @@ async function loginViaSso(provider, claims, req) {
       name: userData.name,
       role: userData.role,
       onboarding_completed: userData.onboarding_completed,
+      token_version: userData.token_version ?? 0,
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
@@ -789,10 +848,13 @@ async function handleSsoLogin(provider, req, res) {
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
     }
-    // Nonce is optional today for backwards compatibility with older clients,
-    // but when present it must be a non-empty string. New clients always send
-    // one; once mobile is updated we can flip this to required.
-    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
+    // Nonce is MANDATORY (SEC-03): every SSO ID token must be bound to a
+    // client-generated nonce, or the anti-replay defense is inert. Web + the
+    // updated mobile client both send one; reject anything that doesn't.
+    if (typeof nonce !== 'string' || nonce.length === 0) {
+      return res.status(400).json({ error: 'nonce_required' });
+    }
+    const expectedNonce = nonce;
 
     const claims = await oidc.verify(provider, idToken, expectedNonce);
     const payload = await loginViaSso(provider, claims, req);
@@ -840,7 +902,11 @@ async function handleSsoLink(provider, req, res) {
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
     }
-    const expectedNonce = typeof nonce === 'string' && nonce.length > 0 ? nonce : undefined;
+    // Nonce mandatory (SEC-03) — same as the login flow.
+    if (typeof nonce !== 'string' || nonce.length === 0) {
+      return res.status(400).json({ error: 'nonce_required' });
+    }
+    const expectedNonce = nonce;
     const claims = await oidc.verify(provider, idToken, expectedNonce);
 
     const userId = req.user.id;

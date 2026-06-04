@@ -310,29 +310,40 @@ class ValidationMiddleware {
     return sanitized;
   }
 
-  /**
-   * Validate tax year parameter
-   */
-  static validateTaxYear(req, res, next) {
-    const { taxYear } = req.params;
+}
 
-    if (!taxYear || !/^\d{4}$/.test(taxYear)) {
-      return res.status(400).json({
-        error: 'Invalid tax year',
-        message: 'Tax year must be a 4-digit year (e.g., 2023)'
-      });
-    }
+// Canonical FBR tax-year format used throughout the app/DB: "YYYY-YY"
+// (e.g. "2025-26"). The previous validateTaxYear required a bare 4-digit year,
+// which never matched the real format — so it was both dead AND wrong (SEC-09).
+const TAX_YEAR_RE = /^\d{4}-\d{2}$/;
 
-    const year = parseInt(taxYear);
-    if (year < 2020 || year > new Date().getFullYear() + 1) {
-      return res.status(400).json({
-        error: 'Invalid tax year range',
-        message: 'Tax year must be between 2020 and next year'
-      });
-    }
-
-    next();
+/**
+ * Express router.param handler for ":taxYear". Register once per router with
+ *   router.param('taxYear', validateTaxYearParam)
+ * and every route in that router carrying a :taxYear segment is validated before
+ * its handler runs — returning a clean 400 for malformed input instead of
+ * silently querying with a bogus value. (taxYear is always passed to pg as a
+ * bound parameter, so this is input hygiene / defense-in-depth, not an injection
+ * fix.) The end year must be (start % 100) + 1, rejecting nonsense like 2025-99.
+ */
+function validateTaxYearParam(req, res, next, value) {
+  if (!TAX_YEAR_RE.test(value)) {
+    return res.status(400).json({
+      error: 'Invalid tax year',
+      message: 'Tax year must be in YYYY-YY format (e.g., 2025-26).',
+    });
   }
+  const start = parseInt(value.slice(0, 4), 10);
+  const end = parseInt(value.slice(5), 10);
+  if (start < 2015 || start > new Date().getFullYear() + 1 || end !== (start + 1) % 100) {
+    return res.status(400).json({
+      error: 'Invalid tax year',
+      message: 'Tax year is out of range or its two halves are inconsistent (e.g., 2025-26).',
+    });
+  }
+  next();
 }
 
 module.exports = ValidationMiddleware;
+module.exports.validateTaxYearParam = validateTaxYearParam;
+module.exports.TAX_YEAR_RE = TAX_YEAR_RE;
