@@ -22,7 +22,6 @@ import {
   Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePriorYearData } from '../../../hooks/usePriorYearData';
 import HelpHint from '../../../components/Help/HelpHint';
 import adjustableTaxHelp from '../../../help/adjustableTaxHelp';
 import { formatCurrency } from '../../../utils/currency';
@@ -384,7 +383,6 @@ const AdjustableTaxForm = () => {
   }, [formData, reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Prior year pre-fill
-  const { hasPriorData: hasPriorAdjustable, applyPriorYear: applyPriorAdjustable, dismissPriorYear: dismissPriorAdjustable } = usePriorYearData('adjustable_tax', setValue);
 
   // PERF-02: the per-field auto-calc effects that used to read a bare watch()
   // here now live in the headless <AdjustableAutoCalc> child (self-subscribing
@@ -1156,15 +1154,6 @@ const AdjustableTaxForm = () => {
           />
         }
       >
-        {hasPriorAdjustable && (
-          <div className="flex flex-col gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-body text-sm text-navy">Prior-year WHT data is available. Pre-fill this form?</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={dismissPriorAdjustable} className="rounded-brand border-[1.5px] border-slate-300 px-3 py-1.5 font-body text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Dismiss</button>
-              <button type="button" onClick={applyPriorAdjustable} className="rounded-brand bg-navy px-3 py-1.5 font-body text-xs font-bold text-white transition-colors hover:bg-navy-dark">Apply prior year</button>
-            </div>
-          </div>
-        )}
 
         {/* Column headers (desktop) */}
         <div className="hidden grid-cols-[1fr_150px_150px] gap-4 px-1 md:grid">
