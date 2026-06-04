@@ -50,10 +50,11 @@ async function setRaw(value) {
     return;
   }
   await SecureStore.setItemAsync(KEY, value, {
-    // Available after first unlock — needed because background tasks (sync,
-    // notifications) may run before the user unlocks the device the first
-    // time after a reboot.
-    keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+    // _THIS_DEVICE_ONLY binds the token to this device so it never syncs to
+    // another via iCloud Keychain (MSEC-04). AFTER_FIRST_UNLOCK is kept (not
+    // WHEN_UNLOCKED) so post-reboot background tasks (sync, notifications) can
+    // still read it before the first manual unlock.
+    keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
   });
 }
 
