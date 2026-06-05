@@ -248,6 +248,7 @@ const Login = () => {
   const [showPassword, setShowPassword]     = useState(false);
   const [loading, setLoading]               = useState(false);
   const [errors, setErrors]                 = useState({});
+  const [rememberMe, setRememberMe]         = useState(true);
   const [adminAssistedLogin, setAdminAssistedLogin] = useState(null);
   // One nonce per Login mount — both Google and Apple receive it; backend
   // verifies the ID token's nonce claim equals this value.
@@ -301,7 +302,9 @@ const Login = () => {
       };
       if (adminAssistedLogin) loginPayload.adminBypassToken = adminAssistedLogin.tempBypassToken;
 
-      const result = await login(loginPayload.email, loginPayload.password, loginPayload.adminBypassToken);
+      // Admin-assisted (bypass) logins always persist; otherwise honour the
+      // "Remember me" checkbox.
+      const result = await login(loginPayload.email, loginPayload.password, loginPayload.adminBypassToken, adminAssistedLogin ? true : rememberMe);
       if (result.success) {
         if (adminAssistedLogin) {
           localStorage.removeItem('adminAssistedLogin');
@@ -456,7 +459,12 @@ const Login = () => {
             {/* Remember + Forgot */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: -4 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
-                <input type="checkbox" style={{ width: 15, height: 15, accentColor: '#28396C', cursor: 'pointer' }} />
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ width: 15, height: 15, accentColor: '#28396C', cursor: 'pointer' }}
+                />
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--content-muted)' }}>Remember me</span>
               </label>
               <button type="button" onClick={() => toast('Contact your administrator to reset your password.', { icon: 'ℹ️' })}

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getToken, storeToken, clearToken } from '../utils/tokenStorage';
 
 // Set axios defaults for API base URL
 axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
+    clearToken();
     // Impersonation keys (legacy admin-assisted flow).
     localStorage.removeItem('adminAssistedLogin');
     localStorage.removeItem('isImpersonation');
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     // Auto-logout at expiry
     expiryTimerRef.current = setTimeout(() => {
       setUser(null);
-      localStorage.removeItem('token');
+      clearToken();
       clearExpiryTimers();
       toast.error('Your session has expired. Please log in again.');
     }, msUntilExpiry);
@@ -112,7 +113,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token');
+        const token = getToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -128,9 +129,9 @@ export const AuthProvider = ({ children }) => {
           error.response?.status === 401 &&
           !error.config?.url?.includes('/login') &&
           !error.config?.url?.includes('/register') &&
-          localStorage.getItem('token') // only act if there was an active session
+          getToken() // only act if there was an active session
         ) {
-          localStorage.removeItem('token');
+          clearToken();
           setUser(null);
           clearExpiryTimers();
           toast.error('Session expired. Please login again.');
@@ -158,18 +159,18 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       if (!token) return;
 
       const payload = decodeJwtPayload(token);
       if (!payload) {
-        localStorage.removeItem('token');
+        clearToken();
         return;
       }
 
       // Reject already-expired tokens
       if (payload.exp && payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem('token');
+        clearToken();
         return;
       }
 
@@ -194,13 +195,13 @@ export const AuthProvider = ({ children }) => {
         })
         .catch(() => { /* 401 handled by the response interceptor */ });
     } catch {
-      localStorage.removeItem('token');
+      clearToken();
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email, password, adminBypassToken = null) => {
+  const login = async (email, password, adminBypassToken = null, rememberMe = true) => {
     try {
       const loginPayload = { email, password };
       if (adminBypassToken) loginPayload.adminBypassToken = adminBypassToken;
@@ -210,7 +211,9 @@ export const AuthProvider = ({ children }) => {
       if (response.data?.success) {
         const { token, user: userData, hasPersonalInfo, currentYearData, taxYearsSummary } = response.data;
 
-        localStorage.setItem('token', token);
+        // "Remember me": persist to localStorage (survives restart) or, when
+        // unchecked, sessionStorage (cleared when the browser closes).
+        storeToken(token, rememberMe);
         // Treat undefined as "completed" so legacy logins (pre-flag) don't get
         // bounced into the wizard.
         setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
@@ -256,7 +259,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: message };
       }
       const { token, user: userData } = response.data;
-      localStorage.setItem('token', token);
+      storeToken(token); // keep whatever storage the session is already using
       setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
       scheduleExpiryWarning(token);
       toast.success(`Welcome, ${userData.name || userData.email}!`);
@@ -274,7 +277,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post('/api/register', userData);
       const { token, user: newUser } = response.data;
-      localStorage.setItem('token', token);
+      storeToken(token);
       // Backend returns onboarding_completed: false for fresh registrations.
       // The Onboarding wizard relies on this flag to keep the user inside the
       // flow until they hit "Done" — see App.js OnboardingRoute.
@@ -297,7 +300,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('/api/onboarding/complete');
       const { token, user: updated } = response.data;
       if (token) {
-        localStorage.setItem('token', token);
+        storeToken(token); // preserve the session's current storage choice
         scheduleExpiryWarning(token);
       }
       setUser((prev) => ({ ...(prev || {}), ...updated, onboarding_completed: true }));
