@@ -44,9 +44,7 @@ const WizardCTABanner = () => {
   };
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, #F0FFC2 0%, #d8f0a0 100%)',
-      border: '1.5px solid #c0da94',
+    <div className="wizard-cta" style={{
       borderRadius: 16,
       padding: '16px 18px',
       marginBottom: 20,
@@ -65,10 +63,10 @@ const WizardCTABanner = () => {
           <Sparkles size={18} color="#fff" />
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 800, color: '#1e2a4a', letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--brand-on-cream-navy)', letterSpacing: '-0.01em' }}>
             {isResume ? "Resume your tax quick-start" : "Get a rough tax estimate in 90 seconds"}
           </p>
-          <p style={{ fontSize: 12, color: '#3d3e37', fontWeight: 500, marginTop: 2 }}>
+          <p style={{ fontSize: 12, color: 'var(--content)', fontWeight: 500, marginTop: 2 }}>
             {isResume
               ? "Pick up where you left off — your answers are saved."
               : "A few quick questions, then we'll fill your form drafts and show a rough total."}
@@ -106,7 +104,7 @@ const WizardCTABanner = () => {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#7a8890',
+              color: 'var(--content-subtle)',
               display: 'flex',
               alignItems: 'center',
               padding: 6,

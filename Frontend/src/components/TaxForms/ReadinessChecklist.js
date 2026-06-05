@@ -58,18 +58,18 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
       <div
         onClick={() => setShowAll(true)}
         style={{
-          background:    ready ? '#F0FFC2' : issues.length > 0 ? '#fef2f2' : '#fffbeb',
-          border:        `1px solid ${ready ? '#c0da94' : issues.length > 0 ? '#fecaca' : '#fde68a'}`,
+          background:    ready ? 'var(--brand-cream)' : issues.length > 0 ? '#fef2f2' : '#fffbeb',
+          border:        `1px solid ${ready ? 'var(--brand-cream-track)' : issues.length > 0 ? '#fecaca' : '#fde68a'}`,
           borderRadius:  12, padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
         }}
       >
         {ready
-          ? <CheckCircle size={18} color="#3d6020" />
+          ? <CheckCircle size={18} color="var(--brand-on-cream)" />
           : issues.length > 0
             ? <AlertOctagon size={18} color="#b91c1c" />
             : <AlertTriangle size={18} color="#b45309" />}
-        <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a' }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: ready ? 'var(--brand-on-cream-navy)' : '#1e2a4a' }}>
           {ready
             ? 'Ready to submit — no blocking issues'
             : `${issues.length} blocker${issues.length !== 1 ? 's' : ''}, ${warnings.length} warning${warnings.length !== 1 ? 's' : ''} — click to review`}
@@ -80,10 +80,10 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
 
   // ── Full list ─────────────────────────────────────────────────────────────
   const tone = ready
-    ? { bg: '#F0FFC2', border: '#c0da94', accent: '#3d6020' }
+    ? { bg: 'var(--brand-cream)', border: 'var(--brand-cream-track)', accent: 'var(--brand-on-cream)', ink: 'var(--brand-on-cream-navy)', sub: 'var(--brand-on-cream-navy)' }
     : issues.length > 0
-      ? { bg: '#fef2f2', border: '#fecaca', accent: '#b91c1c' }
-      : { bg: '#fffbeb', border: '#fde68a', accent: '#b45309' };
+      ? { bg: '#fef2f2', border: '#fecaca', accent: '#b91c1c', ink: '#1e2a4a', sub: '#4a5575' }
+      : { bg: '#fffbeb', border: '#fde68a', accent: '#b45309', ink: '#1e2a4a', sub: '#4a5575' };
 
   const renderIssue = (it, severity, idx) => {
     const colour = severity === 'error' ? '#b91c1c' : '#b45309';
@@ -141,7 +141,7 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
             : issues.length > 0
               ? <AlertOctagon size={20} color={tone.accent} />
               : <AlertTriangle size={20} color={tone.accent} />}
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1e2a4a' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: tone.ink }}>
             {ready
               ? 'Ready to submit'
               : `${issues.length} blocking issue${issues.length !== 1 ? 's' : ''} • ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
@@ -154,7 +154,7 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
           title="Re-run readiness check"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: 12, fontWeight: 600, color: '#4a5575',
+            fontSize: 12, fontWeight: 600, color: tone.sub,
             background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(0,0,0,0.08)',
             borderRadius: 6, padding: '4px 10px', cursor: loading ? 'wait' : 'pointer',
           }}

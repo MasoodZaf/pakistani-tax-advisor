@@ -45,14 +45,14 @@ class ErrorBoundary extends React.Component {
           padding: '2rem',
           textAlign: 'center',
           backgroundColor: 'var(--brand-cream, #FBF8F1)',
-          color: 'var(--brand-navy, #28396C)',
+          color: 'var(--brand-on-cream-navy, #28396C)',
           fontFamily: "'Nunito', system-ui, sans-serif",
         }}
       >
         <h1 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
           Something went wrong
         </h1>
-        <p style={{ maxWidth: '28rem', margin: 0, color: '#475569' }}>
+        <p style={{ maxWidth: '28rem', margin: 0, color: 'var(--content-muted, #475569)' }}>
           The page hit an unexpected error. Your saved tax data is safe — reloading usually fixes it.
         </p>
         <button

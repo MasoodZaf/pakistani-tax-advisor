@@ -195,6 +195,17 @@
   background: #3d4a6e;
 }
 
+/* Wizard CTA banner (UX-07) — lime gradient in light, dark navy band in dark.
+   A gradient can't be a single CSS var, so the surface lives here as a class. */
+.wizard-cta {
+  background: linear-gradient(135deg, #F0FFC2 0%, #d8f0a0 100%);
+  border: 1.5px solid #c0da94;
+}
+[data-theme="dark"] .wizard-cta {
+  background: linear-gradient(135deg, #1b2440 0%, #141b30 100%);
+  border-color: #2a3450;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    Cross-cutting accessibility baseline (A11Y).
    ────────────────────────────────────────────────────────────────────────── */

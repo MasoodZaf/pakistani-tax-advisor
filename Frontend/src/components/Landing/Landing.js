@@ -388,7 +388,7 @@ function Hero() {
             { icon: Check, text: 'Tax Year 2025-26' },
           ].map(({ icon: Icon, text }) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--content-muted)', fontSize: 14, fontWeight: 600 }}>
-              <div style={{ width: 18, height: 18, background: '#F0FFC2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 18, height: 18, background: 'var(--brand-cream)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={10} color="#4a7a2a" strokeWidth={3} />
               </div>
               {text}
