@@ -58,8 +58,8 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
       <div
         onClick={() => setShowAll(true)}
         style={{
-          background:    ready ? 'var(--brand-cream)' : issues.length > 0 ? '#fef2f2' : '#fffbeb',
-          border:        `1px solid ${ready ? 'var(--brand-cream-track)' : issues.length > 0 ? '#fecaca' : '#fde68a'}`,
+          background:    ready ? 'var(--brand-cream)' : issues.length > 0 ? 'var(--status-error-bg)' : 'var(--status-warn-bg)',
+          border:        `1px solid ${ready ? 'var(--brand-cream-track)' : issues.length > 0 ? 'var(--status-error-border)' : 'var(--status-warn-border)'}`,
           borderRadius:  12, padding: '12px 16px',
           display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
         }}
@@ -67,9 +67,9 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
         {ready
           ? <CheckCircle size={18} color="var(--brand-on-cream)" />
           : issues.length > 0
-            ? <AlertOctagon size={18} color="#b91c1c" />
-            : <AlertTriangle size={18} color="#b45309" />}
-        <p style={{ fontSize: 13, fontWeight: 700, color: ready ? 'var(--brand-on-cream-navy)' : '#1e2a4a' }}>
+            ? <AlertOctagon size={18} color="var(--status-error-text)" />
+            : <AlertTriangle size={18} color="var(--status-warn-text)" />}
+        <p style={{ fontSize: 13, fontWeight: 700, color: ready ? 'var(--brand-on-cream-navy)' : 'var(--content)' }}>
           {ready
             ? 'Ready to submit — no blocking issues'
             : `${issues.length} blocker${issues.length !== 1 ? 's' : ''}, ${warnings.length} warning${warnings.length !== 1 ? 's' : ''} — click to review`}
@@ -82,11 +82,11 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
   const tone = ready
     ? { bg: 'var(--brand-cream)', border: 'var(--brand-cream-track)', accent: 'var(--brand-on-cream)', ink: 'var(--brand-on-cream-navy)', sub: 'var(--brand-on-cream-navy)' }
     : issues.length > 0
-      ? { bg: '#fef2f2', border: '#fecaca', accent: '#b91c1c', ink: '#1e2a4a', sub: '#4a5575' }
-      : { bg: '#fffbeb', border: '#fde68a', accent: '#b45309', ink: '#1e2a4a', sub: '#4a5575' };
+      ? { bg: 'var(--status-error-bg)', border: 'var(--status-error-border)', accent: 'var(--status-error-text)', ink: 'var(--content)', sub: 'var(--content-muted)' }
+      : { bg: 'var(--status-warn-bg)', border: 'var(--status-warn-border)', accent: 'var(--status-warn-text)', ink: 'var(--content)', sub: 'var(--content-muted)' };
 
   const renderIssue = (it, severity, idx) => {
-    const colour = severity === 'error' ? '#b91c1c' : '#b45309';
+    const colour = severity === 'error' ? 'var(--status-error-text)' : 'var(--status-warn-text)';
     const Icon   = severity === 'error' ? AlertOctagon : AlertTriangle;
     return (
       <div
@@ -94,18 +94,18 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
         style={{
           display: 'flex', gap: 10, alignItems: 'flex-start',
           padding: '12px 14px',
-          background: severity === 'error' ? '#fef2f2' : '#fffbeb',
-          border: `1px solid ${severity === 'error' ? '#fecaca' : '#fde68a'}`,
+          background: severity === 'error' ? 'var(--status-error-bg)' : 'var(--status-warn-bg)',
+          border: `1px solid ${severity === 'error' ? 'var(--status-error-border)' : 'var(--status-warn-border)'}`,
           borderRadius: 10, marginBottom: 8,
         }}
       >
         <Icon size={16} color={colour} style={{ flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a', marginBottom: 4 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 4 }}>
             {it.message}
           </p>
           {it.fix && (
-            <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 6, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500, marginBottom: 6, lineHeight: 1.5 }}>
               {it.fix}
             </p>
           )}
@@ -155,7 +155,7 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
             fontSize: 12, fontWeight: 600, color: tone.sub,
-            background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(0,0,0,0.08)',
+            background: 'var(--surface-raised)', border: '1px solid var(--line)',
             borderRadius: 6, padding: '4px 10px', cursor: loading ? 'wait' : 'pointer',
           }}
         >
@@ -165,7 +165,7 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
       </div>
 
       {!ready && (
-        <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 14, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500, marginBottom: 14, lineHeight: 1.5 }}>
           Fix all blocking issues before submitting. Warnings are advisory — they won&apos;t prevent submission but FBR may flag the return for review.
         </p>
       )}

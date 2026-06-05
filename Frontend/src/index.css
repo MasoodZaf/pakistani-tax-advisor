@@ -37,6 +37,14 @@
   --line: #e3e2dc;           /* hairline borders             */
   --brand-on-cream: #3d6020; /* green text/icon on cream/lime badges */
   --brand-on-cream-navy: #28396C; /* navy text/icon on cream/lime badges */
+
+  /* Semantic status tints (flip in dark) — for inline-styled status banners. */
+  --status-error-bg: #fef2f2;
+  --status-error-border: #fecaca;
+  --status-error-text: #b91c1c;
+  --status-warn-bg: #fffbeb;
+  --status-warn-border: #fde68a;
+  --status-warn-text: #b45309;
 }
 
 /* ── Dark theme (UX-07) — applied to <html> by ThemeProvider / no-flash script.
@@ -61,6 +69,13 @@
   --line: #2a3450;
   --brand-on-cream: #B5E18B;
   --brand-on-cream-navy: #B5E18B;
+
+  --status-error-bg: #2a1414;
+  --status-error-border: #5b2424;
+  --status-error-text: #fca5a5;
+  --status-warn-bg: #2a230b;
+  --status-warn-border: #5b4a18;
+  --status-warn-text: #fcd34d;
 
   color-scheme: dark; /* native form controls, scrollbars, etc. follow */
 }
