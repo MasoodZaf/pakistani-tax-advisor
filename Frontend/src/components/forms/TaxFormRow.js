@@ -23,7 +23,7 @@ export default function TaxFormRow({
     <div className={`grid grid-cols-1 gap-1.5 py-2.5 md:grid-cols-[1fr_220px] md:items-center md:gap-4 ${className}`}>
       <div className="flex items-start gap-1.5">
         <div className="min-w-0">
-          <label htmlFor={name} className="font-body text-sm leading-snug text-slate-700">
+          <label htmlFor={name} className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">
             {label}
           </label>
           {sublabel && <p className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">{sublabel}</p>}

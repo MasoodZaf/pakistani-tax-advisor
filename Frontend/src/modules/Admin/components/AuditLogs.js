@@ -19,9 +19,9 @@ const S = () => (
 const ACTION_COLORS = {
   login:              'bg-navy/5 text-navy',
   admin_assisted_login: 'bg-navy/5 text-navy',
-  create:             'bg-green-50 text-green-700',
-  update:             'bg-yellow-50 text-yellow-700',
-  delete:             'bg-red-50 text-red-700',
+  create:             'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-300',
+  update:             'bg-yellow-50 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300',
+  delete:             'bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300',
   password_change:    'bg-navy/5 text-navy',
   password_reset:     'bg-navy/5 text-navy',
   clone:              'bg-navy/5 text-navy',
@@ -65,15 +65,15 @@ export default function AuditLogs() {
       <S />
 
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-brand p-6 border border-gray-100">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-brand p-6 border border-gray-100 dark:border-[#2a3450]">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-navy/5 border border-navy/15 flex items-center justify-center">
               <Activity className="w-5 h-5 text-navy" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-navy">Audit Logs</h1>
-              <p className="text-sm text-gray-500">{pagination.total.toLocaleString()} total entries</p>
+              <h1 className="text-xl font-bold text-navy dark:text-[#e7eaf3]">Audit Logs</h1>
+              <p className="text-sm text-gray-500 dark:text-[#7e88a6]">{pagination.total.toLocaleString()} total entries</p>
             </div>
           </div>
           <button onClick={() => fetchLogs(1)} className="al-btn al-btn-ghost" disabled={loading}>
@@ -84,10 +84,10 @@ export default function AuditLogs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-wrap gap-3 items-center">
-        <Filter className="w-4 h-4 text-gray-400" />
+      <div className="bg-white dark:bg-[#151c30] rounded-xl border border-gray-100 dark:border-[#2a3450] p-4 flex flex-wrap gap-3 items-center">
+        <Filter className="w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-[#7e88a6]" />
           <input
             className="al-input !pl-8 w-64"
             placeholder="Search email, action, table..."
@@ -116,36 +116,36 @@ export default function AuditLogs() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl border border-gray-100 dark:border-[#2a3450] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Time</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Table</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Summary</th>
+              <tr className="bg-gray-50 dark:bg-[#0f1426] border-b border-gray-100 dark:border-[#2a3450]">
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">Time</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">User</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">Table</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">Summary</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-400">
+                  <td colSpan={5} className="py-12 text-center text-gray-400 dark:text-[#7e88a6]">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-400">
+                  <td colSpan={5} className="py-12 text-center text-gray-400 dark:text-[#7e88a6]">
                     <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     <p>No audit log entries found</p>
                   </td>
                 </tr>
               ) : (
                 logs.map(log => (
-                  <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                  <tr key={log.id} className="border-b border-gray-50 dark:border-[#2a3450] hover:bg-gray-50 dark:hover:bg-[#0f1426] transition-colors">
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-[#7e88a6] whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatTime(log.created_at)}
@@ -153,22 +153,22 @@ export default function AuditLogs() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
-                        <User className="w-3 h-3 text-gray-400" />
-                        <span className="text-gray-700 font-medium text-xs">{log.user_email}</span>
+                        <User className="w-3 h-3 text-gray-400 dark:text-[#7e88a6]" />
+                        <span className="text-gray-700 dark:text-[#aab2cc] font-medium text-xs">{log.user_email}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`al-badge ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`al-badge ${ACTION_COLORS[log.action] || 'bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]'}`}>
                         {log.action}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <FileText className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-600">{log.table_name}</span>
+                        <FileText className="w-3 h-3 text-gray-400 dark:text-[#7e88a6]" />
+                        <span className="text-xs text-gray-600 dark:text-[#aab2cc]">{log.table_name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-[#7e88a6] max-w-xs truncate">
                       {log.change_summary || log.new_value || '—'}
                     </td>
                   </tr>
@@ -180,8 +180,8 @@ export default function AuditLogs() {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <span className="text-xs text-gray-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-[#2a3450]">
+            <span className="text-xs text-gray-500 dark:text-[#7e88a6]">
               Page {pagination.page} of {pagination.pages} ({pagination.total.toLocaleString()} entries)
             </span>
             <div className="flex gap-2">

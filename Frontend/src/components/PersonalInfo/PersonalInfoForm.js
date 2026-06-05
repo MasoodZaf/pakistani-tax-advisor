@@ -177,27 +177,27 @@ const PersonalInfoForm = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1426]">
         <div className="text-center">
           <div className="spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading personal information...</p>
+          <p className="text-gray-600 dark:text-[#aab2cc]">Loading personal information...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1426] py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-md p-6">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-[#e7eaf3] mb-2">
               Personal Information
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-[#aab2cc]">
               Please provide your personal details as per FBR requirements. This information will be used for tax filing.
             </p>
-            <div className="mt-2 px-4 py-2 bg-blue-50 border-l-4 border-blue-500 text-blue-700">
+            <div className="mt-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/15 border-l-4 border-blue-500 dark:border-blue-500/30 text-blue-700 dark:text-blue-300">
               <p className="text-sm font-medium">
                 Tax Year: {currentTaxYear}
               </p>
@@ -207,12 +207,12 @@ const PersonalInfoForm = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Personal Details Section */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] mb-4 border-b dark:border-[#2a3450] pb-2">
                 Personal Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -220,8 +220,8 @@ const PersonalInfoForm = () => {
                     name="full_name"
                     value={formData.full_name}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.full_name ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.full_name ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="Enter your full name"
                   />
@@ -231,7 +231,7 @@ const PersonalInfoForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Father's Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -239,8 +239,8 @@ const PersonalInfoForm = () => {
                     name="father_name"
                     value={formData.father_name}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.father_name ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.father_name ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="Enter father's name"
                   />
@@ -250,7 +250,7 @@ const PersonalInfoForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     CNIC <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -258,8 +258,8 @@ const PersonalInfoForm = () => {
                     name="cnic"
                     value={formData.cnic}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.cnic ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.cnic ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="XXXXX-XXXXXXX-X"
                     maxLength="15"
@@ -270,7 +270,7 @@ const PersonalInfoForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     NTN <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -278,8 +278,8 @@ const PersonalInfoForm = () => {
                     name="ntn"
                     value={formData.ntn}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.ntn ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.ntn ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="XXXXXXX"
                     maxLength="7"
@@ -290,7 +290,7 @@ const PersonalInfoForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Passport Number
                   </label>
                   <input
@@ -298,7 +298,7 @@ const PersonalInfoForm = () => {
                     name="passport_number"
                     value={formData.passport_number}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Optional"
                   />
                 </div>
@@ -307,20 +307,20 @@ const PersonalInfoForm = () => {
 
             {/* Address Information Section */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] mb-4 border-b dark:border-[#2a3450] pb-2">
                 Address Information
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Residential Address <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="residential_address"
                     value={formData.residential_address}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.residential_address ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.residential_address ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     rows="2"
                     placeholder="Enter complete residential address"
@@ -332,7 +332,7 @@ const PersonalInfoForm = () => {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc]">
                       Mailing Address
                     </label>
                     <button
@@ -347,7 +347,7 @@ const PersonalInfoForm = () => {
                     name="mailing_address"
                     value={formData.mailing_address}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     rows="2"
                     placeholder="Enter mailing address (if different)"
                   />
@@ -355,7 +355,7 @@ const PersonalInfoForm = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                       City <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -363,8 +363,8 @@ const PersonalInfoForm = () => {
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                        errors.city ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                        errors.city ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                       }`}
                       placeholder="City"
                     />
@@ -374,15 +374,15 @@ const PersonalInfoForm = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                       Province <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="province"
                       value={formData.province}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                        errors.province ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                        errors.province ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                       }`}
                     >
                       <option value="">Select Province</option>
@@ -400,7 +400,7 @@ const PersonalInfoForm = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                       Postal Code
                     </label>
                     <input
@@ -408,14 +408,14 @@ const PersonalInfoForm = () => {
                       name="postal_code"
                       value={formData.postal_code}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                       placeholder="Postal Code"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Country
                   </label>
                   <input
@@ -423,7 +423,7 @@ const PersonalInfoForm = () => {
                     name="country"
                     value={formData.country}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Country"
                   />
                 </div>
@@ -432,12 +432,12 @@ const PersonalInfoForm = () => {
 
             {/* Contact Information Section */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] mb-4 border-b dark:border-[#2a3450] pb-2">
                 Contact Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Mobile Number <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -445,8 +445,8 @@ const PersonalInfoForm = () => {
                     name="mobile_number"
                     value={formData.mobile_number}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.mobile_number ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.mobile_number ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="03001234567"
                   />
@@ -456,7 +456,7 @@ const PersonalInfoForm = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Landline Number
                   </label>
                   <input
@@ -464,13 +464,13 @@ const PersonalInfoForm = () => {
                     name="landline_number"
                     value={formData.landline_number}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Optional"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -478,8 +478,8 @@ const PersonalInfoForm = () => {
                     name="email_address"
                     value={formData.email_address}
                     onChange={handleChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      errors.email_address ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] ${
+                      errors.email_address ? 'border-red-500 dark:border-red-500/60' : 'border-gray-300 dark:border-[#2a3450]'
                     }`}
                     placeholder="email@example.com"
                   />
@@ -492,12 +492,12 @@ const PersonalInfoForm = () => {
 
             {/* Professional Information Section */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] mb-4 border-b dark:border-[#2a3450] pb-2">
                 Professional Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Profession
                   </label>
                   <input
@@ -505,13 +505,13 @@ const PersonalInfoForm = () => {
                     name="profession"
                     value={formData.profession}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Your profession/occupation"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Employer Name
                   </label>
                   <input
@@ -519,13 +519,13 @@ const PersonalInfoForm = () => {
                     name="employer_name"
                     value={formData.employer_name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Company/organization name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Employer NTN
                   </label>
                   <input
@@ -533,20 +533,20 @@ const PersonalInfoForm = () => {
                     name="employer_ntn"
                     value={formData.employer_ntn}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Employer's NTN"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Employer Address
                   </label>
                   <textarea
                     name="employer_address"
                     value={formData.employer_address}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     rows="2"
                     placeholder="Employer's complete address"
                   />
@@ -556,12 +556,12 @@ const PersonalInfoForm = () => {
 
             {/* FBR Information Section */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] mb-4 border-b dark:border-[#2a3450] pb-2">
                 FBR Registration Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     FBR Registration Number
                   </label>
                   <input
@@ -569,13 +569,13 @@ const PersonalInfoForm = () => {
                     name="fbr_registration_number"
                     value={formData.fbr_registration_number}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="FBR registration number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Tax Circle
                   </label>
                   <input
@@ -583,13 +583,13 @@ const PersonalInfoForm = () => {
                     name="tax_circle"
                     value={formData.tax_circle}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Tax circle"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Zone
                   </label>
                   <input
@@ -597,7 +597,7 @@ const PersonalInfoForm = () => {
                     name="zone"
                     value={formData.zone}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-md focus:ring-2 focus:ring-blue-500"
                     placeholder="Zone"
                   />
                 </div>
@@ -605,11 +605,11 @@ const PersonalInfoForm = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-4 pt-6 border-t">
+            <div className="flex justify-end gap-4 pt-6 border-t dark:border-[#2a3450]">
               <button
                 type="button"
                 onClick={() => navigate('/logout')}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 dark:border-[#2a3450] rounded-md text-gray-700 dark:text-[#aab2cc] hover:bg-gray-50 dark:hover:bg-[#1a2238] transition-colors"
               >
                 Logout
               </button>
