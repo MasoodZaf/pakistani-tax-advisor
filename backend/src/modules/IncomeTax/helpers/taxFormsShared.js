@@ -21,14 +21,27 @@ async function getCurrentTaxYear() {
 // Helper function to recalculate form completion from database
 async function recalculateFormCompletion(userId, taxYear) {
   try {
+    // `addons` (when present) lists the conditional forms a form is gated behind,
+    // mirroring deriveActiveSteps in Frontend/src/contexts/TaxFormContext.js. A
+    // form with no `addons` is always active. capital_gain and final_tax are only
+    // shown — and so only counted toward the completion percentage — when the
+    // user's income profile selects a matching addon.
     const formsToCheck = [
       { table: 'income_forms', column: 'income_form_complete' },
       { table: 'adjustable_tax_forms', column: 'adjustable_tax_form_complete' },
       { table: 'reductions_forms', column: 'reductions_form_complete' },
       { table: 'credits_forms', column: 'credits_form_complete' },
       { table: 'deductions_forms', column: 'deductions_form_complete' },
-      { table: 'final_tax_forms', column: 'final_tax_form_complete' },
-      { table: 'capital_gain_forms', column: 'capital_gain_form_complete' },
+      {
+        table: 'final_tax_forms',
+        column: 'final_tax_form_complete',
+        addons: ['bank_profit', 'dividends', 'securities', 'prizes'],
+      },
+      {
+        table: 'capital_gain_forms',
+        column: 'capital_gain_form_complete',
+        addons: ['property_gain', 'securities'],
+      },
       { table: 'expenses_forms', column: 'expenses_form_complete' },
       { table: 'wealth_forms', column: 'wealth_form_complete' },
       { table: 'final_min_income_forms', column: 'final_min_income_form_complete' },
@@ -59,7 +72,33 @@ async function recalculateFormCompletion(userId, taxYear) {
       }
     }
 
-    const completedCount = Object.values(completionStatus).filter(Boolean).length;
+    // Resolve the user's income profile so the completion percentage counts only
+    // the forms actually shown to them (the conditional capital_gain / final_tax
+    // forms are excluded unless a matching addon is selected). This keeps the
+    // stored percentage in agreement with the web form's activeSteps progress —
+    // otherwise a salaried filer with no capital gains / final-tax income tops out
+    // at 10/12 = 83% and all_forms_complete never becomes true.
+    let addons = [];
+    try {
+      const prof = await pool.query(
+        `SELECT income_profile FROM tax_returns WHERE user_id = $1 AND tax_year = $2 LIMIT 1`,
+        [userId, taxYear]
+      );
+      const p = prof.rows[0]?.income_profile;
+      if (p && Array.isArray(p.addons)) {
+        addons = p.addons.filter((a) => typeof a === 'string');
+      }
+    } catch (err) {
+      logger.warn('recalc: could not load income_profile, assuming salaried-only:', err.message);
+    }
+    const addonSet = new Set(addons);
+    const isActive = (form) => !form.addons || form.addons.some((a) => addonSet.has(a));
+
+    const activeForms = formsToCheck.filter(isActive);
+    const completedActive = activeForms.filter((f) => completionStatus[f.column]).length;
+    const denom = activeForms.length; // always >= 10 (the always-active forms)
+    const completionPercentage = denom > 0 ? Math.round((completedActive * 100) / denom) : 0;
+    const allFormsComplete = denom > 0 && completedActive === denom;
 
     await pool.query(
       `UPDATE form_completion_status
@@ -71,8 +110,10 @@ async function recalculateFormCompletion(userId, taxYear) {
            final_min_income_form_complete = $10,
            wealth_reconciliation_form_complete = $11,
            tax_computation_form_complete = $12,
+           completion_percentage = $13,
+           all_forms_complete = $14,
            last_updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $13 AND tax_year = $14`,
+       WHERE user_id = $15 AND tax_year = $16`,
       [
         completionStatus['income_form_complete'],
         completionStatus['adjustable_tax_form_complete'],
@@ -86,13 +127,15 @@ async function recalculateFormCompletion(userId, taxYear) {
         completionStatus['final_min_income_form_complete'],
         completionStatus['wealth_reconciliation_form_complete'],
         completionStatus['tax_computation_form_complete'],
+        completionPercentage,
+        allFormsComplete,
         userId,
         taxYear,
       ]
     );
 
     logger.info(
-      `Form completion recalculated for ${userId}: ${completedCount}/${formsToCheck.length} forms completed`
+      `Form completion recalculated for ${userId}: ${completedActive}/${denom} active forms complete (${completionPercentage}%)`
     );
   } catch (error) {
     logger.error('Error recalculating completion:', error);
