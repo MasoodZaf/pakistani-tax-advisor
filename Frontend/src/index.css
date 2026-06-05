@@ -35,6 +35,8 @@
   --content-muted: #4b5563;  /* secondary text (gray-600)    */
   --content-subtle: #6b7280; /* tertiary text (gray-500)     */
   --line: #e3e2dc;           /* hairline borders             */
+  --brand-on-cream: #3d6020; /* green text/icon on cream/lime badges */
+  --brand-on-cream-navy: #28396C; /* navy text/icon on cream/lime badges */
 }
 
 /* ── Dark theme (UX-07) — applied to <html> by ThemeProvider / no-flash script.
@@ -57,6 +59,8 @@
   --content-muted: #aab2cc;
   --content-subtle: #7e88a6;
   --line: #2a3450;
+  --brand-on-cream: #B5E18B;
+  --brand-on-cream-navy: #B5E18B;
 
   color-scheme: dark; /* native form controls, scrollbars, etc. follow */
 }

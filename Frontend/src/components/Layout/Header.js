@@ -41,7 +41,7 @@ const Header = () => {
         .hdr-root {
           font-family: 'Nunito', sans-serif;
           position: fixed; top: 0; left: 0; right: 0; height: 56px;
-          background: #fff; border-bottom: 1px solid #e3e2dc;
+          background: var(--surface-raised); border-bottom: 1px solid var(--line);
           display: flex; align-items: center;
           padding: 0 20px 0 232px; z-index: 39; gap: 16px;
           -webkit-font-smoothing: antialiased;
@@ -49,31 +49,33 @@ const Header = () => {
         }
         .hdr-root.collapsed { padding-left: 76px; }
         .hdr-root.session-warn { background: #fffbeb; border-bottom-color: #f59e0b; }
+        [data-theme="dark"] .hdr-root.session-warn { background: #2a230b; border-bottom-color: #b45309; }
 
         .hdr-year-badge {
           display: inline-flex; align-items: center; gap: 5px;
-          background: #F0FFC2; border: 1px solid #c0da94;
-          color: #3d6020; font-size: 11px; font-weight: 700;
+          background: var(--brand-cream); border: 1px solid var(--brand-cream-track);
+          color: var(--brand-on-cream); font-size: 11px; font-weight: 700;
           padding: 3px 10px; border-radius: 100px; letter-spacing: 0.03em;
           white-space: nowrap;
         }
         .hdr-user-btn {
           display: flex; align-items: center; gap: 9px;
-          background: none; border: 1.5px solid #e3e2dc; border-radius: 12px;
+          background: none; border: 1.5px solid var(--line); border-radius: 12px;
           padding: 6px 10px 6px 6px; cursor: pointer;
           transition: border-color 0.2s, background 0.2s;
           font-family: 'Nunito', sans-serif;
         }
-        .hdr-user-btn:hover { border-color: #a8c890; background: #f5f8ea; }
+        .hdr-user-btn:hover { border-color: #a8c890; background: var(--brand-hover-bg); }
         .hdr-avatar {
           width: 28px; height: 28px; background: #28396C; border-radius: 8px;
           display: flex; align-items: center; justify-content: center;
           font-family: 'Bricolage Grotesque', sans-serif;
           font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
         }
+        [data-theme="dark"] .hdr-avatar { background: var(--brand-navy-mid); }
         .hdr-dropdown {
           position: absolute; top: calc(100% + 6px); right: 0; width: 220px;
-          background: #fff; border: 1.5px solid #e3e2dc; border-radius: 14px;
+          background: var(--surface-raised); border: 1.5px solid var(--line); border-radius: 14px;
           box-shadow: 0 8px 32px rgba(26,28,24,0.10); overflow: hidden; z-index: 200;
           animation: dropIn 0.18s ease;
         }
@@ -83,25 +85,27 @@ const Header = () => {
         }
         .hdr-drop-item {
           display: flex; align-items: center; gap: 10px; padding: 11px 14px;
-          font-size: 13px; font-weight: 600; color: #3d3e37; text-decoration: none;
+          font-size: 13px; font-weight: 600; color: var(--content); text-decoration: none;
           background: none; border: none; width: 100%; cursor: pointer;
           font-family: 'Nunito', sans-serif; transition: background 0.15s;
         }
-        .hdr-drop-item:hover { background: #f5f8ea; }
+        .hdr-drop-item:hover { background: var(--brand-hover-bg); }
         .hdr-drop-item.danger { color: #c0392b; }
+        [data-theme="dark"] .hdr-drop-item.danger { color: #f87171; }
         .hdr-drop-item.danger:hover { background: #fdf2f2; }
+        [data-theme="dark"] .hdr-drop-item.danger:hover { background: #2a1414; }
         .hdr-notif {
           width: 34px; height: 34px; background: none;
-          border: 1.5px solid #e3e2dc; border-radius: 10px;
+          border: 1.5px solid var(--line); border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
           cursor: pointer; position: relative; flex-shrink: 0;
           transition: border-color 0.2s, background 0.2s;
         }
-        .hdr-notif:hover { border-color: #a8c890; background: #f5f8ea; }
+        .hdr-notif:hover { border-color: #a8c890; background: var(--brand-hover-bg); }
         .hdr-notif-dot {
           position: absolute; top: 6px; right: 6px;
           width: 7px; height: 7px;
-          background: #c0392b; border-radius: 50%; border: 1.5px solid #fff;
+          background: #c0392b; border-radius: 50%; border: 1.5px solid var(--surface-raised);
         }
         .hdr-session-warn {
           display: inline-flex; align-items: center; gap: 6px;
@@ -110,6 +114,7 @@ const Header = () => {
           padding: 4px 12px; border-radius: 100px; white-space: nowrap;
           animation: pulseWarn 1.8s ease-in-out infinite;
         }
+        [data-theme="dark"] .hdr-session-warn { background: #2a230b; border-color: #b45309; color: #fcd34d; }
         @keyframes pulseWarn {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.72; }
@@ -134,7 +139,7 @@ const Header = () => {
         <ThemeToggle />
 
         <button className="hdr-notif" aria-label="Notifications">
-          <Bell size={15} color="#6b6c64" />
+          <Bell size={15} color="var(--content-subtle)" />
           <span className="hdr-notif-dot" />
         </button>
 
@@ -142,38 +147,38 @@ const Header = () => {
           <button className="hdr-user-btn" onClick={() => setMenuOpen(v => !v)}>
             <div className="hdr-avatar">{initials}</div>
             <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a', lineHeight: 1.2, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', lineHeight: 1.2, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user?.name}
               </p>
-              <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 600, textTransform: 'capitalize', lineHeight: 1.2 }}>
+              <p style={{ fontSize: 11, color: 'var(--content-muted)', fontWeight: 600, textTransform: 'capitalize', lineHeight: 1.2 }}>
                 {user?.role?.replace('_', ' ')}
               </p>
             </div>
-            <ChevronDown size={13} color="#7a8890" style={{ transition: 'transform 0.2s', transform: menuOpen ? 'rotate(180deg)' : 'none' }} />
+            <ChevronDown size={13} color="var(--content-subtle)" style={{ transition: 'transform 0.2s', transform: menuOpen ? 'rotate(180deg)' : 'none' }} />
           </button>
 
           {menuOpen && (
             <>
               <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setMenuOpen(false)} />
               <div className="hdr-dropdown">
-                <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #f0efeb' }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a' }}>{user?.name}</p>
-                  <p style={{ fontSize: 12, color: '#7a8890', fontWeight: 500, marginTop: 2 }}>{user?.email}</p>
-                  <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: '#F0FFC2', border: '1px solid #c0da94', borderRadius: 100, padding: '3px 9px' }}>
+                <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--line)' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)' }}>{user?.name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500, marginTop: 2 }}>{user?.email}</p>
+                  <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--brand-cream)', border: '1px solid var(--brand-cream-track)', borderRadius: 100, padding: '3px 9px' }}>
                     <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#B5E18B' }} />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#3d6020', textTransform: 'capitalize' }}>{user?.role?.replace('_', ' ')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-on-cream)', textTransform: 'capitalize' }}>{user?.role?.replace('_', ' ')}</span>
                   </div>
                   {sessionExpiresAt && (
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, fontWeight: 500 }}>
+                    <p style={{ fontSize: 11, color: 'var(--content-subtle)', marginTop: 6, fontWeight: 500 }}>
                       Session expires {sessionExpiresAt.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
                 <div style={{ padding: '6px 0' }}>
                   <Link to="/settings" className="hdr-drop-item" onClick={() => setMenuOpen(false)}>
-                    <Settings size={15} color="#6b6c64" /> Settings
+                    <Settings size={15} color="var(--content-subtle)" /> Settings
                   </Link>
-                  <div style={{ height: 1, background: '#f0efeb', margin: '4px 14px' }} />
+                  <div style={{ height: 1, background: 'var(--line)', margin: '4px 14px' }} />
                   <button className="hdr-drop-item danger" onClick={() => { setMenuOpen(false); logout(); }}>
                     <LogOut size={15} /> Sign out
                   </button>
