@@ -3,107 +3,24 @@ const { pool } = require('../../../config/database');
 const auth = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
 const TaxRateService = require('../../../services/taxRateService');
-
-// Helper: fetch the current tax year from the DB at runtime (not hardcoded)
-async function getCurrentTaxYear() {
-  const result = await pool.query(
-    `SELECT tax_year FROM tax_years WHERE is_current = true AND is_active = true LIMIT 1`
-  );
-  if (result.rows.length === 0) throw new Error('No current tax year configured in the database.');
-  return result.rows[0].tax_year;
-}
 const CalculationService = require('../../../services/calculationService');
 const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 const {
   getAllowedColumns,
   filterToAllowedColumns,
 } = require('../../../helpers/tableColumns');
+// Shared form helpers (CQ-05): getCurrentTaxYear / recalculateFormCompletion /
+// saveFormData were lifted verbatim into this module.
+const {
+  getCurrentTaxYear,
+  recalculateFormCompletion,
+  saveFormData,
+} = require('../helpers/taxFormsShared');
 
 const router = express.Router();
 
 // Validate any :taxYear segment up front (SEC-09).
 router.param('taxYear', require('../../../middleware/validation').validateTaxYearParam);
-
-// Helper function to recalculate form completion from database
-async function recalculateFormCompletion(userId, taxYear) {
-  try {
-    const formsToCheck = [
-      { table: 'income_forms', column: 'income_form_complete' },
-      { table: 'adjustable_tax_forms', column: 'adjustable_tax_form_complete' },
-      { table: 'reductions_forms', column: 'reductions_form_complete' },
-      { table: 'credits_forms', column: 'credits_form_complete' },
-      { table: 'deductions_forms', column: 'deductions_form_complete' },
-      { table: 'final_tax_forms', column: 'final_tax_form_complete' },
-      { table: 'capital_gain_forms', column: 'capital_gain_form_complete' },
-      { table: 'expenses_forms', column: 'expenses_form_complete' },
-      { table: 'wealth_forms', column: 'wealth_form_complete' },
-      { table: 'final_min_income_forms', column: 'final_min_income_form_complete' },
-      { table: 'wealth_reconciliation_forms', column: 'wealth_reconciliation_form_complete' },
-      { table: 'tax_computation_forms', column: 'tax_computation_form_complete' },
-    ];
-
-    const completionStatus = {};
-
-    for (const form of formsToCheck) {
-      try {
-        const result = await pool.query(
-          `SELECT * FROM ${form.table} WHERE user_id = $1 AND tax_year = $2`,
-          [userId, taxYear]
-        );
-
-        if (result.rows.length > 0) {
-          // Use the explicit is_complete flag set when the user clicks "Complete & Next".
-          // Do NOT use hasData (any numeric > 0) — that fires as soon as any data is entered
-          // and would falsely mark forms complete before the user intentionally finishes them.
-          completionStatus[form.column] = Boolean(result.rows[0].is_complete);
-        } else {
-          completionStatus[form.column] = false;
-        }
-      } catch (err) {
-        logger.warn(`Error checking ${form.table}:`, err.message);
-        completionStatus[form.column] = false;
-      }
-    }
-
-    const completedCount = Object.values(completionStatus).filter(Boolean).length;
-
-    await pool.query(
-      `UPDATE form_completion_status
-       SET income_form_complete = $1, adjustable_tax_form_complete = $2,
-           reductions_form_complete = $3, credits_form_complete = $4,
-           deductions_form_complete = $5, final_tax_form_complete = $6,
-           capital_gain_form_complete = $7, expenses_form_complete = $8,
-           wealth_form_complete = $9,
-           final_min_income_form_complete = $10,
-           wealth_reconciliation_form_complete = $11,
-           tax_computation_form_complete = $12,
-           last_updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $13 AND tax_year = $14`,
-      [
-        completionStatus['income_form_complete'],
-        completionStatus['adjustable_tax_form_complete'],
-        completionStatus['reductions_form_complete'],
-        completionStatus['credits_form_complete'],
-        completionStatus['deductions_form_complete'],
-        completionStatus['final_tax_form_complete'],
-        completionStatus['capital_gain_form_complete'],
-        completionStatus['expenses_form_complete'],
-        completionStatus['wealth_form_complete'],
-        completionStatus['final_min_income_form_complete'],
-        completionStatus['wealth_reconciliation_form_complete'],
-        completionStatus['tax_computation_form_complete'],
-        userId,
-        taxYear,
-      ]
-    );
-
-    logger.info(
-      `Form completion recalculated for ${userId}: ${completedCount}/${formsToCheck.length} forms completed`
-    );
-  } catch (error) {
-    logger.error('Error recalculating completion:', error);
-  }
-}
 
 // GET /api/tax-forms/current-return - Get current tax return with all form data
 router.get('/current-return', auth, async (req, res) => {
@@ -1411,104 +1328,6 @@ router.post('/adjustable-tax', auth, async (req, res) => {
 //
 // Identifiers (table, columns) are NEVER taken from request input — they come
 // from getAllowedColumns(tableName), sourced from information_schema.
-const saveFormData = async (tableName, formKey, req, res) => {
-  try {
-    const userId = req.user.id;
-    const userEmail = req.user.email;
-    const taxYear = req.body.taxYear || req.query.taxYear || await getCurrentTaxYear();
-    const formData = req.body;
-
-    logger.info(`Saving ${formKey} data for user ${userId}, tax year ${taxYear}`);
-
-    let allowedColumns;
-    try {
-      allowedColumns = await getAllowedColumns(tableName);
-    } catch (e) {
-      logger.error(`saveFormData rejected: ${e.message}`);
-      return res.status(500).json({ success: false, message: 'Save target not permitted' });
-    }
-
-    let taxReturnId;
-    try {
-      taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
-    } catch (e) {
-      return res.status(400).json({ success: false, message: e.message });
-    }
-
-    const taxYearRow = await pool.query('SELECT id FROM tax_years WHERE tax_year = $1', [taxYear]);
-    if (taxYearRow.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid tax year' });
-    }
-    const taxYearId = taxYearRow.rows[0].id;
-
-    // Strip request-envelope fields (not DB columns) and any auto-managed
-    // columns the client might echo back (`updated_at` would otherwise collide
-    // with the server-managed `updated_at = CURRENT_TIMESTAMP` in the UPDATE
-    // set, producing a "multiple assignments to same column" error).
-    const {
-      taxYear: _,
-      taxReturnId: _taxReturnId,
-      isComplete,
-      id: _id,
-      created_at: _createdAt,
-      updated_at: _updatedAt,
-      ...cleanFormData
-    } = formData;
-
-    // Server-controlled fields: overwrite any matching request-body keys.
-    const serverFields = {
-      tax_return_id: taxReturnId,
-      user_id: userId,
-      user_email: userEmail,
-      tax_year_id: taxYearId,
-      tax_year: taxYear,
-      is_complete: isComplete || false,
-      last_updated_by: userId,
-    };
-
-    const clientFields = filterToAllowedColumns(tableName, allowedColumns, cleanFormData);
-    const dataToSave = { ...clientFields, ...serverFields };
-
-    // Identity fields never get overwritten on ON CONFLICT UPDATE.
-    const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
-
-    const columns = Object.keys(dataToSave);
-    const values = columns.map((c) => dataToSave[c]);
-    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-    const updateAssignments = columns
-      .filter((c) => !identityKeys.has(c))
-      // is_complete is sticky (BE-06): a partial "Save data" (is_complete=false)
-      // must not silently un-complete a form the user already finished. Only an
-      // explicit completion flips it true; OR keeps an existing true.
-      .map((c) => c === 'is_complete'
-        ? `is_complete = ${tableName}.is_complete OR EXCLUDED.is_complete`
-        : `${c} = EXCLUDED.${c}`)
-      .concat(['updated_at = CURRENT_TIMESTAMP'])
-      .join(', ');
-
-    const sql =
-      `INSERT INTO ${tableName} (${columns.join(', ')}) ` +
-      `VALUES (${placeholders}) ` +
-      `ON CONFLICT (user_id, tax_year) DO UPDATE SET ${updateAssignments} ` +
-      `RETURNING *`;
-
-    const result = await pool.query(sql, values);
-
-    logger.info(`${formKey} data saved for user ${userId}`);
-    res.json({
-      success: true,
-      data: result.rows[0],
-      message: `${formKey} data saved successfully`,
-    });
-  } catch (error) {
-    logger.error(`Error saving ${formKey} data:`, error);
-    res.status(500).json({
-      success: false,
-      message: `Failed to save ${formKey} data`,
-    });
-  }
-};
-
 // GET /api/tax-forms/capital-gains - Get capital gains data
 router.get('/capital-gains', auth, async (req, res) => {
   try {
