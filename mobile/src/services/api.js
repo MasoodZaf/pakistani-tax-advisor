@@ -21,10 +21,14 @@ if (!API_URL) {
 }
 
 // The companion web app — final review and e-filing happen there (MOB-02).
-// Derived from the API host by dropping the `api.` subdomain; falls back to the
-// public production site.
+// Derived from the API URL by dropping the `api.` subdomain AND/OR a trailing
+// `/api` path (prod serves the API at tax.aurmak.com/api), so we land on the web
+// root. Falls back to the public production site.
 export const WEB_APP_URL =
-  (API_URL.replace('://api.', '://').replace(/\/+$/, '')) || 'https://tax.aurmak.com';
+  API_URL
+    .replace('://api.', '://')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/+$/, '') || 'https://tax.aurmak.com';
 
 // Create axios instance
 const api = axios.create({
