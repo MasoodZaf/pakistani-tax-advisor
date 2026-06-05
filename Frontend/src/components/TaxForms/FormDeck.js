@@ -71,13 +71,13 @@ const FormDeck = ({ title, subtitle, scope }) => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-6">
         <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-            {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3]">{title}</h2>
+            {subtitle && <p className="text-sm text-gray-500 dark:text-[#7e88a6] mt-1">{subtitle}</p>}
           </div>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-[#7e88a6]">
             {cards.filter(({ step }) => completedSteps.has(step.id)).length} / {cards.length} completed
           </span>
         </div>
@@ -93,10 +93,10 @@ const FormDeck = ({ title, subtitle, scope }) => {
                 className={`
                   flex flex-col p-5 rounded-lg border-2 transition-all duration-200 hover:shadow-md h-full
                   ${isCompleted
-                    ? 'border-green-200 bg-green-50 hover:border-green-300 hover:bg-green-100'
+                    ? 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/15 hover:border-green-300 hover:bg-green-100'
                     : isCurrent
-                      ? 'border-primary-200 bg-primary-50 hover:border-primary-300 hover:bg-primary-100'
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                      ? 'border-primary-200 dark:border-primary-500/30 bg-primary-50 dark:bg-primary-500/15 hover:border-primary-300 hover:bg-primary-100'
+                      : 'border-gray-200 dark:border-[#2a3450] bg-gray-50 dark:bg-[#0f1426] hover:border-gray-300 hover:bg-gray-100'
                   }
                 `}
               >
@@ -105,10 +105,10 @@ const FormDeck = ({ title, subtitle, scope }) => {
                     <div className={`
                       w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
                       ${isCompleted
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300'
                         : isCurrent
-                          ? 'bg-primary-100 text-primary-800'
-                          : 'bg-gray-100 text-gray-600'
+                          ? 'bg-primary-100 dark:bg-primary-500/15 text-primary-800 dark:text-primary-300'
+                          : 'bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]'
                       }
                     `}>
                       {idx + 1}
@@ -118,34 +118,34 @@ const FormDeck = ({ title, subtitle, scope }) => {
                   <div className="flex-shrink-0">
                     {isCompleted
                       ? <CheckCircle className="w-5 h-5 text-green-500" />
-                      : <Circle className="w-5 h-5 text-gray-400" />}
+                      : <Circle className="w-5 h-5 text-gray-400 dark:text-[#7e88a6]" />}
                   </div>
                 </div>
 
                 <div className="flex-grow">
                   <h3 className={`font-semibold mb-2 text-base leading-tight
-                    ${isCompleted ? 'text-green-900' : isCurrent ? 'text-primary-900' : 'text-gray-900'}`}>
+                    ${isCompleted ? 'text-green-900 dark:text-green-300' : isCurrent ? 'text-primary-900 dark:text-primary-300' : 'text-gray-900 dark:text-[#e7eaf3]'}`}>
                     {step.title}
                   </h3>
                   <p className={`text-sm leading-relaxed mb-3
-                    ${isCompleted ? 'text-green-700' : isCurrent ? 'text-primary-700' : 'text-gray-600'}`}>
+                    ${isCompleted ? 'text-green-700 dark:text-green-300' : isCurrent ? 'text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-[#aab2cc]'}`}>
                     {step.description}
                   </p>
                 </div>
 
                 <div className="mt-auto pt-2">
                   {isCompleted && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300">
                       ✓ Completed
                     </span>
                   )}
                   {isCurrent && !isCompleted && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-500/15 text-primary-800 dark:text-primary-300">
                       ⏳ In Progress
                     </span>
                   )}
                   {!isCompleted && !isCurrent && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]">
                       ○ Pending
                     </span>
                   )}

@@ -20,19 +20,19 @@ import { Link } from 'react-router-dom';
 // regardless of which form embeds it.
 const FormEmptyState = ({ title, addons = [], note }) => {
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+    <div className="bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-lg p-5">
       <div className="flex items-start gap-3">
-        <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-300 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-blue-900">{title}</p>
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{title}</p>
 
           {addons.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-blue-700">Unlocked by:</span>
+              <span className="text-xs text-blue-700 dark:text-blue-300">Unlocked by:</span>
               {addons.map((a) => (
                 <span
                   key={a}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-500/30"
                 >
                   {a}
                 </span>
@@ -41,12 +41,12 @@ const FormEmptyState = ({ title, addons = [], note }) => {
           )}
 
           {note && (
-            <p className="text-xs text-blue-700 mt-2 leading-relaxed">{note}</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 leading-relaxed">{note}</p>
           )}
 
           <Link
             to="/settings"
-            className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-blue-700 hover:text-blue-900 underline-offset-2 hover:underline"
+            className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200 underline-offset-2 hover:underline"
           >
             Manage income streams in Settings <ArrowRight className="w-3.5 h-3.5" />
           </Link>

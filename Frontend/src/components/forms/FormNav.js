@@ -18,7 +18,7 @@ export default function FormNav({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-slate-300 px-5 py-2.5 font-body text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-slate-300 px-5 py-2.5 font-body text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-[#2a3450] dark:text-[#aab2cc] dark:hover:bg-[#1a2238] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20 sm:w-auto"
           >
             <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
           </button>
@@ -30,7 +30,7 @@ export default function FormNav({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy px-5 py-2.5 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20 disabled:opacity-50 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy px-5 py-2.5 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/5 dark:border-[#3d5a90] dark:text-[#c5cde6] dark:hover:bg-navy/25 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20 disabled:opacity-50 sm:w-auto"
           >
             {saving ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Save size={16} aria-hidden="true" />}
             {saveLabel}

@@ -1106,11 +1106,11 @@ const AdjustableTaxForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="adj-help">
-      <h3 className="font-display text-sm font-bold text-navy">About this form</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About this form</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Covers every Pakistani withholding-tax category from your certificates.</li>
         <li>Enter amounts exactly as shown on your certificates.</li>
-        <li><strong className="text-navy">Amount on certificate</strong> is the gross value; <strong className="text-navy">tax collected</strong> is the WHT deducted.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Amount on certificate</strong> is the gross value; <strong className="text-navy dark:text-[#e7eaf3]">tax collected</strong> is the WHT deducted.</li>
         <li>Auto-fetched rows pull from your Income form; auto-calculated tax is editable.</li>
         <li>These amounts are adjusted against your final tax liability.</li>
       </ul>
@@ -1157,9 +1157,9 @@ const AdjustableTaxForm = () => {
 
         {/* Column headers (desktop) */}
         <div className="hidden grid-cols-[1fr_150px_150px] gap-4 px-1 md:grid">
-          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Amount on certificate</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax collected</span>
+          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Description</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Amount on certificate</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax collected</span>
         </div>
 
         {/* Dynamic sections — filtered by income-profile addons via shared/formFieldVisibility.js. */}
@@ -1182,18 +1182,18 @@ const AdjustableTaxForm = () => {
                   <div key={field.key} className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_150px_150px] md:items-start md:gap-4">
                     <div className="min-w-0">
                       <div className="flex items-start gap-1.5">
-                        <span className="font-body text-sm leading-snug text-slate-700">{field.label}</span>
+                        <span className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">{field.label}</span>
                         <HelpHint fieldId={field.key} source={adjustableTaxHelp} />
                       </div>
                       {field.atlStatusField && (
                         <div className="mt-2">
-                          <label htmlFor={field.atlStatusField} className="mb-1 block font-body text-xs font-medium text-slate-500">Filer status</label>
+                          <label htmlFor={field.atlStatusField} className="mb-1 block font-body text-xs font-medium text-slate-500 dark:text-[#7e88a6]">Filer status</label>
                           <select
                             id={field.atlStatusField}
                             key={`${field.atlStatusField}-${refreshKey}`}
                             {...register(field.atlStatusField)}
                             defaultValue={getValues(field.atlStatusField) || 'ATL'}
-                            className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                            className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3]"
                           >
                             <option value="ATL">Filer (ATL) — 10%</option>
                             <option value="NONATL">Non-filer — 20%</option>
@@ -1203,7 +1203,7 @@ const AdjustableTaxForm = () => {
                     </div>
 
                     <div>
-                      <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount on certificate</span>
+                      <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Amount on certificate</span>
                       <input
                         id={field.grossField}
                         key={`${field.grossField}-${refreshKey}`}
@@ -1217,14 +1217,14 @@ const AdjustableTaxForm = () => {
                         onFocus={(e) => handleNumberFocus(field.grossField, e)}
                         onChange={(e) => handleNumberInput(field.grossField, e)}
                         onBlur={(e) => handleNumberBlur(field.grossField, e)}
-                        className={`w-full rounded-brand border-[1.5px] border-slate-300 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 ${isAutoFetched ? 'cursor-default bg-slate-100 text-slate-500' : 'bg-white'}`}
+                        className={`w-full rounded-brand border-[1.5px] border-slate-300 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:text-[#e7eaf3] ${isAutoFetched ? 'cursor-default bg-slate-100 text-slate-500 dark:bg-[#1a2238] dark:text-[#7e88a6]' : 'bg-white dark:bg-[#151c30]'}`}
                       />
-                      {isAutoFetched && <p className="mt-1 text-right font-body text-xs text-slate-400">From Income form</p>}
-                      {errors[field.grossField] && <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[field.grossField].message}</p>}
+                      {isAutoFetched && <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">From Income form</p>}
+                      {errors[field.grossField] && <p role="alert" className="mt-1 text-right font-body text-xs text-red-600 dark:text-red-300">{errors[field.grossField].message}</p>}
                     </div>
 
                     <div>
-                      <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax collected</span>
+                      <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax collected</span>
                       <div className="relative">
                         <input
                           id={field.taxField}
@@ -1238,7 +1238,7 @@ const AdjustableTaxForm = () => {
                           onFocus={(e) => handleNumberFocus(field.taxField, e)}
                           onChange={(e) => handleNumberInput(field.taxField, e)}
                           onBlur={(e) => handleNumberBlur(field.taxField, e)}
-                          className={`w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 ${field.autoCalculateTax ? 'pl-3 pr-9' : 'px-3'}`}
+                          className={`w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3] ${field.autoCalculateTax ? 'pl-3 pr-9' : 'px-3'}`}
                         />
                         {field.autoCalculateTax && (
                           <button
@@ -1258,9 +1258,9 @@ const AdjustableTaxForm = () => {
                         )}
                       </div>
                       {field.autoCalculateTax && autoRate != null && (
-                        <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated @ {(autoRate * 100).toFixed(2).replace(/\.?0+$/, '')}% — editable</p>
+                        <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto-calculated @ {(autoRate * 100).toFixed(2).replace(/\.?0+$/, '')}% — editable</p>
                       )}
-                      {errors[field.taxField] && <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[field.taxField].message}</p>}
+                      {errors[field.taxField] && <p role="alert" className="mt-1 text-right font-body text-xs text-red-600 dark:text-red-300">{errors[field.taxField].message}</p>}
                     </div>
                   </div>
                 );
@@ -1279,7 +1279,7 @@ const AdjustableTaxForm = () => {
             <button
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
-              className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
+              className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15 dark:border-[#2a3450] dark:bg-white/5 dark:text-[#e7eaf3] dark:hover:bg-white/10"
             >
               {showAdvanced
                 ? (<><ChevronDown size={16} aria-hidden="true" /> Hide advanced fields</>)

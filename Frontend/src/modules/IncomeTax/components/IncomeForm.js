@@ -315,8 +315,8 @@ const IncomeForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="income-help">
-      <h3 className="font-display text-sm font-bold text-navy">Filling in this form</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Filling in this form</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Enter annual amounts in rupees — monthly fields are converted to annual (×12) for you.</li>
         <li>Grey rows are calculated automatically and can&apos;t be edited.</li>
         <li>Amounts format with thousands separators as you type.</li>

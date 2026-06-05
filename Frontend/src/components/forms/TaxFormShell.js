@@ -15,7 +15,7 @@ export default function TaxFormShell({
 }) {
   return (
     <div className={`mx-auto w-full max-w-5xl p-4 sm:p-6 ${className}`}>
-      <div className="overflow-hidden rounded-brand-lg border border-slate-200 bg-white shadow-brand">
+      <div className="overflow-hidden rounded-brand-lg border border-slate-200 bg-white shadow-brand dark:border-[#2a3450] dark:bg-[#151c30]">
         {/* Navy header bar */}
         <div className="flex flex-col gap-3 bg-navy px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -43,11 +43,11 @@ export default function TaxFormShell({
           )}
         </div>
 
-        {help && <div className="border-b border-slate-100 bg-cream-bg px-5 py-3">{help}</div>}
+        {help && <div className="border-b border-slate-100 bg-cream-bg px-5 py-3 dark:border-[#2a3450] dark:bg-[#1a2238]">{help}</div>}
 
         <div className="space-y-4 px-3 py-4 sm:px-5">{children}</div>
 
-        {footer && <div className="border-t border-slate-100 px-5 py-4">{footer}</div>}
+        {footer && <div className="border-t border-slate-100 px-5 py-4 dark:border-[#2a3450]">{footer}</div>}
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ const FinalTaxAutoCalc = ({ control, getValues, setValue, rates }) => {
 const AutoCalcHint = ({ control, field, ratePct }) => {
   const amount = useWatch({ control, name: field });
   if (!((parseFloat(amount) || 0) > 0)) return null;
-  return <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated @ {ratePct}%</p>;
+  return <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto-calculated @ {ratePct}%</p>;
 };
 
 const FinalTaxForm = () => {
@@ -235,8 +235,8 @@ const FinalTaxForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="final-tax-help">
-      <h3 className="font-display text-sm font-bold text-navy">About final tax</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About final tax</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Final tax is the complete liability on these income types — no further computation, no refund.</li>
         <li>These amounts are not added to your taxable income for normal slab calculation.</li>
         <li>Tax is auto-calculated for fixed-rate items; enter the gross amount received.</li>
@@ -272,17 +272,17 @@ const FinalTaxForm = () => {
 
         {/* Column headers (desktop) */}
         <div className="hidden grid-cols-[1fr_150px_150px] gap-4 px-1 md:grid">
-          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Gross amount</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax</span>
+          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Description</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Gross amount</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax</span>
         </div>
 
         {groups.map((group) => {
           const items = FINAL_TAX_ITEMS.filter((i) => group.ids.includes(i.id));
           return (
             <div key={group.title}>
-              <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">{group.title}</h2>
-              <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+              <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">{group.title}</h2>
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 dark:divide-[#2a3450] dark:border-[#2a3450]">
                 {items.map((item) => {
                   const r = item.manual ? null : finalTaxRate(item.id);
                   const isAutoCalc = !item.manual && r !== null;
@@ -291,10 +291,10 @@ const FinalTaxForm = () => {
                     <div key={item.id} className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_150px_150px] md:items-start md:gap-4">
                       <div className="min-w-0">
                         <div className="flex items-start gap-1.5">
-                          <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
+                          <span className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">{item.description}</span>
                           <HelpHint fieldId={item.id} source={finalTaxHelp} />
                         </div>
-                        <p className="mt-0.5 font-body text-xs text-slate-400">
+                        <p className="mt-0.5 font-body text-xs text-slate-400 dark:text-[#7e88a6]">
                           {item.section !== 'Other' && <span className="mr-1">{item.section}</span>}
                           {item.remark}
                           {item.manual
@@ -306,9 +306,9 @@ const FinalTaxForm = () => {
                       </div>
 
                       <div>
-                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Gross amount</span>
+                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Gross amount</span>
                         <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">Rs</span>
                           <input
                             id={item.amountField}
                             type="number"
@@ -317,16 +317,16 @@ const FinalTaxForm = () => {
                             inputMode="numeric"
                             aria-label={`${item.description} — gross amount`}
                             {...register(item.amountField, { valueAsNumber: true, min: 0 })}
-                            className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                            className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3]"
                             placeholder="0"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax</span>
+                        <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax</span>
                         <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">Rs</span>
                           <input
                             id={item.taxField}
                             type="number"
@@ -335,7 +335,7 @@ const FinalTaxForm = () => {
                             inputMode="numeric"
                             aria-label={`${item.description} — tax`}
                             {...register(item.taxField, { valueAsNumber: true, min: 0 })}
-                            className={`w-full rounded-brand border-[1.5px] py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 ${isAutoCalc ? 'cursor-default border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-300 bg-white text-navy'}`}
+                            className={`w-full rounded-brand border-[1.5px] py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 ${isAutoCalc ? 'cursor-default border-slate-200 bg-slate-50 text-slate-500 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#7e88a6]' : 'border-slate-300 bg-white text-navy dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3]'}`}
                             placeholder="0"
                             readOnly={isAutoCalc}
                             title={isAutoCalc ? 'Auto-calculated — read-only' : 'Enter manually'}
@@ -352,7 +352,7 @@ const FinalTaxForm = () => {
         })}
 
         {/* Total — navy emphasis band (this is final tax owed, not a refund). */}
-        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 dark:divide-[#2a3450] dark:border-[#2a3450]">
           <LiveAmount component={AmountRow} field="total" label="Total final tax" variant="total" />
         </div>
       </TaxFormShell>

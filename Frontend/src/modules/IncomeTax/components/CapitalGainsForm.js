@@ -107,11 +107,11 @@ const NetCgtHeadline = () => {
   if (!(totals.cgt > 0)) return null;
   return (
     <div className="flex flex-col gap-1 rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="font-body text-sm font-bold text-red-700">Net CGT payable</div>
-      <div className="font-body text-xs text-slate-500 sm:text-right">
+      <div className="font-body text-sm font-bold text-red-700 dark:text-red-300">Net CGT payable</div>
+      <div className="font-body text-xs text-slate-500 dark:text-[#7e88a6] sm:text-right">
         Gross CGT {formatCurrency(totals.cgt)} − tax deducted {formatCurrency(totals.taxDeducted)}
       </div>
-      <div className="font-mono text-base font-bold tabular-nums text-red-600 sm:text-right">
+      <div className="font-mono text-base font-bold tabular-nums text-red-600 dark:text-red-300 sm:text-right">
         {formatCurrency(Math.max(0, totals.cgt - totals.taxDeducted))}
       </div>
     </div>
@@ -227,42 +227,42 @@ const CapitalGainsForm = () => {
   const renderGroup = (title, sublabel, items) => (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2 px-3">
-        <h2 className="font-display text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h2>
-        {sublabel && <span className="font-body text-xs text-slate-400">{sublabel}</span>}
+        <h2 className="font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">{title}</h2>
+        {sublabel && <span className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">{sublabel}</span>}
       </div>
-      <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+      <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
         {items.map(item => {
           const r = cgtRate(item.id);
           return (
             <div key={item.id} className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_72px_140px_140px_140px_120px] md:items-start md:gap-3">
               <div className="min-w-0">
                 <div className="flex items-start gap-1.5">
-                  <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
+                  <span className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">{item.description}</span>
                   <HelpHint fieldId={item.id} source={capitalGainsHelp} />
                 </div>
                 <div className="mt-0.5 md:hidden">
                   {r === null ? (
-                    <span className="font-body text-xs text-slate-400">Rate loading…</span>
+                    <span className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">Rate loading…</span>
                   ) : r === 0 ? (
-                    <span className="font-body text-xs text-slate-400">Rate: exempt</span>
+                    <span className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">Rate: exempt</span>
                   ) : (
-                    <span className="font-body text-xs font-semibold text-navy">Rate {(r * 100).toFixed(1)}%</span>
+                    <span className="font-body text-xs font-semibold text-navy dark:text-[#e7eaf3]">Rate {(r * 100).toFixed(1)}%</span>
                   )}
                 </div>
               </div>
 
               <div className="hidden md:flex md:items-center md:justify-center md:pt-2">
                 {r === null ? (
-                  <span className="font-body text-xs text-slate-400">…</span>
+                  <span className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">…</span>
                 ) : r === 0 ? (
-                  <span className="font-body text-xs font-semibold text-slate-400">NIL</span>
+                  <span className="font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">NIL</span>
                 ) : (
-                  <span className="font-body text-sm font-bold tabular-nums text-navy">{(r * 100).toFixed(1)}%</span>
+                  <span className="font-body text-sm font-bold tabular-nums text-navy dark:text-[#e7eaf3]">{(r * 100).toFixed(1)}%</span>
                 )}
               </div>
 
               <div>
-                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Gain amount</span>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Gain amount</span>
                 <input
                   id={item.taxableAmount}
                   type="number"
@@ -272,16 +272,16 @@ const CapitalGainsForm = () => {
                   aria-label={`${item.description} — gain amount`}
                   aria-invalid={errors[item.taxableAmount] ? true : undefined}
                   {...register(item.taxableAmount, { valueAsNumber: true, min: 0 })}
-                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors placeholder:font-normal placeholder:text-slate-300 dark:placeholder:text-[#7e88a6] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
                 {errors[item.taxableAmount] && (
-                  <p role="alert" className="mt-1 text-right font-body text-xs font-medium text-red-600">{errors[item.taxableAmount].message}</p>
+                  <p role="alert" className="mt-1 text-right font-body text-xs font-medium text-red-600 dark:text-red-300">{errors[item.taxableAmount].message}</p>
                 )}
               </div>
 
               <div>
-                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">CGT (auto)</span>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">CGT (auto)</span>
                 <input
                   id={item.taxField}
                   type="number"
@@ -289,20 +289,20 @@ const CapitalGainsForm = () => {
                   min="0"
                   aria-label={`${item.description} — capital gains tax (auto-calculated)`}
                   {...register(item.taxField, { valueAsNumber: true, min: 0 })}
-                  className="w-full cursor-default rounded-brand border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500 focus:outline-none"
+                  className="w-full cursor-default rounded-brand border-[1.5px] border-slate-200 dark:border-[#2a3450] bg-slate-50 dark:bg-[#0f1426] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500 dark:text-[#7e88a6] focus:outline-none"
                   placeholder="0"
                   readOnly
                   title="Auto-calculated — read-only"
                 />
                 {r !== null && r > 0 && (
                   <LiveWhen control={control} field={item.taxableAmount}>
-                    <p className="mt-1 text-right font-body text-xs text-slate-400">Auto @ {(r * 100).toFixed(1)}%</p>
+                    <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto @ {(r * 100).toFixed(1)}%</p>
                   </LiveWhen>
                 )}
               </div>
 
               <div>
-                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax deducted</span>
                 <input
                   id={item.taxDeducted}
                   type="number"
@@ -311,13 +311,13 @@ const CapitalGainsForm = () => {
                   min="0"
                   aria-label={`${item.description} — tax deducted`}
                   {...register(item.taxDeducted, { valueAsNumber: true, min: 0 })}
-                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors placeholder:font-normal placeholder:text-slate-300 dark:placeholder:text-[#7e88a6] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Carryable</span>
+                <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Carryable</span>
                 <input
                   id={item.taxCarryable}
                   type="number"
@@ -326,7 +326,7 @@ const CapitalGainsForm = () => {
                   min="0"
                   aria-label={`${item.description} — carryable`}
                   {...register(item.taxCarryable, { valueAsNumber: true, min: 0 })}
-                  className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                  className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors placeholder:font-normal placeholder:text-slate-300 dark:placeholder:text-[#7e88a6] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                   placeholder="0"
                 />
               </div>
@@ -352,13 +352,13 @@ const CapitalGainsForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="cg-help">
-      <h3 className="font-display text-sm font-bold text-navy">About this form</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
-        <li><strong className="text-navy">Immovable property u/s 37(1A)</strong>: rates step from 15% down to 2.5% by holding period; exempt after 6 years.</li>
-        <li><strong className="text-navy">Securities u/s 37A</strong>: rates from 5% to 25% depending on type and acquisition date.</li>
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About this form</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Immovable property u/s 37(1A)</strong>: rates step from 15% down to 2.5% by holding period; exempt after 6 years.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Securities u/s 37A</strong>: rates from 5% to 25% depending on type and acquisition date.</li>
         <li>CGT is auto-calculated from gain amount × rate (read-only column).</li>
-        <li><strong className="text-navy">Tax deducted</strong>: advance tax already withheld (e.g. u/s 236C on property).</li>
-        <li><strong className="text-navy">Carryable</strong>: net CGT that carries to your computation summary.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Tax deducted</strong>: advance tax already withheld (e.g. u/s 236C on property).</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Carryable</strong>: net CGT that carries to your computation summary.</li>
       </ul>
     </div>
   ) : null;
@@ -391,12 +391,12 @@ const CapitalGainsForm = () => {
         {/* Column headers (desktop) */}
         {(propertyItems.length > 0 || securitiesItems.length > 0) && (
           <div className="hidden grid-cols-[1fr_72px_140px_140px_140px_120px] gap-3 px-3 md:grid">
-            <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-            <span className="text-center font-body text-xs font-bold uppercase tracking-wider text-slate-400">Rate</span>
-            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Gain amount</span>
-            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">CGT (auto)</span>
-            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax deducted</span>
-            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Carryable</span>
+            <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Description</span>
+            <span className="text-center font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Rate</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Gain amount</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">CGT (auto)</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax deducted</span>
+            <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Carryable</span>
           </div>
         )}
 

@@ -134,8 +134,8 @@ const ExpensesForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="expenses-help">
-      <h3 className="font-display text-sm font-bold text-navy">Allowable expenses</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Allowable expenses</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Record all legitimate business and professional expenses.</li>
         <li>Include household expenses for wealth reconciliation.</li>
         <li>Keep receipts and documentation for all expenses.</li>
@@ -170,8 +170,8 @@ const ExpensesForm = () => {
       >
 
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Housing &amp; property</h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Housing &amp; property</h2>
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <TaxFormRow name="rent" label="Rent" help={<HelpHint fieldId="rent" source={expensesHelp} />} error={errors.rent?.message} inputProps={reg('rent')} />
             <TaxFormRow name="rates_taxes_charges" label="Property rates / taxes" help={<HelpHint fieldId="rates_taxes_charges" source={expensesHelp} />} error={errors.rates_taxes_charges?.message} inputProps={reg('rates_taxes_charges')} />
             <TaxFormRow name="maintenance" label="Maintenance" help={<HelpHint fieldId="maintenance" source={expensesHelp} />} error={errors.maintenance?.message} inputProps={reg('maintenance')} />
@@ -179,8 +179,8 @@ const ExpensesForm = () => {
         </div>
 
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Utilities</h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Utilities</h2>
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <TaxFormRow name="electricity" label="Electricity" help={<HelpHint fieldId="electricity" source={expensesHelp} />} error={errors.electricity?.message} inputProps={reg('electricity')} />
             <TaxFormRow name="water" label="Water" help={<HelpHint fieldId="water" source={expensesHelp} />} error={errors.water?.message} inputProps={reg('water')} />
             <TaxFormRow name="gas" label="Gas" help={<HelpHint fieldId="gas" source={expensesHelp} />} error={errors.gas?.message} inputProps={reg('gas')} />
@@ -189,16 +189,16 @@ const ExpensesForm = () => {
         </div>
 
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Transportation</h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Transportation</h2>
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <TaxFormRow name="vehicle_running_maintenance" label="Vehicle expenses" sublabel="Fuel, maintenance, insurance" help={<HelpHint fieldId="vehicle_running_maintenance" source={expensesHelp} />} error={errors.vehicle_running_maintenance?.message} inputProps={reg('vehicle_running_maintenance')} />
             <TaxFormRow name="travelling" label="Travel expenses" sublabel="Business and personal travel" help={<HelpHint fieldId="travelling" source={expensesHelp} />} error={errors.travelling?.message} inputProps={reg('travelling')} />
           </div>
         </div>
 
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Personal &amp; family</h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Personal &amp; family</h2>
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <TaxFormRow name="medical" label="Medical expenses" help={<HelpHint fieldId="medical" source={expensesHelp} />} error={errors.medical?.message} inputProps={reg('medical')} />
             <TaxFormRow name="educational" label="Educational expenses" help={<HelpHint fieldId="educational" source={expensesHelp} />} error={errors.educational?.message} inputProps={reg('educational')} />
             <TaxFormRow name="entertainment" label="Entertainment" help={<HelpHint fieldId="entertainment" source={expensesHelp} />} error={errors.entertainment?.message} inputProps={reg('entertainment')} />
@@ -206,15 +206,15 @@ const ExpensesForm = () => {
         </div>
 
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Tax &amp; other</h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax &amp; other</h2>
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <TaxFormRow name="income_tax" label="Income tax paid" help={<HelpHint fieldId="income_tax" source={expensesHelp} />} error={errors.income_tax?.message} inputProps={reg('income_tax')} />
             <TaxFormRow name="donations_zakat_annuity" label="Charitable donations" help={<HelpHint fieldId="donations_zakat_annuity" source={expensesHelp} />} error={errors.donations_zakat_annuity?.message} inputProps={reg('donations_zakat_annuity')} />
             <TaxFormRow name="other_expenses" label="Other expenses" help={<HelpHint fieldId="other_expenses" source={expensesHelp} />} error={errors.other_expenses?.message} inputProps={reg('other_expenses')} />
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
           <LiveAmount component={AmountRow} variant="calculated" field="housing" label="Housing &amp; property" />
           <LiveAmount component={AmountRow} variant="calculated" field="utilities" label="Utilities" />
           <LiveAmount component={AmountRow} variant="calculated" field="transportation" label="Transportation" />

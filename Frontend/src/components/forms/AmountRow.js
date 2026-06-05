@@ -12,12 +12,12 @@ import { formatCurrency } from '../../utils/currency';
  * and shows the magnitude, so meaning never depends on colour alone.
  */
 const ROW = {
-  line:       { wrap: '',                                                              label: 'text-slate-700',      amount: 'text-navy' },
-  calculated: { wrap: '',                                                              label: 'text-slate-500',      amount: 'text-slate-500' },
-  subtotal:   { wrap: 'rounded-brand border-l-[3px] border-navy bg-navy/[0.04]',       label: 'font-semibold text-navy',  amount: 'font-semibold text-navy' },
-  total:      { wrap: 'rounded-brand border-l-[3px] border-navy bg-navy/[0.08]',       label: 'font-bold text-navy',      amount: 'font-bold text-navy text-base' },
-  payable:    { wrap: 'rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06]', label: 'font-bold text-red-700',   amount: 'font-bold text-red-600 text-base' },
-  refund:     { wrap: 'rounded-brand border-l-[3px] border-green-600 bg-green-600/[0.06]', label: 'font-bold text-green-800', amount: 'font-bold text-green-700 text-base' },
+  line:       { wrap: '',                                                              label: 'text-slate-700 dark:text-[#aab2cc]', amount: 'text-navy dark:text-[#e7eaf3]' },
+  calculated: { wrap: '',                                                              label: 'text-slate-500 dark:text-[#7e88a6]', amount: 'text-slate-500 dark:text-[#7e88a6]' },
+  subtotal:   { wrap: 'rounded-brand border-l-[3px] border-navy bg-navy/[0.04] dark:border-navy-mid dark:bg-navy-mid/[0.18]',       label: 'font-semibold text-navy dark:text-[#dfe5f5]',  amount: 'font-semibold text-navy dark:text-[#dfe5f5]' },
+  total:      { wrap: 'rounded-brand border-l-[3px] border-navy bg-navy/[0.08] dark:border-navy-mid dark:bg-navy-mid/[0.28]',       label: 'font-bold text-navy dark:text-[#e7eaf3]',      amount: 'font-bold text-navy dark:text-[#e7eaf3] text-base' },
+  payable:    { wrap: 'rounded-brand border-l-[3px] border-red-500 bg-red-500/[0.06] dark:bg-red-500/[0.14]', label: 'font-bold text-red-700 dark:text-red-300',   amount: 'font-bold text-red-600 dark:text-red-400 text-base' },
+  refund:     { wrap: 'rounded-brand border-l-[3px] border-green-600 bg-green-600/[0.06] dark:bg-green-500/[0.14]', label: 'font-bold text-green-800 dark:text-green-300', amount: 'font-bold text-green-700 dark:text-green-400 text-base' },
 };
 
 export default function AmountRow({
@@ -38,7 +38,7 @@ export default function AmountRow({
           <div className={`font-body text-sm ${styles.label}`}>{label}</div>
           {help}
         </div>
-        {sublabel && <div className="font-body text-xs text-slate-400">{sublabel}</div>}
+        {sublabel && <div className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">{sublabel}</div>}
       </div>
       <div className="flex items-baseline gap-2 md:justify-end">
         <span className={`font-mono text-sm tabular-nums ${styles.amount}`}>
