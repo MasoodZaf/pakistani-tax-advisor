@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
-import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw, Sparkles } from 'lucide-react';
+import { User, Bell, Shield, HelpCircle, X, Eye, EyeOff, SlidersHorizontal, Check, AlertTriangle, Activity, RefreshCw, Sparkles, Palette } from 'lucide-react';
+import { ThemeSegmented } from '../Layout/ThemeToggle';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConnectedAccounts from './ConnectedAccounts';
@@ -392,6 +393,18 @@ const Settings = () => {
         <p className="text-gray-600">
           Manage your account preferences and personal information
         </p>
+      </div>
+
+      {/* Appearance (UX-07 dark mode) */}
+      <div className="bg-white rounded-lg shadow-sm p-6 dark:bg-[#151c30]">
+        <div className="flex items-center space-x-3 mb-2">
+          <Palette className="w-6 h-6 text-gray-600 dark:text-[#aab2cc]" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e7eaf3]">Appearance</h2>
+        </div>
+        <p className="text-sm text-gray-600 mb-4 dark:text-[#aab2cc]">
+          Choose how the app looks. <span className="font-medium">System</span> follows your device setting.
+        </p>
+        <ThemeSegmented />
       </div>
 
       {/* User Profile */}

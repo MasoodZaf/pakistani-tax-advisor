@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
 import { LogOut, Settings, ChevronDown, Bell, AlertTriangle } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 const Header = () => {
   const { user, logout, sessionExpiresAt, sessionWarning } = useAuth();
@@ -129,6 +130,8 @@ const Header = () => {
         )}
 
         <div style={{ flex: 1 }} />
+
+        <ThemeToggle />
 
         <button className="hdr-notif" aria-label="Notifications">
           <Bell size={15} color="#6b6c64" />
