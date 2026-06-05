@@ -208,8 +208,8 @@ const WealthReconciliationForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="wealth-recon-help">
-      <h3 className="font-display text-sm font-bold text-navy">About wealth reconciliation</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About wealth reconciliation</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>The unreconciled difference must be zero before you can submit.</li>
         <li>It reconciles your net-worth increase with declared income and expenses.</li>
         <li>Figures are pulled automatically from your wealth statement and income forms.</li>
@@ -262,15 +262,15 @@ const WealthReconciliationForm = () => {
           }`}
         >
           {balanced ? (
-            <CheckCircle size={22} className="mt-0.5 shrink-0 text-green-700" aria-hidden="true" />
+            <CheckCircle size={22} className="mt-0.5 shrink-0 text-green-700 dark:text-green-300" aria-hidden="true" />
           ) : (
-            <AlertTriangle size={22} className="mt-0.5 shrink-0 text-red-600" aria-hidden="true" />
+            <AlertTriangle size={22} className="mt-0.5 shrink-0 text-red-600 dark:text-red-300" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <h2 className={`font-display text-sm font-bold ${balanced ? 'text-green-800' : 'text-red-700'}`}>
+            <h2 className={`font-display text-sm font-bold ${balanced ? 'text-green-800 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
               {balanced ? 'Reconciliation balanced' : 'Reconciliation not balanced'}
             </h2>
-            <p className={`font-body text-sm ${balanced ? 'text-green-800/90' : 'text-red-700/90'}`}>
+            <p className={`font-body text-sm ${balanced ? 'text-green-800/90 dark:text-green-300/90' : 'text-red-700/90 dark:text-red-300/90'}`}>
               Unreconciled difference: <strong className="tabular-nums">{formatCurrency(unreconciledDifference)}</strong>
               {!balanced && ' — must be zero before you can submit.'}
             </p>
@@ -280,8 +280,8 @@ const WealthReconciliationForm = () => {
         {/* Quick balance helper — pick a likely bucket and we add the difference. */}
         {!balanced && (
           <div className="rounded-brand-lg border border-navy/20 bg-navy/[0.03] px-4 py-3">
-            <h2 className="font-display text-sm font-bold text-navy">Quick balance</h2>
-            <p className="mt-1 font-body text-xs text-slate-600">
+            <h2 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Quick balance</h2>
+            <p className="mt-1 font-body text-xs text-slate-600 dark:text-[#aab2cc]">
               {unreconciledDifference > 0
                 ? `Your asset increase exceeds declared inflows by ${formatCurrency(unreconciledDifference)}. The most likely sources are below — pick one and we'll add the difference to it.`
                 : `Your declared inflows exceed your asset increase by ${formatCurrency(Math.abs(unreconciledDifference))}. Either reduce an inflow or add to outflows below.`}
@@ -309,17 +309,17 @@ const WealthReconciliationForm = () => {
                     key={field}
                     type="button"
                     onClick={() => setValue(field, Math.round(next * 100) / 100)}
-                    className="rounded-brand border-[1.5px] border-navy/30 bg-white px-3 py-2 text-left font-body text-xs font-semibold text-navy transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20"
+                    className="rounded-brand border-[1.5px] border-navy/30 bg-white dark:bg-[#151c30] px-3 py-2 text-left font-body text-xs font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20"
                   >
                     Add to {label}
-                    <span className="mt-0.5 block font-body text-[11px] font-normal tabular-nums text-slate-500">
+                    <span className="mt-0.5 block font-body text-[11px] font-normal tabular-nums text-slate-500 dark:text-[#7e88a6]">
                       {formatCurrency(current)} → {formatCurrency(next)}
                     </span>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-3 font-body text-[11px] italic text-slate-500">
+            <p className="mt-3 font-body text-[11px] italic text-slate-500 dark:text-[#7e88a6]">
               Only use a category that reflects your actual financial activity. Picking the wrong bucket is worse than leaving it unbalanced — FBR can audit-flag inflated remittances or inheritances.
             </p>
           </div>
@@ -327,10 +327,10 @@ const WealthReconciliationForm = () => {
 
         {/* Net assets */}
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">
             Net assets
           </h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
             <AmountRow variant="calculated" label="Net assets — current year" amount={reconciliationData?.net_assets_current_year || 0} />
             <AmountRow variant="calculated" label="Net assets — previous year" amount={reconciliationData?.net_assets_previous_year || 0} />
             <AmountRow variant="subtotal" label="Increase / (decrease) in assets" amount={reconciliationData?.net_assets_increase || 0} />
@@ -339,10 +339,10 @@ const WealthReconciliationForm = () => {
 
         {/* Inflows */}
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">
             Inflows
           </h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 px-3">
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450] px-3">
             <AmountRow variant="calculated" label="Income declared subject to normal tax" amount={reconciliationData?.income_normal_tax || 0} />
             <AmountRow variant="calculated" label="Income declared exempt from tax" amount={reconciliationData?.income_exempt_from_tax || 0} />
             <AmountRow variant="calculated" label="Income attributable to receipts under final / fixed tax and CGT" amount={reconciliationData?.income_final_tax || 0} />
@@ -384,10 +384,10 @@ const WealthReconciliationForm = () => {
 
         {/* Outflows */}
         <div>
-          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">
             Outflows
           </h2>
-          <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 px-3">
+          <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450] px-3">
             <TaxFormRow
               name="personal_expenses"
               label="Personal expenses"
@@ -417,7 +417,7 @@ const WealthReconciliationForm = () => {
         </div>
 
         {/* Result */}
-        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
           <AmountRow variant="total" label="Net increase / (decrease) in assets" amount={reconciliationData?.calculated_net_increase || 0} />
           <AmountRow
             variant={balanced ? 'subtotal' : 'payable'}

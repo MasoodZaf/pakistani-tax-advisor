@@ -99,16 +99,16 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-[#0f1426] dark:to-[#151c30] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-2xl">PT</span>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-[#e7eaf3]">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-[#aab2cc]">
             Pakistani Tax Advisor System
           </p>
         </div>
@@ -122,7 +122,7 @@ const Register = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                 </div>
                 <input
                   id="name"
@@ -131,7 +131,7 @@ const Register = () => {
                   autoComplete="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`form-input pl-10 ${errors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`form-input pl-10 ${errors.name ? 'border-red-300 dark:border-red-500/40 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Enter your full name"
                 />
               </div>
@@ -145,7 +145,7 @@ const Register = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                 </div>
                 <input
                   id="email"
@@ -154,7 +154,7 @@ const Register = () => {
                   autoComplete="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`form-input pl-10 ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`form-input pl-10 ${errors.email ? 'border-red-300 dark:border-red-500/40 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Enter your email"
                 />
               </div>
@@ -168,7 +168,7 @@ const Register = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Building className="h-5 w-5 text-gray-400" />
+                  <Building className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                 </div>
                 <select
                   id="user_type"
@@ -190,7 +190,7 @@ const Register = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                 </div>
                 <input
                   id="password"
@@ -199,7 +199,7 @@ const Register = () => {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`form-input pl-10 pr-10 ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`form-input pl-10 pr-10 ${errors.password ? 'border-red-300 dark:border-red-500/40 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Create a password"
                 />
                 <button
@@ -208,9 +208,9 @@ const Register = () => {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                   )}
                 </button>
               </div>
@@ -224,7 +224,7 @@ const Register = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                 </div>
                 <input
                   id="confirmPassword"
@@ -233,7 +233,7 @@ const Register = () => {
                   autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className={`form-input pl-10 pr-10 ${errors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`form-input pl-10 pr-10 ${errors.confirmPassword ? 'border-red-300 dark:border-red-500/40 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Confirm your password"
                 />
                 <button
@@ -242,9 +242,9 @@ const Register = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400 dark:text-[#7e88a6]" />
                   )}
                 </button>
               </div>
@@ -259,9 +259,9 @@ const Register = () => {
               name="terms"
               type="checkbox"
               required
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-[#2a3450] rounded"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900 dark:text-[#e7eaf3]">
               I agree to the{' '}
               <a href="#" className="text-primary-600 hover:text-primary-500">
                 Terms and Conditions
@@ -291,7 +291,7 @@ const Register = () => {
 
         {/* Login Link */}
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-[#aab2cc]">
             Already have an account?{' '}
             <Link
               to="/login"

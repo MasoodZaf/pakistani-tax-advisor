@@ -79,15 +79,15 @@ const NumberTrace = ({
           role="dialog"
           aria-modal="true"
           aria-label="Calculation breakdown"
-          className="absolute right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl outline-none"
+          className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#151c30] border border-gray-200 dark:border-[#2a3450] rounded-lg shadow-xl outline-none"
           style={{ minWidth: 320, maxWidth: 420 }}
         >
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-[#2a3450]">
+            <p className="text-xs font-bold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wide">
               How this was calculated
             </p>
             {formula && (
-              <p className="text-sm text-gray-800 mt-1 font-mono">{formula}</p>
+              <p className="text-sm text-gray-800 dark:text-[#e7eaf3] mt-1 font-mono">{formula}</p>
             )}
           </div>
           <div className="overflow-x-auto px-4 py-3">
@@ -96,26 +96,26 @@ const NumberTrace = ({
                 {visibleTrace.map((row, i) => {
                   const op = i === 0 ? '' : (row.op || '+');
                   return (
-                    <tr key={`${row.label}-${i}`} className="text-gray-700">
-                      <td className="text-gray-400 font-mono pr-2 align-top w-3 text-right">
+                    <tr key={`${row.label}-${i}`} className="text-gray-700 dark:text-[#aab2cc]">
+                      <td className="text-gray-400 dark:text-[#7e88a6] font-mono pr-2 align-top w-3 text-right">
                         {op}
                       </td>
                       <td className="py-1 align-top">
                         <div>{row.label}</div>
                         {row.note && (
-                          <div className="text-xs text-gray-500 mt-0.5">{row.note}</div>
+                          <div className="text-xs text-gray-500 dark:text-[#7e88a6] mt-0.5">{row.note}</div>
                         )}
                       </td>
-                      <td className="text-right font-mono py-1 align-top text-gray-900 whitespace-nowrap pl-3">
+                      <td className="text-right font-mono py-1 align-top text-gray-900 dark:text-[#e7eaf3] whitespace-nowrap pl-3">
                         {formatCurrency(row.value)}
                       </td>
                     </tr>
                   );
                 })}
-                <tr className="border-t border-gray-200 font-semibold">
+                <tr className="border-t border-gray-200 dark:border-[#2a3450] font-semibold">
                   <td />
-                  <td className="py-2 text-navy">{resultLabel}</td>
-                  <td className="text-right font-mono py-2 text-navy whitespace-nowrap pl-3">
+                  <td className="py-2 text-navy dark:text-[#e7eaf3]">{resultLabel}</td>
+                  <td className="text-right font-mono py-2 text-navy dark:text-[#e7eaf3] whitespace-nowrap pl-3">
                     {formatCurrency(value)}
                   </td>
                 </tr>

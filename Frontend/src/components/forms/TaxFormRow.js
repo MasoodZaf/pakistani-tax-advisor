@@ -23,10 +23,10 @@ export default function TaxFormRow({
     <div className={`grid grid-cols-1 gap-1.5 py-2.5 md:grid-cols-[1fr_220px] md:items-center md:gap-4 ${className}`}>
       <div className="flex items-start gap-1.5">
         <div className="min-w-0">
-          <label htmlFor={name} className="font-body text-sm leading-snug text-slate-700">
+          <label htmlFor={name} className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">
             {label}
           </label>
-          {sublabel && <p className="font-body text-xs text-slate-400">{sublabel}</p>}
+          {sublabel && <p className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">{sublabel}</p>}
         </div>
         {help}
       </div>
@@ -34,7 +34,7 @@ export default function TaxFormRow({
       <div className="md:w-[220px] md:justify-self-end">
         <div className="relative">
           {prefix && (
-            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">
               {prefix}
             </span>
           )}
@@ -46,22 +46,22 @@ export default function TaxFormRow({
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
             className={[
-              'w-full rounded-brand border-[1.5px] bg-white py-2 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy',
+              'w-full rounded-brand border-[1.5px] bg-white dark:bg-[#0f1426] py-2 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3]',
               prefix ? 'pl-10' : 'pl-3',
-              'transition-colors placeholder:font-normal placeholder:text-slate-300 focus:outline-none focus:ring-4',
+              'transition-colors placeholder:font-normal placeholder:text-slate-300 dark:placeholder:text-[#56607d] focus:outline-none focus:ring-4',
               error
                 ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15'
-                : 'border-slate-300 focus:border-navy focus:ring-navy/15',
-              readOnly ? 'cursor-default bg-slate-50 text-slate-500' : '',
+                : 'border-slate-300 dark:border-[#2a3450] focus:border-navy focus:ring-navy/15',
+              readOnly ? 'cursor-default bg-slate-50 dark:bg-[#0b1020] text-slate-500 dark:text-[#7e88a6]' : '',
             ].join(' ')}
             {...inputProps}
           />
         </div>
         {hint && !error && (
-          <p id={hintId} className="mt-1 text-right font-body text-xs text-slate-400">{hint}</p>
+          <p id={hintId} className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">{hint}</p>
         )}
         {error && (
-          <p id={errorId} role="alert" className="mt-1 text-right font-body text-xs font-medium text-red-600">
+          <p id={errorId} role="alert" className="mt-1 text-right font-body text-xs font-medium text-red-600 dark:text-red-400">
             {error}
           </p>
         )}

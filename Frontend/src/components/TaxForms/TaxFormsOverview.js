@@ -92,23 +92,23 @@ const TaxFormsOverview = () => {
     <>
     <div className="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-navy mb-2">Tax Return 2025-26</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-navy dark:text-[#e7eaf3] mb-2">Tax Return 2025-26</h1>
+            <p className="text-gray-600 dark:text-[#aab2cc]">
               Complete your Pakistani tax return for the financial year 2024-25
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-navy">{completionPercentage}%</div>
-            <div className="text-sm text-gray-500">Complete</div>
+            <div className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{completionPercentage}%</div>
+            <div className="text-sm text-gray-500 dark:text-[#7e88a6]">Complete</div>
           </div>
         </div>
 
         {/* Progress Bar */}
         <div className="mt-6">
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-gray-200 dark:bg-[#1a2238] rounded-full h-3">
             <div
               className="bg-navy   h-3 rounded-full transition-all duration-500"
               style={{ width: `${completionPercentage}%` }}
@@ -120,20 +120,20 @@ const TaxFormsOverview = () => {
         {taxReturn && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="flex items-center space-x-2">
-              <User className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Return ID: {taxReturn.return_number}</span>
+              <User className="w-4 h-4 text-gray-500 dark:text-[#7e88a6]" />
+              <span className="text-sm text-gray-600 dark:text-[#aab2cc]">Return ID: {taxReturn.return_number}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Tax Year: {taxReturn.tax_year}</span>
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-[#7e88a6]" />
+              <span className="text-sm text-gray-600 dark:text-[#aab2cc]">Tax Year: {taxReturn.tax_year}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <FileText className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Status: {taxReturn.filing_status}</span>
+              <FileText className="w-4 h-4 text-gray-500 dark:text-[#7e88a6]" />
+              <span className="text-sm text-gray-600 dark:text-[#aab2cc]">Status: {taxReturn.filing_status}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">
+              <Clock className="w-4 h-4 text-gray-500 dark:text-[#7e88a6]" />
+              <span className="text-sm text-gray-600 dark:text-[#aab2cc]">
                 Updated: {new Date(taxReturn.updated_at).toLocaleDateString()}
               </span>
             </div>
@@ -143,16 +143,16 @@ const TaxFormsOverview = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-brand flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-500/15 rounded-brand flex items-center justify-center">
               <Play className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-navy">
+              <h3 className="font-semibold text-navy dark:text-[#e7eaf3]">
                 {completionPercentage === 0 ? 'Start Tax Return' : 'Continue Tax Return'}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-[#aab2cc]">
                 {nextStep ? `Next: ${nextStep.title}` : 'All sections completed'}
               </p>
             </div>
@@ -168,14 +168,14 @@ const TaxFormsOverview = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Calculate Tax</h3>
-              <p className="text-sm text-gray-600">Calculate your tax liability</p>
+              <h3 className="font-semibold text-navy dark:text-[#e7eaf3]">Calculate Tax</h3>
+              <p className="text-sm text-gray-600 dark:text-[#aab2cc]">Calculate your tax liability</p>
             </div>
           </div>
           <div className="mt-auto">
@@ -189,14 +189,14 @@ const TaxFormsOverview = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Tax Summary</h3>
-              <p className="text-sm text-gray-600">View tax computation summary</p>
+              <h3 className="font-semibold text-navy dark:text-[#e7eaf3]">Tax Summary</h3>
+              <p className="text-sm text-gray-600 dark:text-[#aab2cc]">View tax computation summary</p>
             </div>
           </div>
           <div className="mt-auto">
@@ -210,14 +210,14 @@ const TaxFormsOverview = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Submit Return</h3>
-              <p className="text-sm text-gray-600">File your tax return</p>
+              <h3 className="font-semibold text-navy dark:text-[#e7eaf3]">Submit Return</h3>
+              <p className="text-sm text-gray-600 dark:text-[#aab2cc]">File your tax return</p>
             </div>
           </div>
           <div className="mt-auto">
@@ -232,14 +232,14 @@ const TaxFormsOverview = () => {
         </div>
 
         {/* Prior Year Upload */}
-        <div className="bg-white rounded-brand shadow-brand p-6 flex flex-col h-full">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 flex flex-col h-full">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-lime/25 rounded-brand flex items-center justify-center">
               <Upload className="w-6 h-6 text-navy" />
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Import Prior Year</h3>
-              <p className="text-sm text-gray-600">Pre-fill from TY 2024-25 return</p>
+              <h3 className="font-semibold text-navy dark:text-[#e7eaf3]">Import Prior Year</h3>
+              <p className="text-sm text-gray-600 dark:text-[#aab2cc]">Pre-fill from TY 2024-25 return</p>
             </div>
           </div>
           <div className="mt-auto">
@@ -254,8 +254,8 @@ const TaxFormsOverview = () => {
       </div>
 
       {/* Form Steps Grid */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
-        <h2 className="text-xl font-semibold text-navy mb-6">Tax Return Sections</h2>
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+        <h2 className="text-xl font-semibold text-navy dark:text-[#e7eaf3] mb-6">Tax Return Sections</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {FORM_STEPS.map((step, index) => {
             const isCompleted = completedSteps.has(step.id);
@@ -268,11 +268,11 @@ const TaxFormsOverview = () => {
                 to={getRoutePath(step.id)}
                 className={`
                   flex flex-col p-5 rounded-brand border-2 transition-all duration-200 hover:shadow-md h-full
-                  ${isCompleted 
-                    ? 'border-green-200 bg-green-50 hover:border-green-300 hover:bg-green-100' 
-                    : isCurrent 
+                  ${isCompleted
+                    ? 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/15 hover:border-green-300 hover:bg-green-100'
+                    : isCurrent
                     ? 'border-navy/15 bg-navy/5 hover:border-navy/15 hover:bg-navy/10'
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                    : 'border-gray-200 dark:border-[#2a3450] bg-gray-50 dark:bg-[#0f1426] hover:border-gray-300 hover:bg-gray-100'
                   }
                 `}
               >
@@ -280,11 +280,11 @@ const TaxFormsOverview = () => {
                   <div className="flex items-center space-x-3">
                     <div className={`
                       w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                      ${isCompleted 
-                        ? 'bg-green-100 text-green-800' 
-                        : isCurrent 
+                      ${isCompleted
+                        ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300'
+                        : isCurrent
                         ? 'bg-navy/10 text-navy'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]'
                       }
                     `}>
                       {index + 1}
@@ -295,7 +295,7 @@ const TaxFormsOverview = () => {
                     {isCompleted ? (
                       <CheckCircle className="w-5 h-5 text-green-500" />
                     ) : (
-                      <Circle className="w-5 h-5 text-gray-400" />
+                      <Circle className="w-5 h-5 text-gray-400 dark:text-[#7e88a6]" />
                     )}
                   </div>
                 </div>
@@ -303,11 +303,11 @@ const TaxFormsOverview = () => {
                 <div className="flex-grow">
                   <h3 className={`
                     font-semibold mb-2 text-base leading-tight
-                    ${isCompleted 
-                      ? 'text-green-900' 
-                      : isCurrent 
-                      ? 'text-navy'
-                      : 'text-navy'
+                    ${isCompleted
+                      ? 'text-green-900 dark:text-green-300'
+                      : isCurrent
+                      ? 'text-navy dark:text-[#e7eaf3]'
+                      : 'text-navy dark:text-[#e7eaf3]'
                     }
                   `}>
                     {step.title}
@@ -315,11 +315,11 @@ const TaxFormsOverview = () => {
                   
                   <p className={`
                     text-sm leading-relaxed mb-3
-                    ${isCompleted 
-                      ? 'text-green-700' 
-                      : isCurrent 
-                      ? 'text-navy'
-                      : 'text-gray-600'
+                    ${isCompleted
+                      ? 'text-green-700 dark:text-green-300'
+                      : isCurrent
+                      ? 'text-navy dark:text-[#aab2cc]'
+                      : 'text-gray-600 dark:text-[#aab2cc]'
                     }
                   `}>
                     {step.description}
@@ -328,19 +328,19 @@ const TaxFormsOverview = () => {
 
                 <div className="mt-auto pt-2">
                   {isCompleted && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300">
                       ✓ Completed
                     </span>
                   )}
 
                   {isCurrent && !isCompleted && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy dark:text-[#e7eaf3]">
                       ⏳ In Progress
                     </span>
                   )}
 
                   {!isCompleted && !isCurrent && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]">
                       ○ Pending
                     </span>
                   )}
@@ -353,8 +353,8 @@ const TaxFormsOverview = () => {
 
       {/* Help Section */}
       <div className="bg-navy/5 border border-navy/15 rounded-brand p-6">
-        <h3 className="font-semibold text-navy mb-3">Need Help?</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-navy">
+        <h3 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3">Need Help?</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-navy dark:text-[#aab2cc]">
           <div>
             <h4 className="font-medium mb-2">Getting Started</h4>
             <ul className="space-y-1">

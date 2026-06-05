@@ -1,5 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // UX-07 dark mode: class strategy. ThemeProvider toggles `.dark` on <html>
+  // (with a no-flash bootstrap in public/index.html); components opt surfaces
+  // into dark via `dark:` variants, and the brand CSS variables flip under
+  // `.dark`/[data-theme="dark"] in index.css.
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],

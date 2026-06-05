@@ -26,7 +26,7 @@ const Styles = () => (
       font-family: 'Nunito', sans-serif;
       min-height: 100vh;
       display: flex;
-      background: #fdfcf8;
+      background: var(--surface);
       -webkit-font-smoothing: antialiased;
     }
     .login-display { font-family: 'Bricolage Grotesque', sans-serif; }
@@ -91,9 +91,9 @@ const Styles = () => (
       font-family: 'Nunito', sans-serif;
       font-size: 15px;
       font-weight: 500;
-      color: #1c1d1a;
-      background: #fff;
-      border: 1.5px solid #e0dfd9;
+      color: var(--content);
+      background: var(--surface-raised);
+      border: 1.5px solid var(--line);
       border-radius: 12px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
@@ -103,7 +103,8 @@ const Styles = () => (
       box-shadow: 0 0 0 3px rgba(40,57,108,0.1);
     }
     .ln-input.error { border-color: #f87171; background: #fff5f5; }
-    .ln-input:disabled { background: #f5f8ea; color: #7a8890; cursor: not-allowed; }
+    [data-theme="dark"] .ln-input.error { background: #2a1414; }
+    .ln-input:disabled { background: var(--brand-hover-bg); color: var(--content-subtle); cursor: not-allowed; }
 
     /* ── Buttons ── */
     .ln-btn {
@@ -231,7 +232,7 @@ const BrandPanel = () => (
 function Field({ label, error, children }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, letterSpacing: '0.01em' }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 6, letterSpacing: '0.01em' }}>{label}</label>
       {children}
       {error && <p style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{error}</p>}
     </div>
@@ -380,15 +381,15 @@ const Login = () => {
             <div style={{ width: 32, height: 32, background: '#28396C', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Shield size={15} color="#fff" />
             </div>
-            <span className="login-display" style={{ fontSize: 16, fontWeight: 700, color: '#1c1d1a' }}>PakTax</span>
+            <span className="login-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)' }}>PakTax</span>
           </div>
 
           {/* Heading */}
           <div style={{ marginBottom: 32 }}>
-            <h2 className="login-display" style={{ fontSize: 26, fontWeight: 800, color: '#1c1d1a', letterSpacing: '-0.025em', marginBottom: 6 }}>
+            <h2 className="login-display" style={{ fontSize: 26, fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', marginBottom: 6 }}>
               Welcome back
             </h2>
-            <p style={{ fontSize: 15, color: '#6b6c64', fontWeight: 500 }}>
+            <p style={{ fontSize: 15, color: 'var(--content-muted)', fontWeight: 500 }}>
               Sign in to continue to your return.{' '}
               <Link to="/onboarding" style={{ color: '#28396C', fontWeight: 700, textDecoration: 'none' }}>New here?</Link>
             </p>
@@ -396,11 +397,11 @@ const Login = () => {
 
           {/* Admin-assisted banner */}
           {adminAssistedLogin && (
-            <div style={{ background: '#F0FFC2', border: '1.5px solid #c0da94', borderRadius: 12, padding: '12px 14px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <Shield size={18} color="#28396C" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ background: 'var(--brand-cream)', border: '1.5px solid var(--brand-cream-track)', borderRadius: 12, padding: '12px 14px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <Shield size={18} color="var(--brand-on-cream-navy)" style={{ flexShrink: 0, marginTop: 1 }} />
               <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#28396C', marginBottom: 2 }}>Admin-assisted login</p>
-                <p style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-on-cream-navy)', marginBottom: 2 }}>Admin-assisted login</p>
+                <p style={{ fontSize: 13, color: 'var(--content-muted)', fontWeight: 500 }}>
                   Email pre-filled for <strong>{adminAssistedLogin.userName}</strong>. Just click Sign in.
                 </p>
               </div>
@@ -412,7 +413,7 @@ const Login = () => {
             <Field label="Email address" error={errors.email}>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                  <Mail size={16} color="#7a8890" />
+                  <Mail size={16} color="var(--content-subtle)" />
                 </div>
                 <input
                   name="email"
@@ -430,7 +431,7 @@ const Login = () => {
             <Field label="Password" error={errors.password}>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                  <Lock size={16} color="#7a8890" />
+                  <Lock size={16} color="var(--content-subtle)" />
                 </div>
                 <input
                   name="password"
@@ -445,7 +446,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#7a8890', display: 'flex', padding: 2 }}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--content-subtle)', display: 'flex', padding: 2 }}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -456,7 +457,7 @@ const Login = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: -4 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
                 <input type="checkbox" style={{ width: 15, height: 15, accentColor: '#28396C', cursor: 'pointer' }} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#5c5d55' }}>Remember me</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--content-muted)' }}>Remember me</span>
               </label>
               <button type="button" onClick={() => toast('Contact your administrator to reset your password.', { icon: 'ℹ️' })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#28396C', fontFamily: "'Nunito', sans-serif" }}>
@@ -471,9 +472,9 @@ const Login = () => {
 
           {/* SSO providers */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-            <span style={{ fontSize: 12, color: '#7a8890', fontWeight: 500 }}>or continue with</span>
-            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+            <span style={{ fontSize: 12, color: 'var(--content-subtle)', fontWeight: 500 }}>or continue with</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <GoogleLogin
@@ -494,7 +495,7 @@ const Login = () => {
           </div>
 
           {/* Footer */}
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#7a8890', fontWeight: 500, marginTop: 24 }}>
+          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--content-subtle)', fontWeight: 500, marginTop: 24 }}>
             Don't have an account?{' '}
             <Link to="/onboarding" style={{ color: '#28396C', fontWeight: 700, textDecoration: 'none' }}>Create one free</Link>
           </p>

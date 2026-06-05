@@ -115,16 +115,16 @@ function ConsultantChat({
     <div className={`flex flex-col h-full ${compact ? 'text-sm' : ''}`}>
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50"
+        className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50 dark:bg-[#0f1426]"
       >
         {loadingHistory && (
-          <div className="flex items-center justify-center text-gray-500 py-6">
+          <div className="flex items-center justify-center text-gray-500 dark:text-[#7e88a6] py-6">
             <Loader2 className="animate-spin mr-2" size={16} /> Loading conversation…
           </div>
         )}
         {!loadingHistory && messages.length === 0 && (
-          <div className="text-gray-500 text-center py-6">
-            <p className="font-medium text-gray-700 mb-2">Hi — I'm your tax consultant.</p>
+          <div className="text-gray-500 dark:text-[#7e88a6] text-center py-6">
+            <p className="font-medium text-gray-700 dark:text-[#aab2cc] mb-2">Hi — I'm your tax consultant.</p>
             <p>Ask me about Pakistani income tax, FBR rules, slabs for 2025-26,
               withholding tax, or any field on your return.</p>
           </div>
@@ -133,22 +133,22 @@ function ConsultantChat({
           <MessageBubble key={m.id || `local-${i}`} message={m} />
         ))}
         {sending && (
-          <div className="flex items-center text-gray-500">
+          <div className="flex items-center text-gray-500 dark:text-[#7e88a6]">
             <Loader2 className="animate-spin mr-2" size={14} />
             Thinking…
           </div>
         )}
       </div>
 
-      <div className="border-t border-gray-200 bg-white">
+      <div className="border-t border-gray-200 dark:border-[#2a3450] bg-white dark:bg-[#151c30]">
         <div className="flex items-center justify-between px-3 pt-2">
           <button
             type="button"
             onClick={() => setIncludePII((v) => !v)}
             className={`text-xs flex items-center gap-1 px-2 py-1 rounded-full border transition ${
               includePII
-                ? 'border-amber-300 bg-amber-50 text-amber-700'
-                : 'border-gray-200 bg-gray-50 text-gray-600'
+                ? 'border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                : 'border-gray-200 dark:border-[#2a3450] bg-gray-50 dark:bg-[#0f1426] text-gray-600 dark:text-[#aab2cc]'
             }`}
             title={
               includePII
@@ -160,7 +160,7 @@ function ConsultantChat({
             {includePII ? 'Full data' : 'PII redacted'}
           </button>
           {formContext && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="text-xs text-gray-500 dark:text-[#7e88a6] flex items-center gap-1">
               <FileText size={12} /> form context attached
             </span>
           )}
@@ -172,7 +172,7 @@ function ConsultantChat({
             onKeyDown={onKeyDown}
             rows={compact ? 2 : 3}
             placeholder="Ask a tax question…"
-            className="flex-1 resize-none border border-gray-300 rounded-brand px-3 py-2
+            className="flex-1 resize-none border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-brand px-3 py-2
                        focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-transparent
                        text-sm"
             disabled={sending}
@@ -181,8 +181,8 @@ function ConsultantChat({
             type="button"
             onClick={() => send()}
             disabled={sending || !input.trim()}
-            className="bg-lime hover:bg-lime/80 disabled:bg-gray-300
-                       text-white rounded-brand p-2 transition"
+            className="bg-lime hover:bg-lime/80 disabled:bg-gray-300 dark:disabled:bg-[#2a3450]
+                       text-white dark:text-navy rounded-brand p-2 transition"
             aria-label="Send"
           >
             {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
@@ -202,13 +202,13 @@ function MessageBubble({ message }) {
           isUser
             ? 'bg-navy text-white rounded-br-sm'
             : message.isError
-            ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-sm'
-            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-brand'
+            ? 'bg-red-50 dark:bg-red-500/10 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-500/30 rounded-bl-sm'
+            : 'bg-white dark:bg-[#151c30] text-gray-800 dark:text-[#e7eaf3] border border-gray-200 dark:border-[#2a3450] rounded-bl-sm shadow-brand'
         }`}
       >
         <div className="text-sm">{message.content}</div>
         {message.sources?.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
+          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-[#2a3450] text-[11px] text-gray-500 dark:text-[#7e88a6]">
             <div className="font-medium mb-0.5">Sources:</div>
             <ul className="space-y-0.5">
               {message.sources.map((s, i) => (

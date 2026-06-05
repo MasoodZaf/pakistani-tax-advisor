@@ -18,6 +18,22 @@
          what every shell component previously @import'ed individually. -->
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>Pakistani Tax Advisor</title>
+    <!-- No-flash theme bootstrap (UX-07): resolve the stored theme preference
+         and apply the `dark` class + `data-theme` to <html> BEFORE first paint,
+         so dark-mode users never see a light flash. Mirrors ThemeContext. -->
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('theme') || 'system';
+          var dark = pref === 'dark' ||
+            (pref === 'system' && window.matchMedia &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.classList.toggle('dark', dark);
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

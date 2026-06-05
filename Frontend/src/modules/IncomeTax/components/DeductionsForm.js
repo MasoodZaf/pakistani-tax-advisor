@@ -62,7 +62,7 @@ const ProfExpHint = ({ control, taxableIncome, posPct, taxPct }) => {
   const posPctDisplay = (posPct * 100).toFixed(0);
   const taxPctDisplay = (taxPct * 100).toFixed(0);
   return (
-    <p className="mt-1 text-right font-body text-xs text-slate-500">
+    <p className="mt-1 text-right font-body text-xs text-slate-500 dark:text-[#7e88a6]">
       Lower of {posPctDisplay}% of POS (Rs {a.toLocaleString('en-PK')}) and {taxPctDisplay}% of income (Rs {b.toLocaleString('en-PK')}) = Rs {Math.min(a, b).toLocaleString('en-PK')}
     </p>
   );
@@ -232,8 +232,8 @@ const DeductionsForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="deductions-help">
-      <h3 className="font-display text-sm font-bold text-navy">About deductible allowances</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About deductible allowances</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Professional expenses: for taxpayers with POS and taxable income up to Rs 1.5M.</li>
         <li>Zakat: a straight deduction for Zakat paid under the Zakat and Usher Ordinance.</li>
         <li>Professional expenses are the lower of 5% of the amount paid or 25% of taxable income.</li>
@@ -290,17 +290,17 @@ const DeductionsForm = () => {
         />
 
         {taxableIncome > 0 && (
-          <div className="rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm text-navy">
+          <div className="rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm text-navy dark:border-[#2a3450] dark:bg-white/5 dark:text-[#e7eaf3]">
             Taxable income from your Income form: <strong className="tabular-nums">{formatCurrency(taxableIncome)}</strong>.
             {taxableIncome > PROF_EXP_THRESHOLD && (
-              <span className="mt-1 block text-slate-500">
+              <span className="mt-1 block text-slate-500 dark:text-[#7e88a6]">
                 Professional expenses and education deduction are not applicable — income exceeds the Rs 1.5M threshold.
               </span>
             )}
           </div>
         )}
 
-        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200 dark:divide-[#2a3450] dark:border-[#2a3450]">
           {deductionItems.map((item) => {
             const ineligible = !item.eligible && taxableIncome > 0;
             return (
@@ -327,14 +327,14 @@ const DeductionsForm = () => {
 
                 {/* Y/N applicability selector */}
                 <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-center md:gap-4">
-                  <label htmlFor={`${item.id}_yn`} className="font-body text-sm leading-snug text-slate-700">
+                  <label htmlFor={`${item.id}_yn`} className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">
                     Claim this allowance?
                   </label>
                   <div className="md:w-[220px] md:justify-self-end">
                     <select
                       id={`${item.id}_yn`}
                       {...register(`${item.id}_yn`)}
-                      className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 font-body text-sm text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500"
+                      className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 font-body text-sm text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 disabled:cursor-default disabled:bg-slate-50 disabled:text-slate-500 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3] dark:disabled:bg-[#0f1426] dark:disabled:text-[#7e88a6]"
                       disabled={ineligible}
                     >
                       <option value="">—</option>
@@ -348,15 +348,15 @@ const DeductionsForm = () => {
                 {item.id === 'professional_expenses' && item.eligible && (
                   <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-start md:gap-4">
                     <div className="flex items-start gap-1.5">
-                      <label htmlFor="professional_expenses_pos_amount" className="font-body text-sm leading-snug text-slate-700">
+                      <label htmlFor="professional_expenses_pos_amount" className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">
                         Total POS payments
-                        <span className="block font-body text-xs text-slate-400">Used to auto-calculate the deduction above</span>
+                        <span className="block font-body text-xs text-slate-400 dark:text-[#7e88a6]">Used to auto-calculate the deduction above</span>
                       </label>
                       <HelpHint fieldId="professional_expenses_pos_amount" source={deductionsHelp} />
                     </div>
                     <div className="md:w-[220px] md:justify-self-end">
                       <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">Rs</span>
                         <input
                           id="professional_expenses_pos_amount"
                           type="number"
@@ -364,7 +364,7 @@ const DeductionsForm = () => {
                           min="0"
                           inputMode="numeric"
                           {...register('professional_expenses_pos_amount', { valueAsNumber: true })}
-                          className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                          className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3] dark:placeholder:text-[#7e88a6]"
                           placeholder="0"
                         />
                       </div>
@@ -377,9 +377,9 @@ const DeductionsForm = () => {
                 {item.id === 'education_expense' && item.eligible && (
                   <div className="mt-1 grid grid-cols-1 gap-1.5 md:grid-cols-[1fr_220px] md:items-start md:gap-4">
                     <div className="flex items-start gap-1.5">
-                      <label htmlFor="education_expense_children_count" className="font-body text-sm leading-snug text-slate-700">
+                      <label htmlFor="education_expense_children_count" className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">
                         Number of children
-                        <span className="block font-body text-xs text-slate-400">Maximum 2</span>
+                        <span className="block font-body text-xs text-slate-400 dark:text-[#7e88a6]">Maximum 2</span>
                       </label>
                       <HelpHint fieldId="education_expense_children_count" source={deductionsHelp} />
                     </div>
@@ -392,7 +392,7 @@ const DeductionsForm = () => {
                         max="2"
                         inputMode="numeric"
                         {...register('education_expense_children_count', { valueAsNumber: true, min: 0, max: 2 })}
-                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 px-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3] dark:placeholder:text-[#7e88a6]"
                         placeholder="0"
                       />
                     </div>
@@ -400,7 +400,7 @@ const DeductionsForm = () => {
                 )}
 
                 {ineligible && (
-                  <p className="mt-1 font-body text-xs text-slate-500">Not applicable — taxable income exceeds Rs 1.5M.</p>
+                  <p className="mt-1 font-body text-xs text-slate-500 dark:text-[#7e88a6]">Not applicable — taxable income exceeds Rs 1.5M.</p>
                 )}
               </div>
             );

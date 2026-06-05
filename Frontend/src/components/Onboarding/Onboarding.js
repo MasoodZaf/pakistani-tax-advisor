@@ -17,7 +17,7 @@ const Styles = () => (
 
     .ob-root {
       font-family: 'Nunito', sans-serif;
-      background: #fdfcf8;
+      background: var(--surface);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
@@ -29,9 +29,9 @@ const Styles = () => (
       font-family: 'Nunito', sans-serif;
       font-size: 15px;
       font-weight: 500;
-      color: #1c1d1a;
-      background: #fff;
-      border: 1.5px solid #e0dfd9;
+      color: var(--content);
+      background: var(--surface-raised);
+      border: 1.5px solid var(--line);
       border-radius: 12px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
@@ -49,9 +49,9 @@ const Styles = () => (
       font-family: 'Nunito', sans-serif;
       font-size: 15px;
       font-weight: 500;
-      color: #1c1d1a;
-      background: #fff;
-      border: 1.5px solid #e0dfd9;
+      color: var(--content);
+      background: var(--surface-raised);
+      border: 1.5px solid var(--line);
       border-radius: 12px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
@@ -90,12 +90,12 @@ const Styles = () => (
     .ob-btn-secondary {
       flex: 1;
       padding: 13px 20px;
-      background: #fff;
-      color: #5c5d55;
+      background: var(--surface-raised);
+      color: var(--content-muted);
       font-family: 'Nunito', sans-serif;
       font-size: 15px;
       font-weight: 700;
-      border: 1.5px solid #e0dfd9;
+      border: 1.5px solid var(--line);
       border-radius: 12px;
       cursor: pointer;
       display: flex;
@@ -104,7 +104,13 @@ const Styles = () => (
       gap: 8px;
       transition: border-color 0.2s, background 0.2s;
     }
-    .ob-btn-secondary:hover { border-color: #7a8890; background: #f5f8ea; }
+    .ob-btn-secondary:hover { border-color: #7a8890; background: var(--brand-hover-bg); }
+
+    /* Selected income-stream tile: pale-blue info tint → dark info tint (inline style needs !important) */
+    [data-theme="dark"] .ob-stream.selected { background: #16233f !important; }
+
+    /* Sticky nav: translucent cream page-bg → translucent dark page-bg (inline style needs !important) */
+    [data-theme="dark"] .ob-nav { background: rgba(15,20,38,0.9) !important; }
 
   `}</style>
 );
@@ -142,8 +148,8 @@ function StepBar({ current }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: "'Bricolage Grotesque', sans-serif",
                 fontSize: 13, fontWeight: 700,
-                background: done || active ? '#28396C' : '#f0efeb',
-                color: done || active ? '#fff' : '#7a8890',
+                background: done || active ? '#28396C' : 'var(--surface-sunken)',
+                color: done || active ? '#fff' : 'var(--content-subtle)',
                 boxShadow: active ? '0 0 0 4px rgba(40,57,108,0.15)' : 'none',
                 transition: 'all 0.3s',
               }}>
@@ -151,12 +157,12 @@ function StepBar({ current }) {
               </div>
               <span style={{
                 fontSize: 11, fontWeight: 700,
-                color: active ? '#28396C' : done ? '#5c5d55' : '#b0b1a9',
+                color: active ? '#28396C' : done ? 'var(--content-muted)' : 'var(--content-subtle)',
                 letterSpacing: '0.02em',
               }}>{label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div style={{ height: 2, width: 48, background: done ? '#28396C' : '#e5e4de', marginBottom: 18, transition: 'background 0.3s' }} />
+              <div style={{ height: 2, width: 48, background: done ? '#28396C' : 'var(--line)', marginBottom: 18, transition: 'background 0.3s' }} />
             )}
           </React.Fragment>
         );
@@ -169,9 +175,9 @@ function StepBar({ current }) {
 function Field({ label, error, optional, children }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, letterSpacing: '0.01em' }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 6, letterSpacing: '0.01em' }}>
         {label}
-        {optional && <span style={{ marginLeft: 5, fontWeight: 500, color: '#7a8890', fontSize: 12 }}>optional</span>}
+        {optional && <span style={{ marginLeft: 5, fontWeight: 500, color: 'var(--content-subtle)', fontSize: 12 }}>optional</span>}
       </label>
       {children}
       {error && <p style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{error}</p>}
@@ -184,7 +190,7 @@ function IconInput({ icon: Icon, error, type = 'text', suffix, ...props }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <Icon size={16} color="#7a8890" />
+        <Icon size={16} color="var(--content-subtle)" />
       </div>
       <input type={type} className={`ob-input${error ? ' error' : ''}${suffix ? ' pr-10' : ''}`} {...props} />
       {suffix}
@@ -212,7 +218,7 @@ function StepAccount({ form, setForm, errors, setErrors, onNext, loading }) {
   const PwdToggle = ({ show, onToggle }) => (
     <button type="button" onClick={onToggle} style={{
       position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-      background: 'none', border: 'none', cursor: 'pointer', color: '#7a8890', display: 'flex', padding: 2,
+      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--content-subtle)', display: 'flex', padding: 2,
     }}>
       {show ? <EyeOff size={16} /> : <Eye size={16} />}
     </button>
@@ -233,7 +239,7 @@ function StepAccount({ form, setForm, errors, setErrors, onNext, loading }) {
       <Field label="Password" error={errors.password}>
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <Lock size={16} color="#7a8890" />
+            <Lock size={16} color="var(--content-subtle)" />
           </div>
           <input type={showPwd ? 'text' : 'password'} className={`ob-input${errors.password ? ' error' : ''}`}
             placeholder="Minimum 8 characters" value={form.password || ''}
@@ -245,7 +251,7 @@ function StepAccount({ form, setForm, errors, setErrors, onNext, loading }) {
       <Field label="Confirm password" error={errors.confirmPassword}>
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <Lock size={16} color="#7a8890" />
+            <Lock size={16} color="var(--content-subtle)" />
           </div>
           <input type={showCfm ? 'text' : 'password'} className={`ob-input${errors.confirmPassword ? ' error' : ''}`}
             placeholder="Re-enter password" value={form.confirmPassword || ''}
@@ -334,19 +340,19 @@ function StepIncomeStreams({ selected, setSelected, onNext, onBack, loading }) {
   return (
     <div>
       {/* Primary type — locked */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F0FFC2', border: '1.5px solid #b5d97a', borderRadius: 12, padding: '11px 14px', marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--brand-cream)', border: '1.5px solid var(--brand-cream-track)', borderRadius: 12, padding: '11px 14px', marginBottom: 18 }}>
         <span style={{ fontSize: 18 }}><Briefcase size={17} color="#28396C" /></span>
         <div>
           <p style={{ fontSize: 13, fontWeight: 800, color: '#28396C', margin: 0 }}>Salaried Employee</p>
-          <p style={{ fontSize: 11, color: '#4a6020', margin: 0, fontWeight: 500 }}>Your primary income type — always included</p>
+          <p style={{ fontSize: 11, color: 'var(--brand-on-cream)', margin: 0, fontWeight: 500 }}>Your primary income type — always included</p>
         </div>
         <div style={{ marginLeft: 'auto', width: 20, height: 20, background: '#28396C', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Check size={11} color="#fff" strokeWidth={3} />
         </div>
       </div>
 
-      <p style={{ fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 10 }}>
-        Do you also have income from any of these? <span style={{ fontWeight: 500, color: '#7a8890' }}>(select all that apply)</span>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 10 }}>
+        Do you also have income from any of these? <span style={{ fontWeight: 500, color: 'var(--content-subtle)' }}>(select all that apply)</span>
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 20, maxHeight: 340, overflowY: 'auto', paddingRight: 2 }}>
@@ -356,22 +362,23 @@ function StepIncomeStreams({ selected, setSelected, onNext, onBack, loading }) {
             <button
               key={s.id}
               onClick={() => toggle(s.id)}
+              className={`ob-stream${isSel ? ' selected' : ''}`}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                background: isSel ? '#f0f7ff' : '#fff',
-                border: `1.5px solid ${isSel ? '#28396C' : '#e0dfd9'}`,
+                background: isSel ? '#f0f7ff' : 'var(--surface-raised)',
+                border: `1.5px solid ${isSel ? '#28396C' : 'var(--line)'}`,
                 borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
                 transition: 'border-color 0.15s, background 0.15s', textAlign: 'left',
               }}
             >
               <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{s.icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1d1a', margin: 0 }}>{s.title}</p>
-                <p style={{ fontSize: 11, color: '#6b6c64', margin: 0, fontWeight: 500, lineHeight: 1.4 }}>{s.desc}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', margin: 0 }}>{s.title}</p>
+                <p style={{ fontSize: 11, color: 'var(--content-muted)', margin: 0, fontWeight: 500, lineHeight: 1.4 }}>{s.desc}</p>
               </div>
               <div style={{
-                width: 20, height: 20, borderRadius: 5, border: `2px solid ${isSel ? '#28396C' : '#c8c8c0'}`,
-                background: isSel ? '#28396C' : '#fff', display: 'flex', alignItems: 'center',
+                width: 20, height: 20, borderRadius: 5, border: `2px solid ${isSel ? '#28396C' : 'var(--line)'}`,
+                background: isSel ? '#28396C' : 'var(--surface-raised)', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s, border-color 0.15s',
               }}>
                 {isSel && <Check size={11} color="#fff" strokeWidth={3} />}
@@ -381,7 +388,7 @@ function StepIncomeStreams({ selected, setSelected, onNext, onBack, loading }) {
         })}
       </div>
 
-      <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500, marginBottom: 14, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500, marginBottom: 14, lineHeight: 1.5 }}>
         Don't worry if you're unsure — you can update your income streams from Settings at any time.
       </p>
 
@@ -399,30 +406,30 @@ function StepIncomeStreams({ selected, setSelected, onNext, onBack, loading }) {
 function StepDone({ name, addonCount, onGo }) {
   return (
     <div style={{ textAlign: 'center', padding: '8px 0' }}>
-      <div style={{ width: 60, height: 60, background: '#F0FFC2', border: '2px solid #c0da94', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+      <div style={{ width: 60, height: 60, background: 'var(--brand-cream)', border: '2px solid var(--brand-cream-track)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
         <CheckCircle2 size={28} color="#28396C" />
       </div>
-      <h2 className="ob-display" style={{ fontSize: 22, fontWeight: 800, color: '#1c1d1a', marginBottom: 8, letterSpacing: '-0.02em' }}>
+      <h2 className="ob-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--content)', marginBottom: 8, letterSpacing: '-0.02em' }}>
         You're all set{name ? `, ${name.split(' ')[0]}` : ''}!
       </h2>
-      <p style={{ fontSize: 15, color: '#5c5d55', marginBottom: 28, lineHeight: 1.6, fontWeight: 500 }}>
+      <p style={{ fontSize: 15, color: 'var(--content-muted)', marginBottom: 28, lineHeight: 1.6, fontWeight: 500 }}>
         Your account is ready. We've loaded{' '}
-        <strong style={{ color: '#1c1d1a' }}>
+        <strong style={{ color: 'var(--content)' }}>
           {addonCount > 0 ? `salary + ${addonCount} additional income stream${addonCount > 1 ? 's' : ''}` : 'salary-only forms'}
         </strong>. Your forms are waiting.
       </p>
 
-      <div style={{ background: '#f5f8ea', borderRadius: 14, padding: '18px 20px', marginBottom: 28, textAlign: 'left' }}>
+      <div style={{ background: 'var(--brand-hover-bg)', borderRadius: 14, padding: '18px 20px', marginBottom: 28, textAlign: 'left' }}>
         {[
           'Fill in your income details form by form',
           'Review the auto-calculated tax summary',
           'Download your FBR-compliant return',
         ].map((tip, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < 2 ? '1px solid #e5e4de' : 'none' }}>
-            <div style={{ width: 22, height: 22, background: '#F0FFC2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#3d6020' }}>{i + 1}</span>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < 2 ? '1px solid var(--line)' : 'none' }}>
+            <div style={{ width: 22, height: 22, background: 'var(--brand-cream)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-on-cream)' }}>{i + 1}</span>
             </div>
-            <p style={{ fontSize: 14, color: '#3d3e37', fontWeight: 600 }}>{tip}</p>
+            <p style={{ fontSize: 14, color: 'var(--content)', fontWeight: 600 }}>{tip}</p>
           </div>
         ))}
       </div>
@@ -532,14 +539,14 @@ export default function Onboarding() {
       <Styles />
 
       {/* Minimal nav */}
-      <nav style={{ height: 56, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e5e4de', background: 'rgba(253,252,248,0.9)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 10 }}>
+      <nav className="ob-nav" style={{ height: 56, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--line)', background: 'rgba(253,252,248,0.9)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 10 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
           <div style={{ width: 30, height: 30, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={14} color="#fff" />
           </div>
-          <span className="ob-display" style={{ fontSize: 15, fontWeight: 700, color: '#1c1d1a', letterSpacing: '-0.02em' }}>PakTax</span>
+          <span className="ob-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>PakTax</span>
         </Link>
-        <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: '#5c5d55', textDecoration: 'none' }}>
+        <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: 'var(--content-muted)', textDecoration: 'none' }}>
           Already have an account? <span style={{ color: '#28396C' }}>Sign in</span>
         </Link>
       </nav>
@@ -550,13 +557,13 @@ export default function Onboarding() {
           <StepBar current={step} />
 
           {/* Card */}
-          <div style={{ background: '#fff', border: '1px solid #e5e4de', borderRadius: 20, padding: 'clamp(24px, 5vw, 36px)', boxShadow: '0 4px 24px rgba(26,28,24,0.06)' }}>
+          <div style={{ background: 'var(--surface-raised)', border: '1px solid var(--line)', borderRadius: 20, padding: 'clamp(24px, 5vw, 36px)', boxShadow: '0 4px 24px rgba(26,28,24,0.06)' }}>
             {step < 3 && (
               <div style={{ marginBottom: 28 }}>
-                <h1 className="ob-display" style={{ fontSize: 22, fontWeight: 800, color: '#1c1d1a', letterSpacing: '-0.025em', marginBottom: 6 }}>
+                <h1 className="ob-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', marginBottom: 6 }}>
                   {stepTitles[step]}
                 </h1>
-                <p style={{ fontSize: 14, color: '#6b6c64', lineHeight: 1.6, fontWeight: 500 }}>{stepSubtitles[step]}</p>
+                <p style={{ fontSize: 14, color: 'var(--content-muted)', lineHeight: 1.6, fontWeight: 500 }}>{stepSubtitles[step]}</p>
               </div>
             )}
 
@@ -576,7 +583,7 @@ export default function Onboarding() {
           </div>
 
           {step < 3 && (
-            <p style={{ textAlign: 'center', fontSize: 12, color: '#b0b1a9', fontWeight: 500, marginTop: 16 }}>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--content-subtle)', fontWeight: 500, marginTop: 16 }}>
               Step {step + 1} of {STEPS.length} — your data is encrypted and never shared
             </p>
           )}

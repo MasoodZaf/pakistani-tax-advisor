@@ -27,17 +27,17 @@ const stepRoute = (id) =>
 const Styles = () => (
   <style>{`
     /* Brand fonts loaded once in public/index.html (UX-06) */
-    .dash-root { font-family: 'Nunito', sans-serif; -webkit-font-smoothing: antialiased; color: #1e2a4a; }
+    .dash-root { font-family: 'Nunito', sans-serif; -webkit-font-smoothing: antialiased; color: var(--content); }
     .dash-display { font-family: 'Bricolage Grotesque', sans-serif; }
-    .dash-card { background: #fff; border: 1px solid #e3e2dc; border-radius: 18px; transition: box-shadow 0.2s; }
+    .dash-card { background: var(--surface-raised); border: 1px solid var(--line); border-radius: 18px; transition: box-shadow 0.2s; }
     .dash-card:hover { box-shadow: 0 4px 20px rgba(26,28,32,0.07); }
     .dash-link-card {
-      background: #fff; border: 1px solid #e3e2dc; border-radius: 14px;
+      background: var(--surface-raised); border: 1px solid var(--line); border-radius: 14px;
       padding: 14px 16px; display: flex; align-items: center; gap: 14px;
       text-decoration: none; color: inherit;
       transition: border-color 0.2s, background 0.2s, transform 0.15s;
     }
-    .dash-link-card:hover { border-color: #a8c890; background: #f5f8ea; transform: translateX(2px); }
+    .dash-link-card:hover { border-color: #a8c890; background: var(--brand-hover-bg); transform: translateX(2px); }
     .form-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 9px 10px; border-radius: 10px;
@@ -45,14 +45,15 @@ const Styles = () => (
       transition: background 0.15s, transform 0.1s;
     }
     .form-row + .form-row { margin-top: 2px; }
-    .form-row:hover { background: #f5f7fb; transform: translateX(2px); }
-    .form-row.is-next { background: #F0FFC2; border: 1px solid #c0da94; }
+    .form-row:hover { background: var(--surface-sunken); transform: translateX(2px); }
+    .form-row.is-next { background: var(--brand-cream); border: 1px solid var(--brand-cream-track); }
     .form-row.is-next:hover { background: #e6f5b3; }
+    [data-theme="dark"] .form-row.is-next:hover { background: #222c46; }
     .status-pill {
       font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
       padding: 3px 8px; border-radius: 999px; white-space: nowrap;
     }
-    .progress-track { width: 100%; height: 8px; background: #EAE6BC; border-radius: 100px; overflow: hidden; }
+    .progress-track { width: 100%; height: 8px; background: var(--brand-cream-track); border-radius: 100px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, #28396C, #3d5a90); border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
     .cta-btn {
       display: inline-flex; align-items: center; gap: 8px;
@@ -75,7 +76,7 @@ function CircularProgress({ pct, size = 96 }) {
   const offset = circ - (circ * pct) / 100;
   return (
     <svg width={size} height={size} viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx="48" cy="48" r={r} stroke="#EAE6BC" strokeWidth="8" fill="none" />
+      <circle cx="48" cy="48" r={r} stroke="var(--brand-cream-track)" strokeWidth="8" fill="none" />
       <circle className="progress-ring-fill" cx="48" cy="48" r={r}
         stroke="url(#pgGrad)" strokeWidth="8" fill="none"
         strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
@@ -170,7 +171,7 @@ const Dashboard = () => {
       if (balance < 0) return { label: `Rs ${Math.abs(balance).toLocaleString()}`,  note: 'Estimated refund due',   color: '#4a7a2a', live: true };
       return { label: 'Rs 0', note: 'Estimated balance is zero', color: '#4a7a2a', live: true };
     }
-    return { label: '—', note: pct > 0 ? 'Fill all forms to compute' : 'Start your return', color: '#7a8890', live: false };
+    return { label: '—', note: pct > 0 ? 'Fill all forms to compute' : 'Start your return', color: 'var(--content-subtle)', live: false };
   }, [taxCalculation, livePreview, pct]);
 
   const nextIncomplete = activeSteps.find(s => !completedSteps.has(s.id));
@@ -181,10 +182,10 @@ const Dashboard = () => {
   const reconBreached = Math.abs(reconDiff) >= 1;
 
   const quickLinks = [
-    { to: '/income-tax',       icon: FileText,   color: '#28396C', bg: '#EAE6BC', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
-    { to: '/wealth-statement', icon: BarChart3,   color: '#3d6020', bg: '#F0FFC2', label: 'Wealth Statement',   desc: 'Assets, liabilities and reconciliation' },
-    { to: '/reports',          icon: TrendingUp,  color: '#4a7a2a', bg: '#F0FFC2', label: 'Tax Summary Report', desc: 'View computed tax and download' },
-    { to: '/settings',         icon: Settings,    color: '#5e6b7c', bg: '#f0f2f5', label: 'Account Settings',   desc: 'Profile and preferences' },
+    { to: '/income-tax',       icon: FileText,   color: '#28396C', bg: 'var(--brand-cream-track)', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
+    { to: '/wealth-statement', icon: BarChart3,   color: '#3d6020', bg: 'var(--brand-cream)', label: 'Wealth Statement',   desc: 'Assets, liabilities and reconciliation' },
+    { to: '/reports',          icon: TrendingUp,  color: '#4a7a2a', bg: 'var(--brand-cream)', label: 'Tax Summary Report', desc: 'View computed tax and download' },
+    { to: '/settings',         icon: Settings,    color: 'var(--content-subtle)', bg: 'var(--surface-sunken)', label: 'Account Settings',   desc: 'Profile and preferences' },
   ];
 
   return (
@@ -245,8 +246,8 @@ const Dashboard = () => {
         <div className="dash-card" style={{ padding: '24px 26px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <div>
-              <h2 className="dash-display" style={{ fontSize: 17, fontWeight: 700, color: '#1e2a4a', letterSpacing: '-0.02em' }}>Return progress</h2>
-              <p style={{ fontSize: 13, color: '#4a5575', fontWeight: 500, marginTop: 2 }}>
+              <h2 className="dash-display" style={{ fontSize: 17, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>Return progress</h2>
+              <p style={{ fontSize: 13, color: 'var(--content-muted)', fontWeight: 500, marginTop: 2 }}>
                 {completedCount === 0 ? 'Start filling your forms below' : `${totalSteps - completedCount} section${totalSteps - completedCount !== 1 ? 's' : ''} remaining`}
               </p>
             </div>
@@ -270,7 +271,7 @@ const Dashboard = () => {
                 ? { background: '#dcfce7', color: '#166534' }
                 : isNext
                 ? { background: '#28396C', color: '#fff' }
-                : { background: '#f1f5f9', color: '#64748b' };
+                : { background: 'var(--surface-sunken)', color: 'var(--content-subtle)' };
               const pillLabel = done ? 'Done' : isNext ? 'Up next' : 'Pending';
               return (
                 <Link
@@ -281,15 +282,15 @@ const Dashboard = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                     <span style={{ fontSize: 16, lineHeight: 1 }}>{step.icon}</span>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1e2a4a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.title}</p>
-                      <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.description}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.title}</p>
+                      <p style={{ fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.description}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <span className="status-pill" style={pillStyle}>{pillLabel}</span>
                     {done
                       ? <CheckCircle size={16} color="#4a7a2a" />
-                      : <Clock size={15} color={isNext ? '#28396C' : '#d1d5db'} />
+                      : <Clock size={15} color={isNext ? '#28396C' : 'var(--content-subtle)'} />
                     }
                   </div>
                 </Link>
@@ -311,7 +312,7 @@ const Dashboard = () => {
           {/* Tax estimate */}
           <div className="dash-card" style={{ padding: '20px 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Estimated tax</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--content-subtle)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Estimated tax</p>
               {taxDue.live && (
                 <span
                   title="Live preview — recalculates as you fill the forms"
@@ -330,17 +331,17 @@ const Dashboard = () => {
               )}
             </div>
             <p className="dash-display" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: taxDue.color, marginBottom: 4 }}>{taxDue.label}</p>
-            <p style={{ fontSize: 13, color: '#4a5575', fontWeight: 500 }}>{taxDue.note}</p>
+            <p style={{ fontSize: 13, color: 'var(--content-muted)', fontWeight: 500 }}>{taxDue.note}</p>
           </div>
 
           {/* Deadline */}
           <div className="dash-card" style={{ padding: '20px 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-              <Calendar size={13} color="#7a8890" />
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filing deadline</p>
+              <Calendar size={13} color="var(--content-subtle)" />
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--content-subtle)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Filing deadline</p>
             </div>
             <p className="dash-display" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.025em', color: deadlineColor, marginBottom: 3 }}>Sep 30, 2026</p>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#4a5575' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--content-muted)' }}>
               {daysLeft > 0 ? `${daysLeft} days from today` : 'Deadline passed'}
             </p>
             {daysLeft < 90 && (
@@ -378,13 +379,13 @@ const Dashboard = () => {
 
           {/* Next step */}
           {nextIncomplete && (
-            <div style={{ background: '#F0FFC2', border: '1.5px solid #c0da94', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ background: 'var(--brand-cream)', border: '1.5px solid var(--brand-cream-track)', borderRadius: 16, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Zap size={13} color="#3d6020" />
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#3d6020', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Up next</p>
+                <Zap size={13} color="var(--brand-on-cream)" />
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-on-cream)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Up next</p>
               </div>
-              <p className="dash-display" style={{ fontSize: 15, fontWeight: 700, color: '#1e2a4a', marginBottom: 3 }}>{nextIncomplete.title}</p>
-              <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500, marginBottom: 12 }}>{nextIncomplete.description}</p>
+              <p className="dash-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)', marginBottom: 3 }}>{nextIncomplete.title}</p>
+              <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500, marginBottom: 12 }}>{nextIncomplete.description}</p>
               <Link to="/income-tax" className="cta-btn" style={{ fontSize: 13, padding: '9px 16px' }}>
                 Open form <ChevronRight size={14} />
               </Link>
@@ -395,7 +396,7 @@ const Dashboard = () => {
 
       {/* Quick links */}
       <div className="dash-card" style={{ padding: '22px 24px', marginBottom: 20 }}>
-        <h2 className="dash-display" style={{ fontSize: 16, fontWeight: 700, color: '#1e2a4a', letterSpacing: '-0.02em', marginBottom: 16 }}>Quick access</h2>
+        <h2 className="dash-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em', marginBottom: 16 }}>Quick access</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
           {quickLinks.map(({ to, icon: Icon, color, bg, label, desc }) => (
             <Link key={to} to={to} className="dash-link-card">
@@ -403,8 +404,8 @@ const Dashboard = () => {
                 <Icon size={17} color={color} />
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2a4a' }}>{label}</p>
-                <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500 }}>{desc}</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--content)' }}>{label}</p>
+                <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500 }}>{desc}</p>
               </div>
             </Link>
           ))}
@@ -414,8 +415,8 @@ const Dashboard = () => {
                 <AlertCircle size={17} color="#c0392b" />
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#1e2a4a' }}>Admin Panel</p>
-                <p style={{ fontSize: 12, color: '#4a5575', fontWeight: 500 }}>User management and system</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--content)' }}>Admin Panel</p>
+                <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500 }}>User management and system</p>
               </div>
             </Link>
           )}
@@ -423,11 +424,11 @@ const Dashboard = () => {
       </div>
 
       {/* Reminder strip */}
-      <div style={{ background: '#F0FFC2', border: '1px solid #c0da94', borderRadius: 14, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ background: 'var(--brand-cream)', border: '1px solid var(--brand-cream-track)', borderRadius: 14, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <AlertCircle size={18} color="#4a7a2a" style={{ flexShrink: 0, marginTop: 1 }} />
         <div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: '#2d4a10', marginBottom: 4 }}>Before you submit</p>
-          <p style={{ fontSize: 13, color: '#3d6020', fontWeight: 500, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-on-cream)', marginBottom: 4 }}>Before you submit</p>
+          <p style={{ fontSize: 13, color: 'var(--brand-on-cream)', fontWeight: 500, lineHeight: 1.6 }}>
             Review all entered data carefully · Keep supporting documents ready · Verify CNIC and NTN · Deadline for Tax Year 2025-26 is <strong>September 30, 2026</strong>.
           </p>
         </div>

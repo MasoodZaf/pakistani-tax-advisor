@@ -72,18 +72,18 @@ const CreditItemRow = ({ item, control, register, errors, taxableIncome, avgRate
   return (
     <div className="px-3 py-3">
       <div className="flex items-start gap-1.5">
-        <p className="font-body text-sm font-medium leading-snug text-slate-700">
+        <p className="font-body text-sm font-medium leading-snug text-slate-700 dark:text-[#aab2cc]">
           {item.description}
           <HelpHint fieldId={item.id} source={creditsHelp} />
         </p>
       </div>
       {item.yesNo !== '-' && (
         <div className="mt-2">
-          <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-500">Claiming this credit?</label>
+          <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-500 dark:text-[#7e88a6]">Claiming this credit?</label>
           <select
             id={`${item.id}_yn`}
             {...register(`${item.id}_yn`)}
-            className="rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-1.5 font-body text-xs font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+            className="rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-2.5 py-1.5 font-body text-xs font-semibold text-navy dark:text-[#e7eaf3] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
           >
             <option value="">—</option>
             <option value="Y">Yes</option>
@@ -329,9 +329,9 @@ const CreditsForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="credits-help">
-      <h3 className="font-display text-sm font-bold text-navy">About tax credits</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
-        <li>A <strong className="text-navy">rebate at your average tax rate</strong> is allowed on donations to approved non-profit organisations.</li>
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About tax credits</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
+        <li>A <strong className="text-navy dark:text-[#e7eaf3]">rebate at your average tax rate</strong> is allowed on donations to approved non-profit organisations.</li>
         <li>General donations: lower of the donation and 30% of taxable income.</li>
         <li>Donations to an associate are restricted to 15% of taxable income.</li>
         <li>Pension contributions: up to 20% of taxable income (2% extra per year for late joiners above 40).</li>
@@ -367,24 +367,24 @@ const CreditsForm = () => {
         {/* Auto-calc context banner — navy info band. */}
         {taxableIncome > 0 ? (
           <div className="flex items-start gap-2 rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3">
-            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-navy" aria-hidden="true" />
-            <span className="font-body text-sm text-navy">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-navy dark:text-[#aab2cc]" aria-hidden="true" />
+            <span className="font-body text-sm text-navy dark:text-[#aab2cc]">
               Credits are auto-calculated using a taxable income of <strong>{formatCurrency(taxableIncome)}</strong> and
               an average tax rate of <strong>{(avgRate * 100).toFixed(2)}%</strong> (normal tax: {formatCurrency(normalTax)}).
               Enter the donation amount and the credit is computed automatically — values stay editable.
             </span>
           </div>
         ) : (
-          <div className="flex items-start gap-2 rounded-brand border border-slate-200 bg-slate-50 px-4 py-3">
-            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" aria-hidden="true" />
-            <span className="font-body text-sm text-slate-600">Income data not loaded yet. Save your Income form first for automatic credit calculation, or enter tax credits manually.</span>
+          <div className="flex items-start gap-2 rounded-brand border border-slate-200 dark:border-[#2a3450] bg-slate-50 dark:bg-[#0f1426] px-4 py-3">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400 dark:text-[#7e88a6]" aria-hidden="true" />
+            <span className="font-body text-sm text-slate-600 dark:text-[#aab2cc]">Income data not loaded yet. Save your Income form first for automatic credit calculation, or enter tax credits manually.</span>
           </div>
         )}
 
 
         {/* Credit rows — flat list. Each item carries a Y/N selector, a donation
             amount input and an editable computed-credit input. */}
-        <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+        <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
           {visibleCreditItems.map((item) => (
             <CreditItemRow
               key={item.id}
@@ -406,7 +406,7 @@ const CreditsForm = () => {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
             {showAdvanced ? (
               <>

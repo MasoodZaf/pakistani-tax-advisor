@@ -131,8 +131,8 @@ const TaxArchiveView = () => {
             <Archive className="w-5 h-5 text-navy" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-navy">Tax History</h1>
-            <p className="text-sm text-gray-500">Read-only archives of returns from previous years</p>
+            <h1 className="text-2xl font-semibold text-navy dark:text-[#e7eaf3]">Tax History</h1>
+            <p className="text-sm text-gray-500 dark:text-[#7e88a6]">Read-only archives of returns from previous years</p>
           </div>
         </div>
         <button
@@ -144,7 +144,7 @@ const TaxArchiveView = () => {
         </button>
       </div>
 
-      <div className="mb-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-brand text-sm text-amber-900">
+      <div className="mb-4 flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-brand text-sm text-amber-900 dark:text-amber-300">
         <Lock className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <span>
           Archives are <strong>read-only reference records</strong>. Filing is available for the current
@@ -154,11 +154,11 @@ const TaxArchiveView = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading…</div>
+        <div className="text-center py-12 text-gray-500 dark:text-[#7e88a6]">Loading…</div>
       ) : archives.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-brand">
-          <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600 mb-3">No prior year returns archived yet.</p>
+        <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-[#2a3450] rounded-brand">
+          <Archive className="w-12 h-12 text-gray-300 dark:text-[#7e88a6] mx-auto mb-3" />
+          <p className="text-gray-600 dark:text-[#aab2cc] mb-3">No prior year returns archived yet.</p>
           <button
             onClick={() => setShowUpload(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-lime text-navy rounded-brand hover:bg-lime/80 text-sm"
@@ -174,30 +174,30 @@ const TaxArchiveView = () => {
             const d = detail[a.tax_year];
             const stepKeys = d?.mapped_data ? Object.keys(d.mapped_data) : [];
             return (
-              <div key={a.id} className="border border-gray-200 rounded-brand overflow-hidden bg-white">
-                <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+              <div key={a.id} className="border border-gray-200 dark:border-[#2a3450] rounded-brand overflow-hidden bg-white dark:bg-[#151c30]">
+                <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#0f1426]">
                   <button onClick={() => toggleExpand(a.tax_year)} className="flex-1 flex items-center gap-4 text-left">
-                    <div className="flex items-center gap-2 text-gray-700 font-medium">
-                      <Calendar className="w-4 h-4 text-gray-400" />
+                    <div className="flex items-center gap-2 text-gray-700 dark:text-[#aab2cc] font-medium">
+                      <Calendar className="w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />
                       TY {a.tax_year}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <div className="text-xs text-gray-500 dark:text-[#7e88a6] flex items-center gap-2">
                       <FileText className="w-3.5 h-3.5" />
                       {a.source_format?.toUpperCase()}
                       {a.source_filename ? ` — ${a.source_filename}` : ''}
                     </div>
-                    <div className="text-xs text-gray-500 ml-auto">
+                    <div className="text-xs text-gray-500 dark:text-[#7e88a6] ml-auto">
                       Uploaded {formatDate(a.upload_date)}
                     </div>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300">
                       <Lock className="w-3 h-3" />
                       Archive
                     </span>
-                    {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-[#7e88a6]" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />}
                   </button>
                   <button
                     onClick={() => deleteArchive(a.id, a.tax_year)}
-                    className="ml-3 p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
+                    className="ml-3 p-2 text-gray-400 dark:text-[#7e88a6] hover:text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10"
                     title="Delete archive"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -205,20 +205,20 @@ const TaxArchiveView = () => {
                 </div>
 
                 {isOpen && (
-                  <div className="border-t border-gray-200 px-4 py-4 bg-gray-50 space-y-4">
+                  <div className="border-t border-gray-200 dark:border-[#2a3450] px-4 py-4 bg-gray-50 dark:bg-[#0f1426] space-y-4">
                     {/* Top-line totals */}
                     {a.totals && Object.keys(a.totals).length > 0 && (
                       <div>
-                        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                        <h3 className="text-xs font-semibold text-gray-600 dark:text-[#aab2cc] uppercase tracking-wide mb-2">
                           Snapshot
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                           {Object.entries(a.totals).map(([k, v]) => (
-                            <div key={k} className="bg-white px-3 py-2 rounded border border-gray-200">
-                              <div className="text-xs text-gray-500">
+                            <div key={k} className="bg-white dark:bg-[#151c30] px-3 py-2 rounded border border-gray-200 dark:border-[#2a3450]">
+                              <div className="text-xs text-gray-500 dark:text-[#7e88a6]">
                                 {k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
                               </div>
-                              <div className="font-medium text-navy">{formatPKR(v)}</div>
+                              <div className="font-medium text-navy dark:text-[#e7eaf3]">{formatPKR(v)}</div>
                             </div>
                           ))}
                         </div>
@@ -227,7 +227,7 @@ const TaxArchiveView = () => {
 
                     {/* Rate-change warnings */}
                     {d?.warnings?.length > 0 && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">
+                      <div className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded text-sm text-amber-900 dark:text-amber-300">
                         <div className="flex items-center gap-2 font-medium mb-1">
                           <AlertTriangle className="w-4 h-4" />
                           {d.warnings.length} rate-change warning(s)
@@ -244,13 +244,13 @@ const TaxArchiveView = () => {
 
                     {/* Copy-forward per step */}
                     <div>
-                      <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                      <h3 className="text-xs font-semibold text-gray-600 dark:text-[#aab2cc] uppercase tracking-wide mb-2">
                         Copy Forward (per section)
                       </h3>
                       {!d ? (
-                        <div className="text-xs text-gray-500">Loading detail…</div>
+                        <div className="text-xs text-gray-500 dark:text-[#7e88a6]">Loading detail…</div>
                       ) : stepKeys.length === 0 ? (
-                        <div className="text-xs text-gray-500">No mapped sections in this archive.</div>
+                        <div className="text-xs text-gray-500 dark:text-[#7e88a6]">No mapped sections in this archive.</div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {stepKeys.map((step) => {
@@ -261,15 +261,15 @@ const TaxArchiveView = () => {
                                 key={step}
                                 onClick={() => copyForwardStep(a.tax_year, step)}
                                 disabled={busy || fieldCount === 0}
-                                className="px-3 py-1.5 text-xs border border-navy/15 text-navy rounded-md hover:bg-navy/5 disabled:opacity-50"
+                                className="px-3 py-1.5 text-xs border border-navy/15 dark:border-[#2a3450] text-navy dark:text-[#aab2cc] rounded-md hover:bg-navy/5 dark:hover:bg-[#1a2238] disabled:opacity-50"
                               >
-                                {busy ? 'Copying…' : step} {fieldCount > 0 && <span className="text-gray-400">({fieldCount})</span>}
+                                {busy ? 'Copying…' : step} {fieldCount > 0 && <span className="text-gray-400 dark:text-[#7e88a6]">({fieldCount})</span>}
                               </button>
                             );
                           })}
                         </div>
                       )}
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 dark:text-[#7e88a6] mt-2">
                         Copy Forward stages values into the matching form. You still need to open the
                         form, review, and save — nothing is written to the current return until you do.
                       </p>

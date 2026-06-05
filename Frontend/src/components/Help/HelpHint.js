@@ -52,7 +52,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               position: 'fixed',
               top: 0, right: 0, bottom: 0,
               width: 'min(440px, 92vw)',
-              background: '#fff',
+              background: 'var(--surface-raised)',
               boxShadow: '-8px 0 32px rgba(15, 23, 42, 0.18)',
               zIndex: 201,
               display: 'flex',
@@ -67,8 +67,8 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '18px 22px',
-              borderBottom: '1px solid #f1f5f9',
-              background: 'linear-gradient(135deg, #f8fafc 0%, rgba(40,57,108,0.06) 100%)',
+              borderBottom: '1px solid var(--line)',
+              background: 'linear-gradient(135deg, var(--surface-sunken) 0%, rgba(40,57,108,0.06) 100%)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <div style={{
@@ -81,14 +81,14 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <p style={{
-                    fontSize: 11, fontWeight: 700, color: '#64748b',
+                    fontSize: 11, fontWeight: 700, color: 'var(--content-muted)',
                     textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0,
                   }}>
                     FBR-cited guidance
                   </p>
                   <h3 style={{
                     fontFamily: 'Bricolage Grotesque, sans-serif',
-                    fontSize: 17, fontWeight: 800, color: '#0f172a',
+                    fontSize: 17, fontWeight: 800, color: 'var(--content)',
                     margin: 0, lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
@@ -103,12 +103,12 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                 style={{
                   width: 32, height: 32, borderRadius: 8,
                   border: 'none', background: 'transparent',
-                  color: '#475569', cursor: 'pointer',
+                  color: 'var(--content-muted)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--content-muted)'; }}
               >
                 <X size={18} />
               </button>
@@ -125,7 +125,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                   In plain language
                 </h4>
                 <p style={{
-                  fontSize: 15, color: '#1e293b',
+                  fontSize: 15, color: 'var(--content)',
                   lineHeight: 1.6, fontWeight: 500, margin: 0,
                 }}>
                   {entry.plainLanguage}
@@ -133,7 +133,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               </section>
 
               {entry.example && (
-                <section style={{
+                <section className="hh-example" style={{
                   background: '#fffbeb',
                   border: '1px solid #fde68a',
                   borderRadius: 12,
@@ -160,11 +160,11 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
 
               {(entry.fbrSection || entry.fbrUrl) && (
                 <section style={{
-                  borderTop: '1px solid #f1f5f9',
+                  borderTop: '1px solid var(--line)',
                   paddingTop: 16,
                 }}>
                   <h4 style={{
-                    fontSize: 12, fontWeight: 700, color: '#64748b',
+                    fontSize: 12, fontWeight: 700, color: 'var(--content-muted)',
                     textTransform: 'uppercase', letterSpacing: '0.05em',
                     margin: '0 0 8px',
                   }}>
@@ -172,7 +172,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                   </h4>
                   {entry.fbrSection && (
                     <p style={{
-                      fontSize: 13, color: '#475569',
+                      fontSize: 13, color: 'var(--content-muted)',
                       fontWeight: 600, margin: '0 0 6px',
                     }}>
                       {entry.fbrSection}
@@ -199,9 +199,9 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
             {/* Footer */}
             <div style={{
               padding: '12px 22px',
-              borderTop: '1px solid #f1f5f9',
-              background: '#f8fafc',
-              fontSize: 11, color: '#64748b', fontWeight: 500,
+              borderTop: '1px solid var(--line)',
+              background: 'var(--surface-sunken)',
+              fontSize: 11, color: 'var(--content-muted)', fontWeight: 500,
               lineHeight: 1.5,
             }}>
               This is general guidance based on FBR's published rules. For complex cases or recent rulings, consult a registered tax practitioner.
@@ -211,6 +211,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
           <style>{`
             @keyframes hh-fade-in { from { opacity: 0 } to { opacity: 1 } }
             @keyframes hh-slide-in { from { transform: translateX(100%) } to { transform: translateX(0) } }
+            [data-theme="dark"] .hh-example { background: #2a230b; border-color: #b45309; }
           `}</style>
     </>
   );
@@ -231,7 +232,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
           height: 22,
           marginLeft: 6,
           padding: 0,
-          border: '1.5px solid #cbd5e1',
+          border: '1.5px solid var(--line)',
           background: 'rgba(40,57,108,0.07)',
           color: '#28396C',
           cursor: 'pointer',
@@ -247,7 +248,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
         onMouseLeave={(e) => {
           e.currentTarget.style.background = '#eef2ff';
           e.currentTarget.style.color = '#28396C';
-          e.currentTarget.style.borderColor = '#cbd5e1';
+          e.currentTarget.style.borderColor = 'var(--line)';
         }}
         onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
         onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}

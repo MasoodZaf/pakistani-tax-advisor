@@ -29,8 +29,8 @@ import {
 // would drop focus from the refund-adjustment input on every keystroke).
 const Section = ({ title, children }) => (
   <div>
-    <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h2>
-    <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+    <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">{title}</h2>
+    <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
       {children}
     </div>
   </div>
@@ -500,13 +500,13 @@ const TaxComputationSummary = () => {
 
   const helpPanel = showHelp ? (
     <div id="taxcomp-help">
-      <h3 className="font-display text-sm font-bold text-navy">How this summary works</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">How this summary works</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>The final tax computation, calculated from everything you entered.</li>
-        <li><strong className="text-navy">Income</strong> — total income from all sources.</li>
-        <li><strong className="text-navy">Deductible allowances</strong> — professional expenses, Zakat and the like.</li>
-        <li><strong className="text-navy">Tax chargeable</strong> — tax computed on the Pakistani slabs.</li>
-        <li><strong className="text-navy">Final result</strong> — the amount payable to FBR, or your refund.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Income</strong> — total income from all sources.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Deductible allowances</strong> — professional expenses, Zakat and the like.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Tax chargeable</strong> — tax computed on the Pakistani slabs.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Final result</strong> — the amount payable to FBR, or your refund.</li>
       </ul>
     </div>
   ) : null;
@@ -692,9 +692,9 @@ const TaxComputationSummary = () => {
 
         {/* Neutral completion banner — navy, NOT green, so green stays reserved
             for the refund outcome above. */}
-        <div className="flex items-center justify-center gap-2 rounded-brand border border-navy/15 bg-navy/[0.03] px-4 py-3">
-          <CheckCircle size={18} className="text-navy" aria-hidden="true" />
-          <span className="font-body text-sm font-semibold text-navy">Tax computation complete</span>
+        <div className="flex items-center justify-center gap-2 rounded-brand border border-navy/15 dark:border-[#2a3450] bg-navy/[0.03] dark:bg-[#151c30] px-4 py-3">
+          <CheckCircle size={18} className="text-navy dark:text-[#e7eaf3]" aria-hidden="true" />
+          <span className="font-body text-sm font-semibold text-navy dark:text-[#e7eaf3]">Tax computation complete</span>
         </div>
       </TaxFormShell>
     </form>

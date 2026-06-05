@@ -384,25 +384,25 @@ const Reports = () => {
       <div className="space-y-6">
         {/* Bottom Line — the headline numbers the user actually came here for */}
         {computation && (
-          <div className="rounded-brand border border-gray-200 bg-white shadow-brand overflow-hidden">
-            <div className={`px-6 py-5 ${isPayable ? 'bg-red-50 border-b border-red-100' : isRefund ? 'bg-green-50 border-b border-green-100' : 'bg-gray-50 border-b border-gray-100'}`}>
+          <div className="rounded-brand border border-gray-200 dark:border-[#2a3450] bg-white dark:bg-[#151c30] shadow-brand overflow-hidden">
+            <div className={`px-6 py-5 ${isPayable ? 'bg-red-50 dark:bg-red-500/15 border-b border-red-100 dark:border-red-500/30' : isRefund ? 'bg-green-50 dark:bg-green-500/15 border-b border-green-100 dark:border-green-500/30' : 'bg-gray-50 dark:bg-[#0f1426] border-b border-gray-100 dark:border-[#2a3450]'}`}>
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   {isPayable
-                    ? <ArrowUpCircle className="w-7 h-7 text-red-600" />
+                    ? <ArrowUpCircle className="w-7 h-7 text-red-600 dark:text-red-400" />
                     : isRefund
-                    ? <ArrowDownCircle className="w-7 h-7 text-green-600" />
-                    : <CheckCircle className="w-7 h-7 text-gray-500" />}
+                    ? <ArrowDownCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+                    : <CheckCircle className="w-7 h-7 text-gray-500 dark:text-[#7e88a6]" />}
                   <div>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${isPayable ? 'text-red-700' : isRefund ? 'text-green-700' : 'text-gray-600'}`}>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${isPayable ? 'text-red-700 dark:text-red-400' : isRefund ? 'text-green-700 dark:text-green-400' : 'text-gray-600 dark:text-[#aab2cc]'}`}>
                       {isPayable ? 'Tax payable to FBR' : isRefund ? 'Refund due to you' : 'Tax position'}
                     </p>
-                    <p className={`text-3xl font-bold ${isPayable ? 'text-red-900' : isRefund ? 'text-green-900' : 'text-navy'}`}>
+                    <p className={`text-3xl font-bold ${isPayable ? 'text-red-900 dark:text-red-400' : isRefund ? 'text-green-900 dark:text-green-400' : 'text-navy dark:text-[#e7eaf3]'}`}>
                       {formatCurrency(Math.abs(balance || 0))}
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 max-w-xs">
+                <p className="text-xs text-gray-500 dark:text-[#7e88a6] max-w-xs">
                   {isPayable
                     ? `Pay this amount when filing your return for ${selectedYear}.`
                     : isRefund
@@ -411,21 +411,21 @@ const Reports = () => {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 dark:divide-[#2a3450]">
               <div className="px-6 py-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total tax chargeable</p>
-                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(totalTaxChargeable)}</p>
-                <p className="text-xs text-gray-500 mt-1">Normal + surcharge + CGT + super tax</p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wide">Total tax chargeable</p>
+                <p className="text-xl font-bold text-navy dark:text-[#e7eaf3] mt-1">{formatCurrency(totalTaxChargeable)}</p>
+                <p className="text-xs text-gray-500 dark:text-[#7e88a6] mt-1">Normal + surcharge + CGT + super tax</p>
               </div>
               <div className="px-6 py-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax already paid</p>
-                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(taxAlreadyPaid)}</p>
-                <p className="text-xs text-gray-500 mt-1">Withholding + advance tax u/s 147</p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wide">Tax already paid</p>
+                <p className="text-xl font-bold text-navy dark:text-[#e7eaf3] mt-1">{formatCurrency(taxAlreadyPaid)}</p>
+                <p className="text-xs text-gray-500 dark:text-[#7e88a6] mt-1">Withholding + advance tax u/s 147</p>
               </div>
               <div className="px-6 py-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Taxable income</p>
-                <p className="text-xl font-bold text-navy mt-1">{formatCurrency(computation?.income?.taxableIncomeIncludingCG)}</p>
-                <p className="text-xs text-gray-500 mt-1">Including capital gains</p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-[#7e88a6] uppercase tracking-wide">Taxable income</p>
+                <p className="text-xl font-bold text-navy dark:text-[#e7eaf3] mt-1">{formatCurrency(computation?.income?.taxableIncomeIncludingCG)}</p>
+                <p className="text-xs text-gray-500 dark:text-[#7e88a6] mt-1">Including capital gains</p>
               </div>
             </div>
           </div>
@@ -473,32 +473,32 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Income Breakdown</h3>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Income Breakdown</h3>
           <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Basic Salary</span>
-              <span className="font-medium">{formatCurrency(incomeRow.annual_basic_salary)}</span>
+            <div className="flex justify-between items-center py-2 border-b dark:border-[#2a3450]">
+              <span className="text-gray-700 dark:text-[#aab2cc]">Basic Salary</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(incomeRow.annual_basic_salary)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Allowances</span>
-              <span className="font-medium">{formatCurrency(incomeRow.allowances)}</span>
+            <div className="flex justify-between items-center py-2 border-b dark:border-[#2a3450]">
+              <span className="text-gray-700 dark:text-[#aab2cc]">Allowances</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(incomeRow.allowances)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Bonus</span>
-              <span className="font-medium">{formatCurrency(incomeRow.bonus)}</span>
+            <div className="flex justify-between items-center py-2 border-b dark:border-[#2a3450]">
+              <span className="text-gray-700 dark:text-[#aab2cc]">Bonus</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(incomeRow.bonus)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Car Allowance</span>
-              <span className="font-medium">{formatCurrency(incomeRow.car_allowance)}</span>
+            <div className="flex justify-between items-center py-2 border-b dark:border-[#2a3450]">
+              <span className="text-gray-700 dark:text-[#aab2cc]">Car Allowance</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(incomeRow.car_allowance)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-700">Other Taxable Income</span>
-              <span className="font-medium">{formatCurrency(incomeRow.other_taxable)}</span>
+            <div className="flex justify-between items-center py-2 border-b dark:border-[#2a3450]">
+              <span className="text-gray-700 dark:text-[#aab2cc]">Other Taxable Income</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(incomeRow.other_taxable)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 bg-gray-50 font-semibold">
-              <span className="text-navy">Total Taxable Income</span>
-              <span className="text-navy">{formatCurrency(totalTaxableIncome)}</span>
+            <div className="flex justify-between items-center py-2 bg-gray-50 dark:bg-[#0f1426] font-semibold">
+              <span className="text-navy dark:text-[#e7eaf3]">Total Taxable Income</span>
+              <span className="text-navy dark:text-[#e7eaf3]">{formatCurrency(totalTaxableIncome)}</span>
             </div>
           </div>
         </div>
@@ -516,64 +516,64 @@ const Reports = () => {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
-            <h4 className="text-lg font-semibold text-navy mb-2">Regular Income</h4>
-            <p className="text-3xl font-bold text-navy">{formatCurrency(regularIncome)}</p>
-            <p className="text-sm text-gray-600 mt-1">Salary, business income, etc.</p>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
+            <h4 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-2">Regular Income</h4>
+            <p className="text-3xl font-bold text-navy dark:text-[#e7eaf3]">{formatCurrency(regularIncome)}</p>
+            <p className="text-sm text-gray-600 dark:text-[#aab2cc] mt-1">Salary, business income, etc.</p>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-green-500">
-            <h4 className="text-lg font-semibold text-navy mb-2">Capital Gains</h4>
-            <p className="text-3xl font-bold text-green-600">{formatCurrency(capitalGains)}</p>
-            <p className="text-sm text-gray-600 mt-1">Property, securities sales</p>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 border-l-4 border-green-500 dark:border-green-500/30">
+            <h4 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-2">Capital Gains</h4>
+            <p className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(capitalGains)}</p>
+            <p className="text-sm text-gray-600 dark:text-[#aab2cc] mt-1">Property, securities sales</p>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
-            <h4 className="text-lg font-semibold text-navy mb-2">Final Tax Income</h4>
-            <p className="text-3xl font-bold text-navy">{formatCurrency(finalTaxIncome)}</p>
-            <p className="text-sm text-gray-600 mt-1">Sukuk, bonds, etc.</p>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 border-l-4 border-navy/40">
+            <h4 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-2">Final Tax Income</h4>
+            <p className="text-3xl font-bold text-navy dark:text-[#e7eaf3]">{formatCurrency(finalTaxIncome)}</p>
+            <p className="text-sm text-gray-600 dark:text-[#aab2cc] mt-1">Sukuk, bonds, etc.</p>
           </div>
         </div>
 
         {data.regularIncome && (
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h3 className="text-lg font-semibold text-navy mb-4">Regular Income Details</h3>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Regular Income Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-navy mb-3">Taxable Income</h4>
+                <h4 className="font-medium text-navy dark:text-[#e7eaf3] mb-3">Taxable Income</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Basic Salary</span>
-                    <span>{formatCurrency(data.regularIncome.annual_basic_salary)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Basic Salary</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.annual_basic_salary)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Allowances</span>
-                    <span>{formatCurrency(data.regularIncome.allowances)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Allowances</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.allowances)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Bonus</span>
-                    <span>{formatCurrency(data.regularIncome.bonus)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Bonus</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.bonus)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Car Allowance</span>
-                    <span>{formatCurrency(data.regularIncome.car_allowance)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Car Allowance</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.car_allowance)}</span>
                   </div>
                 </div>
               </div>
               <div>
-                <h4 className="font-medium text-navy mb-3">Exempt Income</h4>
+                <h4 className="font-medium text-navy dark:text-[#e7eaf3] mb-3">Exempt Income</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Medical Allowance</span>
-                    <span>{formatCurrency(data.regularIncome.medical_allowance)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Medical Allowance</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.medical_allowance)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Employer Contribution</span>
-                    <span>{formatCurrency(data.regularIncome.employer_contribution)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Employer Contribution</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.employer_contribution)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Other Exempt</span>
-                    <span>{formatCurrency(data.regularIncome.other_exempt)}</span>
+                    <span className="text-gray-600 dark:text-[#aab2cc]">Other Exempt</span>
+                    <span className="dark:text-[#e7eaf3]">{formatCurrency(data.regularIncome.other_exempt)}</span>
                   </div>
                 </div>
               </div>
@@ -591,104 +591,104 @@ const Reports = () => {
 
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-brand shadow-brand p-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-navy">Total Adjustable Tax</h3>
-            <span className="text-2xl font-bold text-navy">{formatCurrency(data.totalAdjustableTax)}</span>
+            <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3]">Total Adjustable Tax</h3>
+            <span className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{formatCurrency(data.totalAdjustableTax)}</span>
           </div>
-          <p className="text-gray-600">This represents all withholding taxes and advance tax payments made during the tax year.</p>
+          <p className="text-gray-600 dark:text-[#aab2cc]">This represents all withholding taxes and advance tax payments made during the tax year.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h4 className="font-semibold text-navy mb-3 flex items-center">
-              <Building className="w-5 h-5 mr-2 text-navy" />
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3 flex items-center">
+              <Building className="w-5 h-5 mr-2 text-navy dark:text-[#e7eaf3]" />
               Employment
             </h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Salary Tax</span>
-                <span>{formatCurrency(categories.employment?.salaryTax)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Salary Tax</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.employment?.salaryTax)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Directorship Fee</span>
-                <span>{formatCurrency(categories.employment?.directorshipFee)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Directorship Fee</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.employment?.directorshipFee)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h4 className="font-semibold text-navy mb-3 flex items-center">
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3 flex items-center">
               <Calculator className="w-5 h-5 mr-2 text-green-500" />
               Utilities
             </h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Electricity</span>
-                <span>{formatCurrency(categories.utilities?.electricity)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Electricity</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.utilities?.electricity)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Telephone</span>
-                <span>{formatCurrency(categories.utilities?.telephone)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Telephone</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.utilities?.telephone)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Cellphone</span>
-                <span>{formatCurrency(categories.utilities?.cellphone)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Cellphone</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.utilities?.cellphone)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h4 className="font-semibold text-navy mb-3 flex items-center">
-              <Wallet className="w-5 h-5 mr-2 text-navy" />
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3 flex items-center">
+              <Wallet className="w-5 h-5 mr-2 text-navy dark:text-[#e7eaf3]" />
               Motor Vehicle
             </h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Registration</span>
-                <span>{formatCurrency(categories.motorVehicle?.registration)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Registration</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.motorVehicle?.registration)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Transfer</span>
-                <span>{formatCurrency(categories.motorVehicle?.transfer)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Transfer</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.motorVehicle?.transfer)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Sale</span>
-                <span>{formatCurrency(categories.motorVehicle?.sale)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Sale</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.motorVehicle?.sale)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h4 className="font-semibold text-navy mb-3 flex items-center">
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3 flex items-center">
               <Building className="w-5 h-5 mr-2 text-red-500" />
               Property
             </h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Sale/Transfer</span>
-                <span>{formatCurrency(categories.property?.saleTransfer)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Sale/Transfer</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.property?.saleTransfer)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Purchase</span>
-                <span>{formatCurrency(categories.property?.purchase)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Purchase</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.property?.purchase)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h4 className="font-semibold text-navy mb-3 flex items-center">
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3 flex items-center">
               <DollarSign className="w-5 h-5 mr-2 text-yellow-500" />
               Financial
             </h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Profit on Debt</span>
-                <span>{formatCurrency(categories.financial?.profitOnDebt)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Profit on Debt</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.financial?.profitOnDebt)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Cash Withdrawal</span>
-                <span>{formatCurrency(categories.financial?.cashWithdrawal)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Cash Withdrawal</span>
+                <span className="dark:text-[#e7eaf3]">{formatCurrency(categories.financial?.cashWithdrawal)}</span>
               </div>
             </div>
           </div>
@@ -704,8 +704,8 @@ const Reports = () => {
     if (!wealth) {
       return (
         <div className="text-center py-8">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No wealth statement data available for this year.</p>
+          <AlertCircle className="w-12 h-12 text-gray-400 dark:text-[#7e88a6] mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-[#aab2cc]">No wealth statement data available for this year.</p>
         </div>
       );
     }
@@ -713,23 +713,23 @@ const Reports = () => {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h3 className="text-lg font-semibold text-navy mb-4">Assets Comparison</h3>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Assets Comparison</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Previous Year</span>
-                <span className="font-medium">{formatCurrency(wealth.total_assets_previous_year)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Previous Year</span>
+                <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(wealth.total_assets_previous_year)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Current Year</span>
-                <span className="font-medium">{formatCurrency(wealth.total_assets_current_year)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Current Year</span>
+                <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(wealth.total_assets_current_year)}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-navy font-semibold">Change</span>
+              <div className="flex justify-between pt-2 border-t dark:border-[#2a3450]">
+                <span className="text-navy dark:text-[#e7eaf3] font-semibold">Change</span>
                 <span className={`font-semibold ${
-                  (wealth.total_assets_current_year - wealth.total_assets_previous_year) >= 0 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
+                  (wealth.total_assets_current_year - wealth.total_assets_previous_year) >= 0
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
                 }`}>
                   {formatCurrency(wealth.total_assets_current_year - wealth.total_assets_previous_year)}
                 </span>
@@ -737,23 +737,23 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-brand shadow-brand p-6">
-            <h3 className="text-lg font-semibold text-navy mb-4">Liabilities Comparison</h3>
+          <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+            <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Liabilities Comparison</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Previous Year</span>
-                <span className="font-medium">{formatCurrency(wealth.total_liabilities_previous_year)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Previous Year</span>
+                <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(wealth.total_liabilities_previous_year)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Current Year</span>
-                <span className="font-medium">{formatCurrency(wealth.total_liabilities_current_year)}</span>
+                <span className="text-gray-600 dark:text-[#aab2cc]">Current Year</span>
+                <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(wealth.total_liabilities_current_year)}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-navy font-semibold">Change</span>
+              <div className="flex justify-between pt-2 border-t dark:border-[#2a3450]">
+                <span className="text-navy dark:text-[#e7eaf3] font-semibold">Change</span>
                 <span className={`font-semibold ${
-                  (wealth.total_liabilities_current_year - wealth.total_liabilities_previous_year) >= 0 
-                    ? 'text-red-600' 
-                    : 'text-green-600'
+                  (wealth.total_liabilities_current_year - wealth.total_liabilities_previous_year) >= 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-green-600 dark:text-green-400'
                 }`}>
                   {formatCurrency(wealth.total_liabilities_current_year - wealth.total_liabilities_previous_year)}
                 </span>
@@ -762,21 +762,21 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Net Worth Analysis</h3>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Net Worth Analysis</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <p className="text-gray-600 mb-1">Previous Year Net Worth</p>
-              <p className="text-2xl font-bold text-navy">{formatCurrency(wealth.net_worth_previous_year)}</p>
+              <p className="text-gray-600 dark:text-[#aab2cc] mb-1">Previous Year Net Worth</p>
+              <p className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{formatCurrency(wealth.net_worth_previous_year)}</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-600 mb-1">Current Year Net Worth</p>
-              <p className="text-2xl font-bold text-navy">{formatCurrency(wealth.net_worth_current_year)}</p>
+              <p className="text-gray-600 dark:text-[#aab2cc] mb-1">Current Year Net Worth</p>
+              <p className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{formatCurrency(wealth.net_worth_current_year)}</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-600 mb-1">Wealth Increase</p>
+              <p className="text-gray-600 dark:text-[#aab2cc] mb-1">Wealth Increase</p>
               <p className={`text-2xl font-bold ${
-                wealth.wealth_increase >= 0 ? 'text-green-600' : 'text-red-600'
+                wealth.wealth_increase >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 {formatCurrency(wealth.wealth_increase)}
               </p>
@@ -784,31 +784,31 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Income vs. Wealth Reconciliation</h3>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Income vs. Wealth Reconciliation</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Taxable Income</span>
-              <span className="font-medium">{formatCurrency(data.totalTaxableIncome)}</span>
+              <span className="text-gray-600 dark:text-[#aab2cc]">Total Taxable Income</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(data.totalTaxableIncome)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Expenses</span>
-              <span className="font-medium">{formatCurrency(data.totalExpenses)}</span>
+              <span className="text-gray-600 dark:text-[#aab2cc]">Total Expenses</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(data.totalExpenses)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Net Income</span>
-              <span className="font-medium">{formatCurrency(data.totalTaxableIncome - data.totalExpenses)}</span>
+              <span className="text-gray-600 dark:text-[#aab2cc]">Net Income</span>
+              <span className="font-medium dark:text-[#e7eaf3]">{formatCurrency(data.totalTaxableIncome - data.totalExpenses)}</span>
             </div>
-            <div className="flex justify-between border-t pt-2">
-              <span className="text-navy font-semibold">Wealth Increase</span>
-              <span className="font-semibold">{formatCurrency(wealth.wealth_increase)}</span>
+            <div className="flex justify-between border-t dark:border-[#2a3450] pt-2">
+              <span className="text-navy dark:text-[#e7eaf3] font-semibold">Wealth Increase</span>
+              <span className="font-semibold dark:text-[#e7eaf3]">{formatCurrency(wealth.wealth_increase)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy font-semibold">Difference</span>
+              <span className="text-navy dark:text-[#e7eaf3] font-semibold">Difference</span>
               <span className={`font-semibold ${
                 Math.abs((data.totalTaxableIncome - data.totalExpenses) - wealth.wealth_increase) < 1000
-                  ? 'text-green-600' 
-                  : 'text-red-600'
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
               }`}>
                 {formatCurrency((data.totalTaxableIncome - data.totalExpenses) - wealth.wealth_increase)}
               </span>
@@ -865,48 +865,48 @@ const Reports = () => {
         </div>
 
         {aiError && (
-          <div className="rounded-brand border border-red-200 bg-red-50 p-4 text-sm text-red-700">{aiError}</div>
+          <div className="rounded-brand border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-4 text-sm text-red-700 dark:text-red-400">{aiError}</div>
         )}
 
         {aiLoading && !a && (
           <div className="text-center py-12">
-            <RefreshCw className="w-8 h-8 text-navy animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">The AI is reviewing your numbers against FBR rules…</p>
+            <RefreshCw className="w-8 h-8 text-navy dark:text-[#e7eaf3] animate-spin mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-[#aab2cc]">The AI is reviewing your numbers against FBR rules…</p>
           </div>
         )}
 
         {a && (
           <>
             {a.summary && (
-              <div className="rounded-brand border border-navy/15 bg-navy/[0.03] p-4 text-sm leading-relaxed text-gray-700">{a.summary}</div>
+              <div className="rounded-brand border border-navy/15 bg-navy/[0.03] dark:bg-[#151c30] p-4 text-sm leading-relaxed text-gray-700 dark:text-[#aab2cc]">{a.summary}</div>
             )}
 
             {(a.opportunities || []).length === 0 ? (
-              <div className="flex items-center gap-2 rounded-brand border border-lime/40 bg-lime/15 p-4 text-sm font-medium text-navy">
+              <div className="flex items-center gap-2 rounded-brand border border-lime/40 bg-lime/15 p-4 text-sm font-medium text-navy dark:text-[#e7eaf3]">
                 <CheckCircle className="w-5 h-5" /> Your return already looks well-optimised — no additional legal reliefs identified.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(a.opportunities || []).map((o, i) => (
-                  <div key={i} className="rounded-brand-lg border border-navy/12 bg-white p-5 shadow-brand">
+                  <div key={i} className="rounded-brand-lg border border-navy/12 bg-white dark:bg-[#151c30] p-5 shadow-brand">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-2 min-w-0">
                         <Lightbulb className="w-5 h-5 shrink-0 text-lime mt-0.5" />
-                        <h4 className="font-semibold leading-snug text-navy">{o.title}</h4>
+                        <h4 className="font-semibold leading-snug text-navy dark:text-[#e7eaf3]">{o.title}</h4>
                       </div>
                       {o.confidence && (
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          o.confidence === 'high' ? 'bg-lime/25 text-navy'
-                            : o.confidence === 'medium' ? 'bg-amber-100 text-amber-700'
-                            : 'bg-gray-100 text-gray-500'}`}>{o.confidence}</span>
+                          o.confidence === 'high' ? 'bg-lime/25 text-navy dark:text-[#e7eaf3]'
+                            : o.confidence === 'medium' ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                            : 'bg-gray-100 dark:bg-[#1a2238] text-gray-500 dark:text-[#7e88a6]'}`}>{o.confidence}</span>
                       )}
                     </div>
-                    {o.section && <p className="mt-1 font-mono text-xs text-navy/60">{o.section}</p>}
-                    {o.rationale && <p className="mt-2 text-sm text-gray-600">{o.rationale}</p>}
-                    {o.action && <p className="mt-2 text-sm text-navy"><span className="font-semibold">Action:</span> {o.action}</p>}
+                    {o.section && <p className="mt-1 font-mono text-xs text-navy/60 dark:text-[#7e88a6]">{o.section}</p>}
+                    {o.rationale && <p className="mt-2 text-sm text-gray-600 dark:text-[#aab2cc]">{o.rationale}</p>}
+                    {o.action && <p className="mt-2 text-sm text-navy dark:text-[#e7eaf3]"><span className="font-semibold">Action:</span> {o.action}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       {o.estimatedSavingPKR != null && Number(o.estimatedSavingPKR) > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-brand bg-lime/15 px-2.5 py-1 text-sm font-semibold text-navy">
+                        <span className="inline-flex items-center gap-1 rounded-brand bg-lime/15 px-2.5 py-1 text-sm font-semibold text-navy dark:text-[#e7eaf3]">
                           <ArrowDownCircle className="w-4 h-4" /> Est. saving {formatCurrency(o.estimatedSavingPKR)}
                         </span>
                       )}
@@ -926,7 +926,7 @@ const Reports = () => {
             )}
 
             {a.disclaimer && (
-              <div className="flex items-start gap-2 rounded-brand border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+              <div className="flex items-start gap-2 rounded-brand border border-gray-200 dark:border-[#2a3450] bg-gray-50 dark:bg-[#0f1426] p-3 text-xs text-gray-500 dark:text-[#7e88a6]">
                 <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" /><span>{a.disclaimer}</span>
               </div>
             )}
@@ -934,13 +934,13 @@ const Reports = () => {
         )}
 
         {aiRaw && (
-          <pre className="whitespace-pre-wrap rounded-brand bg-gray-50 p-4 text-xs text-gray-600">{aiRaw}</pre>
+          <pre className="whitespace-pre-wrap rounded-brand bg-gray-50 dark:bg-[#0f1426] p-4 text-xs text-gray-600 dark:text-[#aab2cc]">{aiRaw}</pre>
         )}
 
         {!a && !aiLoading && !aiError && (
-          <div className="text-center py-10 text-gray-500">
+          <div className="text-center py-10 text-gray-500 dark:text-[#7e88a6]">
             <Sparkles className="w-10 h-10 mx-auto mb-3 text-navy/30" />
-            <p className="text-sm">Click <strong className="text-navy">Analyse my return</strong> for personalised, legal tax-saving suggestions.</p>
+            <p className="text-sm">Click <strong className="text-navy dark:text-[#e7eaf3]">Analyse my return</strong> for personalised, legal tax-saving suggestions.</p>
           </div>
         )}
       </div>
@@ -950,17 +950,17 @@ const Reports = () => {
   if (availableYears.length === 0) {
     return (
       <div className="space-y-8">
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h1 className="text-2xl font-bold text-navy mb-2">Tax Reports & Analysis</h1>
-          <p className="text-gray-600">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3] mb-2">Tax Reports & Analysis</h1>
+          <p className="text-gray-600 dark:text-[#aab2cc]">
             View your tax calculations, summaries, and detailed reports
           </p>
         </div>
 
-        <div className="bg-white rounded-brand shadow-brand p-12 text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-navy mb-2">No Tax Data Available</h2>
-          <p className="text-gray-600 mb-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-12 text-center">
+          <FileText className="w-16 h-16 text-gray-400 dark:text-[#7e88a6] mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-navy dark:text-[#e7eaf3] mb-2">No Tax Data Available</h2>
+          <p className="text-gray-600 dark:text-[#aab2cc] mb-6">
             Complete your tax forms to generate detailed reports and analysis.
           </p>
           <button 
@@ -977,19 +977,19 @@ const Reports = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-navy mb-2">Tax Reports & Analysis</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3] mb-2">Tax Reports & Analysis</h1>
+            <p className="text-gray-600 dark:text-[#aab2cc]">
               View your tax calculations, summaries, and detailed reports
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex items-center space-x-4">
-            <select 
+            <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="form-select border border-gray-300 rounded-brand px-3 py-2 focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="form-select border border-gray-300 dark:border-[#2a3450] dark:bg-[#151c30] dark:text-[#e7eaf3] rounded-brand px-3 py-2 focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               {availableYears.map(year => (
                 <option key={year.tax_year} value={year.tax_year}>
@@ -1002,8 +1002,8 @@ const Reports = () => {
       </div>
 
       {/* Report Type Tabs */}
-      <div className="bg-white rounded-brand shadow-brand">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand">
+        <div className="border-b border-gray-200 dark:border-[#2a3450]">
           <nav className="flex space-x-8 px-6">
             {[
               { id: 'summary', label: 'Tax Summary', icon: BarChart3, endpoint: 'tax-calculation-summary' },
@@ -1020,8 +1020,8 @@ const Reports = () => {
                 }}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-lime text-navy'
-                    : 'border-transparent text-gray-500 hover:text-navy'
+                    ? 'border-lime text-navy dark:text-[#e7eaf3]'
+                    : 'border-transparent text-gray-500 dark:text-[#7e88a6] hover:text-navy dark:hover:text-[#e7eaf3]'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -1034,8 +1034,8 @@ const Reports = () => {
         <div className="p-6" id="paktax-report-print">
           {loading ? (
             <div className="text-center py-12">
-              <RefreshCw className="w-8 h-8 text-navy animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Loading report data...</p>
+              <RefreshCw className="w-8 h-8 text-navy dark:text-[#e7eaf3] animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-[#aab2cc]">Loading report data...</p>
             </div>
           ) : (
             <>
@@ -1051,9 +1051,9 @@ const Reports = () => {
 
       {/* Export Options */}
       {reportData && (
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Export Options</h3>
-          <p className="text-gray-600 mb-4">Download your tax reports in various formats</p>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Export Options</h3>
+          <p className="text-gray-600 dark:text-[#aab2cc] mb-4">Download your tax reports in various formats</p>
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={exportToPDF}

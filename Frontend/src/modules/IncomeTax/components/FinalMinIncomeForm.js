@@ -214,8 +214,8 @@ const FIELD_DEFINITIONS = [
   }
 ];
 
-const INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors placeholder:font-normal placeholder:text-slate-300 focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15";
-const READONLY_INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-200 bg-slate-100 px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500";
+const INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors placeholder:font-normal placeholder:text-slate-300 dark:placeholder:text-[#7e88a6] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15";
+const READONLY_INPUT_CLASSES = "w-full rounded-brand border-[1.5px] border-slate-200 dark:border-[#2a3450] bg-slate-100 dark:bg-[#1a2238] px-3 py-2 text-right font-body text-sm font-semibold tabular-nums text-slate-500 dark:text-[#7e88a6]";
 
 const formatNumber = (num) => {
   if (!num || isNaN(num)) return '';
@@ -276,24 +276,24 @@ const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certW
       {/* Description */}
       <div className="min-w-0">
         <div className="flex items-start gap-1.5">
-          <span className="font-body text-sm leading-snug text-slate-700">{field.label}</span>
+          <span className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">{field.label}</span>
           <HelpHint fieldId={field.amountField} source={finalMinIncomeHelp} />
         </div>
-        {field.description && <p className="mt-0.5 font-body text-xs text-slate-400">{field.description}</p>}
+        {field.description && <p className="mt-0.5 font-body text-xs text-slate-400 dark:text-[#7e88a6]">{field.description}</p>}
         {field.slabCalculatedTaxDeducted && (() => {
           const salary = parseFloat(amount) || 0;
           if (salary <= 0) return null;
           const { tax, baseTax, surcharge, slabLabel } = calcSalaryTax(salary);
           const effectiveRate = ((tax / salary) * 100).toFixed(1);
           return (
-            <div className="mt-1 space-y-0.5 rounded-brand border border-navy/15 bg-navy/[0.04] px-2 py-1 font-body text-xs">
-              <p className="font-semibold text-navy">FBR Finance Act 2025 slab: {slabLabel}</p>
+            <div className="mt-1 space-y-0.5 rounded-brand border border-navy/15 dark:border-[#2a3450] bg-navy/[0.04] dark:bg-navy/20 px-2 py-1 font-body text-xs">
+              <p className="font-semibold text-navy dark:text-[#e7eaf3]">FBR Finance Act 2025 slab: {slabLabel}</p>
               {surcharge > 0 && (
-                <p className="text-slate-500">
+                <p className="text-slate-500 dark:text-[#aab2cc]">
                   Base tax Rs {baseTax.toLocaleString()} + 9% surcharge (income &gt; Rs 10M) Rs {surcharge.toLocaleString()}
                 </p>
               )}
-              <p className="font-semibold text-navy">
+              <p className="font-semibold text-navy dark:text-[#e7eaf3]">
                 Total tax Rs {tax.toLocaleString()} &nbsp;·&nbsp; effective {effectiveRate}%
               </p>
             </div>
@@ -303,7 +303,7 @@ const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certW
 
       {/* Amount */}
       <div>
-        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</span>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Amount</span>
         {field.autoPopulateAmount ? (
           <ReadonlyNum
             control={control}
@@ -327,7 +327,7 @@ const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certW
 
       {/* Tax deducted */}
       <div>
-        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax deducted</span>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax deducted</span>
         {field.slabCalculatedTaxDeducted ? (
           <div>
             <div className="relative">
@@ -382,7 +382,7 @@ const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certW
 
       {/* Tax chargeable — manual for salary/arrears, auto for fixed-rate rows */}
       <div>
-        <span className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax chargeable</span>
+        <span className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax chargeable</span>
         {field.taxChargeableManual ? (
           <EditableNum
             control={control}
@@ -421,7 +421,7 @@ const AtlToggle = ({ control, setValue }) => {
             type="button"
             onClick={() => setValue('is_atl', opt.val, { shouldDirty: true })}
             className={`rounded-brand border px-4 py-2 font-body text-sm font-semibold transition-colors ${
-              active ? 'border-navy bg-navy text-white' : 'border-slate-300 bg-white text-navy hover:bg-navy/5'
+              active ? 'border-navy bg-navy text-white' : 'border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] text-navy dark:text-[#e7eaf3] hover:bg-navy/5'
             }`}
           >
             {opt.label}
@@ -440,14 +440,14 @@ const CapitalGainRow = ({ control }) => {
   });
   return (
     <div>
-      <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Capital gain</h2>
-      <div className="overflow-hidden rounded-brand-lg border border-slate-200">
+      <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Capital gain</h2>
+      <div className="overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
         <div className="grid grid-cols-1 gap-2 px-3 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-center md:gap-3">
           <div className="flex items-start gap-2">
             <Award size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-navy" />
             <div className="min-w-0">
-              <span className="font-body text-sm text-slate-700">Capital gain (from Capital Gain form)</span>
-              <p className="font-body text-xs text-slate-400">Auto-populated — fill the Capital Gain form first</p>
+              <span className="font-body text-sm text-slate-700 dark:text-[#aab2cc]">Capital gain (from Capital Gain form)</span>
+              <p className="font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto-populated — fill the Capital Gain form first</p>
             </div>
           </div>
           <input type="text" className={READONLY_INPUT_CLASSES} value={formatNumber(cg)} readOnly placeholder="0" aria-label="Capital gain — amount" />
@@ -815,11 +815,11 @@ const FinalMinIncomeForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="finalmin-help">
-      <h3 className="font-display text-sm font-bold text-navy">How this form works</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
-        <li><strong className="text-navy">Amount</strong> — the gross income received.</li>
-        <li><strong className="text-navy">Tax deducted</strong> — the tax withheld at source.</li>
-        <li><strong className="text-navy">Tax chargeable</strong> — auto-calculated from the FBR rate (editable only where the rate is variable, e.g. salary/arrears).</li>
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">How this form works</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Amount</strong> — the gross income received.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Tax deducted</strong> — the tax withheld at source.</li>
+        <li><strong className="text-navy dark:text-[#e7eaf3]">Tax chargeable</strong> — auto-calculated from the FBR rate (editable only where the rate is variable, e.g. salary/arrears).</li>
         <li>Final-tax rates depend on your filer status (set above) — non-filers pay more.</li>
       </ul>
     </div>
@@ -858,11 +858,11 @@ const FinalMinIncomeForm = () => {
       >
         {/* Active Taxpayer (filer) status — drives the final-tax rates below.
             Non-filers pay the higher (≈ double) rate per the FBR Tax Card 2025-26. */}
-        <div className="rounded-brand-lg border border-navy/20 bg-navy/[0.04] p-4">
+        <div className="rounded-brand-lg border border-navy/20 dark:border-[#2a3450] bg-navy/[0.04] dark:bg-navy/20 p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-xl">
-              <h3 className="font-display text-sm font-bold text-navy">Are you an Active Taxpayer (on the FBR ATL)?</h3>
-              <p className="mt-1 font-body text-sm text-slate-600">
+              <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Are you an Active Taxpayer (on the FBR ATL)?</h3>
+              <p className="mt-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
                 Final-tax rates are higher for non-filers — often double. Your answer sets the
                 rate applied to the dividend, sukuk, prize and other income below.
               </p>
@@ -873,10 +873,10 @@ const FinalMinIncomeForm = () => {
 
         {/* Column headers (desktop) */}
         <div className="hidden grid-cols-[1fr_repeat(3,120px)] gap-3 px-1 md:grid">
-          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Amount</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax deducted</span>
-          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400">Tax chargeable</span>
+          <span className="font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Description</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Amount</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax deducted</span>
+          <span className="text-right font-body text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax chargeable</span>
         </div>
 
         {/* Sections — filtered by income-profile addons via shared/formFieldVisibility.js. */}
@@ -914,7 +914,7 @@ const FinalMinIncomeForm = () => {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 dark:border-[#2a3450] bg-navy/[0.03] dark:bg-navy/20 px-4 py-3 font-body text-sm font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
             {showAdvanced
               ? (<><ChevronDown size={16} aria-hidden="true" /> Hide advanced final-tax fields</>)

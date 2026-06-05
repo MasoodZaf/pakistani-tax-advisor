@@ -100,7 +100,7 @@ const ConnectedAccounts = () => {
 
   if (!status.loaded) {
     return (
-      <div className="text-sm text-gray-500">Loading connected accounts…</div>
+      <div className="text-sm text-gray-500 dark:text-[#7e88a6]">Loading connected accounts…</div>
     );
   }
 
@@ -108,14 +108,14 @@ const ConnectedAccounts = () => {
   if (status.provider) {
     return (
       <div>
-        <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg dark:border-[#2a3450]">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-green-600" />
+            <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
             <div>
-              <div className="font-medium text-gray-900">
+              <div className="font-medium text-gray-900 dark:text-[#e7eaf3]">
                 Signed in with {PROVIDER_LABELS[status.provider] || status.provider}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-[#aab2cc]">
                 You can also sign in with your password
                 {!status.has_password ? ' (not set — set one before unlinking)' : ''}.
               </div>
@@ -126,18 +126,18 @@ const ConnectedAccounts = () => {
             onClick={() => setConfirmUnlink(true)}
             disabled={busy || !status.has_password}
             title={!status.has_password ? 'Set a password first' : 'Unlink this provider'}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-[#2a3450] dark:hover:bg-[#1a2238] dark:text-[#e7eaf3]"
           >
             <Unlink className="w-4 h-4" /> Unlink
           </button>
         </div>
 
         {confirmUnlink && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-            <p className="text-amber-900 font-medium mb-2">
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm dark:bg-amber-500/15 dark:border-amber-500/30">
+            <p className="text-amber-900 font-medium mb-2 dark:text-amber-300">
               Unlink {PROVIDER_LABELS[status.provider] || status.provider}?
             </p>
-            <p className="text-amber-800 mb-3">
+            <p className="text-amber-800 mb-3 dark:text-amber-200">
               You'll only be able to sign in with your email and password after this.
             </p>
             <div className="flex gap-2">
@@ -153,7 +153,7 @@ const ConnectedAccounts = () => {
                 type="button"
                 onClick={() => setConfirmUnlink(false)}
                 disabled={busy}
-                className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50"
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 dark:border-[#2a3450] dark:hover:bg-[#1a2238] dark:text-[#e7eaf3]"
               >
                 Cancel
               </button>
@@ -167,8 +167,8 @@ const ConnectedAccounts = () => {
   // Not linked: show both Link buttons.
   return (
     <div>
-      <p className="text-sm text-gray-600 mb-3 flex items-center gap-1.5">
-        <Link2 className="w-4 h-4 text-gray-500" />
+      <p className="text-sm text-gray-600 mb-3 flex items-center gap-1.5 dark:text-[#aab2cc]">
+        <Link2 className="w-4 h-4 text-gray-500 dark:text-[#7e88a6]" />
         Link a Google or Apple account to sign in faster. The provider's email
         must match this account's email.
       </p>

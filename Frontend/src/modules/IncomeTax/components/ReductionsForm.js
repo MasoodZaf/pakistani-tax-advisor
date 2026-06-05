@@ -258,10 +258,10 @@ const ReductionsForm = () => {
 
   const helpPanel = showHelp ? (
     <div id="reductions-help">
-      <h3 className="font-display text-sm font-bold text-navy">About tax reductions</h3>
-      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600">
+      <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About tax reductions</h3>
+      <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
         <li>Tax reductions directly reduce your calculated tax liability.</li>
-        <li>Select <strong className="text-navy">Y</strong> for any reduction that applies to you, then enter the relevant amount.</li>
+        <li>Select <strong className="text-navy dark:text-[#e7eaf3]">Y</strong> for any reduction that applies to you, then enter the relevant amount.</li>
         <li>Some reductions are auto-calculated from your salary or profit figures — these stay editable.</li>
         <li>Capital-gain reductions for armed-forces and government personnel apply only to qualifying disposals.</li>
       </ul>
@@ -303,24 +303,24 @@ const ReductionsForm = () => {
 
         {visibleReductionItems.length > 0 && (
           <>
-            <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400">Tax reductions</h2>
-            <div className="divide-y divide-slate-100 overflow-hidden rounded-brand-lg border border-slate-200">
+            <h2 className="mb-1 px-3 font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-[#7e88a6]">Tax reductions</h2>
+            <div className="divide-y divide-slate-100 dark:divide-[#2a3450] overflow-hidden rounded-brand-lg border border-slate-200 dark:border-[#2a3450]">
               {visibleReductionItems.map((item) => (
                 <div key={item.id} className="grid grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[1fr_90px_160px_160px] md:items-start md:gap-4">
                   <div className="min-w-0">
                     <div className="flex items-start gap-1.5">
-                      <span className="font-body text-sm leading-snug text-slate-700">{item.description}</span>
+                      <span className="font-body text-sm leading-snug text-slate-700 dark:text-[#aab2cc]">{item.description}</span>
                       <HelpHint fieldId={item.id} source={reductionsHelp} />
                     </div>
-                    {item.limits && <p className="mt-0.5 font-body text-xs text-slate-400">{item.limits}</p>}
+                    {item.limits && <p className="mt-0.5 font-body text-xs text-slate-400 dark:text-[#7e88a6]">{item.limits}</p>}
                   </div>
 
                   <div>
-                    <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Applies?</label>
+                    <label htmlFor={`${item.id}_yn`} className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Applies?</label>
                     <select
                       id={`${item.id}_yn`}
                       {...register(`${item.id}_yn`)}
-                      className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white px-2.5 py-2 font-body text-sm font-semibold text-navy focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                      className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] px-2.5 py-2 font-body text-sm font-semibold text-navy dark:text-[#e7eaf3] focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                     >
                       <option value="">-</option>
                       <option value="Y">Y</option>
@@ -329,9 +329,9 @@ const ReductionsForm = () => {
                   </div>
 
                   <div>
-                    <label htmlFor={item.amount} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Amount</label>
+                    <label htmlFor={item.amount} className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Amount</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">Rs</span>
                       <input
                         id={item.amount}
                         type="number"
@@ -342,19 +342,19 @@ const ReductionsForm = () => {
                           min: { value: 0, message: 'Amount cannot be negative' },
                           valueAsNumber: true
                         })}
-                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                         placeholder="0"
                       />
                     </div>
                     {errors[item.amount] && (
-                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[item.amount].message}</p>
+                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600 dark:text-red-300">{errors[item.amount].message}</p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor={item.taxReduction} className="mb-1 block font-body text-xs font-medium text-slate-400 md:hidden">Tax reduction</label>
+                    <label htmlFor={item.taxReduction} className="mb-1 block font-body text-xs font-medium text-slate-400 dark:text-[#7e88a6] md:hidden">Tax reduction</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400">Rs</span>
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-body text-xs font-semibold text-slate-400 dark:text-[#7e88a6]">Rs</span>
                       <input
                         id={item.taxReduction}
                         type="number"
@@ -365,18 +365,18 @@ const ReductionsForm = () => {
                           min: { value: 0, message: 'Amount cannot be negative' },
                           valueAsNumber: true
                         })}
-                        className="w-full rounded-brand border-[1.5px] border-slate-300 bg-white py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
+                        className="w-full rounded-brand border-[1.5px] border-slate-300 dark:border-[#2a3450] bg-white dark:bg-[#151c30] py-2 pl-10 pr-3 text-right font-body text-sm font-semibold tabular-nums text-navy dark:text-[#e7eaf3] transition-colors focus:border-navy focus:outline-none focus:ring-4 focus:ring-navy/15"
                         placeholder="0"
                         title={item.autoCalc ? 'Auto-calculated — editable' : undefined}
                       />
                     </div>
                     {item.autoCalc && (
                       <LiveWhen control={control} field={item.taxReduction}>
-                        <p className="mt-1 text-right font-body text-xs text-slate-400">Auto-calculated — editable</p>
+                        <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto-calculated — editable</p>
                       </LiveWhen>
                     )}
                     {errors[item.taxReduction] && (
-                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600">{errors[item.taxReduction].message}</p>
+                      <p role="alert" className="mt-1 text-right font-body text-xs text-red-600 dark:text-red-300">{errors[item.taxReduction].message}</p>
                     )}
                   </div>
                 </div>
@@ -391,7 +391,7 @@ const ReductionsForm = () => {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
+            className="flex w-full items-center justify-center gap-2 rounded-brand border-[1.5px] border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/[0.06] focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/15"
           >
             {showAdvanced
               ? (<><ChevronDown size={16} aria-hidden="true" /> Hide advanced reduction fields</>)

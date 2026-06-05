@@ -61,7 +61,7 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
       <button
         type="button"
         onClick={toggle}
-        className="text-gray-400 hover:text-navy transition align-middle ml-1"
+        className="text-gray-400 dark:text-[#7e88a6] hover:text-navy dark:hover:text-[#e7eaf3] transition align-middle ml-1"
         title="Ask the AI consultant about this field"
         aria-label="Field help"
       >
@@ -70,28 +70,28 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
       {open && (
         <div
           ref={panelRef}
-          className="absolute z-40 left-0 mt-1 w-80 bg-white border border-gray-200
-                     rounded-brand shadow-xl p-3 text-sm text-gray-700"
+          className="absolute z-40 left-0 mt-1 w-80 bg-white dark:bg-[#151c30] border border-gray-200 dark:border-[#2a3450]
+                     rounded-brand shadow-xl p-3 text-sm text-gray-700 dark:text-[#aab2cc]"
         >
           <div className="flex items-start justify-between mb-2">
-            <div className="font-medium text-gray-800 text-xs uppercase tracking-wide">
+            <div className="font-medium text-gray-800 dark:text-[#e7eaf3] text-xs uppercase tracking-wide">
               {fieldName}
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 dark:text-[#7e88a6] hover:text-gray-600"
               aria-label="Close"
             >
               <X size={14} />
             </button>
           </div>
           {loading && (
-            <div className="flex items-center text-gray-500 py-2">
+            <div className="flex items-center text-gray-500 dark:text-[#7e88a6] py-2">
               <Loader2 className="animate-spin mr-2" size={14} /> Asking the consultant…
             </div>
           )}
-          {error && <div className="text-red-600 text-xs">{error}</div>}
+          {error && <div className="text-red-600 dark:text-red-400 text-xs">{error}</div>}
           {!loading && !error && reply && (
             <div className="whitespace-pre-wrap text-xs leading-relaxed">{reply}</div>
           )}
@@ -99,7 +99,7 @@ function InlineFormHelper({ fieldName, formStep, currentValue, taxYear, formCont
             <button
               type="button"
               onClick={fetchHelp}
-              className="mt-2 text-xs text-navy hover:underline"
+              className="mt-2 text-xs text-navy dark:text-lime hover:underline"
             >
               Re-ask
             </button>

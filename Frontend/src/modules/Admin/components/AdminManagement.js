@@ -13,30 +13,39 @@ const S = () => (
   <style>{`
     /* Brand fonts loaded once in public/index.html (UX-06) */
     .am-root { font-family:'Nunito',sans-serif; }
-    .am-input { width:100%;padding:9px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:#111827;outline:none;transition:border-color .18s,box-shadow .18s; }
+    .am-input { width:100%;padding:9px 13px;border:1.5px solid var(--line);border-radius:9px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--content);background:var(--surface-raised);outline:none;transition:border-color .18s,box-shadow .18s; }
     .am-input:focus { border-color:#28396C;box-shadow:0 0 0 3px rgba(40,57,108,.1); }
     .am-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;border:none; }
     .am-btn-primary { background:#28396C;color:#fff; }
     .am-btn-primary:hover { background:#1e2d5a; }
     .am-btn-danger  { background:#fee2e2;color:#dc2626; }
     .am-btn-danger:hover  { background:#fecaca; }
-    .am-btn-ghost   { background:#f3f4f6;color:#374151; }
-    .am-btn-ghost:hover   { background:#e5e7eb; }
+    [data-theme="dark"] .am-btn-danger { background:#3a1a1a;color:#f87171; }
+    [data-theme="dark"] .am-btn-danger:hover { background:#4a2020; }
+    .am-btn-ghost   { background:var(--surface-sunken);color:var(--content-muted); }
+    .am-btn-ghost:hover   { background:var(--line); }
     .am-btn-green   { background:#ecfdf5;color:#059669; }
     .am-btn-green:hover   { background:#d1fae5; }
+    [data-theme="dark"] .am-btn-green { background:#10291f;color:#34d399; }
+    [data-theme="dark"] .am-btn-green:hover { background:#163a2c; }
     .am-btn-warning { background:#fffbeb;color:#d97706; }
     .am-btn-warning:hover { background:#fef3c7; }
-    .am-card { background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden; }
-    .am-row { display:grid;grid-template-columns:1fr 1fr 120px 120px 160px;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #f3f4f6;transition:background .15s; }
-    .am-row:hover { background:#fafafa; }
-    .am-row-header { background:#f9fafb;font-weight:700;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em; }
+    [data-theme="dark"] .am-btn-warning { background:#2a230b;color:#fbbf24; }
+    [data-theme="dark"] .am-btn-warning:hover { background:#3a3010; }
+    .am-card { background:var(--surface-raised);border:1px solid var(--line);border-radius:14px;overflow:hidden; }
+    .am-row { display:grid;grid-template-columns:1fr 1fr 120px 120px 160px;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);transition:background .15s; }
+    .am-row:hover { background:var(--surface-sunken); }
+    .am-row-header { background:var(--surface-sunken);font-weight:700;font-size:11px;color:var(--content-muted);text-transform:uppercase;letter-spacing:.05em; }
     .am-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px; }
-    .am-modal { background:#fff;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
+    .am-modal { background:var(--surface-raised);border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
     .am-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700; }
     .am-badge-sa  { background:#fef2f2;color:#b91c1c; }
     .am-badge-adm { background:#eff6ff;color:#1d4ed8; }
     .am-badge-active   { background:#ecfdf5;color:#15803d; }
-    .am-badge-inactive { background:#f9fafb;color:#6b7280; }
+    .am-badge-inactive { background:var(--surface-sunken);color:var(--content-muted); }
+    [data-theme="dark"] .am-badge-sa  { background:#3a1a1a;color:#f87171; }
+    [data-theme="dark"] .am-badge-adm { background:#16223f;color:#93b4f5; }
+    [data-theme="dark"] .am-badge-active { background:#10291f;color:#34d399; }
   `}</style>
 );
 
@@ -182,15 +191,15 @@ export default function AdminManagement() {
       <S />
 
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm p-6 border border-gray-100 dark:border-[#2a3450]">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-red-600" />
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-red-600 dark:text-red-300" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Admin Account Management</h1>
-              <p className="text-sm text-gray-500">Create and manage administrator accounts</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-[#e7eaf3]">Admin Account Management</h1>
+              <p className="text-sm text-gray-500 dark:text-[#7e88a6]">Create and manage administrator accounts</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -209,9 +218,9 @@ export default function AdminManagement() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label:'Active Admins', value: myCount, color:'text-green-600 bg-green-50 border-green-200' },
-          { label:'Super Admins', value: saCount, color:'text-red-600 bg-red-50 border-red-200' },
-          { label:'Regular Admins', value: adCount, color:'text-blue-600 bg-blue-50 border-blue-200' },
+          { label:'Active Admins', value: myCount, color:'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-500/15 border-green-200 dark:border-green-500/30' },
+          { label:'Super Admins', value: saCount, color:'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/30' },
+          { label:'Regular Admins', value: adCount, color:'text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border-blue-200 dark:border-blue-500/30' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl border p-4 ${s.color}`}>
             <div className="text-2xl font-bold">{s.value}</div>
@@ -233,10 +242,10 @@ export default function AdminManagement() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+            <RefreshCw className="w-6 h-6 animate-spin text-gray-400 dark:text-[#7e88a6]" />
           </div>
         ) : admins.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-gray-400 dark:text-[#7e88a6]">
             <Shield className="w-10 h-10 mx-auto mb-2 opacity-30" />
             <p>No admin accounts found</p>
           </div>
@@ -246,17 +255,17 @@ export default function AdminManagement() {
               {/* Name */}
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
+                  <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-[#1a2238] flex items-center justify-center text-xs font-bold text-gray-600 dark:text-[#aab2cc]">
                     {admin.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900 text-sm flex items-center gap-1">
+                    <div className="font-semibold text-gray-900 dark:text-[#e7eaf3] text-sm flex items-center gap-1">
                       {admin.name}
                       {admin.id === currentUser?.id && (
-                        <span className="text-xs font-normal text-gray-400">(you)</span>
+                        <span className="text-xs font-normal text-gray-400 dark:text-[#7e88a6]">(you)</span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                    <div className="text-xs text-gray-500 dark:text-[#7e88a6] flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       Last login: {formatLastLogin(admin.last_login_at)}
                     </div>
@@ -265,7 +274,7 @@ export default function AdminManagement() {
               </div>
 
               {/* Email */}
-              <div className="text-sm text-gray-600 truncate">{admin.email}</div>
+              <div className="text-sm text-gray-600 dark:text-[#aab2cc] truncate">{admin.email}</div>
 
               {/* Role */}
               <div>
@@ -317,20 +326,20 @@ export default function AdminManagement() {
       {showCreate && (
         <div className="am-modal-overlay" onClick={() => setShowCreate(false)}>
           <div ref={createRef} role="dialog" aria-modal="true" aria-labelledby="am-create-title" className="am-modal" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-[#2a3450]">
               <div className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-gray-700" />
-                <h2 id="am-create-title" className="text-base font-bold text-gray-900">Create Admin Account</h2>
+                <Plus className="w-5 h-5 text-gray-700 dark:text-[#aab2cc]" />
+                <h2 id="am-create-title" className="text-base font-bold text-gray-900 dark:text-[#e7eaf3]">Create Admin Account</h2>
               </div>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Full Name *</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Full Name *</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />
                   <input
                     className="am-input !pl-9"
                     placeholder="e.g. Muhammad Usman"
@@ -341,9 +350,9 @@ export default function AdminManagement() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Email Address *</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Email Address *</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />
                   <input
                     type="email"
                     className="am-input !pl-9"
@@ -355,7 +364,7 @@ export default function AdminManagement() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Password *</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Password *</label>
                 <div className="relative">
                   <input
                     type={showCreatePwd ? 'text' : 'password'}
@@ -366,13 +375,13 @@ export default function AdminManagement() {
                     required
                   />
                   <button type="button" onClick={() => setShowCreatePwd(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc]">
                     {showCreatePwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Role *</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Role *</label>
                 <select
                   className="am-input"
                   value={createForm.role}
@@ -383,7 +392,7 @@ export default function AdminManagement() {
                 </select>
               </div>
               {createForm.role === 'super_admin' && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 font-semibold">
+                <div className="bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30 rounded-lg p-3 text-xs text-red-700 dark:text-red-300 font-semibold">
                   ⚠️ Super Admin has full system access including tax rate changes, admin management, and user impersonation.
                 </div>
               )}
@@ -405,18 +414,18 @@ export default function AdminManagement() {
       {editTarget && (
         <div className="am-modal-overlay" onClick={() => setEditTarget(null)}>
           <div ref={editRef} role="dialog" aria-modal="true" aria-labelledby="am-edit-title" className="am-modal" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-[#2a3450]">
               <div className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-gray-700" />
-                <h2 id="am-edit-title" className="text-base font-bold text-gray-900">Edit Admin — {editTarget.name}</h2>
+                <Edit2 className="w-5 h-5 text-gray-700 dark:text-[#aab2cc]" />
+                <h2 id="am-edit-title" className="text-base font-bold text-gray-900 dark:text-[#e7eaf3]">Edit Admin — {editTarget.name}</h2>
               </div>
-              <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setEditTarget(null)} className="text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Full Name</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Full Name</label>
                 <input
                   className="am-input"
                   value={editForm.name}
@@ -425,7 +434,7 @@ export default function AdminManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">Email</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Email</label>
                 <input
                   type="email"
                   className="am-input"
@@ -436,7 +445,7 @@ export default function AdminManagement() {
               </div>
               {editTarget.id !== currentUser?.id && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">Role</label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">Role</label>
                   <select
                     className="am-input"
                     value={editForm.role}
@@ -456,7 +465,7 @@ export default function AdminManagement() {
                     onChange={e => setEditForm(p => ({...p, is_active: e.target.checked}))}
                     className="w-4 h-4 accent-green-600"
                   />
-                  <label htmlFor="editActive" className="text-sm font-semibold text-gray-700">Account Active</label>
+                  <label htmlFor="editActive" className="text-sm font-semibold text-gray-700 dark:text-[#aab2cc]">Account Active</label>
                 </div>
               )}
               <div className="flex gap-3 pt-2">
@@ -477,21 +486,21 @@ export default function AdminManagement() {
       {resetTarget && (
         <div className="am-modal-overlay" onClick={() => { setResetTarget(null); setNewPwd(''); }}>
           <div ref={resetRef} role="dialog" aria-modal="true" aria-labelledby="am-reset-title" className="am-modal" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-[#2a3450]">
               <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-600" />
-                <h2 id="am-reset-title" className="text-base font-bold text-gray-900">Reset Password — {resetTarget.name}</h2>
+                <Key className="w-5 h-5 text-amber-600 dark:text-amber-300" />
+                <h2 id="am-reset-title" className="text-base font-bold text-gray-900 dark:text-[#e7eaf3]">Reset Password — {resetTarget.name}</h2>
               </div>
-              <button onClick={() => { setResetTarget(null); setNewPwd(''); }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setResetTarget(null); setNewPwd(''); }} className="text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleReset} className="p-5 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 font-semibold">
+              <div className="bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-300 font-semibold">
                 You are resetting the password for <strong>{resetTarget.email}</strong>. They will need the new password to log in.
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">New Password *</label>
+                <label className="block text-xs font-bold text-gray-600 dark:text-[#aab2cc] mb-1.5">New Password *</label>
                 <div className="relative">
                   <input
                     type={showNewPwd ? 'text' : 'password'}
@@ -502,7 +511,7 @@ export default function AdminManagement() {
                     required
                   />
                   <button type="button" onClick={() => setShowNewPwd(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc]">
                     {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

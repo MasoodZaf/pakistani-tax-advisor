@@ -28,7 +28,7 @@ function FloatingChatWidget() {
     <div className="fixed bottom-6 right-6 z-50">
       {open ? (
         <div className="w-[380px] h-[560px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)]
-                        bg-white rounded-2xl shadow-2xl border border-gray-200
+                        bg-white dark:bg-[#151c30] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2a3450]
                         flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
             <div className="flex items-center gap-2">
