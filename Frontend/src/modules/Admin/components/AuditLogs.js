@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Activity, RefreshCw, Search, Filter, Clock, User, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Skeleton } from '../../../components/common/Skeleton';
 
 const S = () => (
   <style>{`
@@ -130,11 +131,13 @@ export default function AuditLogs() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-400 dark:text-[#7e88a6]">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto" />
-                  </td>
-                </tr>
+                Array.from({ length: 8 }).map((_, r) => (
+                  <tr key={`sk-${r}`} className="border-b border-gray-50 dark:border-[#2a3450]">
+                    {Array.from({ length: 5 }).map((_, c) => (
+                      <td key={c} className="px-4 py-3.5"><Skeleton className="h-3 w-full" /></td>
+                    ))}
+                  </tr>
+                ))
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-400 dark:text-[#7e88a6]">

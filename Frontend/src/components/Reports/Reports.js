@@ -26,6 +26,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import { generateIrisPdf } from '../../utils/irisPdf';
 import { formatCnic } from '../../utils/cnic';
+import { Skeleton, SkeletonText, SkeletonCards } from '../common/Skeleton';
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -1046,9 +1047,12 @@ const Reports = () => {
 
         <div className="p-6" id="paktax-report-print">
           {loading ? (
-            <div className="text-center py-12">
-              <RefreshCw className="w-8 h-8 text-navy dark:text-[#e7eaf3] animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-[#aab2cc]">Loading report data...</p>
+            <div className="space-y-6" role="status" aria-busy="true" aria-label="Loading report data">
+              <SkeletonCards count={4} />
+              <div className="rounded-lg border border-slate-200 p-5 dark:border-[#2a3450]">
+                <Skeleton className="mb-4 h-4 w-40" />
+                <SkeletonText lines={5} />
+              </div>
             </div>
           ) : (
             <>
