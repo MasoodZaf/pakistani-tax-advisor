@@ -13,30 +13,39 @@ const S = () => (
   <style>{`
     /* Brand fonts loaded once in public/index.html (UX-06) */
     .am-root { font-family:'Nunito',sans-serif; }
-    .am-input { width:100%;padding:9px 13px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:#111827;outline:none;transition:border-color .18s,box-shadow .18s; }
+    .am-input { width:100%;padding:9px 13px;border:1.5px solid var(--line);border-radius:9px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--content);background:var(--surface-raised);outline:none;transition:border-color .18s,box-shadow .18s; }
     .am-input:focus { border-color:#28396C;box-shadow:0 0 0 3px rgba(40,57,108,.1); }
     .am-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;border:none; }
     .am-btn-primary { background:#28396C;color:#fff; }
     .am-btn-primary:hover { background:#1e2d5a; }
     .am-btn-danger  { background:#fee2e2;color:#dc2626; }
     .am-btn-danger:hover  { background:#fecaca; }
-    .am-btn-ghost   { background:#f3f4f6;color:#374151; }
-    .am-btn-ghost:hover   { background:#e5e7eb; }
+    [data-theme="dark"] .am-btn-danger { background:#3a1a1a;color:#f87171; }
+    [data-theme="dark"] .am-btn-danger:hover { background:#4a2020; }
+    .am-btn-ghost   { background:var(--surface-sunken);color:var(--content-muted); }
+    .am-btn-ghost:hover   { background:var(--line); }
     .am-btn-green   { background:#ecfdf5;color:#059669; }
     .am-btn-green:hover   { background:#d1fae5; }
+    [data-theme="dark"] .am-btn-green { background:#10291f;color:#34d399; }
+    [data-theme="dark"] .am-btn-green:hover { background:#163a2c; }
     .am-btn-warning { background:#fffbeb;color:#d97706; }
     .am-btn-warning:hover { background:#fef3c7; }
-    .am-card { background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden; }
-    .am-row { display:grid;grid-template-columns:1fr 1fr 120px 120px 160px;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #f3f4f6;transition:background .15s; }
-    .am-row:hover { background:#fafafa; }
-    .am-row-header { background:#f9fafb;font-weight:700;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em; }
+    [data-theme="dark"] .am-btn-warning { background:#2a230b;color:#fbbf24; }
+    [data-theme="dark"] .am-btn-warning:hover { background:#3a3010; }
+    .am-card { background:var(--surface-raised);border:1px solid var(--line);border-radius:14px;overflow:hidden; }
+    .am-row { display:grid;grid-template-columns:1fr 1fr 120px 120px 160px;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);transition:background .15s; }
+    .am-row:hover { background:var(--surface-sunken); }
+    .am-row-header { background:var(--surface-sunken);font-weight:700;font-size:11px;color:var(--content-muted);text-transform:uppercase;letter-spacing:.05em; }
     .am-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px; }
-    .am-modal { background:#fff;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
+    .am-modal { background:var(--surface-raised);border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
     .am-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700; }
     .am-badge-sa  { background:#fef2f2;color:#b91c1c; }
     .am-badge-adm { background:#eff6ff;color:#1d4ed8; }
     .am-badge-active   { background:#ecfdf5;color:#15803d; }
-    .am-badge-inactive { background:#f9fafb;color:#6b7280; }
+    .am-badge-inactive { background:var(--surface-sunken);color:var(--content-muted); }
+    [data-theme="dark"] .am-badge-sa  { background:#3a1a1a;color:#f87171; }
+    [data-theme="dark"] .am-badge-adm { background:#16223f;color:#93b4f5; }
+    [data-theme="dark"] .am-badge-active { background:#10291f;color:#34d399; }
   `}</style>
 );
 

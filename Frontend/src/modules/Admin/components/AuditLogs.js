@@ -7,11 +7,11 @@ const S = () => (
   <style>{`
     /* Brand fonts loaded once in public/index.html (UX-06) */
     .al-root { font-family:'Nunito',sans-serif; }
-    .al-input { padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;outline:none;transition:border-color .18s; }
+    .al-input { padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;color:var(--content);background:var(--surface-raised);outline:none;transition:border-color .18s; }
     .al-input:focus { border-color:#28396C; }
     .al-btn { display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;border:none; }
-    .al-btn-ghost { background:#f3f4f6;color:#374151; }
-    .al-btn-ghost:hover { background:#e5e7eb; }
+    .al-btn-ghost { background:var(--surface-sunken);color:var(--content-muted); }
+    .al-btn-ghost:hover { background:var(--line); }
     .al-badge { display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700; }
   `}</style>
 );

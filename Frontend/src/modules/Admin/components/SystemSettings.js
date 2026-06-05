@@ -147,7 +147,7 @@ const SystemSettings = () => {
       id: setting_key,
       value: setting_value,
       onChange: (e) => handleSettingChange(category, setting_key, e.target.value, data_type),
-      className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      className: "w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
     };
 
     switch (data_type) {
@@ -160,7 +160,7 @@ const SystemSettings = () => {
               onChange={(e) => handleSettingChange(category, setting_key, e.target.checked.toString(), data_type)}
               className="form-checkbox h-4 w-4 text-blue-600"
             />
-            <span className="text-sm text-gray-600">Enabled</span>
+            <span className="text-sm text-gray-600 dark:text-[#aab2cc]">Enabled</span>
           </label>
         );
       
@@ -185,7 +185,7 @@ const SystemSettings = () => {
           <textarea
             rows="3"
             {...commonProps}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
           />
         );
       
@@ -202,10 +202,10 @@ const SystemSettings = () => {
   const renderHealthStatus = (status, details) => {
     const getStatusColor = (status) => {
       switch (status) {
-        case 'healthy': return 'text-green-600';
-        case 'warning': return 'text-yellow-600';
-        case 'error': return 'text-red-600';
-        default: return 'text-gray-600';
+        case 'healthy': return 'text-green-600 dark:text-green-400';
+        case 'warning': return 'text-yellow-600 dark:text-yellow-400';
+        case 'error': return 'text-red-600 dark:text-red-400';
+        default: return 'text-gray-600 dark:text-[#aab2cc]';
       }
     };
 
@@ -229,7 +229,7 @@ const SystemSettings = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="flex items-center space-x-2 text-gray-600">
+        <div className="flex items-center space-x-2 text-gray-600 dark:text-[#aab2cc]">
           <RefreshCw className="w-5 h-5 animate-spin" />
           <span>Loading system settings...</span>
         </div>
@@ -240,21 +240,21 @@ const SystemSettings = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <SettingsIcon className="w-8 h-8 text-blue-600" />
+            <SettingsIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-              <p className="text-gray-600">Configure system parameters and operational settings</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e7eaf3]">System Settings</h1>
+              <p className="text-gray-600 dark:text-[#aab2cc]">Configure system parameters and operational settings</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <button
               onClick={() => fetchSystemHealth()}
               disabled={loadingHealth}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-[#1a2238] text-gray-700 dark:text-[#aab2cc] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2a3450] transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loadingHealth ? 'animate-spin' : ''}`} />
               <span>Refresh Health</span>
@@ -264,7 +264,7 @@ const SystemSettings = () => {
               <button
                 onClick={() => resetToDefaults()}
                 disabled={saving}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                className="flex items-center space-x-2 px-4 py-2 bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-500/25 transition-colors disabled:opacity-50"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Reset All to Defaults</span>
@@ -276,24 +276,24 @@ const SystemSettings = () => {
 
       {/* System Health */}
       {systemHealth && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-6">
           <div className="flex items-center space-x-3 mb-6">
-            <Monitor className="w-6 h-6 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">System Health</h2>
+            <Monitor className="w-6 h-6 text-gray-600 dark:text-[#aab2cc]" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e7eaf3]">System Health</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Database Health */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-[#0f1426] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <Database className="w-5 h-5 text-gray-600" />
-                  <span className="font-medium">Database</span>
+                  <Database className="w-5 h-5 text-gray-600 dark:text-[#aab2cc]" />
+                  <span className="font-medium dark:text-[#e7eaf3]">Database</span>
                 </div>
                 {renderHealthStatus(systemHealth.database.status)}
               </div>
               {systemHealth.database.details && (
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-[#aab2cc] space-y-1">
                   <div>Connections: {systemHealth.database.details.active_connections}</div>
                   <div>Connected: {systemHealth.database.details.connected ? 'Yes' : 'No'}</div>
                 </div>
@@ -301,16 +301,16 @@ const SystemSettings = () => {
             </div>
 
             {/* Memory Usage */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-[#0f1426] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <Cpu className="w-5 h-5 text-gray-600" />
-                  <span className="font-medium">Memory</span>
+                  <Cpu className="w-5 h-5 text-gray-600 dark:text-[#aab2cc]" />
+                  <span className="font-medium dark:text-[#e7eaf3]">Memory</span>
                 </div>
                 {renderHealthStatus(systemHealth.memory.status)}
               </div>
               {systemHealth.memory.details && (
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-[#aab2cc] space-y-1">
                   <div>Heap: {systemHealth.memory.details.heap_used}</div>
                   <div>RSS: {systemHealth.memory.details.rss}</div>
                 </div>
@@ -318,16 +318,16 @@ const SystemSettings = () => {
             </div>
 
             {/* Services */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-[#0f1426] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <Server className="w-5 h-5 text-gray-600" />
-                  <span className="font-medium">Services</span>
+                  <Server className="w-5 h-5 text-gray-600 dark:text-[#aab2cc]" />
+                  <span className="font-medium dark:text-[#e7eaf3]">Services</span>
                 </div>
                 {renderHealthStatus(systemHealth.services.status)}
               </div>
               {systemHealth.services.details && (
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className="text-xs text-gray-600 dark:text-[#aab2cc] space-y-1">
                   <div>Uptime: {systemHealth.services.details.uptime_human}</div>
                   <div>Node: {systemHealth.services.details.node_version}</div>
                 </div>
@@ -335,15 +335,15 @@ const SystemSettings = () => {
             </div>
 
             {/* Disk Space (placeholder) */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-[#0f1426] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <HardDrive className="w-5 h-5 text-gray-600" />
-                  <span className="font-medium">Storage</span>
+                  <HardDrive className="w-5 h-5 text-gray-600 dark:text-[#aab2cc]" />
+                  <span className="font-medium dark:text-[#e7eaf3]">Storage</span>
                 </div>
                 {renderHealthStatus('healthy')}
               </div>
-              <div className="text-xs text-gray-600 space-y-1">
+              <div className="text-xs text-gray-600 dark:text-[#aab2cc] space-y-1">
                 <div>Available: Available</div>
                 <div>Status: Operational</div>
               </div>
@@ -354,7 +354,7 @@ const SystemSettings = () => {
 
       <div className="flex">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-white rounded-lg shadow-sm p-4 mr-6">
+        <div className="w-64 bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-4 mr-6">
           <nav className="space-y-2">
             {Object.entries(settingCategories).map(([key, category]) => (
               <button
@@ -362,8 +362,8 @@ const SystemSettings = () => {
                 onClick={() => setActiveTab(key)}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                   activeTab === key
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
+                    : 'text-gray-700 dark:text-[#aab2cc] hover:bg-gray-100 dark:hover:bg-[#1a2238]'
                 }`}
               >
                 <category.icon className="w-5 h-5" />
@@ -375,22 +375,22 @@ const SystemSettings = () => {
 
         {/* Settings Content */}
         <div className="flex-1">
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-6">
             <div className="mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e7eaf3] flex items-center space-x-2">
                     {React.createElement(settingCategories[activeTab].icon, { className: "w-6 h-6" })}
                     <span>{settingCategories[activeTab].title}</span>
                   </h2>
-                  <p className="text-gray-600 mt-1">{settingCategories[activeTab].description}</p>
+                  <p className="text-gray-600 dark:text-[#aab2cc] mt-1">{settingCategories[activeTab].description}</p>
                 </div>
-                
+
                 {user?.role === 'super_admin' && (
                   <button
                     onClick={() => resetToDefaults(activeTab)}
                     disabled={saving}
-                    className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 dark:bg-[#1a2238] text-gray-700 dark:text-[#aab2cc] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2a3450] transition-colors disabled:opacity-50"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>Reset Category</span>
@@ -402,27 +402,27 @@ const SystemSettings = () => {
             {/* Settings Grid */}
             <div className="space-y-6">
               {settings[activeTab]?.map((setting) => (
-                <div key={setting.id} className="bg-gray-50 rounded-lg p-4">
+                <div key={setting.id} className="bg-gray-50 dark:bg-[#0f1426] rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div>
-                          <label htmlFor={setting.setting_key} className="block text-sm font-medium text-gray-900 mb-1">
+                          <label htmlFor={setting.setting_key} className="block text-sm font-medium text-gray-900 dark:text-[#e7eaf3] mb-1">
                             {setting.setting_key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </label>
-                          <p className="text-xs text-gray-600 mb-3">{setting.description}</p>
+                          <p className="text-xs text-gray-600 dark:text-[#aab2cc] mb-3">{setting.description}</p>
                         </div>
-                        
+
                         <div>
                           {renderSettingInput(setting, activeTab)}
                           <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 dark:text-[#7e88a6]">
                               Type: {setting.data_type} | Updated: {new Date(setting.updated_at).toLocaleDateString()}
                             </span>
                             <button
                               onClick={() => saveSetting(activeTab, setting.setting_key)}
                               disabled={saving}
-                              className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
+                              className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-500/25 transition-colors disabled:opacity-50"
                             >
                               <Save className="w-3 h-3" />
                               <span>Save</span>
@@ -434,8 +434,8 @@ const SystemSettings = () => {
                   </div>
                 </div>
               )) || (
-                <div className="text-center py-8 text-gray-500">
-                  <SettingsIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-gray-500 dark:text-[#7e88a6]">
+                  <SettingsIcon className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-[#7e88a6]" />
                   <p>No settings found for this category</p>
                 </div>
               )}

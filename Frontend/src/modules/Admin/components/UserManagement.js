@@ -59,15 +59,15 @@ const UserManagement = () => {
     const colors = {
       user: 'bg-navy/10 text-navy',
       admin: 'bg-navy/10 text-navy',
-      super_admin: 'bg-red-100 text-red-800'
+      super_admin: 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300'
     };
     return colors[role] || colors.user;
   };
 
   const getStatusColor = (isActive) => {
     return isActive
-      ? 'bg-green-100 text-green-800'
-      : 'bg-gray-100 text-gray-800';
+      ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300'
+      : 'bg-gray-100 dark:bg-[#1a2238] text-gray-800 dark:text-[#e7eaf3]';
   };
 
   // Handle user selection
@@ -176,11 +176,11 @@ const UserManagement = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-navy">User Management</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">User Management</h1>
+            <p className="text-gray-600 dark:text-[#aab2cc] mt-1">
               Manage user accounts, roles, and permissions
             </p>
           </div>
@@ -195,23 +195,23 @@ const UserManagement = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-[#7e88a6] w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               />
             </div>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="all">All Roles</option>
               <option value="user">Users</option>
@@ -221,7 +221,7 @@ const UserManagement = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -238,7 +238,7 @@ const UserManagement = () => {
                 <span>Delete Selected ({selectedUsers.length})</span>
               </button>
             )}
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-[#aab2cc]">
               Showing {filteredUsers.length} of {users.length} users
             </div>
           </div>
@@ -246,70 +246,70 @@ const UserManagement = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-brand shadow-brand overflow-hidden">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2a3450]">
+            <thead className="bg-gray-50 dark:bg-[#0f1426]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   <input
                     type="checkbox"
                     checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-navy focus:ring-navy/30"
+                    className="rounded border-gray-300 dark:border-[#2a3450] text-navy focus:ring-navy/30"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   User Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-[#151c30] divide-y divide-gray-200 dark:divide-[#2a3450]">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
                     Loading users...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
                     No users found
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2238]">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedUsers.includes(user.id)}
                         onChange={() => handleSelectUser(user.id)}
-                        className="rounded border-gray-300 text-navy focus:ring-navy/30"
+                        className="rounded border-gray-300 dark:border-[#2a3450] text-navy focus:ring-navy/30"
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="font-medium text-navy">{user.name}</div>
-                        <div className="text-sm text-gray-600">{user.email}</div>
+                        <div className="font-medium text-navy dark:text-[#e7eaf3]">{user.name}</div>
+                        <div className="text-sm text-gray-600 dark:text-[#aab2cc]">{user.email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy dark:text-[#e7eaf3]">
                       {user.user_type || 'individual'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -325,7 +325,7 @@ const UserManagement = () => {
                         {user.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-navy dark:text-[#e7eaf3]">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -348,7 +348,7 @@ const UserManagement = () => {
                         {currentUser.role === 'super_admin' && user.role !== 'super_admin' && (
                           <button 
                             onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900 flex items-center space-x-1"
+                            className="text-red-600 dark:text-red-300 hover:text-red-900 flex items-center space-x-1"
                           >
                             <Trash2 className="w-4 h-4" />
                             <span>Delete</span>
@@ -366,21 +366,21 @@ const UserManagement = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
-          <div className="text-2xl font-bold text-navy">{stats.users?.total_users || 0}</div>
-          <div className="text-sm text-gray-600">Total Users</div>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{stats.users?.total_users || 0}</div>
+          <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Total Users</div>
         </div>
-        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.users?.active_users || 0}</div>
-          <div className="text-sm text-gray-600">Active Users</div>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-300">{stats.users?.active_users || 0}</div>
+          <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Active Users</div>
         </div>
-        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
-          <div className="text-2xl font-bold text-navy">{stats.users?.admin_users || 0}</div>
-          <div className="text-sm text-gray-600">Admins</div>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{stats.users?.admin_users || 0}</div>
+          <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Admins</div>
         </div>
-        <div className="bg-white rounded-brand shadow-brand p-6 text-center">
-          <div className="text-2xl font-bold text-navy">{stats.users?.new_users_30d || 0}</div>
-          <div className="text-sm text-gray-600">New This Month</div>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6 text-center">
+          <div className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{stats.users?.new_users_30d || 0}</div>
+          <div className="text-sm text-gray-600 dark:text-[#aab2cc]">New This Month</div>
         </div>
       </div>
       
@@ -452,49 +452,49 @@ const AddUserModal = ({ onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-add-user-title" className="bg-white rounded-brand p-6 w-full max-w-md outline-none">
-        <h2 id="admin-add-user-title" className="text-xl font-bold mb-4">Add New User</h2>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-add-user-title" className="bg-white dark:bg-[#151c30] rounded-brand p-6 w-full max-w-md outline-none">
+        <h2 id="admin-add-user-title" className="text-xl font-bold mb-4 dark:text-[#e7eaf3]">Add New User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Email</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Password</label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Role</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({...formData, role: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -502,11 +502,11 @@ const AddUserModal = ({ onClose, onSuccess }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">User Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">User Type</label>
             <select
               value={formData.user_type}
               onChange={(e) => setFormData({...formData, user_type: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="individual">Individual</option>
               <option value="business">Business</option>
@@ -517,7 +517,7 @@ const AddUserModal = ({ onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-brand hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:text-[#aab2cc] rounded-brand hover:bg-gray-50 dark:hover:bg-[#1a2238] transition-colors"
             >
               Cancel
             </button>
@@ -567,39 +567,39 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-edit-user-title" className="bg-white rounded-brand p-6 w-full max-w-md outline-none">
-        <h2 id="admin-edit-user-title" className="text-xl font-bold mb-4">Edit User</h2>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-edit-user-title" className="bg-white dark:bg-[#151c30] rounded-brand p-6 w-full max-w-md outline-none">
+        <h2 id="admin-edit-user-title" className="text-xl font-bold mb-4 dark:text-[#e7eaf3]">Edit User</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Email</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               required
             />
           </div>
           
           {currentUser.role === 'super_admin' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">Role</label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -609,11 +609,11 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
           )}
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">User Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">User Type</label>
             <select
               value={formData.user_type}
               onChange={(e) => setFormData({...formData, user_type: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="individual">Individual</option>
               <option value="business">Business</option>
@@ -626,9 +626,9 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
                 type="checkbox"
                 checked={formData.is_active}
                 onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
-                className="rounded border-gray-300 text-navy focus:ring-navy/30"
+                className="rounded border-gray-300 dark:border-[#2a3450] text-navy focus:ring-navy/30"
               />
-              <span className="text-sm font-medium text-gray-700">Active</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-[#aab2cc]">Active</span>
             </label>
           </div>
           
@@ -636,7 +636,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-brand hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:text-[#aab2cc] rounded-brand hover:bg-gray-50 dark:hover:bg-[#1a2238] transition-colors"
             >
               Cancel
             </button>

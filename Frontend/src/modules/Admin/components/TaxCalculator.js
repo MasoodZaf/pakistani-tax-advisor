@@ -60,22 +60,22 @@ const TaxCalculator = ({ onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-tax-calc-title"
-        className="bg-white rounded-brand w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
+        className="bg-white dark:bg-[#151c30] rounded-brand w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
       >
-        <div className="p-6 border-b">
+        <div className="p-6 border-b dark:border-[#2a3450]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Calculator className="w-6 h-6 text-navy" />
-              <h2 id="admin-tax-calc-title" className="text-xl font-bold text-navy">Tax Calculator</h2>
+              <Calculator className="w-6 h-6 text-navy dark:text-[#e7eaf3]" />
+              <h2 id="admin-tax-calc-title" className="text-xl font-bold text-navy dark:text-[#e7eaf3]">Tax Calculator</h2>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="text-gray-400 dark:text-[#7e88a6] hover:text-gray-600 dark:hover:text-[#aab2cc] text-2xl"
             >
               ×
             </button>
           </div>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 dark:text-[#aab2cc] mt-1">
             Calculate income tax for Pakistani taxpayers
           </p>
         </div>
@@ -84,13 +84,13 @@ const TaxCalculator = ({ onClose }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Input Form */}
             <div>
-              <h3 className="text-lg font-semibold text-navy mb-4">
+              <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">
                 Tax Calculation Input
               </h3>
-              
+
               <form onSubmit={calculateTax} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Gross Annual Income (PKR)
                   </label>
                   <input
@@ -98,14 +98,14 @@ const TaxCalculator = ({ onClose }) => {
                     name="income"
                     value={formData.income}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                     placeholder="e.g., 1200000"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Tax Allowances/Exemptions (PKR)
                   </label>
                   <input
@@ -113,20 +113,20 @@ const TaxCalculator = ({ onClose }) => {
                     name="allowances"
                     value={formData.allowances}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                     placeholder="e.g., 600000"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#aab2cc] mb-1">
                     Tax Year
                   </label>
                   <select
                     name="tax_year"
                     value={formData.tax_year}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
                   >
                     {(availableYears.length ? availableYears : ['2025-26', '2024-25']).map(yr => (
                       <option key={yr} value={yr}>{yr}</option>
@@ -151,7 +151,7 @@ const TaxCalculator = ({ onClose }) => {
 
             {/* Results */}
             <div>
-              <h3 className="text-lg font-semibold text-navy mb-4">
+              <h3 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">
                 Tax Calculation Results
               </h3>
               
@@ -169,22 +169,22 @@ const TaxCalculator = ({ onClose }) => {
                       </div>
                     </div>
 
-                    <div className="bg-green-50 p-4 rounded-brand border border-green-200">
+                    <div className="bg-green-50 dark:bg-green-500/15 p-4 rounded-brand border border-green-200 dark:border-green-500/30">
                       <div className="flex items-center space-x-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-900">Net Income</span>
+                        <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-900 dark:text-green-300">Net Income</span>
                       </div>
-                      <div className="text-xl font-bold text-green-900">
+                      <div className="text-xl font-bold text-green-900 dark:text-green-300">
                         {formatCurrency(result.net_income)}
                       </div>
                     </div>
 
-                    <div className="bg-red-50 p-4 rounded-brand border border-red-200">
+                    <div className="bg-red-50 dark:bg-red-500/15 p-4 rounded-brand border border-red-200 dark:border-red-500/30">
                       <div className="flex items-center space-x-2 mb-2">
-                        <FileText className="w-4 h-4 text-red-600" />
-                        <span className="text-sm font-medium text-red-900">Total Tax</span>
+                        <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        <span className="text-sm font-medium text-red-900 dark:text-red-300">Total Tax</span>
                       </div>
-                      <div className="text-xl font-bold text-red-900">
+                      <div className="text-xl font-bold text-red-900 dark:text-red-300">
                         {formatCurrency(result.total_tax)}
                       </div>
                     </div>
@@ -201,20 +201,20 @@ const TaxCalculator = ({ onClose }) => {
                   </div>
 
                   {/* Detailed Breakdown */}
-                  <div className="bg-gray-50 p-4 rounded-brand">
-                    <h4 className="font-semibold text-navy mb-3">Tax Breakdown by Slabs</h4>
+                  <div className="bg-gray-50 dark:bg-[#0f1426] p-4 rounded-brand">
+                    <h4 className="font-semibold text-navy dark:text-[#e7eaf3] mb-3">Tax Breakdown by Slabs</h4>
                     <div className="space-y-2">
                       {result.breakdown.map((slab, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-[#2a3450] last:border-b-0">
                           <div>
-                            <div className="font-medium text-navy">{slab.range}</div>
-                            <div className="text-sm text-gray-600">Rate: {slab.rate}</div>
+                            <div className="font-medium text-navy dark:text-[#e7eaf3]">{slab.range}</div>
+                            <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Rate: {slab.rate}</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-navy">
+                            <div className="font-medium text-navy dark:text-[#e7eaf3]">
                               {formatCurrency(slab.tax_amount)}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-[#aab2cc]">
                               on {formatCurrency(slab.taxable_amount)}
                             </div>
                           </div>
@@ -250,8 +250,8 @@ const TaxCalculator = ({ onClose }) => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-12">
-                  <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <div className="text-center text-gray-500 dark:text-[#7e88a6] py-12">
+                  <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-[#7e88a6]" />
                   <p>Enter income details and click "Calculate Tax" to see results</p>
                 </div>
               )}

@@ -118,33 +118,33 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-navy">
+              <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">
                 {isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
               </h1>
               {isSuperAdmin && (
-                <span className="px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full border border-red-200">
+                <span className="px-2.5 py-1 text-xs font-bold bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-500/30">
                   SUPER ADMIN
                 </span>
               )}
             </div>
-            <p className="text-gray-600 mt-1">System overview and administrative controls</p>
+            <p className="text-gray-600 dark:text-[#aab2cc] mt-1">System overview and administrative controls</p>
           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={fetchStats}
               disabled={loadingStats}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 border border-gray-200 rounded-brand transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#7e88a6] hover:text-gray-700 dark:hover:text-[#aab2cc] px-3 py-1.5 border border-gray-200 dark:border-[#2a3450] rounded-brand transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loadingStats ? 'animate-spin' : ''}`} />
               Refresh
             </button>
             <div className="text-right">
-              <div className="text-sm text-gray-500">Logged in as</div>
-              <div className="font-medium text-navy capitalize">
+              <div className="text-sm text-gray-500 dark:text-[#7e88a6]">Logged in as</div>
+              <div className="font-medium text-navy dark:text-[#e7eaf3] capitalize">
                 {user?.role?.replace('_', ' ')}
               </div>
             </div>
@@ -169,8 +169,8 @@ const AdminDashboard = () => {
                   <RefreshCw className="w-4 h-4 animate-spin opacity-40" />
                 )}
               </div>
-              <div className="text-2xl font-bold text-navy">{stat.value}</div>
-              <div className="text-sm font-semibold text-gray-700 mt-0.5">{stat.title}</div>
+              <div className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">{stat.value}</div>
+              <div className="text-sm font-semibold text-gray-700 dark:text-[#aab2cc] mt-0.5">{stat.title}</div>
               <div className="text-xs mt-1 opacity-70">{stat.sub}</div>
             </div>
           );
@@ -180,58 +180,58 @@ const AdminDashboard = () => {
       {/* Quick Actions + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Quick Actions */}
-        <div className="bg-white rounded-brand shadow-brand p-6">
-          <h2 className="text-lg font-semibold text-navy mb-4">Quick Actions</h2>
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
+          <h2 className="text-lg font-semibold text-navy dark:text-[#e7eaf3] mb-4">Quick Actions</h2>
 
           <div className="space-y-3">
             <button
               onClick={() => navigate('/admin/users')}
-              className="w-full text-left p-3 border border-gray-200 rounded-brand hover:bg-gray-50 transition-colors"
+              className="w-full text-left p-3 border border-gray-200 dark:border-[#2a3450] rounded-brand hover:bg-gray-50 dark:hover:bg-[#0f1426] transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-navy" />
+                <Users className="w-5 h-5 text-navy dark:text-[#e7eaf3]" />
                 <div>
-                  <div className="font-medium text-navy">User Management</div>
-                  <div className="text-sm text-gray-600">Manage user accounts and permissions</div>
+                  <div className="font-medium text-navy dark:text-[#e7eaf3]">User Management</div>
+                  <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Manage user accounts and permissions</div>
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => setShowTaxCalculator(true)}
-              className="w-full text-left p-3 border border-gray-200 rounded-brand hover:bg-gray-50 transition-colors"
+              className="w-full text-left p-3 border border-gray-200 dark:border-[#2a3450] rounded-brand hover:bg-gray-50 dark:hover:bg-[#0f1426] transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <Calculator className="w-5 h-5 text-navy" />
+                <Calculator className="w-5 h-5 text-navy dark:text-[#e7eaf3]" />
                 <div>
-                  <div className="font-medium text-navy">Tax Calculator</div>
-                  <div className="text-sm text-gray-600">Calculate income tax for Pakistani taxpayers</div>
+                  <div className="font-medium text-navy dark:text-[#e7eaf3]">Tax Calculator</div>
+                  <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Calculate income tax for Pakistani taxpayers</div>
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => navigate('/admin/system-settings')}
-              className="w-full text-left p-3 border border-gray-200 rounded-brand hover:bg-gray-50 transition-colors"
+              className="w-full text-left p-3 border border-gray-200 dark:border-[#2a3450] rounded-brand hover:bg-gray-50 dark:hover:bg-[#0f1426] transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <Settings className="w-5 h-5 text-navy" />
+                <Settings className="w-5 h-5 text-navy dark:text-[#e7eaf3]" />
                 <div>
-                  <div className="font-medium text-navy">System Settings</div>
-                  <div className="text-sm text-gray-600">Configure system parameters</div>
+                  <div className="font-medium text-navy dark:text-[#e7eaf3]">System Settings</div>
+                  <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Configure system parameters</div>
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => navigate('/reports')}
-              className="w-full text-left p-3 border border-gray-200 rounded-brand hover:bg-gray-50 transition-colors"
+              className="w-full text-left p-3 border border-gray-200 dark:border-[#2a3450] rounded-brand hover:bg-gray-50 dark:hover:bg-[#0f1426] transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <FileText className="w-5 h-5 text-navy" />
+                <FileText className="w-5 h-5 text-navy dark:text-[#e7eaf3]" />
                 <div>
-                  <div className="font-medium text-navy">Tax Summary Reports</div>
-                  <div className="text-sm text-gray-600">View user tax summaries and analytics</div>
+                  <div className="font-medium text-navy dark:text-[#e7eaf3]">Tax Summary Reports</div>
+                  <div className="text-sm text-gray-600 dark:text-[#aab2cc]">View user tax summaries and analytics</div>
                 </div>
               </div>
             </button>
@@ -241,18 +241,18 @@ const AdminDashboard = () => {
               <>
                 <button
                   onClick={() => navigate('/admin/tax-rates')}
-                  className="w-full text-left p-3 border border-amber-200 bg-amber-50 rounded-brand hover:bg-amber-100 transition-colors"
+                  className="w-full text-left p-3 border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 rounded-brand hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
-                    <Percent className="w-5 h-5 text-amber-600" />
+                    <Percent className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     <div>
-                      <div className="font-medium text-navy flex items-center">
+                      <div className="font-medium text-navy dark:text-[#e7eaf3] flex items-center">
                         Tax Rates Manager
-                        <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full border border-amber-200">
+                        <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-500/30">
                           SUPER ADMIN
                         </span>
                       </div>
-                      <div className="text-sm text-amber-700">Update FBR income tax slabs &amp; rates</div>
+                      <div className="text-sm text-amber-700 dark:text-amber-300">Update FBR income tax slabs &amp; rates</div>
                     </div>
                   </div>
                 </button>
@@ -268,7 +268,7 @@ const AdminDashboard = () => {
                         Tax-Efficiency Playbook
                         <span className="ml-2 px-2 py-0.5 text-xs bg-lime/25 text-navy rounded-full">SUPER ADMIN</span>
                       </div>
-                      <div className="text-sm text-gray-600">Curate the legal strategies the AI suggests</div>
+                      <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Curate the legal strategies the AI suggests</div>
                     </div>
                   </div>
                 </button>
@@ -293,21 +293,21 @@ const AdminDashboard = () => {
 
                 <button
                   onClick={() => setShowUserImpersonation(true)}
-                  className="w-full text-left p-3 border border-red-200 bg-red-50 rounded-brand hover:bg-red-100 transition-colors"
+                  className="w-full text-left p-3 border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 rounded-brand hover:bg-red-100 dark:hover:bg-red-500/25 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-1">
-                      <UserCog className="w-5 h-5 text-red-600" />
-                      <Shield className="w-4 h-4 text-red-500" />
+                      <UserCog className="w-5 h-5 text-red-600 dark:text-red-400" />
+                      <Shield className="w-4 h-4 text-red-500 dark:text-red-400" />
                     </div>
                     <div>
-                      <div className="font-medium text-navy flex items-center">
+                      <div className="font-medium text-navy dark:text-[#e7eaf3] flex items-center">
                         User Impersonation
-                        <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full border border-red-200">
+                        <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-500/30">
                           SUPER ADMIN
                         </span>
                       </div>
-                      <div className="text-sm text-red-600">Login as any user for tax consultation</div>
+                      <div className="text-sm text-red-600 dark:text-red-300">Login as any user for tax consultation</div>
                     </div>
                   </div>
                 </button>
@@ -317,15 +317,15 @@ const AdminDashboard = () => {
         </div>
 
         {/* Recent Activity — real audit log */}
-        <div className="bg-white rounded-brand shadow-brand p-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-navy">Recent Activity</h2>
-            <Activity className="w-4 h-4 text-gray-400" />
+            <h2 className="text-lg font-semibold text-navy dark:text-[#e7eaf3]">Recent Activity</h2>
+            <Activity className="w-4 h-4 text-gray-400 dark:text-[#7e88a6]" />
           </div>
 
           {loadingStats ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
+              <RefreshCw className="w-5 h-5 animate-spin text-gray-400 dark:text-[#7e88a6]" />
             </div>
           ) : stats?.recentActivity?.length > 0 ? (
             <div className="space-y-3">
@@ -333,25 +333,25 @@ const AdminDashboard = () => {
                 <div key={index} className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-navy rounded-full mt-2 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-navy text-sm">
+                    <div className="font-medium text-navy dark:text-[#e7eaf3] text-sm">
                       {formatActivityLabel(item.action)}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
-                      <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                    <div className="text-xs text-gray-500 dark:text-[#7e88a6] flex items-center gap-2 mt-0.5">
+                      <span className="bg-gray-100 dark:bg-[#1a2238] px-1.5 py-0.5 rounded text-gray-600 dark:text-[#aab2cc]">
                         {item.table_name}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatTimeAgo(item.last_action)}
                       </span>
-                      <span className="text-gray-400">×{item.count}</span>
+                      <span className="text-gray-400 dark:text-[#7e88a6]">×{item.count}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-400 dark:text-[#7e88a6]">
               <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">No recent activity</p>
             </div>
@@ -360,10 +360,10 @@ const AdminDashboard = () => {
       </div>
 
       {/* System Status — real data */}
-      <div className="bg-white rounded-brand shadow-brand p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="w-5 h-5 text-yellow-500" />
-          <h2 className="text-lg font-semibold text-navy">System Status</h2>
+          <h2 className="text-lg font-semibold text-navy dark:text-[#e7eaf3]">System Status</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-lime/15 border border-lime/40 rounded-brand p-4">

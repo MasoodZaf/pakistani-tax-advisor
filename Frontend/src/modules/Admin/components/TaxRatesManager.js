@@ -17,26 +17,45 @@ const S = () => (
     .trm-root { font-family:'Nunito',sans-serif; }
     .trm-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.02em; }
     .trm-rate-pill { display:inline-flex;align-items:center;justify-content:center;padding:4px 12px;border-radius:100px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800; }
-    .trm-input { width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:#111827;outline:none;transition:border-color .18s,box-shadow .18s; }
+    .trm-input { width:100%;padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--content);background:var(--surface-raised);outline:none;transition:border-color .18s,box-shadow .18s; }
     .trm-input:focus { border-color:#28396C;box-shadow:0 0 0 3px rgba(40,57,108,.1); }
+    [data-theme="dark"] .trm-input:focus { border-color:#3d5a90; }
     .trm-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;border:none; }
     .trm-btn-primary { background:#28396C;color:#fff; }
     .trm-btn-primary:hover { background:#1e2d5a; }
     .trm-btn-danger  { background:#fee2e2;color:#dc2626; }
     .trm-btn-danger:hover  { background:#fecaca; }
+    [data-theme="dark"] .trm-btn-danger { background:#3a1d1d;color:#f87171; }
+    [data-theme="dark"] .trm-btn-danger:hover { background:#4a2424; }
     .trm-btn-ghost   { background:#f3f4f6;color:#374151; }
     .trm-btn-ghost:hover   { background:#e5e7eb; }
+    [data-theme="dark"] .trm-btn-ghost { background:var(--surface-sunken);color:var(--content-muted); }
+    [data-theme="dark"] .trm-btn-ghost:hover { background:#1a2238; }
     .trm-btn-green   { background:#ecfdf5;color:#059669; }
     .trm-btn-green:hover   { background:#d1fae5; }
+    [data-theme="dark"] .trm-btn-green { background:#10241c;color:#34d399; }
+    [data-theme="dark"] .trm-btn-green:hover { background:#163026; }
     .trm-slab-row { display:grid;grid-template-columns:40px 1fr 1fr 1fr 100px 90px;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;transition:background .15s; }
-    .trm-slab-row:hover { background:#f9fafb; }
+    .trm-slab-row:hover { background:var(--surface-sunken); }
     .trm-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px; }
-    .trm-modal { background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
+    .trm-modal { background:var(--surface-raised);border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 64px rgba(0,0,0,.18);overflow:hidden; }
     .trm-preview-bar { height:28px;border-radius:4px;transition:width .5s ease;min-width:4px; }
     .rate-0    { background:#f0fdf4;color:#15803d; }
     .rate-low  { background:#fef9c3;color:#854d0e; }
     .rate-mid  { background:#fff7ed;color:#c2410c; }
     .rate-high { background:#fef2f2;color:#b91c1c; }
+    [data-theme="dark"] .rate-0    { background:#10241c;color:#4ade80; }
+    [data-theme="dark"] .rate-low  { background:#2a2410;color:#facc15; }
+    [data-theme="dark"] .rate-mid  { background:#2e1f12;color:#fb923c; }
+    [data-theme="dark"] .rate-high { background:#2e1515;color:#f87171; }
+    /* status-tint banners: dark variants (light values stay inline) */
+    [data-theme="dark"] .trm-total-banner { background:#0e1c30 !important;border-top-color:#1e3a5f !important; }
+    [data-theme="dark"] .trm-total-banner span { color:#93c5fd !important; }
+    [data-theme="dark"] .trm-fbr-notice { background:#2a230b !important;border-color:#5a4410 !important; }
+    [data-theme="dark"] .trm-rate-hint { background:#10241c !important; }
+    [data-theme="dark"] .trm-warn-tint { background:#2a230b !important; }
+    [data-theme="dark"] .trm-badge-ok  { background:#10241c !important;color:#34d399 !important; }
+    [data-theme="dark"] .trm-badge-err { background:#2e1515 !important;color:#f87171 !important; }
   `}</style>
 );
 
@@ -392,13 +411,13 @@ export default function TaxRatesManager() {
       <S />
 
       {/* ── Header ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a3450] p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontSize:22, fontWeight:800, color:'#111827', margin:0 }}>
+            <h1 style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontSize:22, fontWeight:800, color:'var(--content)', margin:0 }}>
               Tax Rates Manager
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-500 dark:text-[#7e88a6] text-sm mt-1">
               Configure FBR tax slabs and rates by year. Changes apply to all new calculations immediately.
             </p>
           </div>
@@ -443,7 +462,7 @@ export default function TaxRatesManager() {
         </div>
 
         {/* Mode switcher — Slabs / Other Rates / Bundle Updates */}
-        <div className="flex gap-2 mt-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
+        <div className="flex gap-2 mt-5" style={{ borderBottom: '1px solid var(--line)' }}>
           {[
             { id: 'slabs',  label: 'Tax Slabs',      icon: <BarChart2 size={14} /> },
             { id: 'rates',  label: 'Other Rates',    icon: <TrendingUp size={14} /> },
@@ -456,7 +475,7 @@ export default function TaxRatesManager() {
                 display:'inline-flex', alignItems:'center', gap:6,
                 padding:'10px 16px', border:'none', background:'none', cursor:'pointer',
                 fontFamily:'Nunito,sans-serif', fontSize:13, fontWeight:700,
-                color: mode === m.id ? '#28396C' : '#6b7280',
+                color: mode === m.id ? '#28396C' : 'var(--content-subtle)',
                 borderBottom: mode === m.id ? '2px solid #28396C' : '2px solid transparent',
                 marginBottom: -1,
               }}
@@ -470,7 +489,7 @@ export default function TaxRatesManager() {
         {mode !== 'bundle' && (
         <div className="flex flex-wrap gap-4 mt-5">
           <div>
-            <label className="block text-xs font-700 text-gray-500 mb-1 uppercase tracking-wider">Tax Year</label>
+            <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1 uppercase tracking-wider">Tax Year</label>
             <div className="relative">
               <select
                 value={selectedYear || ''}
@@ -484,13 +503,13 @@ export default function TaxRatesManager() {
                   </option>
                 ))}
               </select>
-              <ChevronDown size={14} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'#6b7280' }} />
+              <ChevronDown size={14} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'var(--content-subtle)' }} />
             </div>
           </div>
 
           {mode === 'slabs' && (
             <div>
-              <label className="block text-xs font-700 text-gray-500 mb-1 uppercase tracking-wider">Slab Type</label>
+              <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1 uppercase tracking-wider">Slab Type</label>
               <div className="flex flex-wrap gap-2">
                 {SLAB_TYPES.map(t => (
                   <button
@@ -498,9 +517,9 @@ export default function TaxRatesManager() {
                     onClick={() => setSelectedType(t.id)}
                     style={{
                       padding:'6px 14px', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', border:'1.5px solid',
-                      borderColor: selectedType === t.id ? '#28396C' : '#e5e7eb',
-                      background:  selectedType === t.id ? '#28396C' : '#fff',
-                      color:       selectedType === t.id ? '#fff' : '#374151',
+                      borderColor: selectedType === t.id ? '#28396C' : 'var(--line)',
+                      background:  selectedType === t.id ? '#28396C' : 'var(--surface-raised)',
+                      color:       selectedType === t.id ? '#fff' : 'var(--content-muted)',
                     }}
                   >
                     {t.label}
@@ -512,7 +531,7 @@ export default function TaxRatesManager() {
 
           {mode === 'rates' && (
             <div>
-              <label className="block text-xs font-700 text-gray-500 mb-1 uppercase tracking-wider">Rate Type</label>
+              <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1 uppercase tracking-wider">Rate Type</label>
               <div className="flex flex-wrap gap-2">
                 {RATE_TYPES.map(t => (
                   <button
@@ -521,9 +540,9 @@ export default function TaxRatesManager() {
                     title={t.desc}
                     style={{
                       padding:'6px 14px', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', border:'1.5px solid',
-                      borderColor: selectedRateType === t.id ? '#28396C' : '#e5e7eb',
-                      background:  selectedRateType === t.id ? '#28396C' : '#fff',
-                      color:       selectedRateType === t.id ? '#fff' : '#374151',
+                      borderColor: selectedRateType === t.id ? '#28396C' : 'var(--line)',
+                      background:  selectedRateType === t.id ? '#28396C' : 'var(--surface-raised)',
+                      color:       selectedRateType === t.id ? '#fff' : 'var(--content-muted)',
                     }}
                   >
                     {t.label}
@@ -538,13 +557,13 @@ export default function TaxRatesManager() {
 
       {/* ── Slabs Table (mode === 'slabs') ── */}
       {mode === 'slabs' && (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a3450] overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2a3450] flex items-center justify-between">
           <div>
-            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'#111827', fontSize:16 }}>
+            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'var(--content)', fontSize:16 }}>
               {SLAB_TYPES.find(t=>t.id===selectedType)?.label} — {currentYearData?.tax_year}
             </span>
-            <span className="ml-3 text-xs text-gray-400 font-600">{slabs.length} slab{slabs.length!==1?'s':''}</span>
+            <span className="ml-3 text-xs text-gray-400 dark:text-[#7e88a6] font-600">{slabs.length} slab{slabs.length!==1?'s':''}</span>
           </div>
           <div className="flex gap-2">
             <button className="trm-btn trm-btn-ghost" style={{ padding:'6px 12px' }} onClick={() => setShowPreview(!showPreview)}>
@@ -558,25 +577,25 @@ export default function TaxRatesManager() {
 
         {/* Column headers */}
         {slabs.length > 0 && (
-          <div className="trm-slab-row" style={{ background:'#f9fafb', borderBottom:'1px solid #f3f4f6' }}>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>#</span>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>Min Income</span>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>Max Income</span>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>Slab Name</span>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>Rate</span>
-            <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' }}>Actions</span>
+          <div className="trm-slab-row" style={{ background:'var(--surface-sunken)', borderBottom:'1px solid var(--line)' }}>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>#</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Min Income</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Max Income</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Slab Name</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Rate</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Actions</span>
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw className="animate-spin text-gray-300" size={28} />
+            <RefreshCw className="animate-spin text-gray-300 dark:text-[#3a4564]" size={28} />
           </div>
         ) : slabs.length === 0 ? (
           <div className="py-16 text-center">
-            <BarChart2 size={40} style={{ margin:'0 auto 12px', color:'#d1d5db' }} />
-            <p style={{ fontWeight:700, color:'#374151', marginBottom:4 }}>No slabs configured</p>
-            <p style={{ fontSize:13, color:'#9ca3af' }}>
+            <BarChart2 size={40} style={{ margin:'0 auto 12px', color:'var(--content-subtle)' }} />
+            <p style={{ fontWeight:700, color:'var(--content-muted)', marginBottom:4 }}>No slabs configured</p>
+            <p style={{ fontSize:13, color:'var(--content-subtle)' }}>
               {isSuperAdmin ? 'Click "Add Slab" to add the first tax slab for this year and type.' : 'Contact Super Admin to configure tax slabs.'}
             </p>
             {isSuperAdmin && (
@@ -588,20 +607,20 @@ export default function TaxRatesManager() {
         ) : (
           <div>
             {slabs.map((slab, idx) => (
-              <div key={slab.id} className="trm-slab-row" style={{ borderBottom: idx < slabs.length-1 ? '1px solid #f3f4f6' : 'none' }}>
-                <span style={{ width:28, height:28, borderRadius:'50%', background:'#f3f4f6', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, color:'#6b7280' }}>
+              <div key={slab.id} className="trm-slab-row" style={{ borderBottom: idx < slabs.length-1 ? '1px solid var(--line)' : 'none' }}>
+                <span style={{ width:28, height:28, borderRadius:'50%', background:'var(--surface-sunken)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, color:'var(--content-subtle)' }}>
                   {slab.slab_order}
                 </span>
-                <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:700, fontSize:14, color:'#111827' }}>
+                <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:700, fontSize:14, color:'var(--content)' }}>
                   {formatPKR(slab.min_income)}
                 </span>
-                <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:700, fontSize:14, color:'#111827' }}>
-                  {slab.max_income ? formatPKR(slab.max_income) : <span style={{ color:'#9ca3af', fontStyle:'italic' }}>Unlimited</span>}
+                <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:700, fontSize:14, color:'var(--content)' }}>
+                  {slab.max_income ? formatPKR(slab.max_income) : <span style={{ color:'var(--content-subtle)', fontStyle:'italic' }}>Unlimited</span>}
                 </span>
                 <div>
-                  <p style={{ fontSize:13, fontWeight:700, color:'#374151', margin:0 }}>{slab.slab_name}</p>
+                  <p style={{ fontSize:13, fontWeight:700, color:'var(--content-muted)', margin:0 }}>{slab.slab_name}</p>
                   {/* Rate bar */}
-                  <div style={{ marginTop:4, height:4, background:'#f3f4f6', borderRadius:4, overflow:'hidden', maxWidth:120 }}>
+                  <div style={{ marginTop:4, height:4, background:'var(--surface-sunken)', borderRadius:4, overflow:'hidden', maxWidth:120 }}>
                     <div style={{ height:'100%', background: parseFloat(slab.tax_rate) === 0 ? '#86efac' : '#28396C', borderRadius:4, width: `${Math.min((parseFloat(slab.tax_rate)*100/maxTax)*100, 100)}%`, transition:'width .4s' }} />
                   </div>
                 </div>
@@ -618,27 +637,27 @@ export default function TaxRatesManager() {
                     </button>
                   </div>
                 ) : (
-                  <span style={{ fontSize:11, color:'#9ca3af' }}>Read-only</span>
+                  <span style={{ fontSize:11, color:'var(--content-subtle)' }}>Read-only</span>
                 )}
               </div>
             ))}
 
             {/* Summary footer */}
-            <div style={{ padding:'12px 16px', background:'#f9fafb', borderTop:'1px solid #f3f4f6', display:'flex', gap:24 }}>
+            <div style={{ padding:'12px 16px', background:'var(--surface-sunken)', borderTop:'1px solid var(--line)', display:'flex', gap:24 }}>
               <div>
-                <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em' }}>Min Rate</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', letterSpacing:'.05em' }}>Min Rate</span>
                 <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:18, color:'#059669', margin:'2px 0 0' }}>
                   {Math.min(...slabs.map(s => parseFloat(s.tax_rate)*100)).toFixed(0)}%
                 </p>
               </div>
               <div>
-                <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em' }}>Max Rate</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', letterSpacing:'.05em' }}>Max Rate</span>
                 <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:18, color:'#dc2626', margin:'2px 0 0' }}>
                   {Math.max(...slabs.map(s => parseFloat(s.tax_rate)*100)).toFixed(0)}%
                 </p>
               </div>
               <div>
-                <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'.05em' }}>Brackets</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', letterSpacing:'.05em' }}>Brackets</span>
                 <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:18, color:'#28396C', margin:'2px 0 0' }}>
                   {slabs.length}
                 </p>
@@ -652,14 +671,14 @@ export default function TaxRatesManager() {
 
       {/* ── Other Rates Table (mode === 'rates') ── */}
       {mode === 'rates' && (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a3450] overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2a3450] flex items-center justify-between">
           <div>
-            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'#111827', fontSize:16 }}>
+            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'var(--content)', fontSize:16 }}>
               {RATE_TYPES.find(t=>t.id===selectedRateType)?.label} — {currentYearData?.tax_year}
             </span>
-            <span className="ml-3 text-xs text-gray-400 font-600">{rateRows.length} row{rateRows.length!==1?'s':''}</span>
-            <p style={{ fontSize:12, color:'#6b7280', margin:'4px 0 0' }}>
+            <span className="ml-3 text-xs text-gray-400 dark:text-[#7e88a6] font-600">{rateRows.length} row{rateRows.length!==1?'s':''}</span>
+            <p style={{ fontSize:12, color:'var(--content-subtle)', margin:'4px 0 0' }}>
               {RATE_TYPES.find(t=>t.id===selectedRateType)?.desc}
             </p>
           </div>
@@ -669,7 +688,7 @@ export default function TaxRatesManager() {
         </div>
 
         {rateRows.length > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:'minmax(220px, 2.2fr) 120px 120px 120px 100px minmax(200px, 2.5fr) 90px', gap:12, padding:'12px 20px', background:'#f9fafb', borderBottom:'1px solid #f3f4f6' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(220px, 2.2fr) 120px 120px 120px 100px minmax(200px, 2.5fr) 90px', gap:12, padding:'12px 20px', background:'var(--surface-sunken)', borderBottom:'1px solid var(--line)' }}>
             {[
               { label:'Category', align:'left' },
               { label:'Min',      align:'right' },
@@ -679,20 +698,20 @@ export default function TaxRatesManager() {
               { label:'Description', align:'left' },
               { label:'Actions',  align:'right' },
             ].map(h => (
-              <span key={h.label} style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', textAlign: h.align, letterSpacing:'.03em' }}>{h.label}</span>
+              <span key={h.label} style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', textAlign: h.align, letterSpacing:'.03em' }}>{h.label}</span>
             ))}
           </div>
         )}
 
         {loadingRates ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw className="animate-spin text-gray-300" size={28} />
+            <RefreshCw className="animate-spin text-gray-300 dark:text-[#3a4564]" size={28} />
           </div>
         ) : rateRows.length === 0 ? (
           <div className="py-16 text-center">
-            <TrendingUp size={40} style={{ margin:'0 auto 12px', color:'#d1d5db' }} />
-            <p style={{ fontWeight:700, color:'#374151', marginBottom:4 }}>No {RATE_TYPES.find(t=>t.id===selectedRateType)?.label.toLowerCase()} rates configured</p>
-            <p style={{ fontSize:13, color:'#9ca3af' }}>
+            <TrendingUp size={40} style={{ margin:'0 auto 12px', color:'var(--content-subtle)' }} />
+            <p style={{ fontWeight:700, color:'var(--content-muted)', marginBottom:4 }}>No {RATE_TYPES.find(t=>t.id===selectedRateType)?.label.toLowerCase()} rates configured</p>
+            <p style={{ fontSize:13, color:'var(--content-subtle)' }}>
               {isSuperAdmin ? 'Click "Add Rate" to create one.' : 'Contact Super Admin to configure.'}
             </p>
             {isSuperAdmin && (
@@ -723,29 +742,29 @@ export default function TaxRatesManager() {
                     gap:12,
                     padding:'14px 20px',
                     alignItems:'center',
-                    borderBottom: idx < rateRows.length-1 ? '1px solid #f3f4f6' : 'none',
+                    borderBottom: idx < rateRows.length-1 ? '1px solid var(--line)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize:13, fontWeight:700, color:'#111827', wordBreak:'break-word', lineHeight:1.4 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--content)', wordBreak:'break-word', lineHeight:1.4 }}>
                     {row.rate_category}
                   </span>
-                  <span style={{ fontSize:13, fontWeight:600, color: minTxt === '—' ? '#9ca3af' : '#374151', textAlign:'right', fontFamily: minTxt === '—' ? 'inherit' : 'Bricolage Grotesque,sans-serif' }}>
+                  <span style={{ fontSize:13, fontWeight:600, color: minTxt === '—' ? 'var(--content-subtle)' : 'var(--content-muted)', textAlign:'right', fontFamily: minTxt === '—' ? 'inherit' : 'Bricolage Grotesque,sans-serif' }}>
                     {minTxt}
                   </span>
                   <span style={{ fontSize:13, fontWeight:600, textAlign:'right',
-                                 color: maxTxt === '—' ? '#9ca3af' : maxTxt === 'Unlimited' ? '#9ca3af' : '#374151',
+                                 color: maxTxt === '—' ? 'var(--content-subtle)' : maxTxt === 'Unlimited' ? 'var(--content-subtle)' : 'var(--content-muted)',
                                  fontStyle: maxTxt === 'Unlimited' ? 'italic' : 'normal',
                                  fontFamily: (maxTxt === '—' || maxTxt === 'Unlimited') ? 'inherit' : 'Bricolage Grotesque,sans-serif' }}>
                     {maxTxt}
                   </span>
-                  <span style={{ fontSize:13, fontWeight:600, color: fixTxt === '—' ? '#9ca3af' : '#374151', textAlign:'right', fontFamily: fixTxt === '—' ? 'inherit' : 'Bricolage Grotesque,sans-serif' }}>
+                  <span style={{ fontSize:13, fontWeight:600, color: fixTxt === '—' ? 'var(--content-subtle)' : 'var(--content-muted)', textAlign:'right', fontFamily: fixTxt === '—' ? 'inherit' : 'Bricolage Grotesque,sans-serif' }}>
                     {fixTxt}
                   </span>
                   <span className={`trm-rate-pill ${rateClass(row.tax_rate)}`} style={{ justifySelf:'center' }}>
                     {pct(row.tax_rate)}%
                   </span>
-                  <span style={{ fontSize:12, color:'#6b7280', lineHeight:1.4 }} title={row.fbr_reference || ''}>
-                    {row.description || <em style={{color:'#9ca3af'}}>—</em>}
+                  <span style={{ fontSize:12, color:'var(--content-subtle)', lineHeight:1.4 }} title={row.fbr_reference || ''}>
+                    {row.description || <em style={{color:'var(--content-subtle)'}}>—</em>}
                   </span>
                   {isSuperAdmin ? (
                     <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
@@ -757,7 +776,7 @@ export default function TaxRatesManager() {
                       </button>
                     </div>
                   ) : (
-                    <span style={{ fontSize:11, color:'#9ca3af', textAlign:'right' }}>Read-only</span>
+                    <span style={{ fontSize:11, color:'var(--content-subtle)', textAlign:'right' }}>Read-only</span>
                   )}
                 </div>
               );
@@ -769,34 +788,34 @@ export default function TaxRatesManager() {
 
       {/* ── Bundle Updates (mode === 'bundle') ── */}
       {mode === 'bundle' && (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100">
+      <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a3450] overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-[#2a3450]">
           <div className="flex items-center gap-2 mb-2">
             <Package size={18} style={{ color:'#28396C' }} />
-            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'#111827', fontSize:16 }}>
+            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'var(--content)', fontSize:16 }}>
               Rates Bundle
             </span>
             {bundleInfo?.checksum_ok && (
-              <span className="trm-badge" style={{ background:'#ecfdf5', color:'#059669' }}>
+              <span className="trm-badge trm-badge-ok" style={{ background:'#ecfdf5', color:'#059669' }}>
                 <CheckCircle size={11} /> Verified
               </span>
             )}
             {bundleInfo && !bundleInfo.checksum_ok && (
-              <span className="trm-badge" style={{ background:'#fef2f2', color:'#b91c1c' }}>
+              <span className="trm-badge trm-badge-err" style={{ background:'#fef2f2', color:'#b91c1c' }}>
                 <AlertTriangle size={11} /> Checksum mismatch
               </span>
             )}
           </div>
-          <p style={{ fontSize:13, color:'#6b7280', margin:0 }}>
+          <p style={{ fontSize:13, color:'var(--content-subtle)', margin:0 }}>
             Curated JSON bundle of Finance Act slabs &amp; rates. Preview the diff against your database, then apply atomically. Source:&nbsp;
-            <code style={{ fontSize:12, background:'#f3f4f6', padding:'2px 6px', borderRadius:4 }}>
+            <code style={{ fontSize:12, background:'var(--surface-sunken)', padding:'2px 6px', borderRadius:4 }}>
               {bundleInfo?.source?.startsWith('http') ? bundleInfo.source : 'local file'}
             </code>
           </p>
         </div>
 
         {bundleInfo && (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, padding:'16px 24px', borderBottom:'1px solid #f3f4f6' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, padding:'16px 24px', borderBottom:'1px solid var(--line)' }}>
             {[
               { label:'Version',     value: bundleInfo.version || '—' },
               { label:'Generated',   value: bundleInfo.generated_at ? new Date(bundleInfo.generated_at).toLocaleDateString() : '—' },
@@ -805,8 +824,8 @@ export default function TaxRatesManager() {
               { label:'Total Rates', value: bundleInfo.total_rates ?? '—' },
             ].map(c => (
               <div key={c.label}>
-                <p style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', margin:0 }}>{c.label}</p>
-                <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:15, color:'#111827', margin:'4px 0 0' }}>{c.value}</p>
+                <p style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', margin:0 }}>{c.label}</p>
+                <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:15, color:'var(--content)', margin:'4px 0 0' }}>{c.value}</p>
               </div>
             ))}
           </div>
@@ -814,12 +833,12 @@ export default function TaxRatesManager() {
 
         {bundleLoading && !bundlePreview ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw className="animate-spin text-gray-300" size={28} />
+            <RefreshCw className="animate-spin text-gray-300 dark:text-[#3a4564]" size={28} />
           </div>
         ) : bundlePreview ? (
           <div>
-            <div style={{ padding:'12px 24px', background:'#f9fafb', borderBottom:'1px solid #f3f4f6', display:'flex', alignItems:'center', gap:12 }}>
-              <span style={{ fontSize:12, fontWeight:700, color:'#374151' }}>
+            <div style={{ padding:'12px 24px', background:'var(--surface-sunken)', borderBottom:'1px solid var(--line)', display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ fontSize:12, fontWeight:700, color:'var(--content-muted)' }}>
                 Total changes: <strong style={{ color: bundlePreview.total_changes > 0 ? '#d97706' : '#059669' }}>{bundlePreview.total_changes}</strong>
               </span>
               {bundlePreview.total_changes === 0 && (
@@ -834,15 +853,15 @@ export default function TaxRatesManager() {
               const s = y.summary;
               const nothing = s.slabs_add + s.slabs_update + s.slabs_remove + s.rates_add + s.rates_update + s.rates_remove === 0;
               return (
-                <div key={y.tax_year} style={{ padding:'14px 24px', borderBottom:'1px solid #f3f4f6' }}>
+                <div key={y.tax_year} style={{ padding:'14px 24px', borderBottom:'1px solid var(--line)' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                    <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:14, color:'#111827' }}>
+                    <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:14, color:'var(--content)' }}>
                       Tax Year {y.tax_year}
                     </span>
-                    {nothing && <span className="trm-badge" style={{ background:'#ecfdf5', color:'#059669' }}>No changes</span>}
+                    {nothing && <span className="trm-badge trm-badge-ok" style={{ background:'#ecfdf5', color:'#059669' }}>No changes</span>}
                   </div>
                   {!nothing && (
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:16, fontSize:12, color:'#374151' }}>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:16, fontSize:12, color:'var(--content-muted)' }}>
                       {s.slabs_add    > 0 && <span><strong style={{color:'#059669'}}>+{s.slabs_add}</strong> slabs</span>}
                       {s.slabs_update > 0 && <span><strong style={{color:'#d97706'}}>~{s.slabs_update}</strong> slabs changed</span>}
                       {s.slabs_remove > 0 && <span><strong style={{color:'#dc2626'}}>-{s.slabs_remove}</strong> slabs</span>}
@@ -857,8 +876,8 @@ export default function TaxRatesManager() {
           </div>
         ) : (
           <div className="py-12 text-center">
-            <Package size={36} style={{ margin:'0 auto 12px', color:'#d1d5db' }} />
-            <p style={{ fontSize:13, color:'#6b7280' }}>Click Re-check to load the bundle diff.</p>
+            <Package size={36} style={{ margin:'0 auto 12px', color:'var(--content-subtle)' }} />
+            <p style={{ fontSize:13, color:'var(--content-subtle)' }}>Click Re-check to load the bundle diff.</p>
           </div>
         )}
       </div>
@@ -866,10 +885,10 @@ export default function TaxRatesManager() {
 
       {/* ── Tax Preview Panel (slabs mode only) ── */}
       {mode === 'slabs' && showPreview && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white dark:bg-[#151c30] rounded-xl shadow-sm border border-gray-100 dark:border-[#2a3450] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Calculator size={18} style={{ color:'#28396C' }} />
-            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'#111827', fontSize:16 }}>
+            <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, color:'var(--content)', fontSize:16 }}>
               Tax Calculator Preview
             </span>
           </div>
@@ -899,27 +918,27 @@ export default function TaxRatesManager() {
                   { label:'Effective Rate',  value: previewResult.effectiveRate,          color:'#f59e0b' },
                   { label:'Marginal Rate',   value: previewResult.marginalRate,           color:'#8b5cf6' },
                 ].map(c => (
-                  <div key={c.label} style={{ background:'#f9fafb', borderRadius:12, padding:'14px 16px', borderLeft:`4px solid ${c.color}` }}>
-                    <p style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', margin:0 }}>{c.label}</p>
-                    <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:18, color:'#111827', margin:'4px 0 0' }}>{c.value}</p>
+                  <div key={c.label} style={{ background:'var(--surface-sunken)', borderRadius:12, padding:'14px 16px', borderLeft:`4px solid ${c.color}` }}>
+                    <p style={{ fontSize:11, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase', margin:0 }}>{c.label}</p>
+                    <p style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:18, color:'var(--content)', margin:'4px 0 0' }}>{c.value}</p>
                   </div>
                 ))}
               </div>
 
               {/* Slab breakdown */}
-              <div style={{ border:'1px solid #f3f4f6', borderRadius:10, overflow:'hidden' }}>
-                <div style={{ padding:'10px 16px', background:'#f9fafb', borderBottom:'1px solid #f3f4f6' }}>
-                  <span style={{ fontSize:12, fontWeight:700, color:'#6b7280', textTransform:'uppercase' }}>Slab Breakdown</span>
+              <div style={{ border:'1px solid var(--line)', borderRadius:10, overflow:'hidden' }}>
+                <div style={{ padding:'10px 16px', background:'var(--surface-sunken)', borderBottom:'1px solid var(--line)' }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:'var(--content-subtle)', textTransform:'uppercase' }}>Slab Breakdown</span>
                 </div>
                 {previewResult.breakdown.map((b, i) => (
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 100px 100px', gap:12, padding:'10px 16px', borderBottom: i < previewResult.breakdown.length-1 ? '1px solid #f9fafb' : 'none', alignItems:'center' }}>
-                    <span style={{ fontSize:12, color:'#6b7280' }}>{b.slab_name}</span>
-                    <span style={{ fontSize:13, fontWeight:600, color:'#374151' }}>{formatPKR(b.taxable_amount)}</span>
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 100px 100px', gap:12, padding:'10px 16px', borderBottom: i < previewResult.breakdown.length-1 ? '1px solid var(--line)' : 'none', alignItems:'center' }}>
+                    <span style={{ fontSize:12, color:'var(--content-subtle)' }}>{b.slab_name}</span>
+                    <span style={{ fontSize:13, fontWeight:600, color:'var(--content-muted)' }}>{formatPKR(b.taxable_amount)}</span>
                     <span className={`trm-rate-pill ${rateClass(parseFloat(b.rate)/100)}`} style={{ fontSize:12 }}>{b.rate}</span>
                     <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:700, fontSize:14, color:'#dc2626' }}>{formatPKR(b.tax_amount)}</span>
                   </div>
                 ))}
-                <div style={{ padding:'12px 16px', background:'#eff6ff', borderTop:'2px solid #dbeafe', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div className="trm-total-banner" style={{ padding:'12px 16px', background:'#eff6ff', borderTop:'2px solid #dbeafe', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontWeight:700, color:'#1e40af' }}>Total Tax Liability</span>
                   <span style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:20, color:'#1e40af' }}>{formatPKR(previewResult.totalTax)}</span>
                 </div>
@@ -930,7 +949,7 @@ export default function TaxRatesManager() {
       )}
 
       {/* ── FBR Notice ── */}
-      <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:12, padding:'14px 18px', display:'flex', gap:10, alignItems:'flex-start' }}>
+      <div className="trm-fbr-notice" style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:12, padding:'14px 18px', display:'flex', gap:10, alignItems:'flex-start' }}>
         <Info size={16} style={{ color:'#d97706', flexShrink:0, marginTop:2 }} />
         <div>
           <p style={{ fontSize:13, fontWeight:700, color:'#92400e', margin:0 }}>FBR Rate Update Guidance</p>
@@ -945,50 +964,50 @@ export default function TaxRatesManager() {
       {showSlabModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowSlabModal(false)}>
           <div ref={slabRef} role="dialog" aria-modal="true" aria-labelledby="trm-slab-title" className="trm-modal" style={{ outline:'none' }}>
-            <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span id="trm-slab-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--line)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span id="trm-slab-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'var(--content)' }}>
                 {editingSlab ? 'Edit Tax Slab' : 'Add Tax Slab'}
               </span>
-              <button onClick={() => setShowSlabModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}>
+              <button onClick={() => setShowSlabModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--content-subtle)' }}>
                 <X size={20} />
               </button>
             </div>
             <div style={{ padding:'20px 24px' }}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Slab Name</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Slab Name</label>
                   <input className="trm-input" placeholder="e.g. Up to 600K" value={form.slab_name} onChange={e => setForm(p=>({...p,slab_name:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Order #</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Order #</label>
                   <input className="trm-input" type="number" min="1" value={form.slab_order} onChange={e => setForm(p=>({...p,slab_order:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Slab Type</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Slab Type</label>
                   <select className="trm-input" value={form.slab_type} onChange={e => setForm(p=>({...p,slab_type:e.target.value}))}>
                     {SLAB_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Min Income (PKR) *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Min Income (PKR) *</label>
                   <input className="trm-input" type="number" min="0" placeholder="0" value={form.min_income} onChange={e => setForm(p=>({...p,min_income:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Max Income (PKR) <span style={{color:'#9ca3af'}}>leave blank = unlimited</span></label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Max Income (PKR) <span style={{color:'var(--content-subtle)'}}>leave blank = unlimited</span></label>
                   <input className="trm-input" type="number" min="0" placeholder="Unlimited" value={form.max_income} onChange={e => setForm(p=>({...p,max_income:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Tax Rate (%) *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Tax Rate (%) *</label>
                   <input className="trm-input" type="number" min="0" max="100" step="0.01" placeholder="e.g. 15.00" value={form.tax_rate} onChange={e => setForm(p=>({...p,tax_rate:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Effective From</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Effective From</label>
                   <input className="trm-input" type="date" value={form.effective_from} onChange={e => setForm(p=>({...p,effective_from:e.target.value}))} />
                 </div>
               </div>
 
               {form.tax_rate !== '' && (
-                <div style={{ marginTop:16, padding:'12px 14px', background:'#f0fdf4', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
+                <div className="trm-rate-hint" style={{ marginTop:16, padding:'12px 14px', background:'#f0fdf4', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
                   <CheckCircle size={14} style={{ color:'#16a34a' }} />
                   <span style={{ fontSize:13, color:'#15803d', fontWeight:600 }}>
                     Rate: <strong>{parseFloat(form.tax_rate||0).toFixed(2)}%</strong>
@@ -997,7 +1016,7 @@ export default function TaxRatesManager() {
                 </div>
               )}
             </div>
-            <div style={{ padding:'16px 24px', borderTop:'1px solid #f3f4f6', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ padding:'16px 24px', borderTop:'1px solid var(--line)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button className="trm-btn trm-btn-ghost" onClick={() => setShowSlabModal(false)}>Cancel</button>
               <button className="trm-btn trm-btn-primary" onClick={saveSlab} disabled={saving}>
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
@@ -1012,30 +1031,30 @@ export default function TaxRatesManager() {
       {showRateModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowRateModal(false)}>
           <div ref={rateRef} role="dialog" aria-modal="true" aria-labelledby="trm-rate-title" className="trm-modal" style={{ maxWidth: 600, outline:'none' }}>
-            <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span id="trm-rate-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--line)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span id="trm-rate-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'var(--content)' }}>
                 {editingRate ? 'Edit Rate' : 'Add Rate'} — {RATE_TYPES.find(t=>t.id===rateForm.rate_type)?.label}
               </span>
-              <button onClick={() => setShowRateModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}>
+              <button onClick={() => setShowRateModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--content-subtle)' }}>
                 <X size={20} />
               </button>
             </div>
             <div style={{ padding:'20px 24px' }}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Tax Year *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Tax Year *</label>
                   <select className="trm-input" value={rateForm.tax_year} onChange={e => setRateForm(p=>({...p,tax_year:e.target.value}))} disabled={!!editingRate}>
                     {taxYears.map(y => <option key={y.id} value={y.tax_year}>{y.tax_year}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Rate Type *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Rate Type *</label>
                   <select className="trm-input" value={rateForm.rate_type} onChange={e => setRateForm(p=>({...p,rate_type:e.target.value}))} disabled={!!editingRate}>
                     {RATE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Category *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Category *</label>
                   <input
                     className="trm-input"
                     placeholder="e.g. salary, dividend, rent_immovable"
@@ -1045,32 +1064,32 @@ export default function TaxRatesManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Tax Rate (%) *</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Tax Rate (%) *</label>
                   <input className="trm-input" type="number" min="0" max="100" step="0.01" placeholder="10.00" value={rateForm.tax_rate} onChange={e => setRateForm(p=>({...p,tax_rate:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Fixed Amount (PKR)</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Fixed Amount (PKR)</label>
                   <input className="trm-input" type="number" min="0" placeholder="0" value={rateForm.fixed_amount} onChange={e => setRateForm(p=>({...p,fixed_amount:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Min Amount (PKR)</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Min Amount (PKR)</label>
                   <input className="trm-input" type="number" min="0" placeholder="0" value={rateForm.min_amount} onChange={e => setRateForm(p=>({...p,min_amount:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Max Amount (PKR) <span style={{color:'#9ca3af'}}>blank = unlimited</span></label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Max Amount (PKR) <span style={{color:'var(--content-subtle)'}}>blank = unlimited</span></label>
                   <input className="trm-input" type="number" min="0" placeholder="Unlimited" value={rateForm.max_amount} onChange={e => setRateForm(p=>({...p,max_amount:e.target.value}))} />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Description</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Description</label>
                   <input className="trm-input" placeholder="Human-readable note" value={rateForm.description} onChange={e => setRateForm(p=>({...p,description:e.target.value}))} />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">FBR Reference</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">FBR Reference</label>
                   <input className="trm-input" placeholder="e.g. Section 4C / Division I" value={rateForm.fbr_reference} onChange={e => setRateForm(p=>({...p,fbr_reference:e.target.value}))} />
                 </div>
               </div>
             </div>
-            <div style={{ padding:'16px 24px', borderTop:'1px solid #f3f4f6', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ padding:'16px 24px', borderTop:'1px solid var(--line)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button className="trm-btn trm-btn-ghost" onClick={() => setShowRateModal(false)}>Cancel</button>
               <button className="trm-btn trm-btn-primary" onClick={saveRate} disabled={saving}>
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
@@ -1085,25 +1104,25 @@ export default function TaxRatesManager() {
       {showCloneModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowCloneModal(false)}>
           <div ref={cloneRef} role="dialog" aria-modal="true" aria-labelledby="trm-clone-title" className="trm-modal" style={{ outline:'none' }}>
-            <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span id="trm-clone-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>Clone Tax Slabs</span>
-              <button onClick={() => setShowCloneModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}><X size={20} /></button>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--line)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span id="trm-clone-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'var(--content)' }}>Clone Tax Slabs</span>
+              <button onClick={() => setShowCloneModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--content-subtle)' }}><X size={20} /></button>
             </div>
             <div style={{ padding:'20px 24px' }}>
-              <p style={{ fontSize:13, color:'#6b7280', marginBottom:16 }}>
+              <p style={{ fontSize:13, color:'var(--content-subtle)', marginBottom:16 }}>
                 Copy all <strong>{SLAB_TYPES.find(t=>t.id===selectedType)?.label}</strong> slabs from one tax year to another.
                 Existing slabs in the target year (for this type) will be replaced.
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Source Year (copy FROM)</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Source Year (copy FROM)</label>
                   <select className="trm-input" value={cloneForm.fromYearId} onChange={e => setCloneForm(p=>({...p,fromYearId:e.target.value}))}>
                     <option value="">Select year...</option>
                     {taxYears.map(y => <option key={y.id} value={y.id}>{y.tax_year}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Target Year (copy TO)</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Target Year (copy TO)</label>
                   <select className="trm-input" value={cloneForm.toYearId} onChange={e => setCloneForm(p=>({...p,toYearId:e.target.value}))}>
                     <option value="">Select year...</option>
                     {taxYears.map(y => <option key={y.id} value={y.id}>{y.tax_year}</option>)}
@@ -1111,7 +1130,7 @@ export default function TaxRatesManager() {
                 </div>
               </div>
               {cloneForm.fromYearId && cloneForm.toYearId && cloneForm.fromYearId !== cloneForm.toYearId && (
-                <div style={{ marginTop:14, padding:'12px 14px', background:'#fffbeb', borderRadius:8, display:'flex', gap:8 }}>
+                <div className="trm-warn-tint" style={{ marginTop:14, padding:'12px 14px', background:'#fffbeb', borderRadius:8, display:'flex', gap:8 }}>
                   <AlertTriangle size={14} style={{ color:'#d97706', flexShrink:0, marginTop:2 }} />
                   <span style={{ fontSize:12, color:'#92400e' }}>
                     This will <strong>replace</strong> all {SLAB_TYPES.find(t=>t.id===selectedType)?.label} slabs in the target year.
@@ -1119,7 +1138,7 @@ export default function TaxRatesManager() {
                 </div>
               )}
             </div>
-            <div style={{ padding:'16px 24px', borderTop:'1px solid #f3f4f6', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ padding:'16px 24px', borderTop:'1px solid var(--line)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button className="trm-btn trm-btn-ghost" onClick={() => setShowCloneModal(false)}>Cancel</button>
               <button className="trm-btn trm-btn-primary" onClick={cloneSlabs} disabled={saving}>
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
@@ -1134,39 +1153,39 @@ export default function TaxRatesManager() {
       {showYearModal && (
         <div className="trm-modal-overlay" onClick={e => e.target === e.currentTarget && setShowYearModal(false)}>
           <div ref={yearRef} role="dialog" aria-modal="true" aria-labelledby="trm-year-title" className="trm-modal" style={{ outline:'none' }}>
-            <div style={{ padding:'20px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span id="trm-year-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'#111827' }}>New Tax Year</span>
-              <button onClick={() => setShowYearModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9ca3af' }}><X size={20} /></button>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--line)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span id="trm-year-title" style={{ fontFamily:'Bricolage Grotesque,sans-serif', fontWeight:800, fontSize:17, color:'var(--content)' }}>New Tax Year</span>
+              <button onClick={() => setShowYearModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--content-subtle)' }}><X size={20} /></button>
             </div>
             <div style={{ padding:'20px 24px' }}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Tax Year * (format: YYYY-YY)</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Tax Year * (format: YYYY-YY)</label>
                   <input className="trm-input" placeholder="e.g. 2026-27" value={yearForm.taxYear} onChange={e => setYearForm(p=>({...p,taxYear:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Start Date</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Start Date</label>
                   <input className="trm-input" type="date" value={yearForm.startDate} onChange={e => setYearForm(p=>({...p,startDate:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">End Date</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">End Date</label>
                   <input className="trm-input" type="date" value={yearForm.endDate} onChange={e => setYearForm(p=>({...p,endDate:e.target.value}))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Filing Deadline</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Filing Deadline</label>
                   <input className="trm-input" type="date" value={yearForm.filingDeadline} onChange={e => setYearForm(p=>({...p,filingDeadline:e.target.value}))} />
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:20 }}>
                   <input type="checkbox" id="isCurrent" checked={yearForm.isCurrent} onChange={e => setYearForm(p=>({...p,isCurrent:e.target.checked}))} style={{ width:16, height:16 }} />
-                  <label htmlFor="isCurrent" style={{ fontSize:13, fontWeight:700, color:'#374151', cursor:'pointer' }}>Set as current year</label>
+                  <label htmlFor="isCurrent" style={{ fontSize:13, fontWeight:700, color:'var(--content-muted)', cursor:'pointer' }}>Set as current year</label>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-700 text-gray-500 mb-1">Description</label>
+                  <label className="block text-xs font-700 text-gray-500 dark:text-[#7e88a6] mb-1">Description</label>
                   <input className="trm-input" placeholder="e.g. Finance Act 2026 rates" value={yearForm.description} onChange={e => setYearForm(p=>({...p,description:e.target.value}))} />
                 </div>
               </div>
             </div>
-            <div style={{ padding:'16px 24px', borderTop:'1px solid #f3f4f6', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ padding:'16px 24px', borderTop:'1px solid var(--line)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button className="trm-btn trm-btn-ghost" onClick={() => setShowYearModal(false)}>Cancel</button>
               <button className="trm-btn trm-btn-primary" onClick={createYear} disabled={saving}>
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}

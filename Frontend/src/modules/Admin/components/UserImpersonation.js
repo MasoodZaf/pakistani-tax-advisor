@@ -126,15 +126,15 @@ const UserImpersonation = ({ onClose }) => {
     const colors = {
       'user': 'bg-navy/10 text-navy',
       'admin': 'bg-navy/10 text-navy',
-      'super_admin': 'bg-red-100 text-red-800'
+      'super_admin': 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300'
     };
-    return colors[role] || 'bg-gray-100 text-gray-800';
+    return colors[role] || 'bg-gray-100 dark:bg-[#1a2238] text-gray-800 dark:text-[#e7eaf3]';
   };
 
   const getStatusColor = (isActive) => {
-    return isActive 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
+    return isActive
+      ? 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300'
+      : 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300';
   };
 
   if (user?.role !== 'super_admin') {
@@ -145,12 +145,12 @@ const UserImpersonation = ({ onClose }) => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="admin-impersonation-denied-title"
-          className="bg-white p-8 rounded-brand shadow-xl max-w-md w-full mx-4 outline-none"
+          className="bg-white dark:bg-[#151c30] p-8 rounded-brand shadow-xl max-w-md w-full mx-4 outline-none"
         >
           <div className="text-center">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-navy mb-2">Access Denied</h2>
-            <p className="text-gray-600 mb-6">
+            <AlertTriangle className="w-16 h-16 text-red-500 dark:text-red-300 mx-auto mb-4" />
+            <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-navy dark:text-[#e7eaf3] mb-2">Access Denied</h2>
+            <p className="text-gray-600 dark:text-[#aab2cc] mb-6">
               Only Super Admin can access user impersonation features.
             </p>
             <button
@@ -172,7 +172,7 @@ const UserImpersonation = ({ onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-impersonation-title"
-        className="bg-white rounded-brand shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden outline-none"
+        className="bg-white dark:bg-[#151c30] rounded-brand shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden outline-none"
       >
         {/* Header */}
         <div className="bg-navy   px-6 py-4">
@@ -194,11 +194,11 @@ const UserImpersonation = ({ onClose }) => {
         </div>
 
         {/* Warning Banner */}
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div className="bg-yellow-50 dark:bg-yellow-500/15 border-l-4 border-yellow-400 dark:border-yellow-500/30 p-4">
           <div className="flex items-center">
             <AlertTriangle className="w-5 h-5 text-yellow-400 mr-3" />
             <div>
-              <p className="text-sm text-yellow-800">
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">
                 <strong>Security Notice:</strong> All impersonation activities are logged and monitored. 
                 Use this feature responsibly for legitimate tax consultation purposes only.
               </p>
@@ -207,46 +207,46 @@ const UserImpersonation = ({ onClose }) => {
         </div>
 
         {/* Search and Filters */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 dark:border-[#2a3450]">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
+                <Search className="w-5 h-5 text-gray-400 dark:text-[#7e88a6] absolute left-3 top-3" />
                 <input
                   type="text"
                   placeholder="Search users by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] dark:placeholder-[#7e88a6] rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="all">All Roles</option>
                 <option value="user">Users</option>
                 <option value="admin">Admins</option>
               </select>
-              
+
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-              
+
               <button
                 onClick={loadUserCredentials}
                 disabled={loading}
-                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-brand hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="flex items-center px-4 py-2 bg-gray-100 dark:bg-[#1a2238] text-gray-700 dark:text-[#aab2cc] rounded-brand hover:bg-gray-200 dark:hover:bg-[#222c46] transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -259,46 +259,46 @@ const UserImpersonation = ({ onClose }) => {
         <div className="overflow-auto max-h-96">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mr-3" />
-              <span className="text-gray-500">Loading user credentials...</span>
+              <RefreshCw className="w-8 h-8 text-gray-400 dark:text-[#7e88a6] animate-spin mr-3" />
+              <span className="text-gray-500 dark:text-[#7e88a6]">Loading user credentials...</span>
             </div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-gray-50 dark:bg-[#0f1426] sticky top-0">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     Tax Progress
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     Last Login
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-[#151c30] divide-y divide-gray-200 dark:divide-[#2a3450]">
                 {filteredUsers.map((targetUser) => (
-                  <tr key={targetUser.id} className="hover:bg-gray-50">
+                  <tr key={targetUser.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2238]">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-500" />
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-[#1a2238] rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-gray-500 dark:text-[#7e88a6]" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-navy">
+                          <div className="text-sm font-medium text-navy dark:text-[#e7eaf3]">
                             {targetUser.name}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 dark:text-[#7e88a6]">
                             {targetUser.email}
                           </div>
                         </div>
@@ -317,22 +317,22 @@ const UserImpersonation = ({ onClose }) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-1">
-                          <div className="text-sm text-navy">
+                          <div className="text-sm text-navy dark:text-[#e7eaf3]">
                             {targetUser.total_tax_returns} returns
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                            <div 
-                              className="bg-navy h-2 rounded-full" 
+                          <div className="w-full bg-gray-200 dark:bg-[#1a2238] rounded-full h-2 mt-1">
+                            <div
+                              className="bg-navy h-2 rounded-full"
                               style={{ width: `${targetUser.completion_percentage}%` }}
                             ></div>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 dark:text-[#7e88a6] mt-1">
                             {targetUser.completion_percentage}% complete
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-[#7e88a6]">
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
                         {formatDate(targetUser.last_login_at)}
@@ -356,16 +356,16 @@ const UserImpersonation = ({ onClose }) => {
         </div>
 
         {/* Summary */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-[#0f1426] border-t border-gray-200 dark:border-[#2a3450]">
+          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-[#aab2cc]">
             <div className="flex items-center space-x-6">
               <span>Total Users: <strong>{filteredUsers.length}</strong></span>
               <span>Active: <strong>{filteredUsers.filter(u => u.is_active).length}</strong></span>
               <span>Inactive: <strong>{filteredUsers.filter(u => !u.is_active).length}</strong></span>
             </div>
             <div className="flex items-center">
-              <Activity className="w-4 h-4 mr-2 text-red-600" />
-              <span className="text-red-600 font-medium">Super Admin Session</span>
+              <Activity className="w-4 h-4 mr-2 text-red-600 dark:text-red-300" />
+              <span className="text-red-600 dark:text-red-300 font-medium">Super Admin Session</span>
             </div>
           </div>
         </div>

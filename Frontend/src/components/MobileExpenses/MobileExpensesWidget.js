@@ -125,19 +125,19 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
   if (data && buckets.length === 0 && !loading) return null;
 
   return (
-    <div className="bg-navy/5 border border-navy/15 rounded-brand p-4 mb-4">
+    <div className="bg-navy/5 dark:bg-[#151c30] border border-navy/15 dark:border-[#2a3450] rounded-brand p-4 mb-4">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center justify-between w-full text-left"
       >
         <div className="flex items-center">
-          <Smartphone className="h-5 w-5 text-navy mr-2" />
-          <span className="font-semibold text-navy">
+          <Smartphone className="h-5 w-5 text-navy dark:text-[#aab2cc] mr-2" />
+          <span className="font-semibold text-navy dark:text-[#e7eaf3]">
             From your mobile expenses
           </span>
           {data ? (
-            <span className="ml-3 text-sm text-navy">
+            <span className="ml-3 text-sm text-navy dark:text-[#aab2cc]">
               {formatPkr(data.total_captured_pkr)} captured for {taxYear}
             </span>
           ) : null}
@@ -146,15 +146,15 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); load(); }}
-            className="p-1 hover:bg-navy/10 rounded"
+            className="p-1 hover:bg-navy/10 dark:hover:bg-[#1a2238] rounded"
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 text-navy ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 text-navy dark:text-[#aab2cc] ${loading ? 'animate-spin' : ''}`} />
           </button>
           {expanded ? (
-            <ChevronUp className="h-5 w-5 text-navy ml-1" />
+            <ChevronUp className="h-5 w-5 text-navy dark:text-[#aab2cc] ml-1" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-navy ml-1" />
+            <ChevronDown className="h-5 w-5 text-navy dark:text-[#aab2cc] ml-1" />
           )}
         </div>
       </button>
@@ -167,18 +167,18 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
             return (
               <div
                 key={b.key}
-                className="flex items-center justify-between bg-white border border-navy/15 rounded px-3 py-2"
+                className="flex items-center justify-between bg-white dark:bg-[#0f1426] border border-navy/15 dark:border-[#2a3450] rounded px-3 py-2"
               >
                 <div>
-                  <div className="text-sm font-medium text-navy">
+                  <div className="text-sm font-medium text-navy dark:text-[#e7eaf3]">
                     {labels[b.key] || b.key}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-[#7e88a6]">
                     {b.count} entr{b.count === 1 ? 'y' : 'ies'} · {formatPkr(b.total_pkr)}
                   </div>
                 </div>
                 {wasApplied ? (
-                  <div className="flex items-center text-green-600 text-sm font-medium">
+                  <div className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium">
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Applied
                   </div>
@@ -191,7 +191,7 @@ const MobileExpensesWidget = ({ taxYear, fieldMap, setValue, getValues, onApplie
                     Apply
                   </button>
                 ) : (
-                  <span className="text-xs text-gray-400">No matching field</span>
+                  <span className="text-xs text-gray-400 dark:text-[#7e88a6]">No matching field</span>
                 )}
               </div>
             );
