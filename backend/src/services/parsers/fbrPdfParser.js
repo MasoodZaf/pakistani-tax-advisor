@@ -310,8 +310,22 @@ function extractByLabel(text, code, labelRe) {
   return 0;
 }
 
+// Defense-in-depth for this untrusted-input path (DEP-06): pdf-parse wraps an
+// unmaintained pdf.js, so bound the work a malicious/oversized PDF can do. The
+// 10 MB size cap is enforced upstream (multer in taxHistory.js); here we cap the
+// pages parsed (a real FBR 114(1) return is ~5 pages) and time-box the parse so a
+// pathological file can't pin CPU or hang the request. Real returns parse
+// identically — they're well under both bounds.
+const MAX_PDF_PAGES = 50;
+const PDF_PARSE_TIMEOUT_MS = 20000;
+
 async function parseFbrPdfBuffer(buffer) {
-  const parsed = await pdfParse(buffer);
+  const parsed = await Promise.race([
+    pdfParse(buffer, { max: MAX_PDF_PAGES }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('PDF parsing timed out')), PDF_PARSE_TIMEOUT_MS)
+    ),
+  ]);
   const text = parsed.text || '';
 
   const identity = extractIdentity(text);
