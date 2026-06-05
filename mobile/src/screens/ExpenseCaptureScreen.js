@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { upsertExpense, deleteExpense, getExpense } from '../services/expensesDb';
 import { syncAll } from '../services/expensesSync';
 import { pickReceiptImage, uploadReceipt, getReceiptUrl } from '../services/receipts';
@@ -21,12 +22,21 @@ import { CATEGORIES, PAYMENT_METHODS } from '../../../shared/expenseSchema';
 
 // YYYY-MM-DD for today, in the user's local time zone (not UTC — they don't
 // want a midnight-UTC bug to file an expense in the wrong day).
-function todayLocal() {
-  const d = new Date();
+function ymdLocal(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+function todayLocal() {
+  return ymdLocal(new Date());
+}
+// Parse a YYYY-MM-DD string to a local Date (noon avoids any DST/UTC edge
+// shifting the calendar day) for the native picker's initial value.
+function ymdToLocalDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  if (!m) return new Date();
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
 }
 
 const ExpenseCaptureScreen = ({ route, navigation }) => {
@@ -36,6 +46,7 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
   const [currency, setCurrency] = useState('PKR');
   const [fxRate, setFxRate] = useState('');
   const [occurredOn, setOccurredOn] = useState(todayLocal());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('groceries');
   const [description, setDescription] = useState('');
   const [payee, setPayee] = useState('');
@@ -227,15 +238,30 @@ const ExpenseCaptureScreen = ({ route, navigation }) => {
           )}
 
           <Field label="Date">
-            <TextInput
-              style={styles.input}
-              value={occurredOn}
-              onChangeText={setOccurredOn}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              accessibilityLabel="Date of expense"
-              accessibilityHint="Format: year, month, day"
-            />
+            <TouchableOpacity
+              style={[styles.input, styles.dateField]}
+              onPress={() => setShowDatePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Date of expense: ${occurredOn}. Tap to change.`}
+            >
+              <Text style={styles.dateText}>{occurredOn}</Text>
+              <MaterialIcons name="event" size={20} color="#6b7280" />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={ymdToLocalDate(occurredOn)}
+                mode="date"
+                maximumDate={new Date()}
+                onChange={(event, selected) => {
+                  // Close after the interaction (Android auto-dismisses; on iOS we
+                  // close the inline picker once a value is set or it's dismissed).
+                  setShowDatePicker(false);
+                  if (event.type !== 'dismissed' && selected) {
+                    setOccurredOn(ymdLocal(selected));
+                  }
+                }}
+              />
+            )}
           </Field>
 
           <Field label="Category">
@@ -380,6 +406,13 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48, // ≥44px touch target (MOB-04)
+  },
+  dateText: { fontSize: 16, color: '#1f2937' },
   amountRow: { flexDirection: 'row', alignItems: 'center' },
   chipRow: { paddingVertical: 4 },
   chip: {
