@@ -7,6 +7,7 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +19,7 @@ const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
   const [, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
@@ -25,9 +27,13 @@ const DashboardScreen = ({ navigation }) => {
       const response = await dashboardAPI.getDashboardData();
       if (response?.success) {
         setDashboardData(response.data);
+        setLoadFailed(false);
+      } else {
+        setLoadFailed(true);
       }
     } catch (error) {
       console.error('Dashboard data error:', error);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -120,8 +126,31 @@ const DashboardScreen = ({ navigation }) => {
               />
             </View>
           </View>
-          <MaterialIcons name="notifications" size={24} color="#6b7280" />
+          <TouchableOpacity
+            onPress={() => Alert.alert('Notifications', "You're all caught up — no new notifications.")}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <MaterialIcons name="notifications" size={24} color="#6b7280" />
+          </TouchableOpacity>
         </View>
+
+        {/* Dashboard load failed — surface it with a retry instead of an empty screen (MOB-10) */}
+        {loadFailed && !dashboardData && (
+          <View style={styles.errorBanner}>
+            <MaterialIcons name="cloud-off" size={20} color="#b91c1c" />
+            <Text style={styles.errorText}>Couldn&apos;t load your dashboard. Check your connection.</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={onRefresh}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading the dashboard"
+            >
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Stats Card — only show what we have a real data source for */}
         <View style={styles.statsContainer}>
@@ -250,6 +279,37 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#1f2937',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginHorizontal: 20,
+    marginTop: 16,
+    gap: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#b91c1c',
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: '#b91c1c',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  retryText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   statsContainer: {
     flexDirection: 'row',
