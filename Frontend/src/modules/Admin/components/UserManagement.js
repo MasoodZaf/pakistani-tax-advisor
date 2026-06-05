@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
 import UserTaxRecords from './UserTaxRecords';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { Skeleton } from '../../../components/common/Skeleton';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -281,11 +282,13 @@ const UserManagement = () => {
             </thead>
             <tbody className="bg-white dark:bg-[#151c30] divide-y divide-gray-200 dark:divide-[#2a3450]">
               {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
-                    Loading users...
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, r) => (
+                  <tr key={`sk-${r}`}>
+                    {Array.from({ length: 7 }).map((_, c) => (
+                      <td key={c} className="px-6 py-4"><Skeleton className="h-3.5 w-full" /></td>
+                    ))}
+                  </tr>
+                ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
