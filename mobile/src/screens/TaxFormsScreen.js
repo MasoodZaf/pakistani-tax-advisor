@@ -7,9 +7,11 @@ import {
   StyleSheet,
   SafeAreaView,
   RefreshControl,
+  Linking,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { taxFormsAPI } from '../services/api';
+import { taxFormsAPI, WEB_APP_URL } from '../services/api';
 
 const TaxFormsScreen = ({ navigation }) => {
   const [formsData, setFormsData] = useState(null);
@@ -36,6 +38,19 @@ const TaxFormsScreen = ({ navigation }) => {
     setRefreshing(true);
     await loadFormsData();
     setRefreshing(false);
+  };
+
+  // Final review + e-filing happen on the web app (the mobile app captures data
+  // only). Open it in the system browser rather than presenting a dead Submit
+  // button here (MOB-02).
+  const openWebApp = async () => {
+    try {
+      const ok = await Linking.canOpenURL(WEB_APP_URL);
+      if (ok) await Linking.openURL(WEB_APP_URL);
+      else Alert.alert('Open on web', `Visit ${WEB_APP_URL} to review and file your return.`);
+    } catch {
+      Alert.alert('Open on web', `Visit ${WEB_APP_URL} to review and file your return.`);
+    }
   };
 
   const FormCard = ({ 
@@ -232,28 +247,24 @@ const TaxFormsScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Submit Section */}
+        {/* Review & file — happens on the web app (MOB-02: no dead Submit) */}
         <View style={styles.submitSection}>
           <View style={styles.submitCard}>
-            <MaterialIcons name="send" size={32} color="#4f46e5" />
-            <Text style={styles.submitTitle}>Ready to Submit?</Text>
+            <MaterialIcons name="open-in-new" size={32} color="#4f46e5" />
+            <Text style={styles.submitTitle}>Review &amp; file on the web</Text>
             <Text style={styles.submitDescription}>
-              Complete all required forms to submit your tax return
+              {completedForms < totalRequiredForms
+                ? `Capture your figures here — ${totalRequiredForms - completedForms} form${totalRequiredForms - completedForms > 1 ? 's' : ''} still to go. Final review and e-filing happen on the secure web app, where your entries are already synced.`
+                : 'Your forms are in. Final review and e-filing happen on the secure web app, where your entries are already synced.'}
             </Text>
-            
+
             <TouchableOpacity
-              style={[
-                styles.submitButton,
-                completedForms < totalRequiredForms && styles.submitButtonDisabled
-              ]}
-              disabled={completedForms < totalRequiredForms}
+              style={styles.submitButton}
+              onPress={openWebApp}
+              accessibilityRole="link"
+              accessibilityLabel="Open the web app to review and file your return"
             >
-              <Text style={styles.submitButtonText}>
-                {completedForms < totalRequiredForms 
-                  ? `Complete ${totalRequiredForms - completedForms} more form${totalRequiredForms - completedForms > 1 ? 's' : ''}`
-                  : 'Submit Tax Return'
-                }
-              </Text>
+              <Text style={styles.submitButtonText}>Open web app to file</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -465,7 +476,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     minWidth: 200,
+    minHeight: 48, // ≥44px platform touch-target minimum (MOB-04)
     alignItems: 'center',
+    justifyContent: 'center',
   },
   submitButtonDisabled: {
     backgroundColor: '#9ca3af',
