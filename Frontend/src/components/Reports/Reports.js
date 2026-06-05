@@ -217,8 +217,17 @@ const Reports = () => {
 
     setLoading(true);
     try {
-      const XLSX = await import('xlsx');
-      const wb = XLSX.utils.book_new();
+      // exceljs (maintained; matches the backend) — replaces SheetJS/xlsx,
+      // which had unpatched prototype-pollution + ReDoS advisories (DEP-01).
+      const ExcelJSModule = await import('exceljs');
+      const ExcelJS = ExcelJSModule.default ?? ExcelJSModule;
+      const wb = new ExcelJS.Workbook();
+      // Build a sheet from an array-of-arrays (aoa) with optional column widths.
+      const addSheet = (name, rows, widths) => {
+        const ws = wb.addWorksheet(name);
+        ws.addRows(rows);
+        if (widths) widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      };
 
       // ── Summary sheet ──
       const summaryRows = [
@@ -248,13 +257,11 @@ const Reports = () => {
         ['Other taxable income',    Number(incomeRow.other_taxable)         || 0],
         ['Total taxable income',    Number(incomeRow.total_taxable_income ?? reportData.summary?.totalIncome ?? 0)],
       );
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-      summarySheet['!cols'] = [{ wch: 38 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+      addSheet('Summary', summaryRows, [38, 18]);
 
       // ── Income sheet ──
       const ri = reportData.regularIncome || {};
-      const incomeSheet = XLSX.utils.aoa_to_sheet([
+      const incomeRows = [
         ['Income Analysis', ''],
         ['Tax Year', selectedYear],
         [],
@@ -270,9 +277,8 @@ const Reports = () => {
         [],
         ['Capital gains',          Number(reportData.capitalGains?.total_capital_gain || reportData.capitalGains?.total_capital_gains || 0)],
         ['Final tax income',       Number(reportData.finalTaxIncome?.total_final_tax ?? ((reportData.finalTaxIncome?.sukuk_amount || 0) + (reportData.finalTaxIncome?.debt_amount || 0)))],
-      ]);
-      incomeSheet['!cols'] = [{ wch: 32 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, incomeSheet, 'Income');
+      ];
+      addSheet('Income', incomeRows, [32, 18]);
 
       // ── Adjustable tax sheet ──
       const adjRows = [
@@ -288,14 +294,12 @@ const Reports = () => {
           adjRows.push([cat, sub, Number(amt) || 0]);
         });
       });
-      const adjSheet = XLSX.utils.aoa_to_sheet(adjRows);
-      adjSheet['!cols'] = [{ wch: 22 }, { wch: 28 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(wb, adjSheet, 'Adjustable Tax');
+      addSheet('Adjustable Tax', adjRows, [22, 28, 18]);
 
       // ── Wealth sheet ──
       const w = reportData.wealthStatement;
       if (w) {
-        const wealthSheet = XLSX.utils.aoa_to_sheet([
+        addSheet('Wealth', [
           ['Wealth Reconciliation', ''],
           ['Tax Year', selectedYear],
           [],
@@ -303,12 +307,21 @@ const Reports = () => {
           ['Total assets',      Number(w.total_assets_previous_year)     || 0, Number(w.total_assets_current_year)     || 0, (Number(w.total_assets_current_year) || 0) - (Number(w.total_assets_previous_year) || 0)],
           ['Total liabilities', Number(w.total_liabilities_previous_year) || 0, Number(w.total_liabilities_current_year) || 0, (Number(w.total_liabilities_current_year) || 0) - (Number(w.total_liabilities_previous_year) || 0)],
           ['Net worth',         Number(w.net_worth_previous_year)         || 0, Number(w.net_worth_current_year)         || 0, Number(w.wealth_increase) || 0],
-        ]);
-        wealthSheet['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
-        XLSX.utils.book_append_sheet(wb, wealthSheet, 'Wealth');
+        ], [22, 16, 16, 16]);
       }
 
-      XLSX.writeFile(wb, `paktax-report-${selectedYear}.xlsx`);
+      // Write to an in-memory buffer and trigger a browser download (exceljs
+      // has no writeFile in the browser).
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `paktax-report-${selectedYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
       toast.success('Excel file downloaded');
     } catch (err) {
       toast.error('Excel export failed — please try again');
