@@ -75,14 +75,14 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
       const display = rawText != null ? rawText : (value != null ? formatPkr(value) : '');
       return (
         <div style={{ marginBottom: 14 }}>
-          <label htmlFor={id} style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6 }}>
+          <label htmlFor={id} style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 6 }}>
             {field.prompt}
             {isOptional && (
-              <span style={{ marginLeft: 6, color: '#7a8890', fontWeight: 500 }}>(optional)</span>
+              <span style={{ marginLeft: 6, color: 'var(--content-subtle)', fontWeight: 500 }}>(optional)</span>
             )}
           </label>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#7a8890', fontWeight: 600, fontSize: 14, pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--content-subtle)', fontWeight: 600, fontSize: 14, pointerEvents: 'none' }}>
               ₨
             </span>
             <input
@@ -99,9 +99,9 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
                 padding: '12px 14px 12px 32px',
                 fontSize: 15,
                 fontWeight: 500,
-                color: '#1c1d1a',
-                background: '#fff',
-                border: `1.5px solid ${errMsg ? '#f87171' : '#e0dfd9'}`,
+                color: 'var(--content)',
+                background: 'var(--surface-raised)',
+                border: `1.5px solid ${errMsg ? '#f87171' : 'var(--line)'}`,
                 borderRadius: 10,
                 outline: 'none',
                 fontFamily: "'Nunito', sans-serif",
@@ -111,7 +111,7 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
           {errMsg && (
             <p style={{ marginTop: 5, fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{errMsg}</p>
           )}
-          <p style={{ marginTop: 5, fontSize: 11, color: '#7a8890', fontWeight: 500 }}>
+          <p style={{ marginTop: 5, fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500 }}>
             Tip: you can type "15 lakh", "1.5 cr", or "1500000".
           </p>
         </div>
@@ -123,7 +123,7 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
       // and aria-pressed conveys which choice is selected.
       return (
         <fieldset style={{ marginBottom: 14, border: 'none', margin: 0, padding: 0 }}>
-          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, padding: 0 }}>
+          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 6, padding: 0 }}>
             {field.prompt}
           </legend>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -139,9 +139,9 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
                     padding: '8px 14px',
                     fontSize: 14,
                     fontWeight: 600,
-                    color: active ? '#fff' : '#1e2a4a',
-                    background: active ? '#28396C' : '#fff',
-                    border: `1.5px solid ${active ? '#28396C' : '#e0dfd9'}`,
+                    color: active ? '#fff' : 'var(--content)',
+                    background: active ? '#28396C' : 'var(--surface-raised)',
+                    border: `1.5px solid ${active ? '#28396C' : 'var(--line)'}`,
                     borderRadius: 999,
                     cursor: 'pointer',
                     fontFamily: "'Nunito', sans-serif",
@@ -164,7 +164,7 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
       // A11Y-05: fieldset+legend group label + aria-pressed selected state.
       return (
         <fieldset style={{ marginBottom: 14, border: 'none', margin: 0, padding: 0 }}>
-          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#3d3e37', marginBottom: 6, padding: 0 }}>
+          <legend style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content)', marginBottom: 6, padding: 0 }}>
             {field.prompt}
           </legend>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -181,9 +181,9 @@ function WizardField({ field, value, rawText, setRawText, setValue, error }) {
                     padding: '10px',
                     fontSize: 14,
                     fontWeight: 700,
-                    color: active ? '#fff' : '#1e2a4a',
-                    background: active ? '#28396C' : '#fff',
-                    border: `1.5px solid ${active ? '#28396C' : '#e0dfd9'}`,
+                    color: active ? '#fff' : 'var(--content)',
+                    background: active ? '#28396C' : 'var(--surface-raised)',
+                    border: `1.5px solid ${active ? '#28396C' : 'var(--line)'}`,
                     borderRadius: 10,
                     cursor: 'pointer',
                     fontFamily: "'Nunito', sans-serif",

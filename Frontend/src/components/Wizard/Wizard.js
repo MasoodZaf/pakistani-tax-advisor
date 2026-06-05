@@ -196,7 +196,7 @@ const Wizard = () => {
   if (mode === 'loading') {
     return (
       <Shell>
-        <div style={{ textAlign: 'center', padding: 40, color: '#7a8890', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--content-subtle)', fontWeight: 600 }}>
           Loading wizard…
         </div>
       </Shell>
@@ -208,8 +208,8 @@ const Wizard = () => {
       <Shell>
         <div style={{ textAlign: 'center', padding: 40 }}>
           <AlertCircle size={32} color="#ef4444" style={{ margin: '0 auto 12px' }} />
-          <p style={{ fontWeight: 700, color: '#1e2a4a', marginBottom: 4 }}>Couldn't start the wizard.</p>
-          <p style={{ fontSize: 13, color: '#7a8890', marginBottom: 16 }}>{error}</p>
+          <p style={{ fontWeight: 700, color: 'var(--content)', marginBottom: 4 }}>Couldn't start the wizard.</p>
+          <p style={{ fontSize: 13, color: 'var(--content-subtle)', marginBottom: 16 }}>{error}</p>
           <Button onClick={boot}>Try again</Button>
         </div>
       </Shell>
@@ -219,7 +219,7 @@ const Wizard = () => {
   if (mode === 'finalizing') {
     return (
       <Shell>
-        <div style={{ textAlign: 'center', padding: 40, color: '#7a8890', fontWeight: 600 }}>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--content-subtle)', fontWeight: 600 }}>
           Calculating your rough tax estimate…
         </div>
       </Shell>
@@ -241,9 +241,9 @@ const Wizard = () => {
 
       {lastEcho && (
         <div style={{
-          background: '#F0FFC2', border: '1.5px solid #c0da94', borderRadius: 12,
+          background: 'var(--brand-cream)', border: '1.5px solid var(--brand-cream-track)', borderRadius: 12,
           padding: '10px 14px', marginBottom: 16,
-          fontSize: 13, color: '#28396C', fontWeight: 600,
+          fontSize: 13, color: 'var(--brand-on-cream-navy)', fontWeight: 600,
         }}>
           {lastEcho}
         </div>
@@ -251,7 +251,7 @@ const Wizard = () => {
 
       {/* Assistant prompt bubble */}
       <div style={{
-        background: '#fff', border: '1.5px solid #e0dfd9', borderRadius: 14,
+        background: 'var(--surface-raised)', border: '1.5px solid var(--line)', borderRadius: 14,
         padding: '16px 18px', marginBottom: 18,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -260,7 +260,7 @@ const Wizard = () => {
             Assistant
           </span>
         </div>
-        <p style={{ fontSize: 15, color: '#1e2a4a', lineHeight: 1.55 }}>
+        <p style={{ fontSize: 15, color: 'var(--content)', lineHeight: 1.55 }}>
           {step.prompt.prompt}
         </p>
       </div>
@@ -282,7 +282,7 @@ const Wizard = () => {
 
       {/* Optional free-text — opt-in for natural-language replies */}
       <details style={{ marginBottom: 16 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#7a8890' }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--content-subtle)' }}>
           Prefer to describe it in words?
         </summary>
         <textarea
@@ -293,11 +293,12 @@ const Wizard = () => {
           style={{
             width: '100%', marginTop: 8, padding: '10px 12px',
             fontSize: 14, fontFamily: "'Nunito', sans-serif",
-            border: '1.5px solid #e0dfd9', borderRadius: 10, outline: 'none',
-            resize: 'vertical', color: '#1c1d1a',
+            background: 'var(--surface-raised)',
+            border: '1.5px solid var(--line)', borderRadius: 10, outline: 'none',
+            resize: 'vertical', color: 'var(--content)',
           }}
         />
-        <p style={{ marginTop: 4, fontSize: 11, color: '#7a8890', fontWeight: 500 }}>
+        <p style={{ marginTop: 4, fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500 }}>
           We'll fill the boxes above from this — you can still adjust before continuing.
         </p>
       </details>
@@ -316,16 +317,16 @@ const Wizard = () => {
 const Shell = ({ children }) => (
   <div style={{
     minHeight: 'calc(100vh - 80px)',
-    background: '#fdfcf8',
+    background: 'var(--surface)',
     padding: '32px 16px',
     fontFamily: "'Nunito', sans-serif",
   }}>
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <div style={{ marginBottom: 18, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 800, color: '#1e2a4a', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.02em' }}>
           Tax Quick-Start
         </h1>
-        <p style={{ fontSize: 13, color: '#7a8890', fontWeight: 500, marginTop: 2 }}>
+        <p style={{ fontSize: 13, color: 'var(--content-subtle)', fontWeight: 500, marginTop: 2 }}>
           A few quick questions to get you a rough estimate.
         </p>
       </div>
@@ -339,12 +340,12 @@ const ProgressBar = ({ current, total }) => {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#7a8890', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--content-subtle)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           Step {current} of {total}
         </span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#7a8890' }}>{pct}%</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--content-subtle)' }}>{pct}%</span>
       </div>
-      <div style={{ height: 6, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: 'var(--line)', borderRadius: 999, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: '#28396C', transition: 'width 0.3s ease' }} />
       </div>
     </div>
@@ -386,15 +387,15 @@ const ReviewScreen = ({ review, onDone }) => {
   return (
     <div>
       <div style={{
-        background: '#fff',
-        border: '1.5px solid #e0dfd9',
+        background: 'var(--surface-raised)',
+        border: '1.5px solid var(--line)',
         borderRadius: 16,
         padding: '24px',
         marginBottom: 16,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
           <CheckCircle size={24} color="#16a34a" />
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1e2a4a', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.02em' }}>
             Done — here's your rough estimate
           </h2>
         </div>
@@ -411,7 +412,7 @@ const ReviewScreen = ({ review, onDone }) => {
             <Stat label="Tax year" value={rough.taxYear} />
           </div>
         ) : (
-          <p style={{ color: '#7a8890', fontSize: 13, fontWeight: 500 }}>
+          <p style={{ color: 'var(--content-subtle)', fontSize: 13, fontWeight: 500 }}>
             We couldn't auto-calculate, but your inputs are saved. Open the app to see the full breakdown.
           </p>
         )}
@@ -430,7 +431,7 @@ const ReviewScreen = ({ review, onDone }) => {
         </div>
 
         {review?.tables_written?.length > 0 && (
-          <p style={{ fontSize: 11, color: '#7a8890', fontWeight: 500, marginTop: 12 }}>
+          <p style={{ fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500, marginTop: 12 }}>
             Drafts saved to {review.tables_written.length} form{review.tables_written.length > 1 ? 's' : ''} —
             ready for you to review in the app.
           </p>
@@ -447,14 +448,14 @@ const ReviewScreen = ({ review, onDone }) => {
 };
 
 const Stat = ({ label, value, tone = 'neutral' }) => (
-  <div style={{ background: '#fafafa', borderRadius: 10, padding: '12px 14px' }}>
-    <p style={{ fontSize: 11, fontWeight: 700, color: '#7a8890', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+  <div style={{ background: 'var(--surface-sunken)', borderRadius: 10, padding: '12px 14px' }}>
+    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--content-subtle)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
       {label}
     </p>
     <p style={{
       fontSize: 18,
       fontWeight: 800,
-      color: tone === 'good' ? '#16a34a' : '#1e2a4a',
+      color: tone === 'good' ? '#16a34a' : 'var(--content)',
       marginTop: 4,
       letterSpacing: '-0.01em',
     }}>

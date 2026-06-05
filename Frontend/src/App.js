@@ -44,11 +44,11 @@ const PageLoader = () => (
 // visually disowning the navy/lime brand (UX-08). Links to "/" so PublicHome
 // routes guests to the landing and signed-in users to their dashboard.
 const NotFound = () => (
-  <div style={{ minHeight: '100vh', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Nunito', sans-serif" }}>
+  <div style={{ minHeight: '100vh', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Nunito', sans-serif" }}>
     <div style={{ textAlign: 'center', maxWidth: 420 }}>
-      <p style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 88, fontWeight: 800, color: '#28396C', lineHeight: 1, margin: 0, letterSpacing: '-0.03em' }}>404</p>
-      <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 700, color: '#1c1d1a', margin: '12px 0 8px' }}>Page not found</h1>
-      <p style={{ fontSize: 15, color: '#6b6c64', margin: '0 0 24px', lineHeight: 1.5 }}>The page you're looking for doesn't exist or may have moved.</p>
+      <p style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 88, fontWeight: 800, color: 'var(--brand-on-cream-navy)', lineHeight: 1, margin: 0, letterSpacing: '-0.03em' }}>404</p>
+      <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--content)', margin: '12px 0 8px' }}>Page not found</h1>
+      <p style={{ fontSize: 15, color: 'var(--content-muted)', margin: '0 0 24px', lineHeight: 1.5 }}>The page you're looking for doesn't exist or may have moved.</p>
       <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#28396C', color: '#fff', fontWeight: 700, fontSize: 15, padding: '11px 22px', borderRadius: 10, textDecoration: 'none' }}>
         Back to home
       </a>
@@ -140,7 +140,7 @@ const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f4f0' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--surface)' }}>
       <a href="#main-content" className="skip-link">Skip to content</a>
       <Header />
       <div style={{ display: 'flex', paddingTop: 56 }}>
