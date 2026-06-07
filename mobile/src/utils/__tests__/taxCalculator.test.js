@@ -36,12 +36,14 @@ describe('MobileTaxCalculator — FA-2025 salaried slabs', () => {
     expect(tax(2500000)).not.toBe(255000);
   });
 
-  test('applies the 10% surcharge above Rs 10,000,000', () => {
+  test('applies the 9% surcharge above Rs 10,000,000', () => {
+    // FA-2025 surcharge is 9% (rates-bundle.json 'salaried_above_10m', 0.09),
+    // not the stale pre-FA-2025 10%. Must match the backend tax_rates seed.
     const slabTaxAt12M = 6000 + 110000 + 230000 + 270000 + 0.35 * (12000000 - 4100000); // 3,381,000
-    const withSurcharge = slabTaxAt12M + Math.round(slabTaxAt12M * 0.10);
+    const withSurcharge = slabTaxAt12M + Math.round(slabTaxAt12M * 0.09);
     expect(tax(12000000)).toBe(withSurcharge);
     const r = MobileTaxCalculator.calculateProgressiveTax(12000000);
-    expect(r.surcharge).toBe(Math.round(slabTaxAt12M * 0.10));
+    expect(r.surcharge).toBe(Math.round(slabTaxAt12M * 0.09));
     // No surcharge at/under the threshold.
     expect(MobileTaxCalculator.calculateProgressiveTax(10000000).surcharge).toBe(0);
   });

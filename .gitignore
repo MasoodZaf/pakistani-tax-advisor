@@ -125,6 +125,10 @@ AUDIT_REPORT_2026-06-01_FULL.md
 AUDIT_LIVE_VERIFICATION_2026-06-01.md
 AUDIT_P0_FIXES_2026-06-01.md
 
+# graphify knowledge-graph artifacts (interactive HTML, report, raw graph, cache).
+# Regenerated locally via /graphify; shared with co-devs as a Downloads zip, not committed.
+graphify-out/
+
 # iCloud conflict-copy files (Documents/ is iCloud-synced) — e.g. "Foo 2.js".
 # The space before the number is the tell; don't match legit "phase2.js".
 * [0-9].js

@@ -25,11 +25,13 @@ export class MobileTaxCalculator {
     { min: 4100000, max: null,    rate: 0.35 }
   ];
 
-  // Surcharge u/s 4AB (FA 2025): 10% of computed income tax when taxable
-  // income exceeds Rs 10,000,000. Mirrors the backend surcharge so the mobile
-  // estimate does not under-state for high earners (audit BLIND-03). Threshold
-  // and rate ideally come from /api/tax-year when online.
-  static SURCHARGE_2025_26 = { threshold: 10000000, rate: 0.10 };
+  // Surcharge u/s 4AB (FA 2025): 9% of computed income tax when taxable
+  // income exceeds Rs 10,000,000. MUST match the backend tax_rates seed
+  // (rates-bundle.json, rate_category 'salaried_above_10m', tax_rate 0.09) —
+  // the previous 10% here was the stale pre-FA-2025 rate and over-stated the
+  // surcharge for high earners. The server stays the source of truth; this
+  // table is an offline fallback only — fetch /api/tax-year when online.
+  static SURCHARGE_2025_26 = { threshold: 10000000, rate: 0.09 };
 
   // Calculate progressive (marginal) tax. Offline-capable.
   static calculateProgressiveTax(taxableIncome /* , taxYear */) {
