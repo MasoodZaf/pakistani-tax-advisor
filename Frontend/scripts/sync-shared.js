@@ -30,10 +30,20 @@ fs.mkdirSync(SRC_SHARED, { recursive: true });
 for (const file of FILES) {
   const src = path.join(ROOT_SHARED, file);
   const dest = path.join(SRC_SHARED, file);
+
+  // The Docker frontend build context is ./Frontend only (see
+  // docker-compose.prod.yml), so repo-root shared/ is NOT present inside the
+  // container. In that case fall back to the committed mirror — it was synced
+  // at commit time and COPY'd into the image — instead of failing the build.
   if (!fs.existsSync(src)) {
-    console.error(`[sync-shared] missing canonical source: ${src}`);
+    if (fs.existsSync(dest)) {
+      console.warn(`[sync-shared] canonical source absent (${src}); using committed mirror src/shared/${file}`);
+      continue;
+    }
+    console.error(`[sync-shared] missing BOTH canonical source and mirror for ${file}`);
     process.exit(1);
   }
+
   const body = fs.readFileSync(src, 'utf8');
   fs.writeFileSync(dest, BANNER.replace('%FILE%', file) + body, 'utf8');
   console.log(`[sync-shared] ${file} -> src/shared/${file}`);
