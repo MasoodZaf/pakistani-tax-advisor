@@ -131,6 +131,26 @@ describe('elevated surface — bulk delete (POST /users/bulk-delete)', () => {
   });
 });
 
+describe('audit logs — elevated only', () => {
+  test('tax_consultant is allowed past the gate (not 403)', async () => {
+    mockAuthAs('tax_consultant');
+    // After the gate the controller queries audit_logs; answer with empty pages.
+    mockQuery.mockResolvedValue({ rows: [{ n: 0 }] });
+    const res = await request(buildApp())
+      .get('/api/admin/audit-logs')
+      .set('Authorization', `Bearer ${tokenFor('tax_consultant')}`);
+    expect(res.status).not.toBe(403);
+  });
+
+  test('plain admin is REJECTED (403)', async () => {
+    mockAuthAs('admin');
+    const res = await request(buildApp())
+      .get('/api/admin/audit-logs')
+      .set('Authorization', `Bearer ${tokenFor('admin')}`);
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('rate changes stay super_admin-only', () => {
   test('tax_consultant is REJECTED from POST /tax-rates (403)', async () => {
     mockAuthAs('tax_consultant');

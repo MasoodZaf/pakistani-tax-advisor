@@ -134,6 +134,10 @@ const bulkImportUsers = async (req, res) => {
 
   const client = await pool.connect();
   try {
+    // SAVEPOINTs only work inside a transaction block — open one for the whole
+    // batch; each row still rolls back independently to its own savepoint.
+    await client.query('BEGIN');
+
     for (let r = 2; r <= ws.rowCount; r++) {
       const row = ws.getRow(r);
       const name = cellStr(row, cols.name);
@@ -224,6 +228,8 @@ const bulkImportUsers = async (req, res) => {
       }
     }
 
+    await client.query('COMMIT');
+
     // Summary audit (mandatory — outside any per-row savepoint).
     await insertAudit(pool, {
       userId: req.user.id,
@@ -243,6 +249,7 @@ const bulkImportUsers = async (req, res) => {
     );
     res.json({ success: true, summary: { created, skipped, failed }, results });
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     logger.error('bulk-import error:', error);
     res.status(500).json({ error: 'Bulk import failed', message: error.message });
   } finally {
