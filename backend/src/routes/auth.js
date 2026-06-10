@@ -766,12 +766,15 @@ async function loginViaSso(provider, claims, req) {
 
   // 3. Brand new user — create the row. SSO-only signup, no password_hash.
   if (!userData) {
+    // role is set explicitly — the live users table has no column default,
+    // so omitting it violates the NOT NULL constraint. onboarding_completed
+    // likewise, so fresh SSO users are routed through the wizard.
     const insertResult = await pool.query(
       `INSERT INTO users (
-        email, name, user_type, password_hash,
+        email, name, role, user_type, password_hash,
         sso_provider, sso_subject, email_verified,
-        is_active, created_at, updated_at
-       ) VALUES ($1, $2, $3, NULL, $4, $5, TRUE, TRUE, NOW(), NOW())
+        is_active, onboarding_completed, created_at, updated_at
+       ) VALUES ($1, $2, 'user', $3, NULL, $4, $5, TRUE, TRUE, FALSE, NOW(), NOW())
        RETURNING id, email, name, role, user_type, permissions, onboarding_completed, cnic, phone, is_active, token_version`,
       [claims.email, claims.name || claims.email.split('@')[0], 'individual', provider, claims.sub]
     );
