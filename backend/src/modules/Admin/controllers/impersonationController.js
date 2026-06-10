@@ -2,21 +2,24 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
 const { insertAudit } = require('../../../helpers/auditLog');
+const { isElevated, isSuperAdmin } = require('../../../middleware/roleGuard');
+
+const STAFF_ROLES = ['admin', 'super_admin', 'tax_consultant'];
 
 const impersonateUser = async (req, res) => {
   try {
-    // Check if user is super admin
-    if (req.user.role !== 'super_admin') {
+    // Super admin OR tax consultant may impersonate.
+    if (!isElevated(req.user.role)) {
       return res.status(403).json({
         error: 'Access denied',
-        message: 'Only super admin can impersonate users'
+        message: 'Only super admin or tax consultant can impersonate users'
       });
     }
 
     const { userId } = req.params;
     const { returnUrl } = req.body;
 
-    // Get target user details
+    // Get target user details — never a super_admin.
     const userResult = await pool.query(`
       SELECT id, name, email, role, user_type, is_active
       FROM users
@@ -31,6 +34,15 @@ const impersonateUser = async (req, res) => {
     }
 
     const targetUser = userResult.rows[0];
+
+    // A tax consultant may only impersonate regular users — not a fellow staff
+    // member (admin / consultant). A super_admin may impersonate any non-super_admin.
+    if (!isSuperAdmin(req.user.role) && STAFF_ROLES.includes(targetUser.role)) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Cannot impersonate staff (admin / consultant) users'
+      });
+    }
 
     if (!targetUser.is_active) {
       return res.status(400).json({

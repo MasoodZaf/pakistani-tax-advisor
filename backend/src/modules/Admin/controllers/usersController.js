@@ -4,6 +4,13 @@ const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
 const { insertAudit } = require('../../../helpers/auditLog');
 const { BCRYPT_ROUNDS, validatePasswordPolicy } = require('../../../helpers/passwordPolicy');
+const { isElevated, isSuperAdmin } = require('../../../middleware/roleGuard');
+const { provisionUser } = require('../helpers/provisionUser');
+
+// Staff roles a tax_consultant may never create, edit, delete, or impersonate —
+// guarding the privilege-escalation path (a consultant must not mint or touch an
+// admin/super_admin, nor another consultant). Only a super_admin may manage staff.
+const STAFF_ROLES = ['admin', 'super_admin', 'tax_consultant'];
 
 const getUsers = async (req, res) => {
   try {
@@ -124,15 +131,25 @@ const createUser = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Check if requester is super admin
-    if (req.user.role !== 'super_admin') {
+    // Super admin OR tax consultant may create users.
+    if (!isElevated(req.user.role)) {
       return res.status(403).json({
         error: 'Access denied',
-        message: 'Super admin privileges required'
+        message: 'Super admin or tax consultant privileges required'
       });
     }
 
     const { email, name, password, role = 'user', user_type = 'individual' } = req.body;
+
+    // Escalation guard: only a super_admin may create a staff account. A tax
+    // consultant is confined to creating regular users — it cannot mint an
+    // admin/super_admin (which would let it bypass the rate-change restriction).
+    if (STAFF_ROLES.includes(role) && !isSuperAdmin(req.user.role)) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only a super admin can create staff (admin / consultant) accounts'
+      });
+    }
 
     if (!email || !name || !password) {
       return res.status(400).json({
@@ -172,66 +189,11 @@ const createUser = async (req, res) => {
     const bcrypt = require('bcrypt');
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    // Create user
-    const userResult = await client.query(`
-      INSERT INTO users (
-        id, email, name, password_hash, user_type, role,
-        is_active, created_at, updated_at
-      )
-      VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, true, NOW(), NOW())
-      RETURNING id, email, name, user_type, role, is_active, created_at
-    `, [email, name, passwordHash, user_type, role]);
-
-    const newUser = userResult.rows[0];
-
-    // Create tax return for current year if it's a regular user
-    if (role === 'user') {
-      const taxYearResult = await client.query(`
-        SELECT id, tax_year FROM tax_years WHERE is_current = true AND is_active = true
-      `);
-
-      if (taxYearResult.rows.length > 0) {
-        const currentTaxYear = taxYearResult.rows[0];
-
-        const returnResult = await client.query(`
-          INSERT INTO tax_returns (
-            id, user_id, user_email, tax_year_id, tax_year,
-            return_number, filing_status, filing_type, created_at
-          )
-          VALUES (
-            uuid_generate_v4(), $1, $2, $3, $4, $5, 'draft', 'normal', NOW()
-          )
-          RETURNING id
-        `, [
-          newUser.id,
-          newUser.email,
-          currentTaxYear.id,
-          currentTaxYear.tax_year,
-          // Full UUID (not 8-char prefix) — unique across all users.
-          `TR-${newUser.id}-${currentTaxYear.tax_year}`
-        ]);
-
-        // Initialize form tables
-        const taxReturnId = returnResult.rows[0].id;
-        const formTables = [
-          'income_forms', 'adjustable_tax_forms', 'reductions_forms',
-          'credits_forms', 'deductions_forms', 'final_tax_forms',
-          'capital_gain_forms', 'expenses_forms', 'wealth_forms',
-          'form_completion_status'
-        ];
-
-        // Idempotent seed: DO NOTHING on (user_id, tax_year) unique from phase-d.
-        for (const tableName of formTables) {
-          await client.query(`
-            INSERT INTO ${tableName} (
-              id, tax_return_id, user_id, user_email,
-              tax_year_id, tax_year, created_at
-            ) VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, NOW())
-            ON CONFLICT (user_id, tax_year) DO NOTHING
-          `, [taxReturnId, newUser.id, newUser.email, currentTaxYear.id, currentTaxYear.tax_year]);
-        }
-      }
-    }
+    // Create the user row + (for regular users) the current-year draft return and
+    // empty form rows. Shared with the bulk Excel import so both paths seed alike.
+    const newUser = await provisionUser(client, {
+      email, name, passwordHash, userType: user_type, role,
+    });
 
     // Mandatory audit — inside the same transaction so a failure rolls back the create.
     await insertAudit(client, {
@@ -283,11 +245,13 @@ const updateUser = async (req, res) => {
 
     const targetUser = userResult.rows[0];
 
-    // Regular admin cannot edit other admins
-    if (req.user.role === 'admin' && ['admin', 'super_admin'].includes(targetUser.role)) {
+    // Only a super_admin may edit a staff account. A plain admin or a tax
+    // consultant editing an admin/super_admin/consultant is blocked — a
+    // consultant must not be able to alter staff rows (escalation path).
+    if (!isSuperAdmin(req.user.role) && STAFF_ROLES.includes(targetUser.role)) {
       return res.status(403).json({
         error: 'Access denied',
-        message: 'Cannot edit admin users'
+        message: 'Cannot edit staff (admin / consultant) users'
       });
     }
 
@@ -375,11 +339,11 @@ const deleteUser = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Check if requester is super admin
-    if (req.user.role !== 'super_admin') {
+    // Super admin OR tax consultant may delete users.
+    if (!isElevated(req.user.role)) {
       return res.status(403).json({
         error: 'Access denied',
-        message: 'Super admin privileges required'
+        message: 'Super admin or tax consultant privileges required'
       });
     }
 
@@ -396,11 +360,19 @@ const deleteUser = async (req, res) => {
 
     const targetUser = userResult.rows[0];
 
-    // Cannot delete super admin users
+    // Nobody may hard-delete a super_admin. A tax_consultant (elevated but not
+    // super_admin) additionally may not delete ANY staff account — only a
+    // super_admin can remove a fellow admin/consultant.
     if (targetUser.role === 'super_admin') {
       return res.status(403).json({
         error: 'Access denied',
         message: 'Cannot delete super admin users'
+      });
+    }
+    if (!isSuperAdmin(req.user.role) && STAFF_ROLES.includes(targetUser.role)) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Cannot delete staff (admin / consultant) users'
       });
     }
 

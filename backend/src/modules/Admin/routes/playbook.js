@@ -156,9 +156,14 @@ function rowsToStrategies(rows) {
   });
 }
 
+// The tax-efficiency Playbook IS the "AI tax efficiency improvement section" the
+// tax_consultant is meant to curate — so it's gated to the elevated tier
+// (super_admin + tax_consultant), not super_admin alone. Rate changes remain
+// super_admin-only elsewhere; nothing here mutates rates.
+const { isElevated } = require('../../../middleware/roleGuard');
 function requireSuperAdmin(req, res, next) {
-  if (req.user?.role !== 'super_admin') {
-    return res.status(403).json({ error: 'Super Admin only' });
+  if (!isElevated(req.user?.role)) {
+    return res.status(403).json({ error: 'Super admin or tax consultant only' });
   }
   next();
 }
