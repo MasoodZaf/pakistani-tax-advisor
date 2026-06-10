@@ -290,9 +290,9 @@ const AdminDashboard = () => {
                   <div className="flex items-center space-x-3">
                     <span className="inline-grid place-items-center rounded-brand bg-lime/25 p-1.5 text-navy"><BookOpen className="w-5 h-5" /></span>
                     <div>
-                      <div className="font-medium text-navy flex items-center">
+                      <div className="font-medium text-navy dark:text-[#e7eaf3] flex items-center">
                         AI Tax Efficiency
-                        <span className="ml-2 px-2 py-0.5 text-xs bg-lime/25 text-navy rounded-full">PLAYBOOK</span>
+                        <span className="ml-2 px-2 py-0.5 text-xs bg-lime/25 text-navy dark:text-lime rounded-full">PLAYBOOK</span>
                       </div>
                       <div className="text-sm text-gray-600 dark:text-[#aab2cc]">Curate the legal strategies the AI suggests</div>
                     </div>
