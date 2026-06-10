@@ -122,6 +122,7 @@ services:
       args:
         REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
         REACT_APP_GOOGLE_OAUTH_CLIENT_ID: ${REACT_APP_GOOGLE_OAUTH_CLIENT_ID:-}
+        REACT_APP_APPLE_SERVICES_ID: ${REACT_APP_APPLE_SERVICES_ID:-}
     container_name: tax_advisor_frontend
     restart: unless-stopped
     ports:
