@@ -164,6 +164,18 @@ router.post('/:taxYear', auth, async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK');
+    // (cnic, tax_year) is the table's PRIMARY KEY — one CNIC files once per
+    // tax year. A collision means the CNIC is already saved under a DIFFERENT
+    // account (same-account saves take the UPDATE branch above). Surface it
+    // as a clear 409 instead of a generic 500.
+    if (error.code === '23505' && error.constraint === 'personal_information_pkey') {
+      return res.status(409).json({
+        error: 'cnic_already_registered',
+        message:
+          'This CNIC is already registered under another account for this tax year. ' +
+          'Sign in to that account instead, or use the correct CNIC.',
+      });
+    }
     logger.error('Save personal info error:', error);
     res.status(500).json({
       error: 'Failed to save personal information',
