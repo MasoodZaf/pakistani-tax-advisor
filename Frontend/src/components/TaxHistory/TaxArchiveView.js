@@ -172,7 +172,14 @@ const TaxArchiveView = () => {
           {archives.map((a) => {
             const isOpen = expandedYear === a.tax_year;
             const d = detail[a.tax_year];
-            const stepKeys = d?.mapped_data ? Object.keys(d.mapped_data) : [];
+            // Only real form sections are copy-forwardable — hide metadata
+            // blocks (taxpayer identity, summary, raw IRIS codes, year label).
+            const META_KEYS = ['tax_year', 'taxpayer', 'summary', 'raw_codes'];
+            const stepKeys = d?.mapped_data
+              ? Object.keys(d.mapped_data).filter(
+                  (k) => !META_KEYS.includes(k) && typeof d.mapped_data[k] === 'object'
+                )
+              : [];
             return (
               <div key={a.id} className="border border-gray-200 dark:border-[#2a3450] rounded-brand overflow-hidden bg-white dark:bg-[#151c30]">
                 <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#0f1426]">

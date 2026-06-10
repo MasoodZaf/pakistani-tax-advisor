@@ -1118,7 +1118,7 @@ CREATE TABLE IF NOT EXISTS tax_return_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id),
     tax_year VARCHAR(9) NOT NULL,
-    source_format VARCHAR(10) NOT NULL,
+    source_format VARCHAR(20) NOT NULL,
     raw_data JSONB,
     mapped_data JSONB,
     rate_flags JSONB,
