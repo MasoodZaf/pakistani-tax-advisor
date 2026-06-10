@@ -51,7 +51,11 @@ const NAMED_CODES = {
   '7013': 'any_other_asset',
   '7015': 'total_assets_inside_pakistan',
   '7019': 'total_assets',
-  '7030': 'net_assets_current_year',
+  // Net-assets rows carry 6-digit codes (703001/703002) — keying on '7030'
+  // would steal the code's tail digits into the amount (66,999,939 parsed
+  // as 166,999,939 from "70300166,999,939").
+  '703001': 'net_assets_current_year',
+  '703002': 'net_assets_previous_year',
   // ─── Personal Expenses (FBR 114 codes 7051..7087) ────────────────────────
   '7051': 'rent_paid',
   '7055': 'vehicle_running',
@@ -123,24 +127,39 @@ function extractIdentity(text) {
 // We anchor on the known code list (literal alternation) instead of \d{4,7}
 // — a greedy digit class would steal leading digits from the amount because
 // pdf-parse concatenates code and amount with no separator.
+// Personal-asset categories print one row PER ASSET plus a category-total row
+// (e.g. two vehicles 6,500,000 + 1,000,000 and a 7,500,000 total, all coded
+// 7008). The total equals the sum of its details, so taking the MAX occurrence
+// per code yields the category total without double-counting.
+const MAX_WINS_CODES = new Set(['7002', '7006', '7008', '7009', '7011', '7012', '7013']);
+
 function extractSingleAmountCodes(text) {
   const out = {};
   const lines = text.split(/\n/);
   const codes = Object.keys(NAMED_CODES).sort((a, b) => b.length - a.length); // long codes first
   const codeAlt = codes.join('|');
-  const re = new RegExp(`^(${codeAlt})(-?[\\d,]+)([A-Za-z].+)$`);
+  // Description is optional (asset rows like "700235,000,000" carry it on a
+  // separate line) and may be indented (expense rows: "7051600,000    Rent").
+  const re = new RegExp(`^(${codeAlt})(-?[\\d,]+)\\s*([A-Za-z].*)?$`);
   for (const line of lines) {
     const m = line.trim().match(re);
     if (!m) continue;
     const code = m[1];
-    // FIRST occurrence wins. The acknowledgement slip on page 1 carries the
-    // canonical totals; later drill-down rows (e.g. previous-year net assets
-    // in the reconciliation block, or per-employer detail rows) are noisy.
-    if (out[code]) continue;
+    const amount = toNumber(m[2]);
+    if (out[code]) {
+      // Asset categories: keep the largest occurrence (= the category total).
+      // Everything else: FIRST occurrence wins — the acknowledgement slip on
+      // page 1 carries the canonical totals; later drill-down rows are noisy.
+      if (MAX_WINS_CODES.has(code) && amount > out[code].amount) {
+        out[code].amount = amount;
+        if (m[3]) out[code].description = m[3].trim();
+      }
+      continue;
+    }
     out[code] = {
       code,
-      amount: toNumber(m[2]),
-      description: m[3].trim(),
+      amount,
+      description: (m[3] || '').trim(),
       label: NAMED_CODES[code],
     };
   }
@@ -243,7 +262,8 @@ function toMappedData({ identity, named, adjustable }) {
     },
     wealth: {
       total_assets: named['7019']?.amount || 0,
-      net_assets_current_year: named['7030']?.amount || 0,
+      net_assets_current_year: named['703001']?.amount || 0,
+      net_assets_previous_year: named['703002']?.amount || 0,
       personal_expenses: named['7089']?.amount || 0,
       property_current_year: named['7002']?.amount || 0,
       investment_current_year: named['7006']?.amount || 0,
@@ -275,7 +295,7 @@ function toMappedData({ identity, named, adjustable }) {
       refundable_tax: named['9210']?.amount || 0,
       surcharge: named['9230']?.amount || 0,
       total_assets: named['7019']?.amount || 0,
-      net_assets: named['7030']?.amount || 0,
+      net_assets: named['703001']?.amount || 0,
       personal_expenses: named['7089']?.amount || 0,
     },
     // Preserved so the operator (or a future migration) can map more
@@ -351,4 +371,12 @@ async function parseFbrPdfBuffer(buffer) {
   };
 }
 
-module.exports = { parseFbrPdfBuffer };
+module.exports = {
+  parseFbrPdfBuffer,
+  // Exported for unit tests — the PDF fixtures are personal returns and stay
+  // out of git, so tests drive the extraction logic with synthetic text.
+  extractSingleAmountCodes,
+  extractAdjustableCodes,
+  toMappedData,
+  extractIdentity,
+};

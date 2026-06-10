@@ -903,6 +903,16 @@ router.post('/sso/apple', (req, res) => handleSsoLogin('apple', req, res));
 
 async function handleSsoLink(provider, req, res) {
   try {
+    // A bulk-imported user on a temp password must claim the account by
+    // setting their own password BEFORE linking SSO. Otherwise they could
+    // link via API and sign in with the provider while the (consultant-known)
+    // temp password silently stays valid forever.
+    if (req.user.must_reset_password) {
+      return res.status(403).json({
+        error: 'password_reset_required',
+        message: 'Set your own password before linking a sign-in provider.',
+      });
+    }
     const { idToken, nonce } = req.body || {};
     if (!idToken || typeof idToken !== 'string') {
       return res.status(400).json({ error: 'idToken_required' });
