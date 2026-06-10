@@ -1,28 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { MessageCircle, X, Maximize2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { isStaff } from '../../utils/roles';
 import aiConsultant from '../../services/aiConsultant';
 import ConsultantChat from './ConsultantChat';
 
-// Bottom-right chat bubble. Renders only for authenticated, non-admin users
-// when DEEPSEEK_API_KEY is configured on the server.
+// Focused full-screen flows where the bubble would intrude: the user isn't
+// "in the app" yet (onboarding, forced password reset) or is already inside
+// a dedicated chat surface (wizard).
+const SUPPRESSED_PATHS = ['/onboarding', '/set-password', '/wizard', '/personal-info'];
+
+// Bottom-right chat bubble. Renders only for authenticated, onboarded,
+// non-admin users when DEEPSEEK_API_KEY is configured on the server.
 function FloatingChatWidget() {
   const { user } = useAuth();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [configured, setConfigured] = useState(null); // null=unknown, false=disabled
   const [conversationId, setConversationId] = useState(null);
 
+  const onboarding = user?.onboarding_completed === false;
+
   useEffect(() => {
-    if (!user || isStaff(user)) return;
+    if (!user || isStaff(user) || onboarding) return;
     aiConsultant.status()
       .then((r) => setConfigured(!!r.configured))
       .catch(() => setConfigured(false));
-  }, [user]);
+  }, [user, onboarding]);
 
   if (!user) return null;
   if (isStaff(user)) return null;
+  if (onboarding) return null;
+  if (SUPPRESSED_PATHS.some((p) => location.pathname.startsWith(p))) return null;
   if (configured === false) return null;
 
   return (
