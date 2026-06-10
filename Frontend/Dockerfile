@@ -16,6 +16,10 @@ COPY . .
 # Build the application
 ARG REACT_APP_API_URL=http://localhost:3001
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+# Google SSO web client ID (public identifier, safe as a build arg). Empty
+# default keeps the Google button disabled when SSO isn't configured.
+ARG REACT_APP_GOOGLE_OAUTH_CLIENT_ID=
+ENV REACT_APP_GOOGLE_OAUTH_CLIENT_ID=$REACT_APP_GOOGLE_OAUTH_CLIENT_ID
 # Match the CI policy: never ship source maps into the public nginx root.
 # Plain `npm run build` defaults GENERATE_SOURCEMAP=true, which would publish
 # ~7.6MB of readable, commented source (FBR logic, auth flows) at /static/js/*.map.
