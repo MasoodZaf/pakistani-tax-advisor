@@ -157,7 +157,7 @@ const PlaybookManager = () => {
           <div className="flex items-start gap-3">
             <span className="inline-grid place-items-center rounded-brand bg-lime/25 p-2 text-navy dark:text-[#e7eaf3]"><BookOpen className="w-6 h-6" /></span>
             <div>
-              <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">Tax-Efficiency Playbook</h1>
+              <h1 className="text-2xl font-bold text-navy dark:text-[#e7eaf3]">AI Tax Efficiency</h1>
               <p className="text-gray-600 dark:text-[#aab2cc] mt-1 max-w-2xl text-sm">
                 Curated, legal-only strategies the AI consultant uses. <strong className="text-navy dark:text-[#e7eaf3]">Approved</strong> strategies
                 are ingested into the AI knowledge base instantly. General tax knowledge only — never any user's data.

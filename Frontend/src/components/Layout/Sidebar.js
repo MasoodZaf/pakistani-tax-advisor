@@ -6,8 +6,9 @@ import {
   Home, FileText, BarChart3, Settings,
   Users, Shield, FileSpreadsheet, TrendingUp, MessageCircle,
   ChevronLeft, ChevronRight, LogOut,
-  Percent, UserCog, Activity
+  Percent, UserCog, Activity, Archive, BookOpen
 } from 'lucide-react';
+import { isStaff as isStaffRole, isElevated as isElevatedRole } from '../../utils/roles';
 
 const Styles = () => (
   <style>{`
@@ -171,6 +172,7 @@ const MAIN_NAV = [
 ];
 const TOOLS_NAV = [
   { name: 'AI Tax Consultant', href: '/consultant',       icon: MessageCircle  },
+  { name: 'Prior-Year Returns', href: '/tax-history',     icon: Archive        },
   { name: 'Reports',          href: '/reports',          icon: BarChart3      },
   { name: 'Excel Tools',      href: '/excel',            icon: FileSpreadsheet },
   { name: 'Settings',         href: '/settings',         icon: Settings       },
@@ -188,7 +190,8 @@ const Sidebar = ({ collapsed, onToggle }) => {
     ? user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : 'U';
 
-  const isAdmin      = ['admin', 'super_admin'].includes(user?.role);
+  const isAdmin      = isStaffRole(user);
+  const isElevated   = isElevatedRole(user);
   const isSuperAdmin = user?.role === 'super_admin';
 
   const isActive = (href) => {
@@ -259,7 +262,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
               </>
             )}
 
-            {/* Admin nav (both admin and super_admin) */}
+            {/* Staff nav (admin, super_admin and tax_consultant) */}
             {isAdmin && (
               <>
                 {!collapsed && <div className="sb-section">Admin</div>}
@@ -268,6 +271,11 @@ const Sidebar = ({ collapsed, onToggle }) => {
                 <NavItem item={{ name: 'System Settings',  href: '/admin/system-settings', icon: Settings }} />
                 <NavItem item={{ name: 'Audit Logs',       href: '/admin/audit-logs',      icon: Activity }} />
               </>
+            )}
+
+            {/* Elevated (super_admin + tax_consultant): playbook curation */}
+            {isElevated && (
+              <NavItem item={{ name: 'AI Tax Efficiency', href: '/admin/playbook', icon: BookOpen }} />
             )}
 
             {/* Super Admin only */}

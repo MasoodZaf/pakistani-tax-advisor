@@ -30,7 +30,7 @@ const auth = async (req, res, next) => {
 
     // Get user from database
     const userResult = await pool.query(
-      'SELECT id, name, email, role, user_type, token_version FROM users WHERE id = $1 AND is_active = true',
+      'SELECT id, name, email, role, user_type, token_version, must_reset_password FROM users WHERE id = $1 AND is_active = true',
       [decoded.userId]
     );
 

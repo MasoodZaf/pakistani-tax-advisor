@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, FileText } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Edit, Trash2, FileText, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
+import { isElevated, isSuperAdmin } from '../../../utils/roles';
 import UserTaxRecords from './UserTaxRecords';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { Skeleton } from '../../../components/common/Skeleton';
@@ -14,6 +15,7 @@ const UserManagement = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [viewingUserTax, setViewingUserTax] = useState(null);
   const [stats, setStats] = useState({});
@@ -60,6 +62,7 @@ const UserManagement = () => {
     const colors = {
       user: 'bg-navy/10 text-navy',
       admin: 'bg-navy/10 text-navy',
+      tax_consultant: 'bg-lime/25 text-navy',
       super_admin: 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300'
     };
     return colors[role] || colors.user;
@@ -124,38 +127,24 @@ const UserManagement = () => {
     }
   };
 
-  // Bulk delete — optimistic removal + allSettled so one failure (e.g. a
-  // super_admin or self) doesn't block reporting which of the rest succeeded.
+  // Bulk delete — SOFT delete via the dedicated endpoint (is_active=false,
+  // recoverable). Staff accounts and self are skipped server-side; hard
+  // CASCADE delete stays per-row and super_admin-only.
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
+    const n = selectedUsers.length;
+    if (!window.confirm(`Deactivate ${n} selected user${n === 1 ? '' : 's'}? Their accounts are disabled (recoverable), not permanently deleted.`)) return;
 
-    const ids = [...selectedUsers];
-    const previous = users;
-    setSelectedUsers([]);
-    setUsers(prev => prev.filter(u => !ids.includes(u.id)));
-
-    const results = await Promise.allSettled(
-      ids.map(userId => axios.delete(`/api/admin/users/${userId}`))
-    );
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.length - succeeded;
-
-    if (failed === 0) {
-      toast.success(`${succeeded} user${succeeded === 1 ? '' : 's'} deleted successfully`);
-    } else if (succeeded === 0) {
-      setUsers(previous); // nothing went through, restore
-      const firstErr = results.find(r => r.status === 'rejected')?.reason;
-      toast.error(firstErr?.response?.data?.message || 'Failed to delete users');
-    } else {
-      // Partial success — keep optimistic removal of the successes, restore the failures.
-      const failedIds = results
-        .map((r, i) => (r.status === 'rejected' ? ids[i] : null))
-        .filter(Boolean);
-      setUsers(prev => {
-        const kept = previous.filter(u => failedIds.includes(u.id));
-        return [...prev, ...kept];
-      });
-      toast.error(`${succeeded} deleted, ${failed} failed`);
+    try {
+      const res = await axios.post('/api/admin/users/bulk-delete', { userIds: selectedUsers });
+      const { deactivated = 0, skipped = 0 } = res.data?.summary || {};
+      setSelectedUsers([]);
+      if (skipped > 0) {
+        toast(`${deactivated} deactivated, ${skipped} skipped (staff accounts and your own can't be bulk-deactivated)`, { icon: '⚠️' });
+      } else {
+        toast.success(`${deactivated} user${deactivated === 1 ? '' : 's'} deactivated`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Bulk deactivate failed');
     }
 
     fetchUsers();
@@ -185,13 +174,24 @@ const UserManagement = () => {
               Manage user accounts, roles, and permissions
             </p>
           </div>
-          <button 
-            onClick={() => setShowAddUser(true)}
-            className="bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add User</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            {isElevated(currentUser) && (
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className="border border-navy/20 dark:border-[#2a3450] text-navy dark:text-[#e7eaf3] px-4 py-2 rounded-brand hover:bg-navy/5 dark:hover:bg-[#1a2238] transition-colors flex items-center space-x-2"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Bulk Import</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowAddUser(true)}
+              className="bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add User</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -217,6 +217,7 @@ const UserManagement = () => {
               <option value="all">All Roles</option>
               <option value="user">Users</option>
               <option value="admin">Admins</option>
+              <option value="tax_consultant">Tax Consultants</option>
               <option value="super_admin">Super Admins</option>
             </select>
             <select
@@ -230,13 +231,13 @@ const UserManagement = () => {
             </select>
           </div>
           <div className="flex items-center space-x-4">
-            {selectedUsers.length > 0 && (
+            {isElevated(currentUser) && selectedUsers.length > 0 && (
               <button
                 onClick={handleBulkDelete}
                 className="bg-red-600 text-white px-4 py-2 rounded-brand hover:bg-red-700 transition-colors flex items-center space-x-2"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Delete Selected ({selectedUsers.length})</span>
+                <span>Deactivate Selected ({selectedUsers.length})</span>
               </button>
             )}
             <div className="text-sm text-gray-600 dark:text-[#aab2cc]">
@@ -387,6 +388,19 @@ const UserManagement = () => {
         </div>
       </div>
       
+      {/* Bulk Import Modal */}
+      {showBulkImport && (
+        <BulkImportModal
+          onClose={(didImport) => {
+            setShowBulkImport(false);
+            if (didImport) {
+              fetchUsers();
+              fetchStats();
+            }
+          }}
+        />
+      )}
+
       {/* Add User Modal */}
       {showAddUser && (
         <AddUserModal 
@@ -424,8 +438,209 @@ const UserManagement = () => {
   );
 };
 
+// Bulk Import Modal — download the xlsx template, upload a filled one, then
+// show the per-row result report (created rows carry a one-time temp password
+// that the consultant hands to the user; first login forces a reset).
+const BulkImportModal = ({ onClose }) => {
+  const [file, setFile] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [report, setReport] = useState(null); // { summary, results }
+  const fileInputRef = useRef(null);
+  const dialogRef = useFocusTrap(true, { onEscape: () => onClose(!!report) });
+
+  const downloadTemplate = async () => {
+    try {
+      const res = await axios.get('/api/admin/users/bulk-template', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'bulk-user-import-template.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Could not download the template');
+    }
+  };
+
+  const acceptFile = (f) => {
+    if (!f) return;
+    if (!/\.(xlsx|xls)$/i.test(f.name)) {
+      toast.error('Please choose an Excel file (.xlsx)');
+      return;
+    }
+    setFile(f);
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await axios.post('/api/admin/users/bulk-import', fd);
+      setReport({ summary: res.data?.summary || {}, results: res.data?.results || [] });
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Bulk import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const copyCredentials = () => {
+    const created = (report?.results || []).filter(r => r.status === 'created');
+    const text = created.map(r => `${r.email}\t${r.tempPassword}`).join('\n');
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success(`Copied ${created.length} credential${created.length === 1 ? '' : 's'}`))
+      .catch(() => toast.error('Copy failed'));
+  };
+
+  const statusBadge = (status) => {
+    if (status === 'created') return 'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300';
+    if (status === 'skipped') return 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300';
+    return 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="bulk-import-title" className="bg-white dark:bg-[#151c30] rounded-brand p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto outline-none">
+        <h2 id="bulk-import-title" className="text-xl font-bold mb-1 dark:text-[#e7eaf3]">Bulk Import Users</h2>
+        <p className="text-sm text-gray-600 dark:text-[#aab2cc] mb-4">
+          Upload a filled template — each created user gets a temporary password and must set their own on first login.
+        </p>
+
+        {!report ? (
+          <>
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center space-x-2 text-navy dark:text-[#e7eaf3] border border-navy/20 dark:border-[#2a3450] px-3 py-2 rounded-brand hover:bg-navy/5 dark:hover:bg-[#1a2238] transition-colors text-sm mb-4"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download Excel template</span>
+            </button>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); acceptFile(e.dataTransfer.files?.[0]); }}
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+              className={`border-2 border-dashed rounded-brand p-8 text-center cursor-pointer transition-colors ${
+                dragOver
+                  ? 'border-lime bg-lime/10'
+                  : 'border-gray-300 dark:border-[#2a3450] hover:border-navy/40 dark:hover:border-[#3a4670]'
+              }`}
+            >
+              <Upload className="w-8 h-8 mx-auto text-gray-400 dark:text-[#7e88a6] mb-2" />
+              {file ? (
+                <p className="font-medium text-navy dark:text-[#e7eaf3]">{file.name}</p>
+              ) : (
+                <p className="text-gray-600 dark:text-[#aab2cc]">Drag &amp; drop the filled .xlsx here, or click to browse</p>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => { acceptFile(e.target.files?.[0]); e.target.value = ''; }}
+              />
+            </div>
+
+            <div className="flex space-x-3 pt-5">
+              <button
+                type="button"
+                onClick={() => onClose(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#2a3450] dark:text-[#aab2cc] rounded-brand hover:bg-gray-50 dark:hover:bg-[#1a2238] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!file || importing}
+                className="flex-1 bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors disabled:opacity-50"
+              >
+                {importing ? 'Importing…' : 'Import Users'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-4 mb-4">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700 dark:text-green-300">
+                <CheckCircle className="w-4 h-4" /> {report.summary.created || 0} created
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4" /> {report.summary.skipped || 0} skipped
+              </span>
+              <span className="text-sm font-semibold text-red-700 dark:text-red-300">
+                {report.summary.failed || 0} failed
+              </span>
+            </div>
+
+            <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-brand p-3 mb-4">
+              Temporary passwords are shown ONCE, below. Share them securely with each user — they are forced to set a new password on first login.
+            </p>
+
+            <div className="overflow-x-auto border border-gray-200 dark:border-[#2a3450] rounded-brand mb-4">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2a3450] text-sm">
+                <thead className="bg-gray-50 dark:bg-[#0f1426]">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase">Row</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase">Name</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase">Email</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase">Temp Password / Note</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-[#2a3450]">
+                  {report.results.map((r, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2 text-gray-600 dark:text-[#aab2cc]">{r.row ?? i + 1}</td>
+                      <td className="px-3 py-2 text-navy dark:text-[#e7eaf3]">{r.name}</td>
+                      <td className="px-3 py-2 text-navy dark:text-[#e7eaf3]">{r.email}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadge(r.status)}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {r.status === 'created'
+                          ? <code className="font-mono text-navy dark:text-[#e7eaf3] bg-gray-100 dark:bg-[#0f1426] px-1.5 py-0.5 rounded">{r.tempPassword}</code>
+                          : <span className="text-gray-600 dark:text-[#aab2cc]">{r.message}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex space-x-3">
+              {(report.summary.created || 0) > 0 && (
+                <button
+                  onClick={copyCredentials}
+                  className="flex-1 px-4 py-2 border border-navy/20 dark:border-[#2a3450] text-navy dark:text-[#e7eaf3] rounded-brand hover:bg-navy/5 dark:hover:bg-[#1a2238] transition-colors"
+                >
+                  Copy email + password list
+                </button>
+              )}
+              <button
+                onClick={() => onClose(true)}
+                className="flex-1 bg-lime text-navy px-4 py-2 rounded-brand hover:bg-lime/80 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Add User Modal Component
 const AddUserModal = ({ onClose, onSuccess }) => {
+  const { user: currentUser } = useAuth();
   const dialogRef = useFocusTrap(true, { onEscape: onClose });
   const [formData, setFormData] = useState({
     name: '',
@@ -500,7 +715,10 @@ const AddUserModal = ({ onClose, onSuccess }) => {
               className="w-full px-3 py-2 border border-gray-300 dark:border-[#2a3450] dark:bg-[#0f1426] dark:text-[#e7eaf3] rounded-brand focus:ring-2 focus:ring-navy/30 focus:border-transparent"
             >
               <option value="user">User</option>
-              <option value="admin">Admin</option>
+              {/* Consultants manage regular users only — the backend rejects
+                  staff-role creation by them, so don't offer it. */}
+              {currentUser.role !== 'tax_consultant' && <option value="admin">Admin</option>}
+              {isSuperAdmin(currentUser) && <option value="tax_consultant">Tax Consultant</option>}
             </select>
           </div>
           
@@ -606,6 +824,7 @@ const EditUserModal = ({ user, onClose, onSuccess }) => {
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
+                <option value="tax_consultant">Tax Consultant</option>
                 {user.role !== 'super_admin' && <option value="super_admin">Super Admin</option>}
               </select>
             </div>

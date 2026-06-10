@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { isStaff } from '../../utils/roles';
 import { useTaxForm } from '../../contexts/TaxFormContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
 import { useTaxPreview } from '../../hooks/useTaxPreview';
@@ -409,7 +410,7 @@ const Dashboard = () => {
               </div>
             </Link>
           ))}
-          {['admin', 'super_admin'].includes(user?.role) && (
+          {isStaff(user) && (
             <Link to="/admin" className="dash-link-card">
               <div style={{ width: 38, height: 38, background: '#fdf2f2', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <AlertCircle size={17} color="#c0392b" />

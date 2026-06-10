@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { isStaff } from '../../utils/roles';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
@@ -310,12 +311,15 @@ const Login = () => {
           localStorage.removeItem('adminAssistedLogin');
           toast.success(`Logged in as ${adminAssistedLogin.userName}`, { duration: 4000 });
         }
-        // Routing: admins → /admin, everyone else → /dashboard. The
-        // previous `needsPersonalInfo` branch routed users to /personal-info
-        // but UserOnlyRoute then bounces unboarded users to /onboarding,
-        // so that branch was effectively dead. Onboarding redirect is now
-        // handled exclusively by the route guards.
-        if (['admin', 'super_admin'].includes(result.userData?.role)) {
+        // Routing: temp-password users → forced reset, staff → /admin,
+        // everyone else → /dashboard. The previous `needsPersonalInfo`
+        // branch routed users to /personal-info but UserOnlyRoute then
+        // bounces unboarded users to /onboarding, so that branch was
+        // effectively dead. Onboarding redirect is now handled exclusively
+        // by the route guards.
+        if (result.userData?.must_reset_password) {
+          navigate('/set-password');
+        } else if (isStaff(result.userData)) {
           navigate('/admin');
         } else {
           navigate('/dashboard');
@@ -333,7 +337,7 @@ const Login = () => {
   // their dashboard (or admin console).
   const afterSsoSuccess = (result) => {
     if (!result?.success) return;
-    if (['admin', 'super_admin'].includes(result.userData?.role)) {
+    if (isStaff(result.userData)) {
       navigate('/admin');
     } else if (result.needsPersonalInfo) {
       navigate('/onboarding');
