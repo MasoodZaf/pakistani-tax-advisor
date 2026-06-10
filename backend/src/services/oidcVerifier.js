@@ -10,6 +10,13 @@
 //
 // Returns the verified claims on success; throws on any failure.
 
+// jose needs the WebCrypto global, which Node 18 (the production image)
+// doesn't expose — without this every real token fails verification with
+// "crypto is not defined". Node 19+ already has the global; keep the guard.
+if (!globalThis.crypto) {
+  globalThis.crypto = require('crypto').webcrypto;
+}
+
 // jose v5+ is ESM-only, so we import it dynamically the first time we
 // actually need to verify a token. Keeps unit tests that stub the verifier
 // (via _setVerifierForTests) from having to deal with the ESM transform.
