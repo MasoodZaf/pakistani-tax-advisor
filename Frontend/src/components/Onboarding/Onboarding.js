@@ -505,9 +505,15 @@ export default function Onboarding() {
         postal_code: personalForm.postal_code,
       });
       setStep(2);
-    } catch {
-      toast.error('Could not save personal info — you can complete it later.');
-      setStep(2);
+    } catch (err) {
+      // A CNIC conflict (409) is actionable — keep the user on this step so
+      // they can correct it. Anything else: continue, completable later.
+      if (err.response?.status === 409) {
+        toast.error(err.response.data?.message || 'This CNIC is already registered under another account.');
+      } else {
+        toast.error('Could not save personal info — you can complete it later.');
+        setStep(2);
+      }
     } finally { setLoading(false); }
   };
 
