@@ -68,6 +68,13 @@ services:
       # CORS_ORIGINS is a comma-separated list (for staging + prod, www + apex, etc).
       FRONTEND_URL: ${FRONTEND_URL:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # SSO ID-token audiences (oidcVerifier.js). Empty values leave the
+      # provider gracefully unconfigured (provider_not_configured).
+      GOOGLE_OAUTH_CLIENT_ID_WEB: ${GOOGLE_OAUTH_CLIENT_ID_WEB:-}
+      GOOGLE_OAUTH_CLIENT_ID_MOBILE_IOS: ${GOOGLE_OAUTH_CLIENT_ID_MOBILE_IOS:-}
+      GOOGLE_OAUTH_CLIENT_ID_MOBILE_ANDROID: ${GOOGLE_OAUTH_CLIENT_ID_MOBILE_ANDROID:-}
+      APPLE_OAUTH_SERVICE_ID: ${APPLE_OAUTH_SERVICE_ID:-}
+      APPLE_OAUTH_BUNDLE_ID: ${APPLE_OAUTH_BUNDLE_ID:-}
       # AI Tax Consultant (DeepSeek). Empty key disables the feature gracefully.
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
