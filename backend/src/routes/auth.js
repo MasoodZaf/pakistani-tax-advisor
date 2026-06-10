@@ -254,7 +254,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 
     // Try to authenticate user (both regular and admin users are in users table)
     const user = await pool.query(`
-      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone, token_version
+      SELECT id, email, name, password_hash, role, user_type, permissions, onboarding_completed, cnic, phone, token_version, must_reset_password
       FROM users
       WHERE email = $1 AND is_active = true
     `, [email]);
@@ -398,7 +398,11 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         permissions: userData.permissions || null,
         onboarding_completed: userData.onboarding_completed,
         cnic: userData.cnic,
-        phone: userData.phone
+        phone: userData.phone,
+        // True for bulk-imported users on a temp password — the client must route
+        // them to set a new password before they can use the app. Cleared by
+        // POST /change-password.
+        must_reset_password: userData.must_reset_password === true
       },
       taxYearsSummary: taxYearsSummary.rows || [],
       currentYearData: currentYearData,
@@ -554,7 +558,8 @@ router.post('/change-password', jwtAuth, async (req, res) => {
     // immediately rejected (SEC-01) — a changed password must not leave old
     // sessions alive on other devices.
     const upd = await pool.query(
-      `UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
+      `UPDATE users SET password_hash = $1, token_version = token_version + 1,
+              must_reset_password = false, updated_at = NOW()
         WHERE id = $2
        RETURNING token_version, name, role, onboarding_completed`,
       [hashedNewPassword, userId]

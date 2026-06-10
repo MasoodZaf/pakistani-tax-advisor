@@ -147,14 +147,17 @@ describe('UX-04 — final-min income rows are reachable', () => {
 // Drift guard: the canonical manifest at /shared/formFieldVisibility.js
 // is also mirrored at /Frontend/src/shared/ because CRA's
 // ModuleScopePlugin blocks imports outside src/. The two files MUST stay
-// identical — this test fails fast if they drift. To resync, run:
+// identical — this test fails fast if they drift. The mirror is regenerated
+// by Frontend/scripts/sync-shared.js, which prepends an `@generated` banner
+// (comment lines + one blank line); strip it before comparing. To resync, run
+// the sync script (npm start/build/test in Frontend/) or:
 //   cp shared/formFieldVisibility.js Frontend/src/shared/
 // ───────────────────────────────────────────────────────────────────────
 const fs = require('fs');
 const path = require('path');
 
 describe('formFieldVisibility — sync between repo /shared/ and Frontend/src/shared/', () => {
-  test('canonical and Frontend mirror are byte-identical', () => {
+  test('canonical and Frontend mirror are byte-identical (banner aside)', () => {
     const canonical = fs.readFileSync(
       path.resolve(__dirname, '../../../shared/formFieldVisibility.js'),
       'utf8'
@@ -163,6 +166,9 @@ describe('formFieldVisibility — sync between repo /shared/ and Frontend/src/sh
       path.resolve(__dirname, '../../../Frontend/src/shared/formFieldVisibility.js'),
       'utf8'
     );
-    expect(mirror).toBe(canonical);
+    const body = mirror.startsWith('// @generated')
+      ? mirror.replace(/^(\/\/[^\n]*\n)+\n/, '')
+      : mirror;
+    expect(body).toBe(canonical);
   });
 });

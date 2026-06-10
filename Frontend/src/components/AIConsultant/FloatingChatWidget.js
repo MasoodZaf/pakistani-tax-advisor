@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MessageCircle, X, Maximize2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { isStaff } from '../../utils/roles';
 import aiConsultant from '../../services/aiConsultant';
 import ConsultantChat from './ConsultantChat';
 
@@ -14,14 +15,14 @@ function FloatingChatWidget() {
   const [conversationId, setConversationId] = useState(null);
 
   useEffect(() => {
-    if (!user || ['admin', 'super_admin'].includes(user.role)) return;
+    if (!user || isStaff(user)) return;
     aiConsultant.status()
       .then((r) => setConfigured(!!r.configured))
       .catch(() => setConfigured(false));
   }, [user]);
 
   if (!user) return null;
-  if (['admin', 'super_admin'].includes(user.role)) return null;
+  if (isStaff(user)) return null;
   if (configured === false) return null;
 
   return (

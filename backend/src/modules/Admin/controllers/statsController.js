@@ -1,5 +1,6 @@
 const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
+const { isElevated } = require('../../../middleware/roleGuard');
 
 const getStats = async (req, res) => {
   try {
@@ -76,10 +77,11 @@ const getStats = async (req, res) => {
 };
 
 const getAuditLogs = async (req, res) => {
-  // Audit logs are super-admin only — they reveal privileged operations
-  // including impersonation, credential bypass, and role changes.
-  if (req.user.role !== 'super_admin') {
-    return res.status(403).json({ error: 'Super Admin only' });
+  // Audit logs are elevated-only (super_admin + tax_consultant) — they reveal
+  // privileged operations including impersonation, credential bypass, and
+  // role changes. Plain admins stay blocked.
+  if (!isElevated(req.user.role)) {
+    return res.status(403).json({ error: 'Elevated access only' });
   }
   try {
     const { page = 1, table_name, action, user_email, category, search } = req.query;

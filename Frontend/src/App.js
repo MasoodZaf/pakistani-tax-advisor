@@ -8,6 +8,7 @@ import { TaxYearProvider } from './contexts/TaxYearContext';
 // landing). Keeping these in the entry bundle avoids a spinner flash on the
 // very first screen.
 import ErrorBoundary from './components/ErrorBoundary';
+import { isStaff } from './utils/roles';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
@@ -30,6 +31,7 @@ const Onboarding = lazy(() => import('./components/Onboarding/Onboarding'));
 const ConsultantPage = lazy(() => import('./components/AIConsultant/ConsultantPage'));
 const FloatingChatWidget = lazy(() => import('./components/AIConsultant/FloatingChatWidget'));
 const Wizard = lazy(() => import('./components/Wizard/Wizard'));
+const ForcePasswordReset = lazy(() => import('./components/Auth/ForcePasswordReset'));
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // Full-screen fallback shown while a route chunk loads (mirrors the
@@ -56,17 +58,22 @@ const NotFound = () => (
   </div>
 );
 
-// A user is "needs onboarding" when authenticated as a non-admin and the
-// wizard hasn't been marked complete yet. Admins skip onboarding entirely.
+// A user is "needs onboarding" when authenticated as a non-staff user and the
+// wizard hasn't been marked complete yet. Staff skip onboarding entirely.
 const needsOnboarding = (u) =>
-  !!u && !['admin', 'super_admin'].includes(u.role) && u.onboarding_completed === false;
+  !!u && !isStaff(u) && u.onboarding_completed === false;
+
+// Bulk-imported users land with a temp password — they must set their own
+// before touching anything else (checked ahead of every other redirect).
+const mustResetPassword = (u) => !!u?.must_reset_password;
 
 // Public home: Landing page for guests, dashboard redirect for authenticated users
 const PublicHome = () => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user) {
-    if (['admin', 'super_admin'].includes(user.role)) return <Navigate to="/admin" replace />;
+    if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
+    if (isStaff(user)) return <Navigate to="/admin" replace />;
     if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
     return <Navigate to="/dashboard" replace />;
   }
@@ -89,7 +96,9 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && !['admin', 'super_admin'].includes(user.role)) {
+  if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
+
+  if (adminOnly && !isStaff(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -105,7 +114,8 @@ const OnboardingRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user) {
-    if (['admin', 'super_admin'].includes(user.role)) return <Navigate to="/admin" replace />;
+    if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
+    if (isStaff(user)) return <Navigate to="/admin" replace />;
     // Already onboarded → home. Mid-flow → keep showing the wizard.
     if (!needsOnboarding(user)) return <Navigate to="/dashboard" replace />;
   }
@@ -126,7 +136,9 @@ const UserOnlyRoute = ({ children }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (['admin', 'super_admin'].includes(user.role)) {
+  if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
+
+  if (isStaff(user)) {
     return <Navigate to="/admin" replace />;
   }
 
@@ -201,6 +213,11 @@ function App() {
               <Route path="/login" element={<Login />} />
               {/* /register redirects to the full onboarding flow */}
               <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+
+              {/* Forced password reset for bulk-imported users on a temp
+                  password — guards itself (redirects away unless the flag
+                  is set), full-screen with no app chrome. */}
+              <Route path="/set-password" element={<ForcePasswordReset />} />
 
               {/* Personal Info Route (Protected, no Layout) */}
               <Route

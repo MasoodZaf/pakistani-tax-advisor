@@ -1,5 +1,6 @@
 const express = require('express');
-const jwtAuth = require('../../../middleware/auth'); // Standardized JWT middleware
+const multer = require('multer');
+const { requireStaff, requireElevated } = require('../../../middleware/roleGuard');
 
 const {
   getUsers,
@@ -14,6 +15,11 @@ const {
   getUserLoginCredentials,
   updateUserRole,
 } = require('../controllers/usersController');
+const {
+  bulkImportTemplate,
+  bulkImportUsers,
+  bulkDeleteUsers,
+} = require('../controllers/bulkUsersController');
 const { getStats, getAuditLogs } = require('../controllers/statsController');
 const {
   getTaxYears,
@@ -42,21 +48,25 @@ const {
 const router = express.Router();
 
 /**
- * requireAdmin — chains JWT verification then checks admin role.
- * Sets req.user (from jwtAuth) — all routes use req.user instead of req.user.
+ * requireAdmin — staff-tier gate (admin + super_admin + tax_consultant).
+ * Now delegates to the shared roleGuard so the three staff tiers live in one
+ * place. tax_consultant is included here at the route level; the powerful
+ * operations (impersonate, delete, bulk, playbook) are additionally gated to the
+ * `elevated` tier, and rate/role/admin-account changes to `superAdmin`, via the
+ * in-controller checks and the dedicated tiers below.
  */
-const requireAdmin = [
-  jwtAuth,
-  (req, res, next) => {
-    if (!['admin', 'super_admin'].includes(req.user?.role)) {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'Admin privileges required',
-      });
-    }
-    next();
-  },
-];
+const requireAdmin = requireStaff;
+
+// In-memory upload for the bulk-import .xlsx (10 MB cap, matches the other
+// admin upload surfaces).
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// --- Bulk user operations (super_admin + tax_consultant) ----------------------
+// Registered BEFORE `/users/:id` so the literal paths aren't captured by the
+// `:id` param route. Bulk import/delete are gated to the elevated tier.
+router.get('/users/bulk-template', requireElevated, bulkImportTemplate);
+router.post('/users/bulk-import', requireElevated, upload.single('file'), bulkImportUsers);
+router.post('/users/bulk-delete', requireElevated, bulkDeleteUsers);
 
 // Get all users (admin only)
 router.get('/users', requireAdmin, getUsers);

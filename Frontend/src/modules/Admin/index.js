@@ -9,10 +9,20 @@ import TaxRatesManager from './components/TaxRatesManager';
 import AdminManagement from './components/AdminManagement';
 import AuditLogs from './components/AuditLogs';
 import PlaybookManager from './components/PlaybookManager';
+import { isElevated } from '../../utils/roles';
 
 const SuperAdminRoute = ({ children }) => {
   const { user } = useAuth();
   if (user?.role !== 'super_admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  return children;
+};
+
+// super_admin + tax_consultant — mirrors backend requireElevated.
+const ElevatedRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (!isElevated(user)) {
     return <Navigate to="/admin/dashboard" replace />;
   }
   return children;
@@ -26,15 +36,17 @@ const AdminModule = () => {
       <Route path="system-settings" element={<SystemSettings />} />
       <Route path="user-tax-records" element={<UserTaxRecords />} />
 
-      {/* Super Admin only routes */}
+      {/* Elevated routes (super_admin + tax_consultant) */}
       <Route
         path="audit-logs"
         element={
-          <SuperAdminRoute>
+          <ElevatedRoute>
             <AuditLogs />
-          </SuperAdminRoute>
+          </ElevatedRoute>
         }
       />
+
+      {/* Super Admin only routes */}
       <Route
         path="tax-rates"
         element={
@@ -54,9 +66,9 @@ const AdminModule = () => {
       <Route
         path="playbook"
         element={
-          <SuperAdminRoute>
+          <ElevatedRoute>
             <PlaybookManager />
-          </SuperAdminRoute>
+          </ElevatedRoute>
         }
       />
 

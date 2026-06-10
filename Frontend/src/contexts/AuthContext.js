@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { getToken, storeToken, clearToken } from '../utils/tokenStorage';
+import { isStaff } from '../utils/roles';
 
 // Set axios defaults for API base URL
 axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -191,7 +192,7 @@ export const AuthProvider = ({ children }) => {
       axios.get('/api/me')
         .then((r) => {
           const u = r.data?.user;
-          if (u) setUser((prev) => (prev ? { ...prev, role: u.role, email: u.email, name: u.name } : prev));
+          if (u) setUser((prev) => (prev ? { ...prev, role: u.role, email: u.email, name: u.name, must_reset_password: u.must_reset_password === true } : prev));
         })
         .catch(() => { /* 401 handled by the response interceptor */ });
     } catch {
@@ -220,13 +221,13 @@ export const AuthProvider = ({ children }) => {
         scheduleExpiryWarning(token);
 
         // Store pre-loaded data so the Dashboard can render immediately without a second fetch
-        if (!['admin', 'super_admin'].includes(userData.role)) {
+        if (!isStaff(userData)) {
           setLoginPayload({ currentYearData: currentYearData || null, taxYearsSummary: taxYearsSummary || [] });
         }
 
         toast.success(`Welcome back, ${userData.name}!`);
 
-        if (!['admin', 'super_admin'].includes(userData.role)) {
+        if (!isStaff(userData)) {
           return { success: true, needsPersonalInfo: !hasPersonalInfo, userData };
         }
         return { success: true, userData };

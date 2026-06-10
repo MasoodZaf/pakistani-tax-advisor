@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { isElevated } from '../../../utils/roles';
 
 const UserImpersonation = ({ onClose }) => {
   const { user, logout } = useAuth();
@@ -26,7 +27,7 @@ const UserImpersonation = ({ onClose }) => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    if (user?.role === 'super_admin') {
+    if (isElevated(user)) {
       loadUserCredentials();
     }
   }, [user]);
@@ -137,7 +138,7 @@ const UserImpersonation = ({ onClose }) => {
       : 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300';
   };
 
-  if (user?.role !== 'super_admin') {
+  if (!isElevated(user)) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div
@@ -151,7 +152,7 @@ const UserImpersonation = ({ onClose }) => {
             <AlertTriangle className="w-16 h-16 text-red-500 dark:text-red-300 mx-auto mb-4" />
             <h2 id="admin-impersonation-denied-title" className="text-xl font-bold text-navy dark:text-[#e7eaf3] mb-2">Access Denied</h2>
             <p className="text-gray-600 dark:text-[#aab2cc] mb-6">
-              Only Super Admin can access user impersonation features.
+              Only Super Admin and Tax Consultant accounts can access user impersonation features.
             </p>
             <button
               onClick={onClose}

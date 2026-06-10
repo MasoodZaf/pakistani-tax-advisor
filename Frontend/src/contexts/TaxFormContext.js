@@ -3,6 +3,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 import { useTaxYear } from './TaxYearContext';
+import { isStaff } from '../utils/roles';
 
 const TaxFormContext = createContext();
 
@@ -136,8 +137,8 @@ export const TaxFormProvider = ({ children }) => {
   const [incomeProfile, setIncomeProfile] = useState({ primary: 'salaried', addons: [] });
 
   // Load tax return when user authentication changes
-  // Skip for admin users — they manage other users' returns, not their own
-  const isAdmin = ['admin', 'super_admin'].includes(user?.role);
+  // Skip for staff users — they manage other users' returns, not their own
+  const isAdmin = isStaff(user);
 
   useEffect(() => {
     if (user && !isAdmin) {
