@@ -9,6 +9,7 @@ import {
   Percent, UserCog, Activity, Archive, BookOpen
 } from 'lucide-react';
 import { isStaff as isStaffRole, isElevated as isElevatedRole } from '../../utils/roles';
+import BrandMark from '../common/BrandMark';
 
 const Styles = () => (
   <style>{`
@@ -242,9 +243,9 @@ const Sidebar = ({ collapsed, onToggle }) => {
           {/* Logo */}
           <div className="sb-logo" style={collapsed ? { justifyContent: 'center', padding: '14px 0' } : {}}>
             <div className="sb-logo-icon">
-              <FileText size={15} color="#B5E18B" />
+              <BrandMark size={18} glyphOnly />
             </div>
-            {!collapsed && <span className="sb-logo-text">Pak<span>Tax</span></span>}
+            {!collapsed && <span className="sb-logo-text">Mera<span>Tax</span></span>}
           </div>
 
           {/* Nav */}

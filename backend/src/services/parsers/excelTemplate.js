@@ -102,7 +102,7 @@ function addInstructionsSheet(workbook, taxYear) {
   const sheet = workbook.addWorksheet('Instructions');
   sheet.columns = [{ width: 110 }];
   const lines = [
-    `Pakistani Tax Advisor — Return Template for Tax Year ${taxYear}`,
+    `MeraTax — Return Template for Tax Year ${taxYear}`,
     '',
     'How to use this file:',
     '  1. Enter your amounts in the "Amount (PKR)" column of each sheet.',
@@ -140,7 +140,7 @@ function addInstructionsSheet(workbook, taxYear) {
  */
 async function buildTemplate({ taxYear, incomePrefill = {}, adjustablePrefill = {} } = {}) {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Pakistani Tax Advisor';
+  workbook.creator = 'MeraTax';
   workbook.created = new Date();
   workbook.properties = { ...workbook.properties, title: `Tax Return Template ${taxYear || ''}` };
 

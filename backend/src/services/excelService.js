@@ -271,8 +271,8 @@ class ExcelService {
       this.workbook = new ExcelJS.Workbook();
       
       // Set workbook properties
-      this.workbook.creator = 'Pakistani Tax Advisor';
-      this.workbook.lastModifiedBy = 'Pakistani Tax Advisor';
+      this.workbook.creator = 'MeraTax';
+      this.workbook.lastModifiedBy = 'MeraTax';
       this.workbook.created = new Date();
       this.workbook.modified = new Date();
       this.workbook.subject = `Tax Return ${taxYear}`;

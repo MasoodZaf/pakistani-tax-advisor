@@ -1,4 +1,4 @@
-# 📱 Pakistani Tax Advisor — Mobile App
+# 📱 MeraTax — Mobile App
 
 > **⚠️ PROTOTYPE — NOT PRODUCTION.**
 > The mobile app is a **scaffold / work-in-progress**. It currently:

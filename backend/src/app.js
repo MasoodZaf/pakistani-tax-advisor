@@ -238,7 +238,7 @@ app.get('/api/health', async (req, res) => {
 // Add a root endpoint for easy testing
 app.get('/', (req, res) => {
   const response = {
-    message: 'Welcome to Pakistani Tax Advisor API',
+    message: 'Welcome to MeraTax API',
     endpoints: {
       health: '/api/health',
       auth: {

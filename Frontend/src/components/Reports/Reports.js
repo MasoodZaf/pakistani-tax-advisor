@@ -232,7 +232,7 @@ const Reports = () => {
 
       // ── Summary sheet ──
       const summaryRows = [
-        ['Pakistan Tax Advisor — Summary', ''],
+        ['MeraTax — Summary', ''],
         ['Tax Year', selectedYear],
         ['Generated', new Date().toLocaleDateString('en-PK')],
         [],
@@ -318,7 +318,7 @@ const Reports = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `paktax-report-${selectedYear}.xlsx`;
+      a.download = `meratax-report-${selectedYear}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -364,7 +364,7 @@ const Reports = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `paktax-${activeTab}-${selectedYear}.csv`;
+    link.download = `meratax-${activeTab}-${selectedYear}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

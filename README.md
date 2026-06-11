@@ -1,6 +1,6 @@
-# 🇵🇰 Pakistani Tax Advisor - Production Ready
+# 🇵🇰 MeraTax - Production Ready
 
-A comprehensive tax calculation and filing system for Pakistani taxpayers, designed for tax consultants and individuals.
+MeraTax — a comprehensive tax calculation and filing system for Pakistani taxpayers, designed for tax consultants and individuals.
 
 ## 🚀 Quick Start for Tax Consultants
 
