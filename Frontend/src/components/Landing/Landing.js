@@ -536,7 +536,7 @@ function Hero() {
           </div>
 
           {/* Floating accents */}
-          <div className="hero-chip" style={{ top: -16, right: -10 }}>
+          <div className="hero-chip" style={{ top: -32, right: -14 }}>
             <div style={{ width: 26, height: 26, background: '#B5E18B', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Calculator size={14} color="#28396C" />
             </div>
