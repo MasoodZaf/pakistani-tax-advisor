@@ -26,7 +26,16 @@ const FontLoader = () => (
 
     /* Navy brand ink that sits directly on the page bg flips to the lime accent
        in dark mode (navy on the dark page would fail contrast). */
+    .land-brand-ink { color: #28396C; }
     [data-theme="dark"] .land-brand-ink { color: #B5E18B; }
+
+    /* Quiet link that inks to navy on hover (lime in dark, where navy vanishes) */
+    .land-quiet-link {
+      color: var(--content-muted);
+      transition: color 0.2s;
+    }
+    .land-quiet-link:hover { color: #28396C; }
+    [data-theme="dark"] .land-quiet-link:hover { color: #B5E18B; }
 
     /* Animated underline */
     .underline-grow {
@@ -348,7 +357,7 @@ function Navbar() {
         <button type="button" aria-label="MeraTax — back to top" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <BrandMark size={34} />
           <span className="display" style={{ fontSize: 17, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>
-            Mera<span className="land-brand-ink" style={{ color: '#28396C' }}>Tax</span>
+            Mera<span className="land-brand-ink">Tax</span>
           </span>
         </button>
 
@@ -361,8 +370,7 @@ function Navbar() {
 
         {/* Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} className="hide-mobile">
-          <Link to="/login" style={{ color: 'var(--content-muted)', fontWeight: 600, fontSize: 15, textDecoration: 'none', padding: '6px 4px', transition: 'color 0.2s' }}
-            onMouseOver={e => e.target.style.color='#28396C'} onMouseOut={e => e.target.style.color='var(--content-muted)'}>
+          <Link to="/login" className="land-quiet-link" style={{ fontWeight: 600, fontSize: 15, textDecoration: 'none', padding: '6px 4px' }}>
             Sign in
           </Link>
           <Link to="/onboarding" className="btn-primary" style={{ padding: '9px 20px', fontSize: 14, borderRadius: 10 }}>
@@ -440,7 +448,7 @@ function Hero() {
             animationDelay: '0.08s',
           }}>
             File your Pakistan tax return —{' '}
-            <span className="land-brand-ink" style={{ color: '#28396C', position: 'relative', display: 'inline-block' }}>
+            <span className="land-brand-ink" style={{ position: 'relative', display: 'inline-block' }}>
               without the stress
               <svg style={{ position: 'absolute', bottom: -4, left: 0, width: '100%' }} height="6" viewBox="0 0 300 6" preserveAspectRatio="none">
                 <path d="M0 5 Q75 0 150 4 Q225 8 300 3" stroke="#B5E18B" strokeWidth="3" fill="none" strokeLinecap="round"/>
@@ -574,7 +582,7 @@ function StatsBar() {
           { value: 'Free', unit: '',      label: 'No subscription, no fees' },
         ].map(({ value, unit, label }) => (
           <div key={label} style={{ textAlign: 'center', padding: '16px 8px' }}>
-            <p className="display" style={{ fontSize: 30, fontWeight: 800, color: '#28396C', lineHeight: 1, marginBottom: 4 }}>
+            <p className="display land-brand-ink" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, marginBottom: 4 }}>
               {value}<span style={{ fontSize: 16 }}>{unit}</span>
             </p>
             <p style={{ fontSize: 13, color: 'var(--content-muted)', fontWeight: 500 }}>{label}</p>
@@ -592,7 +600,7 @@ function Features() {
     <section id="features" style={{ padding: '88px 24px' }}>
       <div style={{ maxWidth: 1120, margin: '0 auto' }}>
         <div ref={ref} className="fade-up" style={{ marginBottom: 56 }}>
-          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Built for accuracy</p>
+          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Built for accuracy</p>
           <h2 className="display" style={{ fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', lineHeight: 1.15, maxWidth: 520 }}>
             Everything you need to file correctly
           </h2>
@@ -637,7 +645,7 @@ function TaxProfiles() {
     <section id="profiles" className="section-alt" style={{ padding: '88px 24px', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
       <div style={{ maxWidth: 1120, margin: '0 auto' }}>
         <div ref={ref} className="fade-up" style={{ marginBottom: 52 }}>
-          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Who it's for</p>
+          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Who it's for</p>
           <h2 className="display" style={{ fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', lineHeight: 1.15 }}>
             Built for your situation
           </h2>
@@ -683,7 +691,7 @@ function HowItWorks() {
     <section id="how" style={{ padding: '88px 24px' }}>
       <div style={{ maxWidth: 1120, margin: '0 auto' }}>
         <div ref={ref} className="fade-up" style={{ marginBottom: 56 }}>
-          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Simple process</p>
+          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Simple process</p>
           <h2 className="display" style={{ fontSize: 'clamp(28px, 3.5vw, 40px)', fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', lineHeight: 1.15 }}>
             From signup to submission<br />in four steps
           </h2>
@@ -720,7 +728,7 @@ function FAQ() {
     <section id="faq" className="section-alt" style={{ padding: '88px 24px', borderTop: '1px solid var(--line)' }}>
       <div style={{ maxWidth: 740, margin: '0 auto' }}>
         <div ref={ref} className="fade-up" style={{ marginBottom: 48, textAlign: 'center' }}>
-          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, color: '#28396C', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Common questions</p>
+          <p className="land-brand-ink" style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Common questions</p>
           <h2 className="display" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 800, color: 'var(--content)', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
             Honest answers, no jargon
           </h2>
@@ -806,8 +814,7 @@ function Footer() {
         </p>
         <div style={{ display: 'flex', gap: 20 }}>
           {['Privacy', 'Terms', 'Help'].map(label => (
-            <span key={label} style={{ fontSize: 13, color: 'var(--content-muted)', fontWeight: 600, cursor: 'pointer', transition: 'color 0.2s' }}
-              onMouseOver={e => e.target.style.color='#28396C'} onMouseOut={e => e.target.style.color='var(--content-muted)'}>
+            <span key={label} className="land-quiet-link" style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               {label}
             </span>
           ))}
