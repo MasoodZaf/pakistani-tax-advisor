@@ -193,6 +193,80 @@ const FontLoader = () => (
       background: #d1fae5;
     }
     [data-theme="dark"] .step-line { background: var(--line); }
+
+    /* ── Hero (two-column) ──────────────────────────────────────────────── */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+    @media (min-width: 980px) {
+      .hero-grid { grid-template-columns: 1.05fr 0.95fr; gap: 48px; }
+    }
+
+    /* Staggered entrance */
+    @keyframes heroRise {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hero-rise {
+      opacity: 0;
+      animation: heroRise 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Right-side scene */
+    .hero-scene { position: relative; max-width: 480px; margin: 0 auto; width: 100%; }
+    .hero-glow {
+      position: absolute; inset: -40px -30px;
+      background: radial-gradient(ellipse at 65% 35%, rgba(181,225,139,0.4) 0%, transparent 65%);
+      filter: blur(8px);
+      pointer-events: none;
+    }
+    [data-theme="dark"] .hero-glow {
+      background: radial-gradient(ellipse at 65% 35%, rgba(181,225,139,0.14) 0%, transparent 65%);
+    }
+    .hero-dots {
+      position: absolute; top: -26px; right: -26px;
+      width: 150px; height: 150px;
+      background-image: radial-gradient(circle, rgba(40,57,108,0.18) 1.5px, transparent 1.5px);
+      background-size: 15px 15px;
+      pointer-events: none;
+    }
+    [data-theme="dark"] .hero-dots {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1.5px, transparent 1.5px);
+    }
+
+    .hero-card {
+      position: relative;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(26,28,24,0.10), 0 2px 8px rgba(26,28,24,0.04);
+      padding: 24px;
+    }
+
+    /* Floating chips */
+    @keyframes heroFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-7px); }
+    }
+    .hero-chip {
+      position: absolute;
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(26,28,24,0.12);
+      padding: 9px 13px;
+      animation: heroFloat 6s ease-in-out infinite;
+    }
+    .hero-chip-2 { animation-duration: 7.5s; animation-delay: 0.8s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-rise { animation: none; opacity: 1; }
+      .hero-chip { animation: none; }
+    }
   `}</style>
 );
 
@@ -333,106 +407,154 @@ function Navbar() {
 }
 
 /* ─── Hero ──────────────────────────────────────────────────────────────────── */
+/* The right column is an honest product scene: the computation uses the REAL
+   Finance Act 2025 salaried slabs for Rs 24,00,000 (0% / 1% / 11% / 23% →
+   Rs 1,62,000), so the marketing mock is exact to the rupee — the same promise
+   the product makes. Keep the numbers consistent if you edit them. */
+const HERO_SLABS = [
+  { rate: '0%',  width: 25,    color: '#dde4f0' },
+  { rate: '1%',  width: 25,    color: '#aab9da' },
+  { rate: '11%', width: 41.67, color: '#5a6da0' },
+  { rate: '23%', width: 8.33,  color: '#28396C' },
+];
+
 function Hero() {
   return (
-    <section style={{ paddingTop: 100, paddingBottom: 80, maxWidth: 1120, margin: '0 auto', padding: '100px 24px 80px' }}>
-      <div style={{ maxWidth: 720 }}>
-        {/* Badge */}
-        <div className="badge" style={{ marginBottom: 28 }}>
-          <Star size={12} fill="#B5E18B" color="#B5E18B" />
-          Finance Act 2025 — fully updated
-        </div>
+    <section style={{ maxWidth: 1120, margin: '0 auto', padding: '96px 24px 80px' }}>
+      <div className="hero-grid">
 
-        {/* Headline */}
-        <h1 className="display" style={{
-          fontSize: 'clamp(38px, 5.5vw, 62px)',
-          fontWeight: 800,
-          lineHeight: 1.1,
-          letterSpacing: '-0.03em',
-          color: 'var(--content)',
-          marginBottom: 22,
-        }}>
-          File your Pakistan tax<br />
-          return —{' '}
-          <span className="land-brand-ink" style={{ color: '#28396C', position: 'relative', display: 'inline-block' }}>
-            without the stress
-            <svg style={{ position: 'absolute', bottom: -4, left: 0, width: '100%' }} height="6" viewBox="0 0 300 6" preserveAspectRatio="none">
-              <path d="M0 5 Q75 0 150 4 Q225 8 300 3" stroke="#B5E18B" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            </svg>
-          </span>
-        </h1>
-
-        {/* Subtext */}
-        <p style={{ fontSize: 18, lineHeight: 1.7, color: 'var(--content-muted)', maxWidth: 560, marginBottom: 36 }}>
-          Guided, FBR-compliant tax preparation for salaried individuals,
-          investors, and business owners. Auto-calculations. Zero guesswork.
-          Built specifically for Pakistani taxpayers.
-        </p>
-
-        {/* CTAs */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 44 }}>
-          <Link to="/onboarding" className="btn-primary" style={{ fontSize: 15 }}>
-            Start your free return <ArrowRight size={16} />
-          </Link>
-          <Link to="/login" className="btn-secondary" style={{ fontSize: 15 }}>
-            Sign in to existing account
-          </Link>
-        </div>
-
-        {/* Social proof strip */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
-          {[
-            { icon: Check, text: 'No credit card needed' },
-            { icon: Check, text: 'FBR-format export' },
-            { icon: Check, text: 'Tax Year 2025-26' },
-          ].map(({ icon: Icon, text }) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--content-muted)', fontSize: 14, fontWeight: 600 }}>
-              <div style={{ width: 18, height: 18, background: 'var(--brand-cream)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={10} color="#4a7a2a" strokeWidth={3} />
-              </div>
-              {text}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Hero visual — tax summary card mockup */}
-      <div style={{ marginTop: 64 }}>
-        <div style={{ background: 'var(--surface-raised)', borderRadius: 20, border: '1px solid var(--line)', boxShadow: '0 8px 48px rgba(26,28,24,0.07)', padding: 28, maxWidth: 680 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--content-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tax Computation Summary</p>
-              <p className="display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)' }}>Tax Year 2025-26</p>
-            </div>
-            <div style={{ background: 'var(--brand-cream)', border: '1px solid var(--brand-cream-track)', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, color: 'var(--brand-on-cream)' }}>FBR Compliant</div>
+        {/* ── Left: copy ── */}
+        <div>
+          <div className="badge hero-rise" style={{ marginBottom: 26 }}>
+            <Star size={12} fill="#B5E18B" color="#B5E18B" />
+            Finance Act 2025 — fully updated
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-            {[
-              { label: 'Total Income',     value: 'Rs 18,00,000', sub: 'Annual salary + allowances' },
-              { label: 'Tax Liability',    value: 'Rs 1,02,600',  sub: 'After Finance Act 2025 slabs' },
-              { label: 'Withholding Tax',  value: 'Rs 85,500',    sub: 'Deducted by employer' },
-            ].map(({ label, value, sub }) => (
-              <div key={label} style={{ background: 'var(--surface-sunken)', borderRadius: 12, padding: '14px 16px' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--content-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</p>
-                <p className="display" style={{ fontSize: 17, fontWeight: 700, color: 'var(--content)', marginBottom: 3 }}>{value}</p>
-                <p style={{ fontSize: 11, color: 'var(--content-subtle)', fontWeight: 500 }}>{sub}</p>
+          <h1 className="display hero-rise" style={{
+            fontSize: 'clamp(36px, 4.4vw, 56px)',
+            fontWeight: 800,
+            lineHeight: 1.08,
+            letterSpacing: '-0.03em',
+            color: 'var(--content)',
+            marginBottom: 22,
+            animationDelay: '0.08s',
+          }}>
+            File your Pakistan tax return —{' '}
+            <span className="land-brand-ink" style={{ color: '#28396C', position: 'relative', display: 'inline-block' }}>
+              without the stress
+              <svg style={{ position: 'absolute', bottom: -4, left: 0, width: '100%' }} height="6" viewBox="0 0 300 6" preserveAspectRatio="none">
+                <path d="M0 5 Q75 0 150 4 Q225 8 300 3" stroke="#B5E18B" strokeWidth="3" fill="none" strokeLinecap="round"/>
+              </svg>
+            </span>
+          </h1>
+
+          <p className="hero-rise" style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--content-muted)', maxWidth: 480, marginBottom: 34, animationDelay: '0.16s' }}>
+            Guided, FBR-compliant preparation for salaried individuals, investors,
+            and business owners. You enter the numbers — every slab, credit, and
+            surcharge is computed for you.
+          </p>
+
+          <div className="hero-rise" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 38, animationDelay: '0.24s' }}>
+            <Link to="/onboarding" className="btn-primary" style={{ fontSize: 15 }}>
+              Start your free return <ArrowRight size={16} />
+            </Link>
+            <Link to="/login" className="btn-secondary" style={{ fontSize: 15 }}>
+              Sign in
+            </Link>
+          </div>
+
+          <div className="hero-rise" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 18, animationDelay: '0.32s' }}>
+            {['Free — no card needed', 'FBR-format export', 'Tax Year 2025-26'].map(text => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--content-muted)', fontSize: 14, fontWeight: 600 }}>
+                <div style={{ width: 18, height: 18, background: 'var(--brand-cream)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Check size={10} color="#4a7a2a" strokeWidth={3} />
+                </div>
+                {text}
               </div>
             ))}
           </div>
+        </div>
 
-          <div style={{ background: 'var(--brand-cream)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Check size={16} color="#fff" strokeWidth={2.5} />
-              </div>
+        {/* ── Right: live computation scene ── */}
+        <div className="hero-scene hero-rise" style={{ animationDelay: '0.28s' }}>
+          <div className="hero-glow" />
+          <div className="hero-dots" />
+
+          <div style={{ position: 'relative' }}>
+          <div className="hero-card">
+            {/* Card header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-on-cream-navy)' }}>Balance payable to FBR</p>
-                <p style={{ fontSize: 11, color: 'var(--brand-on-cream-navy)', fontWeight: 500 }}>After withholding tax credit</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--content-subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>Tax Computation</p>
+                <p className="display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)' }}>Tax Year 2025-26</p>
+              </div>
+              <div style={{ background: 'var(--brand-cream)', border: '1px solid var(--brand-cream-track)', borderRadius: 100, padding: '4px 11px', fontSize: 12, fontWeight: 700, color: 'var(--brand-on-cream)' }}>
+                FBR Compliant
               </div>
             </div>
-            <p className="display" style={{ fontSize: 20, fontWeight: 800, color: 'var(--brand-on-cream-navy)' }}>Rs 17,100</p>
+
+            {/* Figures */}
+            {[
+              { label: 'Total income',       value: 'Rs 24,00,000', sub: 'Salary + allowances' },
+              { label: 'Tax liability',      value: 'Rs 1,62,000',  sub: 'Finance Act 2025 slabs' },
+              { label: 'Withholding credit', value: '− Rs 1,38,000', sub: 'Already deducted by employer' },
+            ].map(({ label, value, sub }, i) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '11px 2px', borderTop: i === 0 ? 'none' : '1px solid var(--line)' }}>
+                <div>
+                  <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--content)' }}>{label}</p>
+                  <p style={{ fontSize: 11.5, color: 'var(--content-subtle)', fontWeight: 500 }}>{sub}</p>
+                </div>
+                <p className="display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)', whiteSpace: 'nowrap' }}>{value}</p>
+              </div>
+            ))}
+
+            {/* Slab bar — proportions match the figures above */}
+            <div style={{ margin: '6px 0 16px' }}>
+              <div style={{ display: 'flex', gap: 3, height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 7 }}>
+                {HERO_SLABS.map(s => (
+                  <div key={s.rate} style={{ width: `${s.width}%`, background: s.color, borderRadius: 2 }} />
+                ))}
+              </div>
+              <p style={{ fontSize: 11.5, color: 'var(--content-subtle)', fontWeight: 600 }}>
+                Computed slab by slab — 0% · 1% · 11% · 23%
+              </p>
+            </div>
+
+            {/* Result */}
+            <div style={{ background: 'var(--brand-cream)', borderRadius: 12, padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 30, height: 30, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Check size={15} color="#fff" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-on-cream-navy)' }}>Balance payable to FBR</p>
+                  <p style={{ fontSize: 11, color: 'var(--brand-on-cream-navy)', fontWeight: 500 }}>After withholding credit</p>
+                </div>
+              </div>
+              <p className="display" style={{ fontSize: 19, fontWeight: 800, color: 'var(--brand-on-cream-navy)', whiteSpace: 'nowrap' }}>Rs 24,000</p>
+            </div>
           </div>
+
+          {/* Floating accents */}
+          <div className="hero-chip" style={{ top: -16, right: -10 }}>
+            <div style={{ width: 26, height: 26, background: '#B5E18B', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Calculator size={14} color="#28396C" />
+            </div>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--content)' }}>Auto-calculated</span>
+          </div>
+          <div className="hero-chip hero-chip-2" style={{ bottom: -24, left: -14 }}>
+            <div style={{ width: 26, height: 26, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Shield size={13} color="#B5E18B" />
+            </div>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--content)' }}>Ready for IRIS</span>
+          </div>
+          </div>
+
+          {/* Human caption */}
+          <p style={{ textAlign: 'center', marginTop: 34, fontSize: 13.5, color: 'var(--content-muted)', fontWeight: 500 }}>
+            <span className="display" style={{ fontWeight: 700, color: 'var(--content)' }}>Mera = mine.</span>{' '}
+            Your numbers, your data — computed live as you type.
+          </p>
         </div>
       </div>
     </section>
