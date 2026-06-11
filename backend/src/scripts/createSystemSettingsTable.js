@@ -42,7 +42,7 @@ async function createSystemSettingsTable() {
       ['tax_calculation', 'default_tax_year', '2025-26', 'string', 'Default tax year for new tax returns'],
       ['tax_calculation', 'minimum_taxable_income', '600000', 'number', 'Minimum taxable income threshold'],
       ['tax_calculation', 'enable_advance_tax_calculation', 'true', 'boolean', 'Enable advance tax calculation features'],
-      ['application', 'app_name', 'Pakistani Tax Advisor', 'string', 'Application display name'],
+      ['application', 'app_name', 'MeraTax', 'string', 'Application display name'],
       ['application', 'app_version', '1.0.0', 'string', 'Application version'],
       ['application', 'maintenance_mode', 'false', 'boolean', 'Enable maintenance mode'],
       ['application', 'max_file_upload_size', '10485760', 'number', 'Maximum file upload size in bytes (10MB)'],

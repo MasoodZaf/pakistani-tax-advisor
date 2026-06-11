@@ -131,7 +131,7 @@ const LoginScreen = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.header}>
             <MaterialIcons name="account-balance" size={80} color="#4f46e5" />
-            <Text style={styles.title}>Pakistani Tax Advisor</Text>
+            <Text style={styles.title}>MeraTax</Text>
             <Text style={styles.subtitle}>Sign in to manage your taxes</Text>
           </View>
 

@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { isStaff } from '../../utils/roles';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, FileText, Check } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GoogleLogin } from '@react-oauth/google';
 import AppleSignInButton from './AppleSignInButton';
+import BrandMark from '../common/BrandMark';
 
 // A 22-char URL-safe random nonce. Generated once per Login mount; both
 // providers receive the same value so the backend can re-check the JWT's
@@ -175,9 +176,9 @@ const BrandPanel = () => (
     <div className="brand-inner brand-anim-1">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-          <FileText size={17} color="#fff" />
+          <BrandMark size={20} glyphOnly />
         </div>
-        <span className="login-display" style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>PakTax</span>
+        <span className="login-display" style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>MeraTax</span>
       </div>
     </div>
 
@@ -385,10 +386,8 @@ const Login = () => {
 
           {/* Mobile logo (only visible when brand panel is hidden) */}
           <div style={{ display: 'none', alignItems: 'center', gap: 9, marginBottom: 28 }} className="mobile-logo">
-            <div style={{ width: 32, height: 32, background: '#28396C', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={15} color="#fff" />
-            </div>
-            <span className="login-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)' }}>PakTax</span>
+            <BrandMark size={32} />
+            <span className="login-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--content)' }}>MeraTax</span>
           </div>
 
           {/* Heading */}

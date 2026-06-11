@@ -467,7 +467,7 @@ router.post('/reset-defaults', requireAdmin, async (req, res) => {
       'application': [
         {
           key: 'app_name',
-          value: 'Pakistani Tax Advisor',
+          value: 'MeraTax',
           data_type: 'string',
           description: 'Application display name'
         },

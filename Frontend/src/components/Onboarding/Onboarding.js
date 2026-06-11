@@ -3,11 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   User, Mail, Lock, Eye, EyeOff, Phone, MapPin, CreditCard,
   Briefcase, Building2, FileText, ChevronRight, ChevronLeft,
-  CheckCircle2, ArrowRight, Shield, Check
+  CheckCircle2, ArrowRight, Check
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import BrandMark from '../common/BrandMark';
 import { formatCnic, stripCnic, isValidCnic } from '../../utils/cnic';
 
 /* ─── Global styles ─────────────────────────────────────────────────────────── */
@@ -547,10 +548,8 @@ export default function Onboarding() {
       {/* Minimal nav */}
       <nav className="ob-nav" style={{ height: 56, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--line)', background: 'rgba(253,252,248,0.9)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 10 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
-          <div style={{ width: 30, height: 30, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Shield size={14} color="#fff" />
-          </div>
-          <span className="ob-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>PakTax</span>
+          <BrandMark size={30} />
+          <span className="ob-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>MeraTax</span>
         </Link>
         <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: 'var(--content-muted)', textDecoration: 'none' }}>
           Already have an account? <span style={{ color: '#28396C' }}>Sign in</span>

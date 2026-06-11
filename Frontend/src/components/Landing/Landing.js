@@ -6,6 +6,7 @@ import {
   Building2, Home, Globe, Check, ArrowRight, Star,
   Calculator, Lock, Menu, X
 } from 'lucide-react';
+import BrandMark from '../common/BrandMark';
 
 /* ─── Google Fonts ─────────────────────────────────────────────────────────── */
 const FontLoader = () => (
@@ -270,12 +271,10 @@ function Navbar() {
     }}>
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
-        <button type="button" aria-label="PakTax — back to top" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div style={{ width: 34, height: 34, background: '#28396C', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={17} color="#fff" />
-          </div>
+        <button type="button" aria-label="MeraTax — back to top" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <BrandMark size={34} />
           <span className="display" style={{ fontSize: 17, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>
-            Pak<span className="land-brand-ink" style={{ color: '#28396C' }}>Tax</span>
+            Mera<span className="land-brand-ink" style={{ color: '#28396C' }}>Tax</span>
           </span>
         </button>
 
@@ -676,10 +675,8 @@ function Footer() {
     <footer style={{ borderTop: '1px solid var(--line)', background: 'var(--surface)', padding: '36px 24px' }}>
       <div style={{ maxWidth: 1120, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 30, height: 30, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={14} color="#fff" />
-          </div>
-          <span className="display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)' }}>PakTax</span>
+          <BrandMark size={30} />
+          <span className="display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)' }}>MeraTax</span>
         </div>
         <p style={{ fontSize: 13, color: 'var(--content-subtle)', fontWeight: 500, maxWidth: 420, lineHeight: 1.5, textAlign: 'center', flex: '1 1 260px' }}>
           An independent tool for preparing Pakistani income tax returns. Not affiliated with FBR.

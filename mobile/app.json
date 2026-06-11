@@ -1,36 +1,36 @@
 {
   "expo": {
-    "name": "Pakistani Tax Advisor",
-    "slug": "pakistani-tax-advisor",
+    "name": "MeraTax",
+    "slug": "meratax",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "paktaxadvisor",
+    "scheme": "meratax",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4f46e5"
+      "backgroundColor": "#28396C"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.paktaxadvisor.mobile",
+      "bundleIdentifier": "com.meratax.mobile",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Pakistani Tax Advisor uses the camera so you can photograph receipts to attach to expense records.",
-        "NSPhotoLibraryUsageDescription": "Pakistani Tax Advisor needs access to your photo library so you can attach receipt images to expense records.",
-        "NSPhotoLibraryAddUsageDescription": "Pakistani Tax Advisor saves downloaded return templates to your photo library for offline access.",
+        "NSCameraUsageDescription": "MeraTax uses the camera so you can photograph receipts to attach to expense records.",
+        "NSPhotoLibraryUsageDescription": "MeraTax needs access to your photo library so you can attach receipt images to expense records.",
+        "NSPhotoLibraryAddUsageDescription": "MeraTax saves downloaded return templates to your photo library for offline access.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4f46e5"
+        "backgroundColor": "#28396C"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.paktaxadvisor.mobile"
+      "package": "com.meratax.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -51,8 +51,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Pakistani Tax Advisor needs access to your photo library so you can attach receipt images to expense records.",
-          "cameraPermission": "Pakistani Tax Advisor needs access to your camera so you can photograph receipts for expense records."
+          "photosPermission": "MeraTax needs access to your photo library so you can attach receipt images to expense records.",
+          "cameraPermission": "MeraTax needs access to your camera so you can photograph receipts for expense records."
         }
       ],
       "@react-native-community/datetimepicker"

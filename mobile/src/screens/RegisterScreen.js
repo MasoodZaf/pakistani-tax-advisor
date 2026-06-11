@@ -130,7 +130,7 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.header}>
             <MaterialIcons name="person-add" size={60} color="#4f46e5" />
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Pakistani Tax Advisor</Text>
+            <Text style={styles.subtitle}>Join MeraTax</Text>
           </View>
 
           <View style={styles.form}>

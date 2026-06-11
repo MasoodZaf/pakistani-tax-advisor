@@ -91,8 +91,8 @@ const ProfileScreen = () => {
 
   const showAbout = () => {
     Alert.alert(
-      'Pakistani Tax Advisor',
-      'Mobile companion app for the Pakistani Tax Advisor web app.\n\nThe full feature set — including Wealth Statement, Capital Gains, Adjustable Tax, AI Consultant, and submission — is available on the web at tax.aurmak.com.',
+      'MeraTax',
+      'Mobile companion app for the MeraTax web app.\n\nThe full feature set — including Wealth Statement, Capital Gains, Adjustable Tax, AI Consultant, and submission — is available on the web at tax.aurmak.com.',
       [{ text: 'OK' }]
     );
   };
@@ -212,7 +212,7 @@ const ProfileScreen = () => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            🇵🇰 Pakistani Tax Advisor v1.0.0
+            🇵🇰 MeraTax v1.0.0
           </Text>
           <Text style={styles.footerSubtext}>
             Compliant with FBR Tax Laws 2025-26

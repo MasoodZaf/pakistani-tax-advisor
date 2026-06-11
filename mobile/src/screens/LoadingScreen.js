@@ -6,7 +6,7 @@ const LoadingScreen = () => {
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#4f46e5" />
       <Text style={styles.text}>Loading...</Text>
-      <Text style={styles.subtitle}>Pakistani Tax Advisor</Text>
+      <Text style={styles.subtitle}>MeraTax</Text>
     </View>
   );
 };

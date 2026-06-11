@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, Lock, Mail, User, Building } from 'lucide-react';
+import BrandMark from '../common/BrandMark';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -102,14 +103,14 @@ const Register = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-[#0f1426] dark:to-[#151c30] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">PT</span>
+          <div className="mx-auto h-16 w-16 flex items-center justify-center">
+            <BrandMark size={64} />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-[#e7eaf3]">
             Create your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-[#aab2cc]">
-            Pakistani Tax Advisor System
+            MeraTax — Pakistan income tax filing
           </p>
         </div>
 

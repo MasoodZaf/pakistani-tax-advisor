@@ -87,7 +87,7 @@ export async function generateIrisPdf(ctx) {
     doc.text('ACKNOWLEDGEMENT SLIP', pageWidth / 2, 32, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Pakistan Tax Advisor — generated locally for review prior to FBR IRIS submission', pageWidth / 2, 52, { align: 'center' });
+    doc.text('MeraTax — generated locally for review prior to FBR IRIS submission', pageWidth / 2, 52, { align: 'center' });
     doc.setTextColor(40, 40, 40);
   };
 
@@ -167,7 +167,7 @@ export async function generateIrisPdf(ctx) {
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
   doc.text(
-    `Generated ${new Date().toLocaleString('en-PK')}  •  Pakistan Tax Advisor`,
+    `Generated ${new Date().toLocaleString('en-PK')}  •  MeraTax`,
     pageWidth / 2, pageHeight - 30, { align: 'center' }
   );
 
@@ -406,7 +406,7 @@ export async function generateIrisPdf(ctx) {
     );
   }
 
-  const filename = ctx.filename || `paktax-iris-${ctx.taxYear || 'return'}.pdf`;
+  const filename = ctx.filename || `meratax-iris-${ctx.taxYear || 'return'}.pdf`;
   doc.save(filename);
   return filename;
 }
