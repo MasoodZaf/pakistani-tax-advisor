@@ -284,6 +284,97 @@ const WizardRerunControl = () => {
   );
 };
 
+// ─── MyConsultant ────────────────────────────────────────────────────────────
+// Shows who (if anyone) manages this user's return, and lets the user end the
+// relationship. Deregistering makes the user independent again — required
+// before any new consultant can be assigned (strictly one at a time).
+const MyConsultant = () => {
+  const [consultant, setConsultant] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    axios.get('/api/consultant-link')
+      .then(res => setConsultant(res.data?.data?.consultant || null))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  const deregister = async () => {
+    setBusy(true);
+    try {
+      await axios.delete('/api/consultant-link');
+      toast.success('You are no longer registered with a consultant');
+      setConsultant(null);
+      setConfirming(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to deregister');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-6 dark:bg-[#151c30]">
+      <div className="flex items-center space-x-3 mb-2">
+        <User className="w-6 h-6 text-gray-600 dark:text-[#aab2cc]" />
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e7eaf3]">My Tax Consultant</h2>
+      </div>
+      {consultant ? (
+        <div>
+          <p className="text-sm text-gray-600 mb-4 dark:text-[#aab2cc]">
+            Your return is managed by a registered tax consultant. They can view and edit
+            your tax forms on your behalf. You can end this at any time.
+          </p>
+          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg dark:border-[#2a3450]">
+            <div>
+              <div className="font-medium text-gray-900 dark:text-[#e7eaf3]">{consultant.name}</div>
+              <div className="text-sm text-gray-600 dark:text-[#aab2cc]">{consultant.email}</div>
+            </div>
+            {confirming ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={deregister}
+                  disabled={busy}
+                  className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {busy ? 'Removing…' : 'Yes, deregister'}
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 dark:border-[#2a3450] dark:text-[#aab2cc]"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirming(true)}
+                className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+              >
+                Deregister
+              </button>
+            )}
+          </div>
+          {confirming && (
+            <p className="text-xs text-gray-500 mt-2 dark:text-[#7e88a6]">
+              They will immediately lose access to your tax data. Your forms and returns stay with you.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-600 dark:text-[#aab2cc]">
+          You are filing independently — no consultant has access to your tax data.
+          If you hire a registered consultant, an administrator can link your account to them.
+        </p>
+      )}
+    </div>
+  );
+};
+
 const Settings = () => {
   const { user } = useAuth();
   const { incomeProfile, updateIncomeProfile } = useTaxForm();
@@ -636,6 +727,10 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* My Tax Consultant — who can see this user's data, with self-service
+          deregistration (phase-z9 consultant isolation). Regular users only. */}
+      {user?.role === 'user' && <MyConsultant />}
 
       {/* Recent Activity — surfaces the user's audit trail (logins, form
           saves, password changes, impersonation events). Especially useful

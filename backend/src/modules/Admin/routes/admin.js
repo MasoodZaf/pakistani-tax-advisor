@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { requireStaff, requireElevated } = require('../../../middleware/roleGuard');
+const { requireAssignedClient } = require('../../../middleware/consultantScope');
 
 const {
   getUsers,
@@ -14,6 +15,8 @@ const {
   getUserCredentials,
   getUserLoginCredentials,
   updateUserRole,
+  listConsultants,
+  setUserConsultant,
 } = require('../controllers/usersController');
 const {
   bulkImportTemplate,
@@ -86,7 +89,7 @@ router.put('/tax-years/:id/status', requireAdmin, updateTaxYearStatus);
 // kept; this stub has been removed.
 
 // Update user status (activate/deactivate)
-router.put('/users/:id/status', requireAdmin, updateUserStatus);
+router.put('/users/:id/status', requireAdmin, requireAssignedClient('id'), updateUserStatus);
 
 // `GET /audit-logs` previously had two definitions — the older handler
 // (without the super-admin gate or the richer category/search filters)
@@ -96,22 +99,30 @@ router.put('/users/:id/status', requireAdmin, updateUserStatus);
 router.post('/users', requireAdmin, createUser);
 
 // Update user (Admin can edit users, Super Admin can edit everything)
-router.put('/users/:id', requireAdmin, updateUser);
+router.put('/users/:id', requireAdmin, requireAssignedClient('id'), updateUser);
 
 // Delete user (Super Admin only)
-router.delete('/users/:id', requireAdmin, deleteUser);
+router.delete('/users/:id', requireAdmin, requireAssignedClient('id'), deleteUser);
 
 // Get single user details (Admin only)
-router.get('/users/:id', requireAdmin, getUser);
+router.get('/users/:id', requireAdmin, requireAssignedClient('id'), getUser);
 
 // Tax Calculator endpoint for admin
 router.post('/tax-calculator', requireAdmin, calculateTax);
 
 // Get user tax records for admin
-router.get('/users/:id/tax-records', requireAdmin, getUserTaxRecords);
+router.get('/users/:id/tax-records', requireAdmin, requireAssignedClient('id'), getUserTaxRecords);
 
 // Update user tax form data (admin as tax consultant)
-router.put('/users/:userId/tax-forms/:formType', requireAdmin, updateUserTaxForm);
+router.put('/users/:userId/tax-forms/:formType', requireAdmin, requireAssignedClient('userId'), updateUserTaxForm);
+
+// ── Consultant assignment (phase-z9, super_admin only — in-controller gate) ──
+// List consultant accounts (for the assignment dropdown)
+router.get('/consultants', requireAdmin, listConsultants);
+
+// Assign / deregister a client's consultant. Strictly one per client; silent
+// switching refused (409) — deregister first.
+router.put('/users/:id/consultant', requireAdmin, setUserConsultant);
 
 // Get all users with login credentials (Super Admin only)
 router.get('/user-credentials', requireAdmin, getUserCredentials);
@@ -120,7 +131,7 @@ router.get('/user-credentials', requireAdmin, getUserCredentials);
 router.get('/user-login-credentials/:userId', requireAdmin, getUserLoginCredentials);
 
 // Impersonate user (Super Admin only)
-router.post('/impersonate/:userId', requireAdmin, impersonateUser);
+router.post('/impersonate/:userId', requireAdmin, requireAssignedClient('userId'), impersonateUser);
 
 // End impersonation (return to admin) — requires valid JWT
 // end-impersonation is called WITH the impersonation token — whose role is

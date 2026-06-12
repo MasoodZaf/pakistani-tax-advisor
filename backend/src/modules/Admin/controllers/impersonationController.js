@@ -143,11 +143,13 @@ const endImpersonation = async (req, res) => {
       });
     }
 
-    // Get admin user details from the acting-admin claim.
+    // Get admin user details from the acting-admin claim. tax_consultant is a
+    // legitimate impersonator (phase-z6) — omitting it here 404'd a consultant
+    // trying to END an impersonation they were allowed to start.
     const adminResult = await pool.query(`
       SELECT id, name, email, role, user_type, is_active
       FROM users
-      WHERE id = $1 AND role IN ('admin', 'super_admin')
+      WHERE id = $1 AND role IN ('admin', 'super_admin', 'tax_consultant')
     `, [decoded.actingAdminId]);
 
     if (adminResult.rows.length === 0) {
