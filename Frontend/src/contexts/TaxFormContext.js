@@ -124,6 +124,14 @@ function deriveActiveSteps(formSteps, addons = []) {
   });
 }
 
+// Default stream enabled when a consultant saves a conditional form the
+// client's profile doesn't cover — keeps the phase-z5 completion denominator
+// consistent with the data. The consultant can refine the stream in Settings.
+const STEP_DEFAULT_ADDON = {
+  capital_gain: 'property_gain',
+  final_tax: 'bank_profit',
+};
+
 export const TaxFormProvider = ({ children }) => {
   const { user, loginPayload, clearLoginPayload } = useAuth();
   const { currentTaxYear } = useTaxYear();
@@ -139,6 +147,12 @@ export const TaxFormProvider = ({ children }) => {
   // Load tax return when user authentication changes
   // Skip for staff users — they manage other users' returns, not their own
   const isAdmin = isStaff(user);
+
+  // Consultant working a client's return via impersonation. Same flag the
+  // ImpersonationBanner reads; impersonation sessions always start with a
+  // fresh page load (token swap), so a render-time read is reliable.
+  const isImpersonation = typeof window !== 'undefined'
+    && localStorage.getItem('isImpersonation') === 'true';
 
   useEffect(() => {
     if (user && !isAdmin) {
@@ -289,6 +303,19 @@ export const TaxFormProvider = ({ children }) => {
         setCompletedSteps(prev => new Set([...prev, stepId]));
       }
 
+      // Consultant mode (impersonation): saving a conditional form the client's
+      // income profile doesn't cover auto-enables the matching stream, so the
+      // profile, the saved data, and the completion % stay consistent.
+      if (isImpersonation && CONDITIONAL_STEP_ADDONS[stepId]) {
+        const addons = incomeProfile?.addons || [];
+        if (!CONDITIONAL_STEP_ADDONS[stepId].some(a => addons.includes(a))) {
+          const ok = await updateIncomeProfile([...addons, STEP_DEFAULT_ADDON[stepId]]);
+          if (ok) {
+            toast(`Enabled the matching income stream on the client's profile so this form counts toward completion. Adjust it under Settings → Income streams if a different stream applies.`, { icon: 'ℹ️', duration: 6000 });
+          }
+        }
+      }
+
       // Only show generic toast for non-income forms
       if (step.formType !== 'income-form') {
         toast.success('Form saved successfully');
@@ -402,6 +429,16 @@ export const TaxFormProvider = ({ children }) => {
   // Active steps = always-shown + conditionally unlocked by selected addons
   const activeSteps = deriveActiveSteps(FORM_STEPS, incomeProfile.addons);
 
+  // What navigation should show. For the client themselves this is exactly
+  // activeSteps. A consultant impersonating the client sees ALL forms — they
+  // often know about income sources the client didn't pick at onboarding —
+  // with the out-of-profile ones flagged so the UI can mark them. Progress
+  // math stays on activeSteps (matches the backend phase-z5 denominator).
+  const activeStepIds = new Set(activeSteps.map(s => s.id));
+  const visibleSteps = isImpersonation
+    ? FORM_STEPS.map(s => (activeStepIds.has(s.id) ? s : { ...s, inactiveForProfile: true }))
+    : activeSteps;
+
   const getCompletionPercentage = () => {
     const activeCompleted = activeSteps.filter(s => completedSteps.has(s.id)).length;
     return activeSteps.length > 0 ? Math.round((activeCompleted / activeSteps.length) * 100) : 0;
@@ -410,7 +447,9 @@ export const TaxFormProvider = ({ children }) => {
   const value = {
     // Form configuration
     FORM_STEPS,
-    activeSteps,       // filtered by income profile — use this for navigation and progress
+    activeSteps,       // filtered by income profile — use this for progress math
+    visibleSteps,      // what navigation renders; = activeSteps unless impersonating (then all, flagged)
+    isImpersonation,   // consultant working this return via impersonation
     incomeProfile,
 
     // Current state

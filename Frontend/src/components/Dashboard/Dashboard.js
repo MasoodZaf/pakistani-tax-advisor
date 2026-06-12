@@ -111,6 +111,7 @@ const Dashboard = () => {
     taxReturn,
     getCompletionPercentage,
     activeSteps,
+    visibleSteps,
     completedSteps,
     taxCalculation,
     formData,
@@ -265,15 +266,17 @@ const Dashboard = () => {
           </div>
 
           <div>
-            {activeSteps.map(step => {
+            {visibleSteps.map(step => {
               const done   = completedSteps.has(step.id);
               const isNext = !done && nextIncomplete?.id === step.id;
-              const pillStyle = done
+              const pillStyle = step.inactiveForProfile
+                ? { background: 'var(--surface-sunken)', color: 'var(--content-subtle)', border: '1px dashed var(--line)' }
+                : done
                 ? { background: '#dcfce7', color: '#166534' }
                 : isNext
                 ? { background: '#28396C', color: '#fff' }
                 : { background: 'var(--surface-sunken)', color: 'var(--content-subtle)' };
-              const pillLabel = done ? 'Done' : isNext ? 'Up next' : 'Pending';
+              const pillLabel = step.inactiveForProfile ? 'Not in profile' : done ? 'Done' : isNext ? 'Up next' : 'Pending';
               return (
                 <Link
                   key={step.id}
