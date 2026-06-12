@@ -217,6 +217,17 @@ const bulkImportUsers = async (req, res) => {
           );
         }
 
+        // Consultant isolation (phase-z9): clients bulk-imported BY a
+        // consultant are auto-assigned to that consultant. Super_admin
+        // imports stay independent.
+        if (req.user.role === 'tax_consultant') {
+          await client.query(
+            `INSERT INTO consultant_clients (consultant_id, client_id, assigned_by)
+             VALUES ($1, $2, $1)`,
+            [req.user.id, newUser.id]
+          );
+        }
+
         await client.query('RELEASE SAVEPOINT bulk_row');
         created++;
         results.push({ ...record, status: 'created', userId: newUser.id, tempPassword });
@@ -278,6 +289,12 @@ const bulkDeleteUsers = async (req, res) => {
     // Soft-delete only regular, currently-active users that aren't the caller.
     // Staff rows are excluded by the role filter — they can't be bulk-deactivated.
     // Bumping token_version revokes any live sessions for the deactivated users.
+    // Consultant isolation (phase-z9): a tax_consultant's delete set is further
+    // restricted to their assigned clients — unassigned IDs fall through to
+    // `skipped`, indistinguishable from non-existent ones.
+    const consultantScopeSql = req.user.role === 'tax_consultant'
+      ? 'AND id IN (SELECT client_id FROM consultant_clients WHERE consultant_id = $2)'
+      : '';
     const result = await client.query(
       `
       UPDATE users
@@ -288,6 +305,7 @@ const bulkDeleteUsers = async (req, res) => {
          AND id <> $2
          AND role NOT IN ('admin', 'super_admin', 'tax_consultant')
          AND is_active = true
+         ${consultantScopeSql}
       RETURNING id, email
     `,
       [userIds, req.user.id]

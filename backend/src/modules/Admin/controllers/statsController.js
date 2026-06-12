@@ -6,6 +6,16 @@ const getStats = async (req, res) => {
   try {
     const stats = {};
 
+    // Consultant isolation (phase-z9): a tax_consultant's dashboard counts
+    // cover ONLY their assigned clients — global population numbers would leak
+    // information about the independent user base.
+    const consultant = req.user.role === 'tax_consultant';
+    const userScope = consultant
+      ? `WHERE id IN (SELECT client_id FROM consultant_clients WHERE consultant_id = $1)` : '';
+    const returnScope = consultant
+      ? `WHERE user_id IN (SELECT client_id FROM consultant_clients WHERE consultant_id = $1)` : '';
+    const scopeParams = consultant ? [req.user.id] : [];
+
     // User statistics
     const userStats = await pool.query(`
       SELECT
@@ -15,7 +25,8 @@ const getStats = async (req, res) => {
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_users_30d,
         COUNT(*) FILTER (WHERE last_login_at >= NOW() - INTERVAL '7 days') as active_users_7d
       FROM users
-    `);
+      ${userScope}
+    `, scopeParams);
     stats.users = userStats.rows[0];
 
     // Tax returns statistics
@@ -26,7 +37,8 @@ const getStats = async (req, res) => {
         COUNT(*) FILTER (WHERE filing_status = 'draft') as draft_returns,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_returns_30d
       FROM tax_returns
-    `);
+      ${returnScope}
+    `, scopeParams);
     stats.taxReturns = taxReturnStats.rows[0];
 
     // Tax years statistics
@@ -90,6 +102,12 @@ const getAuditLogs = async (req, res) => {
 
     const params = [];
     const conds = [];
+    // Consultant isolation (phase-z9): the audit log names users and actions
+    // across the whole system — a consultant sees only entries THEY produced.
+    if (req.user.role === 'tax_consultant') {
+      params.push(req.user.id);
+      conds.push(`al.user_id=$${params.length}`);
+    }
     if (table_name) { params.push(table_name); conds.push(`al.table_name=$${params.length}`); }
     if (action)     { params.push(action);     conds.push(`al.action=$${params.length}`); }
     if (user_email) { params.push(`%${user_email}%`); conds.push(`al.user_email ILIKE $${params.length}`); }

@@ -5,6 +5,7 @@ const logger = require('../../../utils/logger');
 const { insertAudit } = require('../../../helpers/auditLog');
 const { BCRYPT_ROUNDS, validatePasswordPolicy } = require('../../../helpers/passwordPolicy');
 const { isElevated, isSuperAdmin } = require('../../../middleware/roleGuard');
+const { isConsultant } = require('../../../middleware/consultantScope');
 const { provisionUser } = require('../helpers/provisionUser');
 
 // Staff roles a tax_consultant may never create, edit, delete, or impersonate —
@@ -24,27 +25,41 @@ const getUsers = async (req, res) => {
     let queryParams = [];
 
     if (search) {
-      whereClause += ` AND (email ILIKE $${queryParams.length + 1} OR name ILIKE $${queryParams.length + 1})`;
+      whereClause += ` AND (u.email ILIKE $${queryParams.length + 1} OR u.name ILIKE $${queryParams.length + 1})`;
       queryParams.push(`%${search}%`);
+    }
+
+    // Consultant isolation (phase-z9): a tax_consultant sees ONLY clients
+    // assigned to them. Independent users (no assignment row) and other
+    // consultants' clients are equally invisible.
+    if (isConsultant(req.user.role)) {
+      whereClause += ` AND u.id IN (SELECT client_id FROM consultant_clients WHERE consultant_id = $${queryParams.length + 1})`;
+      queryParams.push(req.user.id);
     }
 
     // PERF-04: aggregate tax_returns in ONE join+group instead of a correlated
     // subquery that re-ran per row (up to `limit` = 2000 times per page load).
+    // The consultant join surfaces each client's assigned consultant so the
+    // super_admin UserManagement screen can show/manage assignments.
     const result = await pool.query(`
       SELECT
         u.id, u.email, u.name, u.user_type, u.role, u.is_active,
         u.created_at, u.last_login_at,
-        COUNT(tr.id) as tax_returns_count
+        COUNT(tr.id) as tax_returns_count,
+        cc.consultant_id,
+        cu.name as consultant_name
       FROM users u
       LEFT JOIN tax_returns tr ON tr.user_id = u.id
+      LEFT JOIN consultant_clients cc ON cc.client_id = u.id
+      LEFT JOIN users cu ON cu.id = cc.consultant_id
       ${whereClause}
-      GROUP BY u.id
+      GROUP BY u.id, cc.consultant_id, cu.name
       ORDER BY u.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
 
     const countResult = await pool.query(`
-      SELECT COUNT(*) as total FROM users ${whereClause}
+      SELECT COUNT(*) as total FROM users u ${whereClause}
     `, queryParams);
 
     const total = parseInt(countResult.rows[0].total);
@@ -194,6 +209,17 @@ const createUser = async (req, res) => {
     const newUser = await provisionUser(client, {
       email, name, passwordHash, userType: user_type, role,
     });
+
+    // Consultant isolation (phase-z9): a client created BY a consultant is
+    // auto-assigned to that consultant — the only self-service path into the
+    // relationship. Super_admin-created users stay independent.
+    if (isConsultant(req.user.role)) {
+      await client.query(
+        `INSERT INTO consultant_clients (consultant_id, client_id, assigned_by)
+         VALUES ($1, $2, $1)`,
+        [req.user.id, newUser.id]
+      );
+    }
 
     // Mandatory audit — inside the same transaction so a failure rolls back the create.
     await insertAudit(client, {
@@ -940,6 +966,123 @@ const updateUserRole = async (req, res) => {
   }
 };
 
+// ---- Consultant assignment management (phase-z9, super_admin only) ----------
+
+// GET /api/admin/consultants — consultant accounts + live client counts, for
+// the assignment dropdown in UserManagement.
+const listConsultants = async (req, res) => {
+  if (!isSuperAdmin(req.user.role)) {
+    return res.status(403).json({ error: 'Super Admin only' });
+  }
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.name, u.email, u.is_active,
+             COUNT(cc.client_id) as client_count
+      FROM users u
+      LEFT JOIN consultant_clients cc ON cc.consultant_id = u.id
+      WHERE u.role = 'tax_consultant'
+      GROUP BY u.id
+      ORDER BY u.name
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    logger.error('List consultants error:', error);
+    res.status(500).json({ error: 'Failed to list consultants', message: error.message });
+  }
+};
+
+// PUT /api/admin/users/:id/consultant  { consultantId: uuid | null }
+// Assign (or with null: deregister) a client's consultant. Strictly one
+// consultant per client, and NO silent switching: re-assigning an already
+// assigned client is refused (409) — the client must first deregister (or the
+// super_admin unassigns), per the user-decided two-step flow.
+const setUserConsultant = async (req, res) => {
+  if (!isSuperAdmin(req.user.role)) {
+    return res.status(403).json({ error: 'Super Admin only' });
+  }
+  try {
+    const { id } = req.params;
+    const { consultantId } = req.body;
+
+    const target = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [id]);
+    if (!target.rows.length) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (target.rows[0].role !== 'user') {
+      return res.status(400).json({
+        error: 'Invalid target',
+        message: 'Only regular users can be assigned to a consultant',
+      });
+    }
+
+    const existing = await pool.query(
+      'SELECT consultant_id FROM consultant_clients WHERE client_id = $1', [id]
+    );
+
+    if (consultantId === null || consultantId === undefined || consultantId === '') {
+      // Deregister.
+      if (!existing.rows.length) {
+        return res.status(404).json({ error: 'No consultant assigned', message: 'This user has no consultant to remove' });
+      }
+      await pool.query('DELETE FROM consultant_clients WHERE client_id = $1', [id]);
+      await insertAudit(pool, {
+        userId: req.user.id,
+        userEmail: req.user.email,
+        action: 'consultant_unassigned',
+        tableName: 'consultant_clients',
+        recordId: id,
+        oldValue: { consultant_id: existing.rows[0].consultant_id },
+        category: 'consultant_isolation',
+        severity: 'high',
+        changeSummary: `Super admin removed consultant from client ${target.rows[0].email}`,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        mandatory: true,
+      });
+      return res.json({ success: true, message: 'Consultant removed — user is independent again' });
+    }
+
+    // Assign — refuse to switch silently.
+    if (existing.rows.length) {
+      return res.status(409).json({
+        error: 'Already assigned',
+        message: 'This client already has a consultant. They must deregister from the current consultant before a new one can be assigned.',
+      });
+    }
+
+    const consultant = await pool.query(
+      `SELECT id, name, email FROM users WHERE id = $1 AND role = 'tax_consultant' AND is_active = true`,
+      [consultantId]
+    );
+    if (!consultant.rows.length) {
+      return res.status(404).json({ error: 'Consultant not found', message: 'No active tax consultant with that ID' });
+    }
+
+    await pool.query(
+      `INSERT INTO consultant_clients (consultant_id, client_id, assigned_by) VALUES ($1, $2, $3)`,
+      [consultantId, id, req.user.id]
+    );
+    await insertAudit(pool, {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'consultant_assigned',
+      tableName: 'consultant_clients',
+      recordId: id,
+      newValue: { consultant_id: consultantId, consultant_email: consultant.rows[0].email },
+      category: 'consultant_isolation',
+      severity: 'high',
+      changeSummary: `Super admin assigned client ${target.rows[0].email} to consultant ${consultant.rows[0].email}`,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      mandatory: true,
+    });
+    res.json({ success: true, message: `Client assigned to ${consultant.rows[0].name}` });
+  } catch (error) {
+    logger.error('Set user consultant error:', error);
+    res.status(500).json({ error: 'Failed to update consultant assignment', message: error.message });
+  }
+};
+
 module.exports = {
   getUsers,
   updateUserStatus,
@@ -952,4 +1095,6 @@ module.exports = {
   getUserCredentials,
   getUserLoginCredentials,
   updateUserRole,
+  listConsultants,
+  setUserConsultant,
 };

@@ -23,6 +23,7 @@ const UserManagement = () => {
   // Filter states
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [consultants, setConsultants] = useState([]);
 
   // Fetch users from API. Request a large page so the UI renders the full
   // dataset — the default backend page is 50, which caused "deleted users
@@ -53,10 +54,45 @@ const UserManagement = () => {
     }
   };
 
+  // Consultant assignment (phase-z9) — super_admin only. Consultants never see
+  // this UI; their user list is already scoped server-side to assigned clients.
+  const fetchConsultants = async () => {
+    try {
+      const response = await axios.get('/api/admin/consultants');
+      if (response.data.success) setConsultants(response.data.data);
+    } catch (error) {
+    }
+  };
+
+  const handleAssignConsultant = async (userId, consultantId) => {
+    if (!consultantId) return;
+    try {
+      const res = await axios.put(`/api/admin/users/${userId}/consultant`, { consultantId });
+      toast.success(res.data.message || 'Consultant assigned');
+      fetchUsers();
+      fetchConsultants();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to assign consultant');
+    }
+  };
+
+  const handleUnassignConsultant = async (userId, consultantName) => {
+    if (!window.confirm(`Remove consultant ${consultantName}? The user becomes independent again.`)) return;
+    try {
+      await axios.put(`/api/admin/users/${userId}/consultant`, { consultantId: null });
+      toast.success('Consultant removed');
+      fetchUsers();
+      fetchConsultants();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to remove consultant');
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchStats();
-  }, []);
+    if (isSuperAdmin(currentUser)) fetchConsultants();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getRoleColor = (role) => {
     const colors = {
@@ -273,6 +309,11 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Status
                 </th>
+                {isSuperAdmin(currentUser) && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
+                    Consultant
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#7e88a6] uppercase tracking-wider">
                   Created
                 </th>
@@ -285,14 +326,14 @@ const UserManagement = () => {
               {loading ? (
                 Array.from({ length: 6 }).map((_, r) => (
                   <tr key={`sk-${r}`}>
-                    {Array.from({ length: 7 }).map((_, c) => (
+                    {Array.from({ length: isSuperAdmin(currentUser) ? 8 : 7 }).map((_, c) => (
                       <td key={c} className="px-6 py-4"><Skeleton className="h-3.5 w-full" /></td>
                     ))}
                   </tr>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
+                  <td colSpan={isSuperAdmin(currentUser) ? 8 : 7} className="px-6 py-4 text-center text-gray-500 dark:text-[#7e88a6]">
                     No users found
                   </td>
                 </tr>
@@ -329,6 +370,35 @@ const UserManagement = () => {
                         {user.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </button>
                     </td>
+                    {isSuperAdmin(currentUser) && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {user.role !== 'user' ? (
+                          <span className="text-gray-400 dark:text-[#7e88a6]">—</span>
+                        ) : user.consultant_name ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-navy dark:text-[#e7eaf3]">{user.consultant_name}</span>
+                            <button
+                              onClick={() => handleUnassignConsultant(user.id, user.consultant_name)}
+                              className="text-red-500 dark:text-red-300 hover:text-red-700 text-xs font-semibold"
+                              title="Remove consultant (user becomes independent)"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ) : (
+                          <select
+                            defaultValue=""
+                            onChange={(e) => handleAssignConsultant(user.id, e.target.value)}
+                            className="text-xs border border-gray-300 dark:border-[#2a3450] rounded-md px-2 py-1 bg-white dark:bg-[#0f1426] text-gray-600 dark:text-[#aab2cc]"
+                          >
+                            <option value="">Independent</option>
+                            {consultants.filter(c => c.is_active).map(c => (
+                              <option key={c.id} value={c.id}>{c.name} ({c.client_count})</option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-navy dark:text-[#e7eaf3]">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
