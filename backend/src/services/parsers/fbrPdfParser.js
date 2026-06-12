@@ -224,6 +224,15 @@ function toMappedData({ identity, named, adjustable }) {
   const totalAdjTax = adjustable['6400']?.amount || 0;
   const taxChargeable = named['9200']?.amount || 0;
 
+  // 9210 ("Refundable Income Tax") is ALREADY the net balance the slip
+  // reports — tax paid minus tax chargeable. Negate it for payable;
+  // subtracting WHT from it again double-counts (a ~357k refund used to
+  // surface as "-11.8M payable"). When the slip has no 9210 row (balance
+  // was payable, not refundable), fall back to chargeable - paid.
+  const refundable = named['9210']?.amount || 0;
+  const taxPayableRefundable =
+    refundable !== 0 ? -refundable : taxChargeable - totalAdjTax;
+
   return {
     tax_year: taxYearLabel,
     taxpayer: {
@@ -258,7 +267,7 @@ function toMappedData({ identity, named, adjustable }) {
     },
     tax_computation: {
       total_tax_chargeable: taxChargeable,
-      tax_payable_refundable: (named['9210']?.amount || 0) - totalAdjTax,
+      tax_payable_refundable: taxPayableRefundable,
     },
     wealth: {
       total_assets: named['7019']?.amount || 0,
