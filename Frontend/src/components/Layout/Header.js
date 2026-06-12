@@ -1,15 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
-import { LogOut, Settings, ChevronDown, AlertTriangle } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, AlertTriangle, Bell, Shield, CalendarClock, KeyRound, UserCheck } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+
+const NOTIF_ICONS = {
+  access: Shield,
+  consultant: UserCheck,
+  security: KeyRound,
+  deadline: CalendarClock,
+};
+
+function timeAgo(iso) {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' });
+}
 
 const Header = () => {
   const { user, logout, sessionExpiresAt, sessionWarning } = useAuth();
   const { currentTaxYear } = useTaxYear();
   const [menuOpen, setMenuOpen] = useState(false);
   const [countdown, setCountdown] = useState('');
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState([]);
+  const [notifUnread, setNotifUnread] = useState(0);
+
+  // The feed is derived server-side from the audit log (account access,
+  // consultant changes, password resets) + the filing-deadline reminder.
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get('/api/notifications');
+      if (res.data?.success) {
+        setNotifItems(res.data.data.items || []);
+        setNotifUnread(res.data.data.unread || 0);
+      }
+    } catch { /* non-critical — leave the bell quiet */ }
+  };
+
+  useEffect(() => { if (user) fetchNotifications(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openNotifications = async () => {
+    const opening = !notifOpen;
+    setNotifOpen(opening);
+    setMenuOpen(false);
+    if (opening && notifUnread > 0) {
+      setNotifUnread(0);
+      try { await axios.post('/api/notifications/seen'); } catch { /* noop */ }
+    }
+  };
 
   const initials = user?.name
     ? user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -94,6 +140,34 @@ const Header = () => {
         [data-theme="dark"] .hdr-drop-item.danger { color: #f87171; }
         .hdr-drop-item.danger:hover { background: #fdf2f2; }
         [data-theme="dark"] .hdr-drop-item.danger:hover { background: #2a1414; }
+        .hdr-notif {
+          width: 34px; height: 34px; background: none;
+          border: 1.5px solid var(--line); border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; position: relative; flex-shrink: 0;
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .hdr-notif:hover { border-color: #a8c890; background: var(--brand-hover-bg); }
+        .hdr-notif-dot {
+          position: absolute; top: 6px; right: 6px;
+          width: 7px; height: 7px;
+          background: #c0392b; border-radius: 50%; border: 1.5px solid var(--surface-raised);
+        }
+        .hdr-notif-panel {
+          position: absolute; top: calc(100% + 6px); right: 0; width: 320px;
+          background: var(--surface-raised); border: 1.5px solid var(--line); border-radius: 14px;
+          box-shadow: 0 8px 32px rgba(26,28,24,0.10); overflow: hidden; z-index: 200;
+          animation: dropIn 0.18s ease;
+        }
+        .hdr-notif-item {
+          display: flex; gap: 10px; padding: 11px 14px;
+          border-bottom: 1px solid var(--line);
+        }
+        .hdr-notif-item:last-child { border-bottom: none; }
+        .hdr-notif-item.unread { background: var(--brand-hover-bg); }
+        @media (prefers-reduced-motion: reduce) {
+          .hdr-notif-panel { animation: none; }
+        }
         .hdr-session-warn {
           display: inline-flex; align-items: center; gap: 6px;
           background: #fef3c7; border: 1px solid #f59e0b;
@@ -129,12 +203,58 @@ const Header = () => {
 
         <ThemeToggle />
 
-        {/* No notification bell: there is no notifications system yet, and a
-            dead button with a permanent red dot is dishonest UI. Reintroduce
-            only WITH a real notifications feature. */}
+        {/* Notifications — a real feed (phase-z10): account-access events,
+            consultant changes, password resets (from the audit log) + the
+            filing-deadline countdown. The dot only lights for unread events. */}
+        <div style={{ position: 'relative' }}>
+          <button
+            className="hdr-notif"
+            onClick={openNotifications}
+            aria-label={notifUnread > 0 ? `Notifications — ${notifUnread} unread` : 'Notifications'}
+            aria-expanded={notifOpen}
+          >
+            <Bell size={15} color="var(--content-subtle)" />
+            {notifUnread > 0 && <span className="hdr-notif-dot" />}
+          </button>
+
+          {notifOpen && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setNotifOpen(false)} />
+              <div className="hdr-notif-panel" role="region" aria-label="Notifications">
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)' }}>Notifications</p>
+                </div>
+                <div style={{ maxHeight: 340, overflowY: 'auto' }}>
+                  {notifItems.length === 0 ? (
+                    <p style={{ padding: '22px 16px', fontSize: 13, color: 'var(--content-muted)', fontWeight: 500, textAlign: 'center', lineHeight: 1.6 }}>
+                      Nothing yet. Deadline reminders and account activity
+                      (like a consultant working on your return) will appear here.
+                    </p>
+                  ) : (
+                    notifItems.map(item => {
+                      const Icon = NOTIF_ICONS[item.type] || Bell;
+                      return (
+                        <div key={item.id} className={`hdr-notif-item${item.unread ? ' unread' : ''}`}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--brand-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                            <Icon size={14} color="var(--brand-on-cream-navy)" />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--content)', lineHeight: 1.35 }}>{item.title}</p>
+                            <p style={{ fontSize: 12, color: 'var(--content-muted)', fontWeight: 500, lineHeight: 1.45, marginTop: 2 }}>{item.body}</p>
+                            <p style={{ fontSize: 10.5, color: 'var(--content-subtle)', fontWeight: 600, marginTop: 3 }}>{timeAgo(item.created_at)}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div style={{ position: 'relative' }}>
-          <button className="hdr-user-btn" onClick={() => setMenuOpen(v => !v)}>
+          <button className="hdr-user-btn" onClick={() => { setMenuOpen(v => !v); setNotifOpen(false); }}>
             <div className="hdr-avatar">{initials}</div>
             <div style={{ textAlign: 'left' }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--content)', lineHeight: 1.2, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

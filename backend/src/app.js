@@ -155,6 +155,7 @@ app.use('/api/tax-year', taxYearRoutes);
 app.use('/api/reports',           apiWriteLimiter, reportsRoutes);
 app.use('/api/personal-info',     apiWriteLimiter, personalInfoRoutes);
 app.use('/api/consultant-link',   apiWriteLimiter, require('./routes/consultantLink'));
+app.use('/api/notifications',     apiWriteLimiter, require('./routes/notifications'));
 app.use('/api/admin/system-settings', apiWriteLimiter, systemSettingsRoutes);
 
 // File upload routes — strict upload limiter
