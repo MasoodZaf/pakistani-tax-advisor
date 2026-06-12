@@ -38,8 +38,8 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               background: 'rgba(15, 23, 42, 0.35)',
               backdropFilter: 'blur(2px)',
               zIndex: 200,
-              animation: 'hh-fade-in 0.15s ease',
             }}
+            className="hh-backdrop"
           />
 
           {/* Drawer */}
@@ -57,9 +57,9 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
               zIndex: 201,
               display: 'flex',
               flexDirection: 'column',
-              animation: 'hh-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
               fontFamily: 'Nunito, system-ui, sans-serif',
             }}
+            className="hh-drawer"
           >
             {/* Header */}
             <div style={{
@@ -211,6 +211,11 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
           <style>{`
             @keyframes hh-fade-in { from { opacity: 0 } to { opacity: 1 } }
             @keyframes hh-slide-in { from { transform: translateX(100%) } to { transform: translateX(0) } }
+            .hh-backdrop { animation: hh-fade-in 0.15s ease; }
+            .hh-drawer { animation: hh-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+            @media (prefers-reduced-motion: reduce) {
+              .hh-backdrop, .hh-drawer { animation: none; }
+            }
             [data-theme="dark"] .hh-example { background: #2a230b; border-color: #b45309; }
           `}</style>
     </>

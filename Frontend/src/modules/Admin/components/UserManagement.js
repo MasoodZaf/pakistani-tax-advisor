@@ -379,8 +379,9 @@ const UserManagement = () => {
                             <span className="text-navy dark:text-[#e7eaf3]">{user.consultant_name}</span>
                             <button
                               onClick={() => handleUnassignConsultant(user.id, user.consultant_name)}
-                              className="text-red-500 dark:text-red-300 hover:text-red-700 text-xs font-semibold"
+                              className="p-1.5 -m-1 rounded text-red-500 dark:text-red-300 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 transition-colors text-xs font-semibold"
                               title="Remove consultant (user becomes independent)"
+                              aria-label={`Remove consultant ${user.consultant_name}`}
                             >
                               ✕
                             </button>
@@ -389,7 +390,8 @@ const UserManagement = () => {
                           <select
                             defaultValue=""
                             onChange={(e) => handleAssignConsultant(user.id, e.target.value)}
-                            className="text-xs border border-gray-300 dark:border-[#2a3450] rounded-md px-2 py-1 bg-white dark:bg-[#0f1426] text-gray-600 dark:text-[#aab2cc]"
+                            aria-label={`Assign a consultant to ${user.name}`}
+                            className="text-xs border border-gray-300 dark:border-[#2a3450] rounded-md px-2 py-1.5 bg-white dark:bg-[#0f1426] text-gray-600 dark:text-[#aab2cc] cursor-pointer"
                           >
                             <option value="">Independent</option>
                             {consultants.filter(c => c.is_active).map(c => (

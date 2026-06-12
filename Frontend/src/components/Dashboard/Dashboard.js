@@ -66,6 +66,9 @@ const Styles = () => (
     .cta-btn:hover { background: #1e2d5a; transform: translateY(-1px); }
     @keyframes countRing { from { stroke-dashoffset: 251; } }
     .progress-ring-fill { animation: countRing 1.2s ease-out forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      .progress-ring-fill { animation: none; }
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 0.9s linear infinite; }
   `}</style>
@@ -184,7 +187,7 @@ const Dashboard = () => {
   const reconBreached = Math.abs(reconDiff) >= 1;
 
   const quickLinks = [
-    { to: '/income-tax',       icon: FileText,   color: '#28396C', bg: 'var(--brand-cream-track)', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
+    { to: '/income-tax',       icon: FileText,   color: 'var(--brand-on-cream-navy)', bg: 'var(--brand-cream-track)', label: 'Income Tax Forms',   desc: 'Fill your return section by section' },
     { to: '/wealth-statement', icon: BarChart3,   color: '#3d6020', bg: 'var(--brand-cream)', label: 'Wealth Statement',   desc: 'Assets, liabilities and reconciliation' },
     { to: '/reports',          icon: TrendingUp,  color: '#4a7a2a', bg: 'var(--brand-cream)', label: 'Tax Summary Report', desc: 'View computed tax and download' },
     { to: '/settings',         icon: Settings,    color: 'var(--content-subtle)', bg: 'var(--surface-sunken)', label: 'Account Settings',   desc: 'Profile and preferences' },
@@ -256,7 +259,7 @@ const Dashboard = () => {
             <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               <CircularProgress pct={pct} />
               <div style={{ position: 'absolute', textAlign: 'center' }}>
-                <p className="dash-display" style={{ fontSize: 17, fontWeight: 800, color: '#28396C', lineHeight: 1 }}>{pct}%</p>
+                <p className="dash-display" style={{ fontSize: 17, fontWeight: 800, color: 'var(--brand-on-cream-navy)', lineHeight: 1 }}>{pct}%</p>
               </div>
             </div>
           </div>
@@ -322,8 +325,8 @@ const Dashboard = () => {
                   title="Live preview — recalculates as you fill the forms"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                    fontSize: 9, fontWeight: 800, color: '#28396C',
-                    background: '#eef2ff', borderRadius: 999,
+                    fontSize: 9, fontWeight: 800, color: 'var(--brand-on-cream-navy)',
+                    background: 'var(--brand-cream)', borderRadius: 999,
                     padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em',
                   }}
                 >

@@ -215,7 +215,7 @@ export default function AdminManagement() {
             </button>
             <button onClick={() => setShowCreate(true)} className="am-btn am-btn-primary">
               <Plus className="w-4 h-4" />
-              New Admin
+              New Account
             </button>
           </div>
         </div>

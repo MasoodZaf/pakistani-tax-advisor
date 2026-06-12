@@ -119,6 +119,10 @@ const Header = () => {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.72; }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .hdr-dropdown { animation: none; }
+          .hdr-session-warn { animation: none; }
+        }
       `}</style>
 
       <header className={`hdr-root${sessionWarning ? ' session-warn' : ''}`}>

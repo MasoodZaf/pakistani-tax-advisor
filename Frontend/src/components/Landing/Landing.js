@@ -199,7 +199,7 @@ const FontLoader = () => (
       left: calc(50% + 24px);
       right: calc(-50% + 24px);
       height: 2px;
-      background: #d1fae5;
+      background: #e1eecb;
     }
     [data-theme="dark"] .step-line { background: var(--line); }
 
@@ -295,22 +295,25 @@ function useFadeUp() {
 }
 
 /* ─── Data ──────────────────────────────────────────────────────────────────── */
+// Icon chips stay inside the brand's two ink families (green-on-cream /
+// navy-on-blue) — six unrelated hues here read as the rainbow-tile
+// anti-pattern the rest of the app already removed (UX-05).
 const FEATURES = [
-  { icon: Calculator, color: '#28396C', bg: '#F0FFC2', title: 'Smart auto-calculation', desc: 'Every Finance Act 2025 slab, surcharge, and super tax rate is handled. You enter numbers, we do the math.' },
-  { icon: Shield,     color: '#1d4ed8', bg: '#eff6ff', title: 'FBR-compliant forms',   desc: 'Built from the actual FBR Excel template — every field maps exactly to your official return.' },
-  { icon: Clock,      color: '#b45309', bg: '#F0FFC2', title: 'Save & resume anytime', desc: 'Your return stays exactly where you left it. Come back tomorrow, next week — it\'s all there.' },
-  { icon: FileText,   color: '#7c3aed', bg: '#f5f3ff', title: 'Complete form coverage', desc: '12 forms in one place: income, wealth statement, capital gains, final tax, and more.' },
-  { icon: BarChart3,  color: '#be185d', bg: '#fdf2f8', title: 'Wealth reconciliation',  desc: 'Automatically reconciles opening and closing wealth so your statement always balances.' },
-  { icon: Lock,       color: '#0f766e', bg: '#f0fdfa', title: 'Your data stays yours',  desc: 'Hosted on your own instance. No third-party access, no selling your financial data.' },
+  { icon: Calculator, color: '#3d6020', bg: '#F0FFC2', title: 'Smart auto-calculation', desc: 'Every Finance Act 2025 slab, surcharge, and super tax rate is handled. You enter numbers, we do the math.' },
+  { icon: Shield,     color: '#28396C', bg: '#eff6ff', title: 'FBR-compliant forms',   desc: 'Built from the actual FBR Excel template — every field maps exactly to your official return.' },
+  { icon: Clock,      color: '#3d6020', bg: '#F0FFC2', title: 'Save & resume anytime', desc: 'Your return stays exactly where you left it. Come back tomorrow, next week — it\'s all there.' },
+  { icon: FileText,   color: '#28396C', bg: '#eff6ff', title: 'Complete form coverage', desc: '12 forms in one place: income, wealth statement, capital gains, final tax, and more.' },
+  { icon: BarChart3,  color: '#3d6020', bg: '#F0FFC2', title: 'Wealth reconciliation',  desc: 'Automatically reconciles opening and closing wealth so your statement always balances.' },
+  { icon: Lock,       color: '#28396C', bg: '#eff6ff', title: 'Your data stays yours',  desc: 'Hosted on your own instance. No third-party access, no selling your financial data.' },
 ];
 
 const PROFILES = [
-  { icon: Briefcase, label: 'Salaried',        color: '#28396C', bg: '#F0FFC2',  desc: 'Salary, allowances, employer benefits' },
-  { icon: TrendingUp,label: 'Salary + Extra',   color: '#b45309', bg: '#F0FFC2',  desc: 'Freelance, rental, or investment income' },
-  { icon: Building2, label: 'Business',         color: '#1d4ed8', bg: '#eff6ff',  desc: 'Business, directorship, professional' },
-  { icon: Home,      label: 'Property',         color: '#7c3aed', bg: '#f5f3ff',  desc: 'Rental income, property transactions' },
-  { icon: BarChart3, label: 'Investor',         color: '#be185d', bg: '#fdf2f8',  desc: 'Capital gains, dividends, securities' },
-  { icon: Globe,     label: 'Non-Resident',     color: '#0f766e', bg: '#f0fdfa',  desc: 'Pakistan-source income, remittances' },
+  { icon: Briefcase, label: 'Salaried',        color: '#3d6020', bg: '#F0FFC2',  desc: 'Salary, allowances, employer benefits' },
+  { icon: TrendingUp,label: 'Salary + Extra',   color: '#28396C', bg: '#eff6ff',  desc: 'Freelance, rental, or investment income' },
+  { icon: Building2, label: 'Business',         color: '#3d6020', bg: '#F0FFC2',  desc: 'Business, directorship, professional' },
+  { icon: Home,      label: 'Property',         color: '#28396C', bg: '#eff6ff',  desc: 'Rental income, property transactions' },
+  { icon: BarChart3, label: 'Investor',         color: '#3d6020', bg: '#F0FFC2',  desc: 'Capital gains, dividends, securities' },
+  { icon: Globe,     label: 'Non-Resident',     color: '#28396C', bg: '#eff6ff',  desc: 'Pakistan-source income, remittances' },
 ];
 
 const STEPS = [

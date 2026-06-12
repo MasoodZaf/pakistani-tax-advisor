@@ -255,8 +255,8 @@ const Wizard = () => {
         padding: '16px 18px', marginBottom: 18,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Sparkles size={16} color="#28396C" />
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#28396C', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <Sparkles size={16} color="var(--brand-on-cream-navy)" />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-on-cream-navy)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             Assistant
           </span>
         </div>
