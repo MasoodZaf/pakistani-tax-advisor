@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
-import { LogOut, Settings, ChevronDown, Bell, AlertTriangle } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, AlertTriangle } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 const Header = () => {
@@ -94,19 +94,6 @@ const Header = () => {
         [data-theme="dark"] .hdr-drop-item.danger { color: #f87171; }
         .hdr-drop-item.danger:hover { background: #fdf2f2; }
         [data-theme="dark"] .hdr-drop-item.danger:hover { background: #2a1414; }
-        .hdr-notif {
-          width: 34px; height: 34px; background: none;
-          border: 1.5px solid var(--line); border-radius: 10px;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; position: relative; flex-shrink: 0;
-          transition: border-color 0.2s, background 0.2s;
-        }
-        .hdr-notif:hover { border-color: #a8c890; background: var(--brand-hover-bg); }
-        .hdr-notif-dot {
-          position: absolute; top: 6px; right: 6px;
-          width: 7px; height: 7px;
-          background: #c0392b; border-radius: 50%; border: 1.5px solid var(--surface-raised);
-        }
         .hdr-session-warn {
           display: inline-flex; align-items: center; gap: 6px;
           background: #fef3c7; border: 1px solid #f59e0b;
@@ -142,10 +129,9 @@ const Header = () => {
 
         <ThemeToggle />
 
-        <button className="hdr-notif" aria-label="Notifications">
-          <Bell size={15} color="var(--content-subtle)" />
-          <span className="hdr-notif-dot" />
-        </button>
+        {/* No notification bell: there is no notifications system yet, and a
+            dead button with a permanent red dot is dishonest UI. Reintroduce
+            only WITH a real notifications feature. */}
 
         <div style={{ position: 'relative' }}>
           <button className="hdr-user-btn" onClick={() => setMenuOpen(v => !v)}>
