@@ -160,6 +160,10 @@ const Styles = () => (
       to   { opacity: 1; transform: translateX(0); }
     }
     .form-anim { animation: formSlide 0.45s ease 0.15s both; }
+    @media (prefers-reduced-motion: reduce) {
+      .brand-anim-1, .brand-anim-2, .brand-anim-3, .brand-anim-4,
+      .form-anim { animation: none; }
+    }
 
     /* ── Responsive ── */
     @media (max-width: 768px) {

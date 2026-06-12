@@ -326,7 +326,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
                     <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</p>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'capitalize' }}>{user?.role?.replace('_', ' ')}</p>
                   </div>
-                  <button className="sb-logout" onClick={logout} title="Sign out">
+                  <button className="sb-logout" onClick={logout} title="Sign out" aria-label="Sign out">
                     <LogOut size={15} />
                   </button>
                 </>
