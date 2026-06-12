@@ -55,19 +55,21 @@ const stepHref = (id) => {
 };
 
 const FormDeck = ({ title, subtitle, scope }) => {
-  const { FORM_STEPS, activeSteps, completedSteps } = useTaxForm();
+  const { visibleSteps, completedSteps } = useTaxForm();
 
   const allowedIds = scope === 'wealth' ? WEALTH_STEP_IDS : INCOME_TAX_STEP_IDS;
-  const activeIds  = new Set((activeSteps || []).map((s) => s.id));
 
-  // Show every form that belongs to this scope AND is active in the user's
-  // current return profile. Number cards sequentially within the deck.
-  const cards = FORM_STEPS
-    .filter((step) => allowedIds.includes(step.id) && activeIds.has(step.id))
+  // Show every form in this scope that navigation should offer: the profile's
+  // active forms — plus, in consultant/impersonation mode, the out-of-profile
+  // ones (flagged inactiveForProfile, marked on the card below). Number cards
+  // sequentially within the deck.
+  const cards = (visibleSteps || [])
+    .filter((step) => allowedIds.includes(step.id))
     .map((step, idx) => ({ step, idx }));
 
-  // Find the next incomplete step inside this scope so we can highlight it.
-  const nextStep = cards.find(({ step }) => !completedSteps.has(step.id))?.step;
+  // Find the next incomplete step inside this scope so we can highlight it —
+  // only among the profile's own forms.
+  const nextStep = cards.find(({ step }) => !step.inactiveForProfile && !completedSteps.has(step.id))?.step;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -134,17 +136,20 @@ const FormDeck = ({ title, subtitle, scope }) => {
                 </div>
 
                 <div className="mt-auto pt-2">
-                  {isCompleted && (
+                  {step.inactiveForProfile ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
+                      title="Not part of this client's income profile — saving data here enables the matching income stream">
+                      Not in client profile
+                    </span>
+                  ) : isCompleted ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300">
                       ✓ Completed
                     </span>
-                  )}
-                  {isCurrent && !isCompleted && (
+                  ) : isCurrent ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-500/15 text-primary-800 dark:text-primary-300">
                       ⏳ In Progress
                     </span>
-                  )}
-                  {!isCompleted && !isCurrent && (
+                  ) : (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]">
                       ○ Pending
                     </span>
