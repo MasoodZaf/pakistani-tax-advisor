@@ -270,8 +270,6 @@ const FontLoader = () => (
       padding: 9px 13px;
       animation: heroFloat 6s ease-in-out infinite;
     }
-    .hero-chip-2 { animation-duration: 7.5s; animation-delay: 0.8s; }
-
     @media (prefers-reduced-motion: reduce) {
       .hero-rise { animation: none; opacity: 1; }
       .hero-chip { animation: none; }
@@ -546,18 +544,13 @@ function Hero() {
             </div>
           </div>
 
-          {/* Floating accents */}
+          {/* Floating accent — one chip only; a second at the bottom-left read
+              as accidental overlap rather than intentional layering. */}
           <div className="hero-chip" style={{ top: -32, right: -14 }}>
             <div style={{ width: 26, height: 26, background: '#B5E18B', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Calculator size={14} color="#28396C" />
             </div>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--content)' }}>Auto-calculated</span>
-          </div>
-          <div className="hero-chip hero-chip-2" style={{ bottom: -24, left: -14 }}>
-            <div style={{ width: 26, height: 26, background: '#28396C', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Shield size={13} color="#B5E18B" />
-            </div>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--content)' }}>Ready for IRIS</span>
           </div>
           </div>
 
