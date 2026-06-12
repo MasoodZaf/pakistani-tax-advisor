@@ -26,6 +26,7 @@ const IncomeForm = () => {
   const { currentTaxYear } = useTaxYear();
   const {
     saveFormStep,
+    stagedData,
     saving
   } = useTaxForm();
 
@@ -145,10 +146,21 @@ const IncomeForm = () => {
 
         // Extract income form data from the response
         const incomeFormData = response.data || {};
-        setIncomeData(incomeFormData);
+
+        // Apply copy-forward values staged from the Tax History archive ON TOP
+        // of the saved server data. This form loads from its own endpoint
+        // (unlike the others, which read context formData), so without this
+        // merge the staged queue never reaches the inputs. Staged values are
+        // annual (parser output) — processIncomeData converts to monthly where
+        // needed. Saving clears the staging in TaxFormContext.
+        const staged = stagedData?.income;
+        const mergedData = staged && Object.keys(staged).length > 0
+          ? { ...incomeFormData, ...staged }
+          : incomeFormData;
+        setIncomeData(mergedData);
 
         // Reset form with the loaded data
-        const formattedData = processIncomeData(incomeFormData);
+        const formattedData = processIncomeData(mergedData);
         reset(formattedData);
       } catch (error) {
         toast.error('Failed to load income form data');
@@ -158,7 +170,9 @@ const IncomeForm = () => {
     };
 
     loadIncomeData();
-  }, [currentTaxYear, reset]);
+    // stagedData in deps: a refresh restores the staged queue asynchronously
+    // (after auth resolves), which can land after the first load — re-merge.
+  }, [currentTaxYear, reset, stagedData]);
 
   // Calculate totals based on Excel formula logic - EXACTLY matching XlCal.md
   const calculateTotals = (sourceValues) => {
