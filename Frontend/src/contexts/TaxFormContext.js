@@ -132,6 +132,46 @@ const STEP_DEFAULT_ADDON = {
   final_tax: 'bank_profit',
 };
 
+// Copy-forward staging (Tax History → forms) is mirrored to sessionStorage so
+// a page refresh between staging and opening the form doesn't silently drop
+// the queue. Tab-scoped, keyed to the user id so a logout/login in the same
+// tab can't leak another account's staged values. Cleared per-step on save.
+const STAGED_STORAGE_KEY = 'copyForwardStaged';
+
+const readStagedFromSession = (userId) => {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(STAGED_STORAGE_KEY));
+    if (!raw || raw.userId !== userId) return {};
+    return raw.steps || {};
+  } catch {
+    return {};
+  }
+};
+
+const writeStagedToSession = (userId, steps) => {
+  try {
+    if (!steps || Object.keys(steps).length === 0) {
+      sessionStorage.removeItem(STAGED_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(STAGED_STORAGE_KEY, JSON.stringify({ userId, steps }));
+    }
+  } catch {
+    // sessionStorage unavailable — staging stays in-memory only
+  }
+};
+
+// Re-apply session-staged copy-forward values on top of freshly fetched
+// server data, so loadTaxReturn's wholesale setFormData can't clobber a
+// queue the user hasn't reviewed yet.
+const mergeStagedIntoFormData = (base, userId) => {
+  const staged = readStagedFromSession(userId);
+  const merged = { ...base };
+  for (const [step, values] of Object.entries(staged)) {
+    merged[step] = { ...(merged[step] || {}), ...values };
+  }
+  return merged;
+};
+
 export const TaxFormProvider = ({ children }) => {
   const { user, loginPayload, clearLoginPayload } = useAuth();
   const { currentTaxYear } = useTaxYear();
@@ -143,6 +183,10 @@ export const TaxFormProvider = ({ children }) => {
   const [saving, setSaving] = useState(false);
   const [taxCalculation, setTaxCalculation] = useState(null);
   const [incomeProfile, setIncomeProfile] = useState({ primary: 'salaried', addons: [] });
+  // Copy-forward values staged from the Tax History archive, per step id.
+  // Lives alongside formData (which also receives them) so forms that load
+  // from their own API endpoint (IncomeForm) can re-apply them after fetch.
+  const [stagedData, setStagedData] = useState({});
 
   // Load tax return when user authentication changes
   // Skip for staff users — they manage other users' returns, not their own
@@ -168,12 +212,19 @@ export const TaxFormProvider = ({ children }) => {
           setCompletedSteps(new Set(FORM_STEPS.slice(0, done).map(s => s.id)));
         }
       }
+      // Restore any copy-forward queue that survived a refresh (guarded by
+      // user id inside readStagedFromSession).
+      setStagedData(readStagedFromSession(user.id));
       loadTaxReturn();
     } else {
       setFormData({});
       setCompletedSteps(new Set());
       setTaxReturn(null);
       setTaxCalculation(null);
+      // In-memory only — don't touch sessionStorage here: this branch also
+      // runs at mount before auth resolves, and wiping the session copy then
+      // would defeat refresh persistence.
+      setStagedData({});
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -184,7 +235,7 @@ export const TaxFormProvider = ({ children }) => {
 
       if (response.data.taxReturn) {
         setTaxReturn(response.data.taxReturn);
-        setFormData(response.data.formData || {});
+        setFormData(mergeStagedIntoFormData(response.data.formData || {}, user?.id));
         setCompletedSteps(new Set(response.data.completedSteps || []));
         if (response.data.taxReturn.income_profile) {
           setIncomeProfile(response.data.taxReturn.income_profile);
@@ -225,7 +276,7 @@ export const TaxFormProvider = ({ children }) => {
       const response = await axios.post('/api/tax-forms/create-return');
       const newTaxReturn = response.data.taxReturn;
       setTaxReturn(newTaxReturn);
-      setFormData({});
+      setFormData(mergeStagedIntoFormData({}, user?.id));
       setCompletedSteps(new Set());
       return newTaxReturn; // return object so callers can use it immediately
     } catch (error) {
@@ -244,16 +295,23 @@ export const TaxFormProvider = ({ children }) => {
   };
 
   // Copy-forward from the prior-year archive. Staged into formData but NOT
-  // auto-saved — user must open the form and click Save to persist.
+  // auto-saved — user must open the form and click Save to persist. Also
+  // mirrored into stagedData + sessionStorage so the queue survives a page
+  // refresh and reaches forms that load from their own API endpoint.
   useEffect(() => {
     const handler = (event) => {
       const { step, values } = event.detail || {};
       if (!step || !values) return;
       updateFormData(step, values);
+      setStagedData(prev => {
+        const next = { ...prev, [step]: { ...(prev[step] || {}), ...values } };
+        writeStagedToSession(user?.id, next);
+        return next;
+      });
     };
     window.addEventListener('copyForwardFromArchive', handler);
     return () => window.removeEventListener('copyForwardFromArchive', handler);
-  }, []);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveFormStep = async (stepId, data, markComplete = false) => {
     const step = FORM_STEPS.find(s => s.id === stepId);
@@ -298,6 +356,15 @@ export const TaxFormProvider = ({ children }) => {
       // total_adjustable_tax, net_worth_current_year etc.) over the raw sent payload.
       const responseData = response.data?.data || response.data?.formData;
       updateFormData(stepId, responseData || data);
+
+      // The step is persisted now — drop its copy-forward staging so stale
+      // archive values can't re-apply on the next refresh/reload.
+      setStagedData(prev => {
+        if (!(stepId in prev)) return prev;
+        const { [stepId]: _cleared, ...rest } = prev;
+        writeStagedToSession(user?.id, rest);
+        return rest;
+      });
 
       if (markComplete) {
         setCompletedSteps(prev => new Set([...prev, stepId]));
@@ -455,6 +522,7 @@ export const TaxFormProvider = ({ children }) => {
     // Current state
     currentStep,
     formData,
+    stagedData,        // copy-forward values queued from Tax History, per step id
     completedSteps,
     taxReturn,
     loading,
