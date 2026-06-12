@@ -41,6 +41,8 @@ const S = () => (
     .am-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700; }
     .am-badge-sa  { background:#fef2f2;color:#b91c1c; }
     .am-badge-adm { background:#eff6ff;color:#1d4ed8; }
+    .am-badge-tc  { background:#F0FFC2;color:#4a7a2a; }
+    [data-theme="dark"] .am-badge-tc { background:#1d2a14;color:#B5E18B; }
     .am-badge-active   { background:#ecfdf5;color:#15803d; }
     .am-badge-inactive { background:var(--surface-sunken);color:var(--content-muted); }
     [data-theme="dark"] .am-badge-sa  { background:#3a1a1a;color:#f87171; }
@@ -185,6 +187,10 @@ export default function AdminManagement() {
   const myCount = admins.filter(a => a.is_active).length;
   const saCount = admins.filter(a => a.role === 'super_admin').length;
   const adCount = admins.filter(a => a.role === 'admin').length;
+  const tcCount = admins.filter(a => a.role === 'tax_consultant').length;
+
+  const ROLE_LABEL = { super_admin: 'Super Admin', admin: 'Admin', tax_consultant: 'Tax Consultant' };
+  const ROLE_BADGE = { super_admin: 'am-badge-sa', admin: 'am-badge-adm', tax_consultant: 'am-badge-tc' };
 
   return (
     <div className="am-root space-y-6">
@@ -216,11 +222,12 @@ export default function AdminManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label:'Active Admins', value: myCount, color:'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-500/15 border-green-200 dark:border-green-500/30' },
+          { label:'Active Accounts', value: myCount, color:'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-500/15 border-green-200 dark:border-green-500/30' },
           { label:'Super Admins', value: saCount, color:'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/30' },
           { label:'Regular Admins', value: adCount, color:'text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border-blue-200 dark:border-blue-500/30' },
+          { label:'Tax Consultants', value: tcCount, color:'text-lime-700 dark:text-lime-300 bg-lime-50 dark:bg-lime-500/15 border-lime-200 dark:border-lime-500/30' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl border p-4 ${s.color}`}>
             <div className="text-2xl font-bold">{s.value}</div>
@@ -278,9 +285,14 @@ export default function AdminManagement() {
 
               {/* Role */}
               <div>
-                <span className={`am-badge ${admin.role === 'super_admin' ? 'am-badge-sa' : 'am-badge-adm'}`}>
-                  {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                <span className={`am-badge ${ROLE_BADGE[admin.role] || 'am-badge-adm'}`}>
+                  {ROLE_LABEL[admin.role] || admin.role}
                 </span>
+                {admin.role === 'tax_consultant' && (
+                  <div className="text-xs text-gray-500 dark:text-[#7e88a6] mt-1">
+                    {Number(admin.client_count) || 0} client{Number(admin.client_count) === 1 ? '' : 's'}
+                  </div>
+                )}
               </div>
 
               {/* Status */}
@@ -389,11 +401,19 @@ export default function AdminManagement() {
                 >
                   <option value="admin">Admin</option>
                   <option value="super_admin">Super Admin</option>
+                  <option value="tax_consultant">Tax Consultant</option>
                 </select>
               </div>
               {createForm.role === 'super_admin' && (
                 <div className="bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30 rounded-lg p-3 text-xs text-red-700 dark:text-red-300 font-semibold">
                   ⚠️ Super Admin has full system access including tax rate changes, admin management, and user impersonation.
+                </div>
+              )}
+              {createForm.role === 'tax_consultant' && (
+                <div className="bg-lime-50 dark:bg-lime-500/15 border border-lime-200 dark:border-lime-500/30 rounded-lg p-3 text-xs text-lime-800 dark:text-lime-300 font-semibold">
+                  A Tax Consultant manages ONLY clients explicitly assigned to them (or that they
+                  create / bulk-import). Independent users stay invisible. They cannot change tax
+                  rates, user roles, or admin accounts.
                 </div>
               )}
               <div className="flex gap-3 pt-2">
@@ -453,7 +473,14 @@ export default function AdminManagement() {
                   >
                     <option value="admin">Admin</option>
                     <option value="super_admin">Super Admin</option>
+                    <option value="tax_consultant">Tax Consultant</option>
                   </select>
+                  {editTarget.role === 'tax_consultant' && editForm.role !== 'tax_consultant' && (
+                    <p className="text-xs text-amber-600 dark:text-amber-300 mt-1.5 font-semibold">
+                      Changing this role releases all {Number(editTarget.client_count) || 0} assigned client(s) —
+                      they become independent again.
+                    </p>
+                  )}
                 </div>
               )}
               {editTarget.id !== currentUser?.id && (
