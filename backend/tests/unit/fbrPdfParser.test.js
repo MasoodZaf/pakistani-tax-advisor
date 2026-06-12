@@ -23,6 +23,7 @@ const SAMPLE = [
   '900032,727,110Total Income',
   '910032,727,110Taxable Income',
   '920011,791,577Tax Chargeable',
+  '9210356,667Refundable Income Tax',
   '700235,000,000',
   '70061,059,314',
   '700612,063,972',
@@ -154,5 +155,27 @@ describe('fbrPdfParser — toMappedData wiring', () => {
 
   test('total adjustable tax extracts from the 6400 summary row', () => {
     expect(mapped.adjustable_tax.total_adjustable_tax).toBe(12148244);
+  });
+
+  test('9210 (Refundable Income Tax) is the net balance — negate, never re-subtract WHT', () => {
+    // Slip reports a 356,667 refund. The historical bug subtracted 6400
+    // (12,148,244) from it AGAIN, surfacing "-11,791,577 payable".
+    expect(mapped.tax_computation.tax_payable_refundable).toBe(-356667);
+    expect(mapped.summary.refundable_tax).toBe(356667);
+  });
+
+  test('without a 9210 row, payable falls back to chargeable minus WHT', () => {
+    const noRefundRow = SAMPLE.split('\n')
+      .filter((l) => !l.startsWith('9210'))
+      .join('\n');
+    const named2 = extractSingleAmountCodes(noRefundRow);
+    const adjustable2 = extractAdjustableCodes(noRefundRow, 32727110);
+    const mapped2 = toMappedData({
+      identity: { name: 'TEST USER', ntn: null, period_start: '01-Jul-2024', period_end: '30-Jun-2025' },
+      named: named2,
+      adjustable: adjustable2,
+    });
+    // 11,791,577 chargeable - 12,148,244 paid = -356,667 (same refund)
+    expect(mapped2.tax_computation.tax_payable_refundable).toBe(-356667);
   });
 });

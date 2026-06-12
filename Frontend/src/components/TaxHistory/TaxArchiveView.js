@@ -220,14 +220,22 @@ const TaxArchiveView = () => {
                           Snapshot
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                          {Object.entries(a.totals).map(([k, v]) => (
-                            <div key={k} className="bg-white dark:bg-[#151c30] px-3 py-2 rounded border border-gray-200 dark:border-[#2a3450]">
-                              <div className="text-xs text-gray-500 dark:text-[#7e88a6]">
-                                {k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
+                          {Object.entries(a.totals).map(([k, v]) => {
+                            // Negative tax payable = over-withheld, FBR owes a
+                            // refund. Show it as such instead of a minus sign.
+                            const isRefund = k === 'taxPayable' && Number(v) < 0;
+                            const label = isRefund
+                              ? 'Tax Refundable'
+                              : k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+                            return (
+                              <div key={k} className="bg-white dark:bg-[#151c30] px-3 py-2 rounded border border-gray-200 dark:border-[#2a3450]">
+                                <div className="text-xs text-gray-500 dark:text-[#7e88a6]">{label}</div>
+                                <div className={`font-medium ${isRefund ? 'text-emerald-600 dark:text-emerald-400' : 'text-navy dark:text-[#e7eaf3]'}`}>
+                                  {formatPKR(isRefund ? Math.abs(Number(v)) : v)}
+                                </div>
                               </div>
-                              <div className="font-medium text-navy dark:text-[#e7eaf3]">{formatPKR(v)}</div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
