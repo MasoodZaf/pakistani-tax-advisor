@@ -690,11 +690,13 @@ const TaxComputationSummary = () => {
           }
         />
 
-        {/* Neutral completion banner — navy, NOT green, so green stays reserved
-            for the refund outcome above. */}
+        {/* Neutral caption — navy, NOT green, so green stays reserved for the
+            refund outcome above. Worded so it holds regardless of readiness:
+            this component has no readiness state, so it must not claim the
+            return is submit-ready (the ReadinessChecklist owns that). */}
         <div className="flex items-center justify-center gap-2 rounded-brand border border-navy/15 dark:border-[#2a3450] bg-navy/[0.03] dark:bg-[#151c30] px-4 py-3">
           <CheckCircle size={18} className="text-navy dark:text-[#e7eaf3]" aria-hidden="true" />
-          <span className="font-body text-sm font-semibold text-navy dark:text-[#e7eaf3]">Tax computation complete</span>
+          <span className="font-body text-sm font-semibold text-navy dark:text-[#e7eaf3]">Figures above reflect your saved forms — review the readiness checklist before submitting</span>
         </div>
       </TaxFormShell>
     </form>

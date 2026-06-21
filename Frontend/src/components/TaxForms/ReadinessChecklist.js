@@ -51,6 +51,9 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
   const issues   = report?.issues   || [];
   const warnings = report?.warnings || [];
   const ready    = !!report?.ready;
+  // `ready` only means "no blocking issues" — it can still carry advisory
+  // warnings. `cleanReady` is the stricter "nothing left to review" state.
+  const cleanReady = ready && warnings.length === 0;
 
   // ── Compact: single-line status banner ───────────────────────────────────
   if (compact && !showAll) {
@@ -79,7 +82,7 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
   }
 
   // ── Full list ─────────────────────────────────────────────────────────────
-  const tone = ready
+  const tone = cleanReady
     ? { bg: 'var(--brand-cream)', border: 'var(--brand-cream-track)', accent: 'var(--brand-on-cream)', ink: 'var(--brand-on-cream-navy)', sub: 'var(--brand-on-cream-navy)' }
     : issues.length > 0
       ? { bg: 'var(--status-error-bg)', border: 'var(--status-error-border)', accent: 'var(--status-error-text)', ink: 'var(--content)', sub: 'var(--content-muted)' }
@@ -136,15 +139,17 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          {ready
+          {cleanReady
             ? <CheckCircle size={20} color={tone.accent} />
             : issues.length > 0
               ? <AlertOctagon size={20} color={tone.accent} />
               : <AlertTriangle size={20} color={tone.accent} />}
           <h3 style={{ fontSize: 15, fontWeight: 700, color: tone.ink }}>
-            {ready
+            {cleanReady
               ? 'Ready to submit'
-              : `${issues.length} blocking issue${issues.length !== 1 ? 's' : ''} • ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
+              : ready
+                ? `Submittable — review ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`
+                : `${issues.length} blocking issue${issues.length !== 1 ? 's' : ''} • ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
           </h3>
         </div>
         <button
@@ -173,9 +178,15 @@ const ReadinessChecklist = ({ compact = false, refreshKey = 0 }) => {
       {issues.map((i, idx) => renderIssue(i, 'error', idx))}
       {warnings.map((w, idx) => renderIssue(w, 'warning', idx))}
 
-      {ready && (
+      {cleanReady && (
         <p style={{ fontSize: 13, color: tone.accent, fontWeight: 600 }}>
           Every pre-submit check passed. Click "Submit Return" on the Tax Forms page when ready.
+        </p>
+      )}
+
+      {ready && warnings.length > 0 && (
+        <p style={{ fontSize: 13, color: tone.accent, fontWeight: 600 }}>
+          Submittable now — review the warning{warnings.length !== 1 ? 's' : ''} above; they won&apos;t block submission.
         </p>
       )}
     </div>
