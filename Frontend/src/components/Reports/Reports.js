@@ -152,6 +152,14 @@ const Reports = () => {
       });
       if (res.data?.success) {
         if (opts.cacheOnly && res.data.needsRun) { setAiMeta({ needsRun: true }); return; }
+        // A safety-filter refusal comes back as { blocked: true } with no
+        // analysis — show it in the error banner, never in the raw <pre>.
+        if (res.data.blocked) {
+          if (!opts.cacheOnly) setAiError(res.data.message || 'The analysis was blocked by the safety filter — please try again.');
+          setAiAnalysis(null);
+          setAiRaw(null);
+          return;
+        }
         setAiAnalysis(res.data.analysis || null);
         setAiRaw(res.data.analysis ? null : (res.data.raw || null));
         setAiMeta({ cached: res.data.cached, analysedAt: res.data.analysedAt });
