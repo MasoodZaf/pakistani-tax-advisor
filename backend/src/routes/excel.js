@@ -219,7 +219,11 @@ router.post('/validate/:taxYear', auth, upload.single('excelFile'), async (req, 
       'Income with Final Min tax',
       'Capital Gain',
       'Tax Computation',
+      // Combined legacy sheet (FBR template) + the three split sheets our export now writes.
       'Tax Reduction, Credit & deduct ',
+      'Tax Credits',
+      'Deductions',
+      'Tax Reductions',
       'Detail of Expenses',
       'Wealth Statement',
       'Wealth Recon'
