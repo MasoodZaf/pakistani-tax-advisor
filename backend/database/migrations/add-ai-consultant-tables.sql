@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS ai_conversations (
   title         TEXT NOT NULL DEFAULT 'New conversation',
   include_pii   BOOLEAN NOT NULL DEFAULT FALSE,
   archived      BOOLEAN NOT NULL DEFAULT FALSE,
+  -- internal conversations (optimize / field-help scaffolding) are hidden from the
+  -- user's chat sidebar; see phase-z11-ai-conversation-internal.sql for existing DBs.
+  internal      BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

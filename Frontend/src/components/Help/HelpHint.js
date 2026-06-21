@@ -107,7 +107,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--status-error-bg)'; e.currentTarget.style.color = '#b91c1c'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--content-muted)'; }}
               >
                 <X size={18} />
@@ -118,7 +118,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
             <div style={{ flex: 1, overflowY: 'auto', padding: '22px' }}>
               <section style={{ marginBottom: 22 }}>
                 <h4 style={{
-                  fontSize: 12, fontWeight: 700, color: '#28396C',
+                  fontSize: 12, fontWeight: 700, color: 'var(--brand-on-cream-navy)',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                   margin: '0 0 8px',
                 }}>
@@ -185,7 +185,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
                       rel="noopener noreferrer"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        fontSize: 13, fontWeight: 700, color: '#28396C',
+                        fontSize: 13, fontWeight: 700, color: 'var(--brand-on-cream-navy)',
                         textDecoration: 'none',
                       }}
                     >
@@ -216,7 +216,9 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
             @media (prefers-reduced-motion: reduce) {
               .hh-backdrop, .hh-drawer { animation: none; }
             }
-            [data-theme="dark"] .hh-example { background: #2a230b; border-color: #b45309; }
+            [data-theme="dark"] .hh-example { background: #2a230b !important; border-color: #b45309 !important; }
+            [data-theme="dark"] .hh-example h4 { color: #fcd34d; }
+            [data-theme="dark"] .hh-example p { color: #fcd34d; }
           `}</style>
     </>
   );
@@ -251,7 +253,7 @@ const HelpHint = ({ fieldId, source, label, size = 14, className = '' }) => {
           e.currentTarget.style.borderColor = '#28396C';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#eef2ff';
+          e.currentTarget.style.background = 'var(--brand-hover-bg)';
           e.currentTarget.style.color = '#28396C';
           e.currentTarget.style.borderColor = 'var(--line)';
         }}

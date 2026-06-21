@@ -174,7 +174,7 @@ const TaxArchiveView = () => {
             const d = detail[a.tax_year];
             // Only real form sections are copy-forwardable — hide metadata
             // blocks (taxpayer identity, summary, raw IRIS codes, year label).
-            const META_KEYS = ['tax_year', 'taxpayer', 'summary', 'raw_codes'];
+            const META_KEYS = ['tax_year', 'taxpayer', 'summary', 'raw_codes', 'tax_computation'];
             const stepKeys = d?.mapped_data
               ? Object.keys(d.mapped_data).filter(
                   (k) => !META_KEYS.includes(k) && typeof d.mapped_data[k] === 'object'

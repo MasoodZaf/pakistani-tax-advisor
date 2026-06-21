@@ -487,9 +487,10 @@ const TotalsCard = ({ control }) => {
 // Headless auto-calc — fixed-rate rows derive tax chargeable + tax deducted from
 // amount × rate (ATL-aware ×2). Self-subscribes via useWatch so the effect runs
 // without the form body re-rendering. Renders nothing.
-const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate }) => {
+const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate, isLoadingFromDB }) => {
   const values = useWatch({ control });
   useEffect(() => {
+    if (isLoadingFromDB.current) return;
     const vals = values || {};
     FIELD_DEFINITIONS.forEach((section) => {
       section.fields.forEach((field) => {
@@ -515,12 +516,13 @@ const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate }) => {
         if (Math.abs((parseFloat(vals[field.taxChargeableField]) || 0) - calculatedTax) > 0.01) {
           setValue(field.taxChargeableField, calculatedTax);
         }
-        if (Math.abs((parseFloat(vals[field.taxDeductedField]) || 0) - calculatedTax) > 0.01) {
+        const existingTd = vals[field.taxDeductedField];
+        if (existingTd === null || existingTd === undefined || existingTd === '') {
           setValue(field.taxDeductedField, calculatedTax);
         }
       });
     });
-  }, [values, resolveFinalTaxRate, setValue]);
+  }, [values, resolveFinalTaxRate, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 };
 
@@ -834,7 +836,7 @@ const FinalMinIncomeForm = () => {
       }}
     >
       {/* Headless: derives fixed-rate tax chargeable/deducted (ATL ×2 aware). */}
-      <FinalMinAutoCalc control={control} setValue={setValue} resolveFinalTaxRate={resolveFinalTaxRate} />
+      <FinalMinAutoCalc control={control} setValue={setValue} resolveFinalTaxRate={resolveFinalTaxRate} isLoadingFromDB={isLoadingFromDB} />
 
       <TaxFormShell
         title="Final / minimum tax income"

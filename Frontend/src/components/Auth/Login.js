@@ -401,7 +401,7 @@ const Login = () => {
             </h2>
             <p style={{ fontSize: 15, color: 'var(--content-muted)', fontWeight: 500 }}>
               Sign in to continue to your return.{' '}
-              <Link to="/onboarding" style={{ color: '#28396C', fontWeight: 700, textDecoration: 'none' }}>New here?</Link>
+              <Link to="/onboarding" style={{ color: 'var(--content)', fontWeight: 700, textDecoration: 'none' }}>New here?</Link>
             </p>
           </div>
 
@@ -475,7 +475,7 @@ const Login = () => {
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--content-muted)' }}>Remember me</span>
               </label>
               <button type="button" onClick={() => toast('Contact your administrator to reset your password.', { icon: 'ℹ️' })}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#28396C', fontFamily: "'Nunito', sans-serif" }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--content)', fontFamily: "'Nunito', sans-serif" }}>
                 Forgot password?
               </button>
             </div>
@@ -512,7 +512,7 @@ const Login = () => {
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--content-subtle)', fontWeight: 500, marginTop: 24 }}>
             Don't have an account?{' '}
-            <Link to="/onboarding" style={{ color: '#28396C', fontWeight: 700, textDecoration: 'none' }}>Create one free</Link>
+            <Link to="/onboarding" style={{ color: 'var(--content)', fontWeight: 700, textDecoration: 'none' }}>Create one free</Link>
           </p>
         </div>
       </div>

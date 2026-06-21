@@ -52,8 +52,11 @@ const S = () => (
     [data-theme="dark"] .trm-total-banner { background:#0e1c30 !important;border-top-color:#1e3a5f !important; }
     [data-theme="dark"] .trm-total-banner span { color:#93c5fd !important; }
     [data-theme="dark"] .trm-fbr-notice { background:#2a230b !important;border-color:#5a4410 !important; }
+    [data-theme="dark"] .trm-fbr-notice p { color:#fcd34d !important; }
     [data-theme="dark"] .trm-rate-hint { background:#10241c !important; }
+    [data-theme="dark"] .trm-rate-hint span { color:#4ade80 !important; }
     [data-theme="dark"] .trm-warn-tint { background:#2a230b !important; }
+    [data-theme="dark"] .trm-warn-tint span { color:#fcd34d !important; }
     [data-theme="dark"] .trm-badge-ok  { background:#10241c !important;color:#34d399 !important; }
     [data-theme="dark"] .trm-badge-err { background:#2e1515 !important;color:#f87171 !important; }
   `}</style>

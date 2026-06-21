@@ -269,14 +269,20 @@ const Sidebar = ({ collapsed, onToggle }) => {
                 {!collapsed && <div className="sb-section">Admin</div>}
                 <NavItem item={{ name: 'Admin Panel',      href: '/admin',                 icon: Shield   }} />
                 <NavItem item={{ name: 'User Management',  href: '/admin/users',           icon: Users    }} />
-                <NavItem item={{ name: 'System Settings',  href: '/admin/system-settings', icon: Settings }} />
-                <NavItem item={{ name: 'Audit Logs',       href: '/admin/audit-logs',      icon: Activity }} />
               </>
             )}
 
-            {/* Elevated (super_admin + tax_consultant): playbook curation */}
+            {/* System Settings: admin + super_admin only (backend requireAdmin) — NOT tax_consultant */}
+            {((isAdmin && !isElevated) || isSuperAdmin) && (
+              <NavItem item={{ name: 'System Settings',  href: '/admin/system-settings', icon: Settings }} />
+            )}
+
+            {/* Elevated (super_admin + tax_consultant): audit logs + playbook curation */}
             {isElevated && (
-              <NavItem item={{ name: 'AI Tax Efficiency', href: '/admin/playbook', icon: BookOpen }} />
+              <>
+                <NavItem item={{ name: 'Audit Logs',       href: '/admin/audit-logs', icon: Activity }} />
+                <NavItem item={{ name: 'AI Tax Efficiency', href: '/admin/playbook',  icon: BookOpen }} />
+              </>
             )}
 
             {/* Super Admin only */}

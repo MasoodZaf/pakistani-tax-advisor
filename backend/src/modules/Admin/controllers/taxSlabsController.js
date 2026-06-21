@@ -55,6 +55,9 @@ const createTaxSlab = async (req, res) => {
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Tax slab created' });
   } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'A slab with that order already exists for this year and type' });
+    }
     logger.error('Create tax slab error:', error);
     res.status(500).json({ error: 'Failed to create tax slab', message: error.message });
   }
@@ -89,6 +92,9 @@ const updateTaxSlab = async (req, res) => {
 
     res.json({ success: true, data: result.rows[0], message: 'Tax slab updated' });
   } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'A slab with that order already exists for this year and type' });
+    }
     logger.error('Update tax slab error:', error);
     res.status(500).json({ error: 'Failed to update tax slab', message: error.message });
   }

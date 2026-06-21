@@ -126,7 +126,7 @@ function buildSystemPrompt({ retrievedChunks, live, formContext, includePII }) {
   return parts.join('\n\n');
 }
 
-async function getOrCreateConversation({ userId, conversationId, includePII, titleHint }) {
+async function getOrCreateConversation({ userId, conversationId, includePII, titleHint, internal = false }) {
   if (conversationId) {
     const r = await pool.query(
       `SELECT id, user_id, title, include_pii FROM ai_conversations WHERE id = $1 AND user_id = $2`,
@@ -144,9 +144,9 @@ async function getOrCreateConversation({ userId, conversationId, includePII, tit
   }
   const title = (titleHint || 'New conversation').slice(0, 120);
   const r = await pool.query(
-    `INSERT INTO ai_conversations (user_id, title, include_pii)
-     VALUES ($1, $2, $3) RETURNING id, user_id, title, include_pii`,
-    [userId, title, !!includePII]
+    `INSERT INTO ai_conversations (user_id, title, include_pii, internal)
+     VALUES ($1, $2, $3, $4) RETURNING id, user_id, title, include_pii`,
+    [userId, title, !!includePII, !!internal]
   );
   return r.rows[0];
 }
@@ -172,7 +172,7 @@ async function saveMessage({ conversationId, role, content, tokensPrompt, tokens
   return r.rows[0];
 }
 
-async function chat({ userId, conversationId, message, includePII = false, formContext, taxYear }) {
+async function chat({ userId, conversationId, message, includePII = false, formContext, taxYear, internal = false }) {
   if (!message || typeof message !== 'string') {
     const err = new Error('Message is required'); err.status = 400; throw err;
   }
@@ -181,6 +181,7 @@ async function chat({ userId, conversationId, message, includePII = false, formC
     conversationId,
     includePII,
     titleHint: message.slice(0, 80),
+    internal,
   });
 
   const userVisibleMessage = message;                       // store original for the user
@@ -306,7 +307,9 @@ async function fieldHelp({ userId, fieldName, formStep, currentValue, includePII
 - What's the rate or treatment for tax year 2025-26?
 - Common mistakes to avoid.
 Keep it under 200 words. Current value entered: ${currentValue ?? '(blank)'}.`;
-  return chat({ userId, message: q, includePII, formContext, taxYear });
+  // internal: this synthetic prompt drives the inline field-help popover, not a
+  // user-authored chat — keep it out of the visible conversation list.
+  return chat({ userId, message: q, includePII, formContext, taxYear, internal: true });
 }
 
 // Proactive tax-efficiency analysis of the user's OWN return data. Reuses
@@ -341,7 +344,9 @@ async function taxOptimization({ userId, taxYear, includePII = false, taxData })
     `OUTPUT: Return ONLY valid JSON — no prose before or after — of exactly this shape:`,
     `{"summary":"<one short plain-language paragraph that notes what they've ALREADY claimed>","opportunities":[{"title":"<short>","section":"<Ordinance section, e.g. s.63>","rationale":"<why they may qualify, referencing their figures and what's already claimed>","estimatedSavingPKR":<number or null>,"action":"<what to enter / do on the return>","formStep":"<one of the allowed values>","confidence":"high|medium|low"}],"disclaimer":"<one line: informational only, confirm with a licensed tax adviser>"}`,
   ].join('\n');
-  return chat({ userId, message: q, includePII, formContext: taxData, taxYear });
+  // internal: the optimize task is a structured-JSON analysis prompt, not a
+  // user-authored chat — keep its conversation out of the visible list.
+  return chat({ userId, message: q, includePII, formContext: taxData, taxYear, internal: true });
 }
 
 async function listConversations(userId) {
@@ -349,7 +354,7 @@ async function listConversations(userId) {
     `SELECT id, title, include_pii, created_at, updated_at,
             (SELECT COUNT(*) FROM ai_messages m WHERE m.conversation_id = c.id) AS message_count
        FROM ai_conversations c
-      WHERE user_id = $1 AND archived = FALSE
+      WHERE user_id = $1 AND archived = FALSE AND COALESCE(internal, FALSE) = FALSE
       ORDER BY updated_at DESC
       LIMIT 100`,
     [userId]

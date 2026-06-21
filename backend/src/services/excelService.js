@@ -200,9 +200,9 @@ class ExcelService {
     let rowNum = 4;
     
     for (const [fieldName, fieldConfig] of Object.entries(fieldMappings)) {
-      if (fieldName.includes('id') || fieldName.includes('created_at') || 
+      if (fieldName === 'id' || fieldName.endsWith('_id') || fieldName.includes('created_at') ||
           fieldName.includes('updated_at') || fieldName.includes('last_updated_by')) {
-        continue; // Skip system fields
+        continue; // Skip system fields (exact id / *_id only — NOT substrings like "dividend")
       }
 
       const currentRow = worksheet.getRow(rowNum);
@@ -355,7 +355,8 @@ class ExcelService {
 
         // Process each form sheet
         for (const [tableName, config] of Object.entries(formConfigurations)) {
-          const worksheet = workbook.getWorksheet(config.sheetName);
+          const worksheet = workbook.getWorksheet(config.sheetName)
+            || (config.fallbackSheetName && workbook.getWorksheet(config.fallbackSheetName));
           if (!worksheet) continue;
 
           const formData = {};
@@ -585,14 +586,17 @@ class ExcelService {
         fields: {
           rent: { label: 'Rent', description: 'Rent expenses' },
           electricity: { label: 'Electricity', description: 'Electricity expenses' },
-          vehicle: { label: 'Vehicle Expenses', description: 'Vehicle related expenses' },
+          vehicle_running_maintenance: { label: 'Vehicle Expenses', description: 'Vehicle related expenses' },
           medical: { label: 'Medical Expenses', description: 'Medical expenses' },
           educational: { label: 'Educational Expenses', description: 'Educational expenses' },
           other_expenses: { label: 'Other Expenses', description: 'Other miscellaneous expenses' }
         }
       },
       credits_forms: {
-        sheetName: 'Tax Reduction, Credit & deduct ',
+        sheetName: 'Tax Credits',
+        // Older templates (and the FBR "Salaried Individuals" sheet) carry credits,
+        // deductions and reductions in one combined sheet — fall back to it on import.
+        fallbackSheetName: 'Tax Reduction, Credit & deduct ',
         fields: {
           charitable_donation: { label: 'Charitable Donation', description: 'Charitable donations made' },
           pension_contribution: { label: 'Pension Contribution', description: 'Pension fund contributions' },
@@ -602,7 +606,8 @@ class ExcelService {
         }
       },
       deductions_forms: {
-        sheetName: 'Tax Reduction, Credit & deduct ',
+        sheetName: 'Deductions',
+        fallbackSheetName: 'Tax Reduction, Credit & deduct ',
         fields: {
           zakat: { label: 'Zakat', description: 'Zakat deductions' },
           ushr: { label: 'Ushr', description: 'Ushr deductions' },
@@ -612,7 +617,8 @@ class ExcelService {
         }
       },
       reductions_forms: {
-        sheetName: 'Tax Reduction, Credit & deduct ',
+        sheetName: 'Tax Reductions',
+        fallbackSheetName: 'Tax Reduction, Credit & deduct ',
         fields: {
           teacher_amount: { label: 'Teacher Amount', description: 'Income amount for teacher reduction' },
           teacher_reduction: { label: 'Teacher Reduction', description: 'Tax reduction for teachers' },
@@ -624,53 +630,38 @@ class ExcelService {
       },
       final_tax_forms: {
         sheetName: 'Income with Final Min tax',
+        // NOTE (migration phase-t1 / phase-u): the prior field map targeted 8
+        // columns (dividend_reit_spv, dividend_other_spv, dividend_ipp_shares,
+        // dividend_in_kind, dividend_bf_losses, profit_on_debt_final,
+        // capital_gain_final, total_final_tax_income) that do NOT exist on this
+        // table, so every value exported as 0 and nothing round-tripped. The map
+        // below uses ONLY columns confirmed present on final_tax_forms after
+        // phase-t1-add-final-tax-line-items (the per-instrument gross/tax_amount
+        // families) plus the GENERATED total_final_tax.
         fields: {
-          dividend_reit_spv: { label: 'Dividend u/s 150 @0% share of profit from REIT SPV', description: 'Dividend from REIT SPV (B3)', excelCell: 'B3' },
-          dividend_other_spv: { label: 'Dividend u/s 150 @35% share of profit from other SPV', description: 'Dividend from other SPV (B4)', excelCell: 'B4' },
-          dividend_ipp_shares: { label: 'Dividend u/s 150 @7.5% IPP Shares', description: 'Dividend from IPP shares (B5)', excelCell: 'B5' },
-          dividend_in_kind: { label: 'Dividend u/s 150 @15% (Dividend in kind or Mutual funds with less than 50% profit on debt)', description: 'Dividend in kind (B6)', excelCell: 'B6' },
-          dividend_bf_losses: { label: 'Dividend u/s 150 @25% (From Companies not paying tax due to BF losses or Mutual funds with 50% and above profit on debt)', description: 'Dividend from BF losses companies (B7)', excelCell: 'B7' },
-          profit_on_debt_final: { label: 'Profit on debt u/s 151 @15%', description: 'Profit on debt final tax (B13)', excelCell: 'B13' },
-          capital_gain_final: { label: 'Capital Gain', description: 'Capital gain from Capital Gain sheet (B19)', excelCell: 'B19' },
-          total_final_tax_income: { label: 'Total Income Subject to Final Tax', description: 'Total final tax income (B20)', excelCell: 'B20', calculated: true }
-        }
-      },
-      taxpayer_profile: {
-        sheetName: 'Taxpayer profile',
-        fields: {
-          name: { label: 'Name', description: 'Taxpayer name', excelCell: 'B3' },
-          nic: { label: 'NIC', description: 'National Identity Card number', excelCell: 'B4' },
-          email: { label: 'Email', description: 'Email address', excelCell: 'B5' },
-          mobile_phone: { label: 'Mobile Phone Number/Service provider', description: 'Mobile phone number', excelCell: 'B6' },
-          major_source_income: { label: 'Major Source of Income', description: 'Primary income source', excelCell: 'B7' }
-        }
-      },
-      tax_computation: {
-        sheetName: 'Tax Computation',
-        fields: {
-          income_from_salary: { label: 'Income from Salary', description: 'Total salary income (B6)', excelCell: 'B6' },
-          income_from_other_sources: { label: 'Income from Other Sources', description: 'Other income sources (B7)', excelCell: 'B7' },
-          income_from_capital_gains: { label: 'Income from Capital Gains', description: 'Capital gains income (B8)', excelCell: 'B8' },
-          total_income: { label: 'Total Income', description: 'Sum of all income (B9)', excelCell: 'B9', calculated: true },
-          taxable_income_excluding_cg: { label: 'Taxable Income excluding CG', description: 'Taxable income without capital gains (B11)', excelCell: 'B11', calculated: true },
-          normal_income_tax: { label: 'Normal Income Tax', description: 'Progressive tax calculation (B16)', excelCell: 'B16', calculated: true },
-          surcharge: { label: 'Surcharge', description: 'Surcharge if income > 10M (B17)', excelCell: 'B17', calculated: true },
-          capital_gains_tax: { label: 'Capital Gains Tax', description: 'Tax on capital gains (B18)', excelCell: 'B18' },
-          total_tax_before_adjustments: { label: 'Total Tax before adjustments', description: 'Total tax before reductions (B19)', excelCell: 'B19', calculated: true },
-          net_tax_payable: { label: 'Net Tax Payable', description: 'Final tax liability (B28)', excelCell: 'B28', calculated: true },
-          balance_payable_refundable: { label: 'Balance Payable/Refundable', description: 'Final balance due or refund (B30)', excelCell: 'B30', calculated: true }
-        }
-      },
-      wealth_reconciliation: {
-        sheetName: 'Wealth Recon',
-        fields: {
-          net_worth_previous_year: { label: 'Net Worth Previous Year', description: 'Net worth from previous year (B5)', excelCell: 'B5' },
-          net_worth_current_year: { label: 'Net Worth Current Year', description: 'Net worth current year (B6)', excelCell: 'B6' },
-          wealth_increase: { label: 'Wealth Increase', description: 'Increase in wealth (B7)', excelCell: 'B7', calculated: true },
-          total_income_sources: { label: 'Total Income from all Sources', description: 'All income sources (B21)', excelCell: 'B21', calculated: true },
-          total_expenses: { label: 'Total Expenses', description: 'All expenses (B27)', excelCell: 'B27', calculated: true },
-          net_cash_flow: { label: 'Net Cash Flow', description: 'Income minus expenses (B29)', excelCell: 'B29', calculated: true },
-          unexplained_wealth: { label: 'Unexplained Wealth', description: 'Wealth increase not explained by income (B31)', excelCell: 'B31', calculated: true }
+          sukuk_bonds_gross_amount: { label: 'Sukuk / Bonds - Gross Amount', description: 'Sukuk / bonds gross amount' },
+          sukuk_bonds_tax_amount: { label: 'Sukuk / Bonds - Tax Deducted', description: 'Sukuk / bonds tax deducted' },
+          debt_securities_gross_amount: { label: 'Debt Securities - Gross Amount', description: 'Debt securities gross amount' },
+          debt_securities_tax_amount: { label: 'Debt Securities - Tax Deducted', description: 'Debt securities tax deducted' },
+          prize_bonds_gross_amount: { label: 'Prize Bonds - Gross Amount', description: 'Prize bonds gross amount' },
+          prize_bonds_tax_amount: { label: 'Prize Bonds - Tax Deducted', description: 'Prize bonds tax deducted' },
+          dividend_listed_companies_amount: { label: 'Dividend (Listed Companies) u/s 150 - Gross Amount', description: 'Dividend from listed companies gross amount' },
+          dividend_listed_companies_tax_amount: { label: 'Dividend (Listed Companies) u/s 150 - Tax Deducted', description: 'Dividend from listed companies tax deducted' },
+          dividend_other_amount: { label: 'Dividend (Other Companies / Mutual Funds) u/s 150 - Gross Amount', description: 'Dividend from other companies / mutual funds gross amount' },
+          dividend_other_tax_amount: { label: 'Dividend (Other Companies / Mutual Funds) u/s 150 - Tax Deducted', description: 'Dividend from other companies / mutual funds tax deducted' },
+          profit_govt_securities_amount: { label: 'Profit on Govt Securities (NSS / Post Office) u/s 151(1)(a) - Gross Amount', description: 'Profit on govt securities gross amount' },
+          profit_govt_securities_tax_amount: { label: 'Profit on Govt Securities (NSS / Post Office) u/s 151(1)(a) - Tax Deducted', description: 'Profit on govt securities tax deducted' },
+          profit_defence_savings_amount: { label: 'Profit on Defence Savings Certificates u/s 151(1)(b) - Gross Amount', description: 'Profit on defence savings certificates gross amount' },
+          profit_defence_savings_tax_amount: { label: 'Profit on Defence Savings Certificates u/s 151(1)(b) - Tax Deducted', description: 'Profit on defence savings certificates tax deducted' },
+          lottery_crossword_winnings_amount: { label: 'Lottery / Raffle / Quiz / Crossword Winnings u/s 156A - Gross Amount', description: 'Lottery / crossword winnings gross amount' },
+          lottery_crossword_winnings_tax_amount: { label: 'Lottery / Raffle / Quiz / Crossword Winnings u/s 156A - Tax Deducted', description: 'Lottery / crossword winnings tax deducted' },
+          capital_gain_securities_short_amount: { label: 'Capital Gain on Securities (held < 12 months) u/s 37A - Gross Amount', description: 'Capital gain on securities held under 12 months gross amount' },
+          capital_gain_securities_short_tax_amount: { label: 'Capital Gain on Securities (held < 12 months) u/s 37A - Tax Deducted', description: 'Capital gain on securities held under 12 months tax deducted' },
+          capital_gain_securities_long_amount: { label: 'Capital Gain on Securities (held >= 12 months) u/s 37A - Gross Amount', description: 'Capital gain on securities held 12 months or more gross amount' },
+          capital_gain_securities_long_tax_amount: { label: 'Capital Gain on Securities (held >= 12 months) u/s 37A - Tax Deducted', description: 'Capital gain on securities held 12 months or more tax deducted' },
+          commission_agents_amount: { label: 'Commission to Stock Exchange Members / Agents u/s 233 - Gross Amount', description: 'Commission to agents gross amount' },
+          commission_agents_tax_amount: { label: 'Commission to Stock Exchange Members / Agents u/s 233 - Tax Deducted', description: 'Commission to agents tax deducted' },
+          total_final_tax: { label: 'Total Final Tax', description: 'Total final tax (generated)', calculated: true }
         }
       }
     };

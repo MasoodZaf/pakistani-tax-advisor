@@ -17,9 +17,9 @@ import PriorYearUploadModal from '../TaxHistory/PriorYearUploadModal';
 const TaxFormsOverview = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const navigate = useNavigate();
-  const { 
-    FORM_STEPS, 
-    completedSteps, 
+  const {
+    visibleSteps,
+    completedSteps,
     getCompletionPercentage, 
     taxReturn,
     calculateTax,
@@ -44,7 +44,7 @@ const TaxFormsOverview = () => {
   };
 
   const getNextIncompleteStep = () => {
-    return FORM_STEPS.find(step => !completedSteps.has(step.id));
+    return visibleSteps.find(step => !step.inactiveForProfile && !completedSteps.has(step.id));
   };
 
   const nextStep = getNextIncompleteStep();
@@ -257,7 +257,7 @@ const TaxFormsOverview = () => {
       <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-6">
         <h2 className="text-xl font-semibold text-navy dark:text-[#e7eaf3] mb-6">Tax Return Sections</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {FORM_STEPS.map((step, index) => {
+          {visibleSteps.map((step, index) => {
             const isCompleted = completedSteps.has(step.id);
             const isCurrent = nextStep?.id === step.id;
             
@@ -327,19 +327,26 @@ const TaxFormsOverview = () => {
                 </div>
 
                 <div className="mt-auto pt-2">
-                  {isCompleted && (
+                  {step.inactiveForProfile && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
+                      title="Not part of this client's income profile — saving data here enables the matching income stream">
+                      Not in client profile
+                    </span>
+                  )}
+
+                  {!step.inactiveForProfile && isCompleted && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300">
                       ✓ Completed
                     </span>
                   )}
 
-                  {isCurrent && !isCompleted && (
+                  {!step.inactiveForProfile && isCurrent && !isCompleted && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy dark:text-[#e7eaf3]">
                       ⏳ In Progress
                     </span>
                   )}
 
-                  {!isCompleted && !isCurrent && (
+                  {!step.inactiveForProfile && !isCompleted && !isCurrent && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1a2238] text-gray-600 dark:text-[#aab2cc]">
                       ○ Pending
                     </span>

@@ -255,15 +255,11 @@ function toMappedData({ identity, named, adjustable }) {
       other_taxable_income_others: named['1059']?.amount || 0,
     },
     final_min_income: {
-      dividend_u_s_150_31_atl_15pc: named['5004']?.amount || 0,
-      dividend_u_s_150_25pc_bf_losses: named['5005']?.amount || 0,
-      profit_on_debt_u_s_7b: named['5008']?.amount || 0,
-      return_invest_exceed_1m_sukuk_saa_12_5pc: named['5009']?.amount || 0,
-      prize_bond_cross_world_puzzle_156: named['5010']?.amount || 0,
-    },
-    adjustable_tax: {
-      total_tax_collected: totalAdjTax,
-      total_adjustable_tax: totalAdjTax,
+      dividend_u_s_150_31pc_atl_amount: named['5004']?.amount || 0,
+      dividend_u_s_150_25pc_bf_losses_amount: named['5005']?.amount || 0,
+      interest_income_profit_debt_7b_up_to_5m_amount: named['5008']?.amount || 0,
+      return_invest_exceed_1m_sukuk_saa_12_5pc_amount: named['5009']?.amount || 0,
+      prize_bond_cross_world_puzzle_156_amount: named['5010']?.amount || 0,
     },
     tax_computation: {
       total_tax_chargeable: taxChargeable,

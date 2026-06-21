@@ -342,9 +342,9 @@ function StepIncomeStreams({ selected, setSelected, onNext, onBack, loading }) {
     <div>
       {/* Primary type — locked */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--brand-cream)', border: '1.5px solid var(--brand-cream-track)', borderRadius: 12, padding: '11px 14px', marginBottom: 18 }}>
-        <span style={{ fontSize: 18 }}><Briefcase size={17} color="#28396C" /></span>
+        <span style={{ fontSize: 18 }}><Briefcase size={17} color="var(--brand-on-cream-navy)" /></span>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 800, color: '#28396C', margin: 0 }}>Salaried Employee</p>
+          <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--brand-on-cream-navy)', margin: 0 }}>Salaried Employee</p>
           <p style={{ fontSize: 11, color: 'var(--brand-on-cream)', margin: 0, fontWeight: 500 }}>Your primary income type — always included</p>
         </div>
         <div style={{ marginLeft: 'auto', width: 20, height: 20, background: '#28396C', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -552,7 +552,7 @@ export default function Onboarding() {
           <span className="ob-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--content)', letterSpacing: '-0.02em' }}>MeraTax</span>
         </Link>
         <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: 'var(--content-muted)', textDecoration: 'none' }}>
-          Already have an account? <span style={{ color: '#28396C' }}>Sign in</span>
+          Already have an account? <span style={{ color: 'var(--content)' }}>Sign in</span>
         </Link>
       </nav>
 

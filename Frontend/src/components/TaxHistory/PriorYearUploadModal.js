@@ -255,10 +255,24 @@ const PriorYearUploadModal = ({ onClose, onArchived }) => {
 
               {/* No warnings case */}
               {(!result.warnings || result.warnings.length === 0) && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-brand text-sm text-green-800 dark:text-green-300">
-                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  No rate-change warnings — all mapped fields are safe to carry forward.
-                </div>
+                result.sourceFormat === 'fbr_pdf_114_1' ? (
+                  // FBR PDF carries forward salary + final-tax figures whose
+                  // slab/WHT rates changed materially under Finance Act 2025 —
+                  // a green "safe" banner would be misleading, so show a
+                  // neutral verify-rates note instead.
+                  <div className="flex items-start gap-3 p-3 bg-navy/5 dark:bg-[#1a2238] border border-navy/15 dark:border-[#2a3450] rounded-brand text-sm text-navy dark:text-[#aab2cc]">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Salary and final-tax figures were carried forward — verify rates against
+                      Finance Act 2025 before saving (slab rates changed materially).
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-brand text-sm text-green-800 dark:text-green-300">
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                    No rate-change warnings — all mapped fields are safe to carry forward.
+                  </div>
+                )
               )}
 
               {/* Action buttons */}

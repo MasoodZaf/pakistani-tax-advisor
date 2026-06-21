@@ -257,6 +257,22 @@ router.post('/optimize', auth, async (req, res) => {
       } catch (e) { logger.warn('optimize: failed to cache analysis', { message: e.message }); }
     }
 
+    // If the safety filter blocked the reply, surface it as a structured error
+    // rather than dumping the refusal text into the raw <pre>. The frontend
+    // routes `blocked` to its error banner.
+    if (out.blocked) {
+      return res.json({
+        success: true,
+        taxYear,
+        cached: false,
+        blocked: true,
+        analysis: null,
+        message: 'The AI could not analyse this return (the request was blocked by the safety filter). Please try again or rephrase.',
+        reliefHeadroom,
+        conversationId: out.conversationId,
+      });
+    }
+
     res.json({
       success: true,
       taxYear,
