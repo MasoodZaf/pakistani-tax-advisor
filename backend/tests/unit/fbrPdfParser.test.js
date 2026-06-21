@@ -153,8 +153,28 @@ describe('fbrPdfParser — toMappedData wiring', () => {
     expect(mapped.expenses.total_expenses).toBe(5355000);
   });
 
-  test('total adjustable tax extracts from the 6400 summary row', () => {
-    expect(mapped.adjustable_tax.total_adjustable_tax).toBe(12148244);
+  test('6400 total adjustable tax flows into summary.withholding_tax', () => {
+    // The standalone adjustable_tax copy-forward step was removed (it staged
+    // only computed totals no form input reads, and suppressed the income-form
+    // gross-receipt auto-fill). The 6400 value still surfaces via summary.
+    expect(mapped.summary.withholding_tax).toBe(12148244);
+  });
+
+  test('no standalone adjustable_tax step is emitted (avoids a dead copy-forward chip)', () => {
+    expect(mapped.adjustable_tax).toBeUndefined();
+  });
+
+  test('final_min_income keys match the form-registered amount field names', () => {
+    // Regression guard: the parser previously emitted stale schema names the
+    // FinalMinIncomeForm never read, so dividend/profit-on-debt/sukuk/prize
+    // copy-forward silently did nothing.
+    expect(mapped.final_min_income).toMatchObject({
+      dividend_u_s_150_31pc_atl_amount: expect.any(Number),
+      dividend_u_s_150_25pc_bf_losses_amount: expect.any(Number),
+      interest_income_profit_debt_7b_up_to_5m_amount: expect.any(Number),
+      return_invest_exceed_1m_sukuk_saa_12_5pc_amount: expect.any(Number),
+      prize_bond_cross_world_puzzle_156_amount: expect.any(Number),
+    });
   });
 
   test('9210 (Refundable Income Tax) is the net balance — negate, never re-subtract WHT', () => {
