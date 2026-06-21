@@ -28,12 +28,28 @@ const ElevatedRoute = ({ children }) => {
   return children;
 };
 
+// admin + super_admin — mirrors backend requireAdmin (systemSettings.js). NOT tax_consultant.
+const AdminOnlyRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (user?.role !== 'admin' && user?.role !== 'super_admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  return children;
+};
+
 const AdminModule = () => {
   return (
     <Routes>
       <Route path="dashboard" element={<AdminDashboard />} />
       <Route path="users" element={<UserManagement />} />
-      <Route path="system-settings" element={<SystemSettings />} />
+      <Route
+        path="system-settings"
+        element={
+          <AdminOnlyRoute>
+            <SystemSettings />
+          </AdminOnlyRoute>
+        }
+      />
       <Route path="user-tax-records" element={<UserTaxRecords />} />
 
       {/* Elevated routes (super_admin + tax_consultant) */}
