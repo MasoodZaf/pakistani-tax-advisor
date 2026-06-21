@@ -420,11 +420,11 @@ const ReviewScreen = ({ review, onDone }) => {
         <div style={{
           marginTop: 18,
           padding: '12px 14px',
-          background: '#fef3c7',
-          border: '1.5px solid #fbbf24',
+          background: 'var(--status-warn-bg)',
+          border: '1.5px solid var(--status-warn-border)',
           borderRadius: 10,
         }}>
-          <p style={{ fontSize: 13, color: '#78350f', fontWeight: 600, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 13, color: 'var(--status-warn-text)', fontWeight: 600, lineHeight: 1.5 }}>
             These are rough estimates based on what you told the wizard.
             Open each form in the app and verify the numbers before submitting your return to FBR.
           </p>

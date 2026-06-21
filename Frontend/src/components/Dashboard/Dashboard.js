@@ -352,9 +352,9 @@ const Dashboard = () => {
               {daysLeft > 0 ? `${daysLeft} days from today` : 'Deadline passed'}
             </p>
             {daysLeft < 90 && (
-              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, background: daysLeft < 30 ? '#fdf2f2' : '#F0FFC2', borderRadius: 8, padding: '6px 10px' }}>
-                <AlertCircle size={13} color={daysLeft < 30 ? '#c0392b' : '#4a7a2a'} />
-                <p style={{ fontSize: 12, fontWeight: 700, color: daysLeft < 30 ? '#c0392b' : '#4a7a2a' }}>
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, background: daysLeft < 30 ? 'var(--status-error-bg)' : 'var(--status-warn-bg)', borderRadius: 8, padding: '6px 10px' }}>
+                <AlertCircle size={13} color={daysLeft < 30 ? 'var(--status-error-text)' : 'var(--status-warn-text)'} />
+                <p style={{ fontSize: 12, fontWeight: 700, color: daysLeft < 30 ? 'var(--status-error-text)' : 'var(--status-warn-text)' }}>
                   {daysLeft < 30 ? 'File soon — penalty applies' : 'Less than 3 months left'}
                 </p>
               </div>
@@ -367,18 +367,18 @@ const Dashboard = () => {
               to={stepRoute('wealth_reconciliation')}
               style={{
                 display: 'block', textDecoration: 'none',
-                background: '#fdf2f2', border: '1.5px solid #f3b4b4',
+                background: 'var(--status-error-bg)', border: '1.5px solid var(--status-error-border)',
                 borderRadius: 16, padding: '16px 20px',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                <Scale size={13} color="#c0392b" />
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#c0392b', textTransform: 'uppercase', letterSpacing: '0.07em' }}>FBR compliance — action needed</p>
+                <Scale size={13} color="var(--status-error-text)" />
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--status-error-text)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>FBR compliance — action needed</p>
               </div>
-              <p className="dash-display" style={{ fontSize: 18, fontWeight: 800, color: '#7a1c1c', letterSpacing: '-0.02em', marginBottom: 4 }}>
+              <p className="dash-display" style={{ fontSize: 18, fontWeight: 800, color: 'var(--status-error-text)', letterSpacing: '-0.02em', marginBottom: 4 }}>
                 Rs {Math.abs(reconDiff).toLocaleString()}
               </p>
-              <p style={{ fontSize: 12, color: '#5b1e1e', fontWeight: 500, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: 'var(--status-error-text)', fontWeight: 500, lineHeight: 1.5 }}>
                 Your wealth statement is unreconciled by this amount. FBR will reject the return until it is zero. Open the form to fix.
               </p>
             </Link>
@@ -418,8 +418,8 @@ const Dashboard = () => {
           ))}
           {isStaff(user) && (
             <Link to="/admin" className="dash-link-card">
-              <div style={{ width: 38, height: 38, background: '#fdf2f2', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <AlertCircle size={17} color="#c0392b" />
+              <div style={{ width: 38, height: 38, background: 'var(--status-error-bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertCircle size={17} color="var(--status-error-text)" />
               </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--content)' }}>Admin Panel</p>
