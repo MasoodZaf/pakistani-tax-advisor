@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
-import { LogOut, Settings, ChevronDown, AlertTriangle, Bell, Shield, CalendarClock, KeyRound, UserCheck } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, AlertTriangle, Bell, Shield, CalendarClock, KeyRound, UserCheck, LayoutGrid } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { isStaff } from '../../utils/roles';
 
 const NOTIF_ICONS = {
   access: Shield,
@@ -285,6 +286,11 @@ const Header = () => {
                   )}
                 </div>
                 <div style={{ padding: '6px 0' }}>
+                  {isStaff(user) && (
+                    <Link to="/hub" className="hdr-drop-item" onClick={() => setMenuOpen(false)}>
+                      <LayoutGrid size={15} color="var(--content-subtle)" /> Switch workspace
+                    </Link>
+                  )}
                   <Link to="/settings" className="hdr-drop-item" onClick={() => setMenuOpen(false)}>
                     <Settings size={15} color="var(--content-subtle)" /> Settings
                   </Link>
