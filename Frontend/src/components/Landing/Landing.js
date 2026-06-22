@@ -295,7 +295,7 @@ function Hero() {
             <span className="l-dot" /> FINANCE ACT 2025 · TAX YEAR 2025-26
           </div>
           <h1 className="l-h1">
-            Your Pakistan tax return,<br />
+            Your tax return,<br />
             <span className="l-lime">prepared properly.</span>
           </h1>
           <p className="l-lead" style={{ maxWidth: 500, margin: '26px 0 34px' }}>
