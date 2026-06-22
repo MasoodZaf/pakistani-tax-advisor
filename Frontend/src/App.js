@@ -114,9 +114,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 // Workspace hub — the intermediate landing for staff. Non-staff users have no
 // hub (a single destination), so they're sent to their dashboard.
 const StaffHubRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, roleChecked } = useAuth();
 
-  if (loading) {
+  // Wait for the session AND for the role to be server-authoritative. On a cold
+  // load the role is first decoded from a (possibly stale) JWT; redirecting a
+  // non-staff user before /api/me confirms would bounce a just-promoted staff
+  // member off the hub on first paint.
+  if (loading || (user && !roleChecked)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="spinner"></div>
