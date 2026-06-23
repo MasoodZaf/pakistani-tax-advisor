@@ -3,9 +3,11 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { getToken, storeToken, clearToken } from '../utils/tokenStorage';
 import { isStaff } from '../utils/roles';
+import { API_BASE } from '../utils/apiBase';
 
-// Set axios defaults for API base URL
-axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Set axios defaults for API base URL. Same-origin in production (works on any
+// served domain via Caddy → nginx /api), localhost in dev. See utils/apiBase.
+axios.defaults.baseURL = API_BASE;
 
 const AuthContext = createContext();
 
