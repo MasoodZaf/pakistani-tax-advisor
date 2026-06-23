@@ -204,7 +204,15 @@ const saveFormData = async (tableName, formKey, req, res) => {
     const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
 
     const columns = Object.keys(dataToSave);
-    const values = columns.map((c) => dataToSave[c]);
+    // Empty-string inputs (e.g. a blank "Rs" amount the user never touched)
+    // must become NULL — Postgres rejects '' for numeric columns (22P02:
+    // "invalid input syntax for type numeric"). The form numeric columns are
+    // nullable with DEFAULT 0, so NULL is safe and reads back as 0. Without
+    // this, saving a form with any blank amount 500s (e.g. expenses form).
+    const values = columns.map((c) => {
+      const v = dataToSave[c];
+      return v === '' ? null : v;
+    });
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
     const updateAssignments = columns
       .filter((c) => !identityKeys.has(c))
