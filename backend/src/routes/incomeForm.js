@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
 const CalculationService = require('../services/calculationService');
+const ensureTaxReturn = require('../helpers/ensureTaxReturn');
 
 const router = express.Router();
 
@@ -71,7 +72,15 @@ router.post('/:taxYear', auth, async (req, res) => {
   try {
     const { taxYear } = req.params;
     const userId = req.user.id;
+    const userEmail = req.user.email;
     const formData = req.body;
+
+    // Link the income form to its tax return. This endpoint historically did
+    // NOT set tax_return_id (unlike every other form via saveFormData), leaving
+    // income_forms.tax_return_id NULL — which broke every tax_return_id-keyed
+    // read (Income Analysis report, Tax Computation view all showed Rs 0 even
+    // with salary present). ensureTaxReturn creates the return if missing.
+    const taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
 
     logger.info(`Saving income form data for user ${userId}, tax year ${taxYear}`, {
       monthly_basic_salary: formData.monthly_basic_salary,
@@ -149,7 +158,7 @@ router.post('/:taxYear', auth, async (req, res) => {
     // Use UPSERT with only input fields (generated columns are calculated automatically)
     const query = `
       INSERT INTO income_forms (
-        user_id, tax_year,
+        user_id, tax_year, tax_return_id, user_email,
         annual_basic_salary, allowances, bonus, medical_allowance,
         pension_from_ex_employer, employment_termination_payment,
         retirement_from_approved_funds, directorship_fee, other_cash_benefits,
@@ -157,10 +166,12 @@ router.post('/:taxYear', auth, async (req, res) => {
         profit_on_debt_15_percent, profit_on_debt_12_5_percent,
         other_taxable_income_rent, other_taxable_income_others
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+        $1, $2, $19, $20, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
       )
       ON CONFLICT (user_id, tax_year)
       DO UPDATE SET
+        tax_return_id = EXCLUDED.tax_return_id,
+        user_email = EXCLUDED.user_email,
         annual_basic_salary = EXCLUDED.annual_basic_salary,
         allowances = EXCLUDED.allowances,
         bonus = EXCLUDED.bonus,
@@ -190,7 +201,8 @@ router.post('/:taxYear', auth, async (req, res) => {
       dbData.employer_contribution_provident, dbData.taxable_car_value,
       dbData.other_taxable_subsidies, dbData.profit_on_debt_15_percent,
       dbData.profit_on_debt_12_5_percent, dbData.other_taxable_income_rent,
-      dbData.other_taxable_income_others
+      dbData.other_taxable_income_others,
+      taxReturnId, userEmail   // $19, $20
     ];
 
     const result = await pool.query(query, values);
