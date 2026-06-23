@@ -31,6 +31,12 @@ function decodeJwtPayload(token) {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // True once the user's role is server-authoritative — i.e. it came from a
+  // login/SSO/register response or has been confirmed by /api/me. On a cold
+  // restore the role is first decoded from the (possibly stale) JWT, so guards
+  // that gate on role must wait for this before redirecting (e.g. a user
+  // promoted server-side mid-session would otherwise be bounced on first paint).
+  const [roleChecked, setRoleChecked] = useState(false);
   const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
   const [sessionWarning, setSessionWarning] = useState(false); // true = <5 min left
   // Pre-loaded data from the login API response — used to seed the dashboard instantly
@@ -61,6 +67,7 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem('priorYearWarnings');
     sessionStorage.removeItem('priorYearDismissed');
     setUser(null);
+    setRoleChecked(false);
     setLoginPayload(null);
     clearExpiryTimers();
     toast.success('Logged out successfully');
@@ -161,17 +168,20 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = () => {
     try {
       const token = getToken();
-      if (!token) return;
+      // Nothing to confirm with the server — the gate is settled immediately.
+      if (!token) { setRoleChecked(true); return; }
 
       const payload = decodeJwtPayload(token);
       if (!payload) {
         clearToken();
+        setRoleChecked(true);
         return;
       }
 
       // Reject already-expired tokens
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         clearToken();
+        setRoleChecked(true);
         return;
       }
 
@@ -194,9 +204,13 @@ export const AuthProvider = ({ children }) => {
           const u = r.data?.user;
           if (u) setUser((prev) => (prev ? { ...prev, role: u.role, email: u.email, name: u.name, must_reset_password: u.must_reset_password === true } : prev));
         })
-        .catch(() => { /* 401 handled by the response interceptor */ });
+        .catch(() => { /* 401 handled by the response interceptor */ })
+        // Role is now server-authoritative (confirmed or the session was killed)
+        // — release any guard that was waiting on the check.
+        .finally(() => setRoleChecked(true));
     } catch {
       clearToken();
+      setRoleChecked(true);
     } finally {
       setLoading(false);
     }
@@ -218,6 +232,7 @@ export const AuthProvider = ({ children }) => {
         // Treat undefined as "completed" so legacy logins (pre-flag) don't get
         // bounced into the wizard.
         setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
+        setRoleChecked(true); // role came straight from the server response
         scheduleExpiryWarning(token);
 
         // Store pre-loaded data so the Dashboard can render immediately without a second fetch
@@ -262,6 +277,7 @@ export const AuthProvider = ({ children }) => {
       const { token, user: userData } = response.data;
       storeToken(token); // keep whatever storage the session is already using
       setUser({ ...userData, onboarding_completed: userData.onboarding_completed !== false });
+      setRoleChecked(true); // role came straight from the SSO response
       scheduleExpiryWarning(token);
       toast.success(`Welcome, ${userData.name || userData.email}!`);
       // The SSO endpoint doesn't fetch hasPersonalInfo / taxYearsSummary —
@@ -283,6 +299,7 @@ export const AuthProvider = ({ children }) => {
       // The Onboarding wizard relies on this flag to keep the user inside the
       // flow until they hit "Done" — see App.js OnboardingRoute.
       setUser({ ...newUser, onboarding_completed: !!newUser.onboarding_completed });
+      setRoleChecked(true); // role came straight from the register response
       if (token) scheduleExpiryWarning(token);
       toast.success(`Welcome, ${newUser.name}!`);
       return { success: true };
@@ -322,6 +339,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    roleChecked,
     login,
     ssoLogin,
     register,

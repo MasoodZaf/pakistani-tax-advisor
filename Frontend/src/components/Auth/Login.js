@@ -316,16 +316,16 @@ const Login = () => {
           localStorage.removeItem('adminAssistedLogin');
           toast.success(`Logged in as ${adminAssistedLogin.userName}`, { duration: 4000 });
         }
-        // Routing: temp-password users → forced reset, staff → /admin,
-        // everyone else → /dashboard. The previous `needsPersonalInfo`
-        // branch routed users to /personal-info but UserOnlyRoute then
-        // bounces unboarded users to /onboarding, so that branch was
-        // effectively dead. Onboarding redirect is now handled exclusively
-        // by the route guards.
+        // Routing: temp-password users → forced reset, staff → /hub (the
+        // workspace chooser), everyone else → /dashboard. The previous
+        // `needsPersonalInfo` branch routed users to /personal-info but
+        // UserOnlyRoute then bounces unboarded users to /onboarding, so that
+        // branch was effectively dead. Onboarding redirect is now handled
+        // exclusively by the route guards.
         if (result.userData?.must_reset_password) {
           navigate('/set-password');
         } else if (isStaff(result.userData)) {
-          navigate('/admin');
+          navigate('/hub');
         } else {
           navigate('/dashboard');
         }
@@ -343,7 +343,7 @@ const Login = () => {
   const afterSsoSuccess = (result) => {
     if (!result?.success) return;
     if (isStaff(result.userData)) {
-      navigate('/admin');
+      navigate('/hub');
     } else if (result.needsPersonalInfo) {
       navigate('/onboarding');
     } else {

@@ -32,6 +32,7 @@ const ConsultantPage = lazy(() => import('./components/AIConsultant/ConsultantPa
 const FloatingChatWidget = lazy(() => import('./components/AIConsultant/FloatingChatWidget'));
 const Wizard = lazy(() => import('./components/Wizard/Wizard'));
 const ForcePasswordReset = lazy(() => import('./components/Auth/ForcePasswordReset'));
+const Launcher = lazy(() => import('./components/Launcher/Launcher'));
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // Full-screen fallback shown while a route chunk loads (mirrors the
@@ -73,7 +74,10 @@ const PublicHome = () => {
   if (loading) return null;
   if (user) {
     if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
-    if (isStaff(user)) return <Navigate to="/admin" replace />;
+    // Staff (owner / super_admin / admin / consultant) land on the workspace
+    // hub so they can choose between the App, the Admin Console and the
+    // Consultant Workspace, instead of being force-routed into /admin.
+    if (isStaff(user)) return <Navigate to="/hub" replace />;
     if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
     return <Navigate to="/dashboard" replace />;
   }
@@ -107,6 +111,30 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
+// Workspace hub — the intermediate landing for staff. Non-staff users have no
+// hub (a single destination), so they're sent to their dashboard.
+const StaffHubRoute = ({ children }) => {
+  const { user, loading, roleChecked } = useAuth();
+
+  // Wait for the session AND for the role to be server-authoritative. On a cold
+  // load the role is first decoded from a (possibly stale) JWT; redirecting a
+  // non-staff user before /api/me confirms would bounce a just-promoted staff
+  // member off the hub on first paint.
+  if (loading || (user && !roleChecked)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
+  if (!isStaff(user)) return <Navigate to="/dashboard" replace />;
+
+  return children;
+};
+
 // Onboarding — keep authenticated mid-flow users INSIDE the wizard until
 // they finish. Previously this redirected anyone with a session to dashboard,
 // which silently skipped steps 2–4 of the wizard.
@@ -115,7 +143,7 @@ const OnboardingRoute = () => {
   if (loading) return null;
   if (user) {
     if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
-    if (isStaff(user)) return <Navigate to="/admin" replace />;
+    if (isStaff(user)) return <Navigate to="/hub" replace />;
     // Already onboarded → home. Mid-flow → keep showing the wizard.
     if (!needsOnboarding(user)) return <Navigate to="/dashboard" replace />;
   }
@@ -138,10 +166,10 @@ const UserOnlyRoute = ({ children }) => {
 
   if (mustResetPassword(user)) return <Navigate to="/set-password" replace />;
 
-  if (isStaff(user)) {
-    return <Navigate to="/admin" replace />;
-  }
-
+  // Staff are NO LONGER bounced to /admin here — they reach the App via the
+  // workspace hub's "MeraTax App" card and use it as a regular filer. Their
+  // own return is created lazily on first save (getCurrentReturn tolerates a
+  // user with no return). Onboarding is skipped for staff by needsOnboarding().
   if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
 
   return children;
@@ -213,6 +241,17 @@ function App() {
               <Route path="/login" element={<Login />} />
               {/* /register redirects to the full onboarding flow */}
               <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+
+              {/* Workspace hub — intermediate landing for staff to choose
+                  between the App, Admin Console and Consultant Workspace. */}
+              <Route
+                path="/hub"
+                element={
+                  <StaffHubRoute>
+                    <Launcher />
+                  </StaffHubRoute>
+                }
+              />
 
               {/* Forced password reset for bulk-imported users on a temp
                   password — guards itself (redirects away unless the flag

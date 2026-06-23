@@ -42,7 +42,7 @@ const ForcePasswordReset = () => {
       if (res.data?.token) storeToken(res.data.token);
       updateUser({ must_reset_password: false });
       toast.success('Password set — welcome aboard!');
-      navigate(isStaff(user) ? '/admin' : '/', { replace: true });
+      navigate(isStaff(user) ? '/hub' : '/', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Could not set the new password');
     } finally {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTaxYear } from '../../contexts/TaxYearContext';
-import { LogOut, Settings, ChevronDown, AlertTriangle, Bell, Shield, CalendarClock, KeyRound, UserCheck } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, AlertTriangle, Bell, Shield, CalendarClock, KeyRound, UserCheck, LayoutGrid, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { isStaff } from '../../utils/roles';
 
 const NOTIF_ICONS = {
   access: Shield,
@@ -27,6 +28,10 @@ function timeAgo(iso) {
 const Header = () => {
   const { user, logout, sessionExpiresAt, sessionWarning } = useAuth();
   const { currentTaxYear } = useTaxYear();
+  const location = useLocation();
+  // Staff can sit in two surfaces: the Admin/Consultant area (/admin/*) or the
+  // main App. This drives the one-click switch button below.
+  const inAdminArea = location.pathname.startsWith('/admin');
   const [menuOpen, setMenuOpen] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
@@ -140,6 +145,16 @@ const Header = () => {
         [data-theme="dark"] .hdr-drop-item.danger { color: #f87171; }
         .hdr-drop-item.danger:hover { background: #fdf2f2; }
         [data-theme="dark"] .hdr-drop-item.danger:hover { background: #2a1414; }
+        .hdr-switch {
+          display: inline-flex; align-items: center; gap: 6px;
+          height: 34px; padding: 0 13px; flex-shrink: 0;
+          background: none; border: 1.5px solid var(--line); border-radius: 10px;
+          font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700;
+          color: var(--content); text-decoration: none; cursor: pointer;
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .hdr-switch:hover { border-color: #a8c890; background: var(--brand-hover-bg); }
+        @media (max-width: 600px) { .hdr-switch { display: none; } }
         .hdr-notif {
           width: 34px; height: 34px; background: none;
           border: 1.5px solid var(--line); border-radius: 10px;
@@ -200,6 +215,21 @@ const Header = () => {
         )}
 
         <div style={{ flex: 1 }} />
+
+        {/* One-click area switch for staff: jump straight between the
+            Admin/Consultant board and the main App (and back) without going
+            via the workspace hub. */}
+        {isStaff(user) && (
+          <Link
+            to={inAdminArea ? '/dashboard' : '/admin'}
+            className="hdr-switch"
+            title={inAdminArea ? 'Open the MeraTax App' : 'Open the Admin Console'}
+          >
+            {inAdminArea
+              ? <><LayoutDashboard size={14} color="var(--content-subtle)" /> Open App</>
+              : <><Shield size={14} color="var(--content-subtle)" /> Admin</>}
+          </Link>
+        )}
 
         <ThemeToggle />
 
@@ -285,6 +315,11 @@ const Header = () => {
                   )}
                 </div>
                 <div style={{ padding: '6px 0' }}>
+                  {isStaff(user) && (
+                    <Link to="/hub" className="hdr-drop-item" onClick={() => setMenuOpen(false)}>
+                      <LayoutGrid size={15} color="var(--content-subtle)" /> Switch workspace
+                    </Link>
+                  )}
                   <Link to="/settings" className="hdr-drop-item" onClick={() => setMenuOpen(false)}>
                     <Settings size={15} color="var(--content-subtle)" /> Settings
                   </Link>

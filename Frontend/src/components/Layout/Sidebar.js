@@ -6,7 +6,7 @@ import {
   Home, FileText, BarChart3, Settings,
   Users, Shield, FileSpreadsheet, TrendingUp, MessageCircle,
   ChevronLeft, ChevronRight, LogOut,
-  Percent, UserCog, Activity, Archive, BookOpen
+  Percent, UserCog, Activity, Archive, BookOpen, LayoutGrid
 } from 'lucide-react';
 import { isStaff as isStaffRole, isElevated as isElevatedRole } from '../../utils/roles';
 import BrandMark from '../common/BrandMark';
@@ -195,6 +195,13 @@ const Sidebar = ({ collapsed, onToggle }) => {
   const isElevated   = isElevatedRole(user);
   const isSuperAdmin = user?.role === 'super_admin';
 
+  // Staff can be in two places: the Admin/Consultant area (/admin/*) or the
+  // App (their own return). The sidebar follows them — App nav while in the
+  // App, admin nav while in the admin area. Regular users always see App nav.
+  const inAdminArea  = location.pathname.startsWith('/admin');
+  const showUserNav  = !isAdmin || !inAdminArea;
+  const showAdminNav = isAdmin && inAdminArea;
+
   const isActive = (href) => {
     if (href === '/income-tax')       return location.pathname.startsWith('/income-tax') || location.pathname.startsWith('/tax-forms');
     if (href === '/wealth-statement') return location.pathname.startsWith('/wealth-statement');
@@ -252,8 +259,14 @@ const Sidebar = ({ collapsed, onToggle }) => {
           <nav className="sb-nav">
             {collapsed && <div style={{ height: 10 }} />}
 
-            {/* Regular user nav */}
-            {!isAdmin && (
+            {/* Workspace hub switcher — staff only, lets them jump back to the
+                chooser to swap between the App and the Admin/Consultant area. */}
+            {isAdmin && (
+              <NavItem item={{ name: 'Workspace Hub', href: '/hub', icon: LayoutGrid }} />
+            )}
+
+            {/* App nav — regular users always; staff while they're in the App */}
+            {showUserNav && (
               <>
                 {!collapsed && <div className="sb-section">Main</div>}
                 {MAIN_NAV.map(item => <NavItem key={item.href} item={item} />)}
@@ -263,43 +276,45 @@ const Sidebar = ({ collapsed, onToggle }) => {
               </>
             )}
 
-            {/* Staff nav (admin, super_admin and tax_consultant) */}
-            {isAdmin && (
+            {/* Staff nav (admin, super_admin and tax_consultant) — only shown
+                while in the admin area, so the App view stays clean. */}
+            {showAdminNav && (
               <>
                 {!collapsed && <div className="sb-section">Admin</div>}
                 <NavItem item={{ name: 'Admin Panel',      href: '/admin',                 icon: Shield   }} />
                 <NavItem item={{ name: 'User Management',  href: '/admin/users',           icon: Users    }} />
-              </>
-            )}
 
-            {/* System Settings: admin + super_admin only (backend requireAdmin) — NOT tax_consultant */}
-            {((isAdmin && !isElevated) || isSuperAdmin) && (
-              <NavItem item={{ name: 'System Settings',  href: '/admin/system-settings', icon: Settings }} />
-            )}
+                {/* System Settings: admin + super_admin only (backend requireAdmin) — NOT tax_consultant */}
+                {((isAdmin && !isElevated) || isSuperAdmin) && (
+                  <NavItem item={{ name: 'System Settings',  href: '/admin/system-settings', icon: Settings }} />
+                )}
 
-            {/* Elevated (super_admin + tax_consultant): audit logs + playbook curation */}
-            {isElevated && (
-              <>
-                <NavItem item={{ name: 'Audit Logs',       href: '/admin/audit-logs', icon: Activity }} />
-                <NavItem item={{ name: 'AI Tax Efficiency', href: '/admin/playbook',  icon: BookOpen }} />
-              </>
-            )}
+                {/* Elevated (super_admin + tax_consultant): audit logs + playbook curation */}
+                {isElevated && (
+                  <>
+                    <NavItem item={{ name: 'Audit Logs',       href: '/admin/audit-logs', icon: Activity }} />
+                    <NavItem item={{ name: 'AI Tax Efficiency', href: '/admin/playbook',  icon: BookOpen }} />
+                  </>
+                )}
 
-            {/* Super Admin only */}
-            {isSuperAdmin && (
-              <>
-                <div className="sb-divider" />
-                {!collapsed && <div className="sb-section">Super Admin</div>}
-                <NavItem item={{ name: 'Tax Rates',       href: '/admin/tax-rates',       icon: Percent  }} />
-                <NavItem item={{ name: 'Admin Accounts',  href: '/admin/admin-accounts',  icon: UserCog  }} />
+                {/* Super Admin only */}
+                {isSuperAdmin && (
+                  <>
+                    <div className="sb-divider" />
+                    {!collapsed && <div className="sb-section">Super Admin</div>}
+                    <NavItem item={{ name: 'Tax Rates',       href: '/admin/tax-rates',       icon: Percent  }} />
+                    <NavItem item={{ name: 'Admin Accounts',  href: '/admin/admin-accounts',  icon: UserCog  }} />
+                  </>
+                )}
               </>
             )}
           </nav>
 
           {/* Bottom */}
           <div className="sb-bottom">
-            {/* Progress bar — only for regular users, not admins */}
-            {!isAdmin && (!collapsed ? (
+            {/* Progress bar — shown wherever the App nav is (regular users,
+                and staff while they're in the App) */}
+            {showUserNav && (!collapsed ? (
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Return</span>
