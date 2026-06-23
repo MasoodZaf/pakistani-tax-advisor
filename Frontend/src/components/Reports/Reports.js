@@ -1026,7 +1026,9 @@ const Reports = () => {
       {/* Report Type Tabs */}
       <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand">
         <div className="border-b border-gray-200 dark:border-[#2a3450]">
-          <nav className="flex space-x-8 px-6">
+          {/* Horizontal scroll so all tabs (incl. the 5th, "Tax Efficiency")
+              stay reachable on narrower windows instead of being clipped. */}
+          <nav className="flex space-x-8 px-6 overflow-x-auto">
             {[
               { id: 'summary', label: 'Tax Summary', icon: BarChart3, endpoint: 'tax-calculation-summary' },
               { id: 'income', label: 'Income Analysis', icon: TrendingUp, endpoint: 'income-analysis' },
@@ -1040,7 +1042,7 @@ const Reports = () => {
                   setActiveTab(tab.id);
                   if (tab.endpoint) loadReport(tab.endpoint);
                 }}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 shrink-0 whitespace-nowrap transition-colors ${
                   activeTab === tab.id
                     ? 'border-lime text-navy dark:text-[#e7eaf3]'
                     : 'border-transparent text-gray-500 dark:text-[#7e88a6] hover:text-navy dark:hover:text-[#e7eaf3]'
