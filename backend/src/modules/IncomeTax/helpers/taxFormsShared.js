@@ -98,13 +98,8 @@ async function recalculateFormCompletion(userId, taxYear) {
     const completedActive = activeForms.filter((f) => completionStatus[f.column]).length;
     const denom = activeForms.length; // always >= 10 (the always-active forms)
     const completionPercentage = denom > 0 ? Math.round((completedActive * 100) / denom) : 0;
+    const allFormsComplete = denom > 0 && completedActive === denom;
 
-    // NOTE: do NOT write `all_forms_complete` OR `completion_percentage` — BOTH
-    // are GENERATED ALWAYS columns (Postgres derives them from the individual
-    // *_complete flags). Including either in the SET list raised 428C9 ("can only
-    // be updated to DEFAULT"), which aborted the ENTIRE update — so completion
-    // flags never persisted and the progress counter reset to 0 on every reload.
-    // We write only the source-of-truth flags; the DB recomputes the rest.
     await pool.query(
       `UPDATE form_completion_status
        SET income_form_complete = $1, adjustable_tax_form_complete = $2,
@@ -115,8 +110,10 @@ async function recalculateFormCompletion(userId, taxYear) {
            final_min_income_form_complete = $10,
            wealth_reconciliation_form_complete = $11,
            tax_computation_form_complete = $12,
+           completion_percentage = $13,
+           all_forms_complete = $14,
            last_updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $13 AND tax_year = $14`,
+       WHERE user_id = $15 AND tax_year = $16`,
       [
         completionStatus['income_form_complete'],
         completionStatus['adjustable_tax_form_complete'],
@@ -130,6 +127,8 @@ async function recalculateFormCompletion(userId, taxYear) {
         completionStatus['final_min_income_form_complete'],
         completionStatus['wealth_reconciliation_form_complete'],
         completionStatus['tax_computation_form_complete'],
+        completionPercentage,
+        allFormsComplete,
         userId,
         taxYear,
       ]
