@@ -15,6 +15,7 @@ import {
   LiveTotalsProvider,
   LiveAmount,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 const ExpensesForm = () => {
   const navigate = useNavigate();
@@ -34,10 +35,12 @@ const ExpensesForm = () => {
     watch,
     reset,
     control,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('expenses')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {

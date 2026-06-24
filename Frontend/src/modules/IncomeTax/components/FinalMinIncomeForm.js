@@ -27,6 +27,7 @@ import {
   CollapsibleSection,
   FormNav,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // Static field definitions — kept at module scope so they aren't rebuilt on
 // every render (the component has ~30 inputs; each keystroke was previously
@@ -554,14 +555,16 @@ const FinalMinIncomeForm = () => {
   });
 
   const {
-    handleSubmit,
     control,
     setValue,
     getValues,
-    reset
+    reset,
+    formState: { isDirty }
   } = useForm({
     defaultValues: getStepData('final_min_income')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Guard used by auto-populate effects so they don't fire during a reset()
   // triggered by post-save context sync. Without this, a save would:
@@ -843,10 +846,13 @@ const FinalMinIncomeForm = () => {
 
   return (
     <form
-      onSubmit={async (e) => {
+      onSubmit={(e) => {
+        // Call onSubmit DIRECTLY (it reads getValues + flushes via
+        // syncInputsToForm itself). Routing through handleSubmit raced with the
+        // headless auto-calc and intermittently dropped the submit (no POST,
+        // entered data lost). Matches the reliable "Save data" path.
         e.preventDefault();
-        await syncInputsToForm();
-        handleSubmit(onSubmit)(e);
+        onSubmit();
       }}
     >
       {/* Headless: derives fixed-rate tax chargeable/deducted (ATL ×2 aware). */}
@@ -866,7 +872,7 @@ const FinalMinIncomeForm = () => {
             onSave={onSaveAndContinue}
             saveLabel={saving ? 'Saving…' : 'Save data'}
             saving={saving}
-            nextType="submit"
+            onNext={() => onSubmit()}
             submitting={saving}
             nextLabel="Complete & next"
           />

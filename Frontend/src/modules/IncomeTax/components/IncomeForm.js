@@ -20,6 +20,7 @@ import {
   LiveTotalsProvider,
   LiveAmount,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 const IncomeForm = () => {
   const navigate = useNavigate();
@@ -122,10 +123,13 @@ const IncomeForm = () => {
     handleSubmit,
     watch,
     reset,
-    control
+    control,
+    formState: { isDirty }
   } = useForm({
     defaultValues: processIncomeData(incomeData)
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // PERF-02: no bare `watch()` at render — it would re-render the whole form on
   // every keystroke. The live totals are isolated in <LiveTotalsProvider> below

@@ -23,6 +23,7 @@ import {
   LiveTotalsProvider,
   LiveAmount,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // Two-input wealth row (previous + current year). Defined at MODULE scope so it
 // never remounts its inputs. PERF-02: it self-subscribes to ONLY its own two
@@ -114,10 +115,13 @@ const WealthStatementForm = () => {
     handleSubmit,
     watch,
     reset,
-    control
+    control,
+    formState: { isDirty }
   } = useForm({
     defaultValues: getStepData('wealth')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {

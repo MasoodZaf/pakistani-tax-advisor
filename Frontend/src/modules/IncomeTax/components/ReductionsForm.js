@@ -16,6 +16,7 @@ import HelpHint from '../../../components/Help/HelpHint';
 import reductionsHelp from '../../../help/reductionsHelp';
 import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount, LiveWhen } from '../../../components/forms';
 import FormEmptyState from './FormEmptyState';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // PERF-02: the two auto-calc effects run here (headless) so their field
 // subscriptions don't re-render the whole form. Each watches only the field(s)
@@ -114,10 +115,12 @@ const ReductionsForm = () => {
     setValue,
     control,
     getValues,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('reductions')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back).
   // Reverse-map DB column names → form field names for capital gain reductions,

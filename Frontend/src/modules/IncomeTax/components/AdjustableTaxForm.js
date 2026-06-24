@@ -26,6 +26,7 @@ import HelpHint from '../../../components/Help/HelpHint';
 import adjustableTaxHelp from '../../../help/adjustableTaxHelp';
 import { formatCurrency } from '../../../utils/currency';
 import { TaxFormShell, CollapsibleSection, FormNav } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 
 // Sum gross + tax across all field groups. Pure — callers pass a values
@@ -350,10 +351,12 @@ const AdjustableTaxForm = () => {
     setValue,
     getValues,
     reset,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('adjustable_tax')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when context formData updates (handles page load, navigation back, and post-save).
   // This is the sole data-loading path — the previous standalone axios loadFromAPI was removed

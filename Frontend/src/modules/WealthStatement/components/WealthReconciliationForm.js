@@ -20,6 +20,7 @@ import {
   AmountRow,
   FormNav,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // Inflow/outflow input fields the reconciliation calc depends on.
 const RECON_INPUT_FIELDS = [
@@ -127,10 +128,13 @@ const WealthReconciliationForm = () => {
     setValue,
     reset,
     control,
-    getValues
+    getValues,
+    formState: { isDirty }
   } = useForm({
     defaultValues: getStepData('wealth_reconciliation')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {

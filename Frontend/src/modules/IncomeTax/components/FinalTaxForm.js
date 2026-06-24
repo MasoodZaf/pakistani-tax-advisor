@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import finalTaxHelp from '../../../help/finalTaxHelp';
 import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // Final Tax items. Rates are NOT stored here — they live in tax_rates_config
 // (rate_type='final_tax', rate_category=item.id) and are resolved per-year
@@ -95,10 +96,13 @@ const FinalTaxForm = () => {
     reset,
     setValue,
     control,
-    getValues
+    getValues,
+    formState: { isDirty }
   } = useForm({
     defaultValues: getStepData('final_tax')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API.
   // Reverse-map DB column names → form field names for all 10 FINAL_TAX_ITEMS groups.

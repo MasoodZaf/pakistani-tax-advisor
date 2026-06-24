@@ -16,6 +16,7 @@ import HelpHint from '../../../components/Help/HelpHint';
 import creditsHelp from '../../../help/creditsHelp';
 import { formatCurrency } from '../../../utils/currency';
 import { TaxFormShell, TaxFormRow, AmountRow, FormNav, LiveTotalsProvider, LiveAmount } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // PERF-02: the three rebate auto-calc effects run here (headless) so their
 // field subscriptions don't re-render the whole form. Each watches only its own
@@ -139,15 +140,16 @@ const CreditsForm = () => {
 
   const {
     register,
-    handleSubmit,
     watch,
     reset,
     setValue,
     control,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('credits')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {
@@ -288,13 +290,21 @@ const CreditsForm = () => {
   const sumCredits = (values) =>
     creditItems.reduce((total, item) => total + (parseFloat(values[item.taxReduction]) || 0), 0);
 
-  const onSubmit = async (data) => {
-    const formData = {
-      ...data,
-      total_tax_credits: sumCredits(data)
-    };
+  // Build the payload from current RHF values (watch()), NOT a handleSubmit
+  // snapshot. The auto-calc lives in a headless child that calls setValue, so the
+  // freshest values are in the form state — read them at click time.
+  const buildPayload = () => {
+    const data = watch();
+    return { ...data, total_tax_credits: sumCredits(data) };
+  };
 
-    const success = await saveFormStep('credits', formData, true);
+  // Complete & next + Save data both call saveFormStep DIRECTLY (no handleSubmit).
+  // Routing "Complete & next" through handleSubmit raced with the headless
+  // auto-calc and intermittently never fired onSubmit — the click silently did
+  // nothing (no POST) and the entered credits were lost. Direct calls match the
+  // already-reliable "Save data" path.
+  const onCompleteAndNext = async () => {
+    const success = await saveFormStep('credits', buildPayload(), true);
     if (success) {
       toast.success('Tax credits information saved successfully');
       navigate('/income-tax/deductions');
@@ -302,13 +312,7 @@ const CreditsForm = () => {
   };
 
   const onSaveAndContinue = async () => {
-    const data = watch();
-    const formData = {
-      ...data,
-      total_tax_credits: sumCredits(data)
-    };
-
-    const success = await saveFormStep('credits', formData, false);
+    const success = await saveFormStep('credits', buildPayload(), false);
     if (success) {
       toast.success('Progress saved');
       navigate('/income-tax/deductions');
@@ -341,7 +345,7 @@ const CreditsForm = () => {
   ) : null;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={(e) => { e.preventDefault(); onCompleteAndNext(); }}>
       <CreditsAutoCalc control={control} setValue={setValue} taxableIncome={taxableIncome} normalTax={normalTax} avgRate={avgRate} donationCap={donationCap} donationAssociateCap={donationAssociateCap} pensionCap={pensionCap} />
       <LiveTotalsProvider control={control} compute={(v) => ({ total: sumCredits(v) })}>
       <TaxFormShell
@@ -358,7 +362,7 @@ const CreditsForm = () => {
             onSave={onSaveAndContinue}
             saveLabel={saving ? 'Saving…' : 'Save data'}
             saving={saving}
-            nextType="submit"
+            onNext={onCompleteAndNext}
             submitting={saving}
             nextLabel="Complete & next"
           />

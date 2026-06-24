@@ -55,6 +55,18 @@ const getExpenseSuggestions = async (req, res) => {
       total_captured_pkr,
     });
   } catch (error) {
+    // 42P01 = undefined_table. The mobile expense-capture tables aren't
+    // provisioned in every environment; treat "no ledger" as "no suggestions"
+    // rather than failing the Deductions form's load with a 500.
+    if (error.code === '42P01') {
+      logger.warn('Expense suggestions: expenses table not provisioned — returning empty set');
+      return res.json({
+        tax_year: req.query.taxYear || null,
+        by_treatment: {},
+        unmapped: { total_pkr: 0, count: 0, expense_ids: [] },
+        total_captured_pkr: 0,
+      });
+    }
     logger.error('Expense suggestions failed:', error);
     res.status(500).json({ success: false, message: 'Expense suggestions failed', error: error.message });
   }

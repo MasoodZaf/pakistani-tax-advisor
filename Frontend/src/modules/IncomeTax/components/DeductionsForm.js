@@ -18,6 +18,7 @@ import {
   LiveTotalsProvider,
   LiveAmount,
 } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // PERF-02: the two auto-calc effects run here (headless) so their field
 // subscriptions don't re-render the whole form. Logic byte-identical to the
@@ -89,10 +90,12 @@ const DeductionsForm = () => {
     setValue,
     getValues,
     control,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('deductions')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back).
   // Reverse-map DB column names → form field names for the education expense group,

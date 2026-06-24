@@ -15,6 +15,7 @@ import capitalGainsHelp from '../../../help/capitalGainsHelp';
 import { formatCurrency } from '../../../utils/currency';
 import FormEmptyState from './FormEmptyState';
 import { TaxFormShell, FormNav, LiveTotalsProvider, LiveWhen, useLiveTotals } from '../../../components/forms';
+import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
 
 // Capital-gain category definitions. Rates are NOT in this array any more —
 // they come from tax_rates_config via useTaxRates() (rate_type='capital_gains',
@@ -145,10 +146,12 @@ const CapitalGainsForm = () => {
     setValue,
     control,
     getValues,
-    formState: { errors }
+    formState: { errors, isDirty }
   } = useForm({
     defaultValues: getStepData('capital_gain')
   });
+
+  useUnsavedChangesWarning(isDirty);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {
