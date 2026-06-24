@@ -339,6 +339,10 @@ const AdjustableTaxForm = () => {
   // Prevents auto-calc from overwriting user-saved 0s when gross changes during reset().
   const isLoadingFromDB = useRef(false);
 
+  // Tax cells the user has hand-edited — once a field is in here, auto-calc
+  // (on gross blur) leaves it alone. Cleared by the per-row reset button.
+  const manualTaxOverride = useRef(new Set());
+
   const {
     register,
     handleSubmit,
@@ -1052,6 +1056,27 @@ const AdjustableTaxForm = () => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
+  // Lookups over fieldGroups for the auto-calc-on-blur logic below.
+  // findAutoCalcByGross: given a gross field name, return its auto-calc field def
+  // (so we know the tax field + rate). isAutoCalcTaxField: is this a tax cell that
+  // the user could be hand-editing?
+  const findAutoCalcByGross = (grossFieldName) => {
+    for (const group of Object.values(fieldGroups)) {
+      for (const f of group.fields) {
+        if (f.autoCalculateTax && f.grossField === grossFieldName) return f;
+      }
+    }
+    return null;
+  };
+  const isAutoCalcTaxField = (taxFieldName) => {
+    for (const group of Object.values(fieldGroups)) {
+      for (const f of group.fields) {
+        if (f.autoCalculateTax && f.taxField === taxFieldName) return true;
+      }
+    }
+    return false;
+  };
+
   // Handle input focus - select all text for easy editing
   const handleNumberFocus = (fieldName, event) => {
     event.target.select();
@@ -1071,6 +1096,11 @@ const AdjustableTaxForm = () => {
     }
     const numericValue = parseFormattedNumber(sanitized);
     setValue(fieldName, numericValue);
+
+    // Typing directly into an auto-calc tax cell counts as a manual override.
+    if (isAutoCalcTaxField(fieldName)) {
+      manualTaxOverride.current.add(fieldName);
+    }
   };
 
   // Handle input blur - parse value and update React Hook Form, then format for display
@@ -1082,6 +1112,28 @@ const AdjustableTaxForm = () => {
 
     const formatted = formatNumber(numericValue);
     event.target.value = formatted;
+
+    // A blur on an auto-calc tax cell means the user committed a hand-typed value.
+    if (isAutoCalcTaxField(fieldName)) {
+      manualTaxOverride.current.add(fieldName);
+      return;
+    }
+
+    // A blur on a gross field whose row auto-calculates tax: now that we have the
+    // final amount, (re)compute the tax — unless the user overrode it. We write the
+    // value into the uncontrolled DOM input directly so it shows without a remount
+    // (no focus loss). resolveFieldRate falls back to the static rate if the DB
+    // rate set hasn't loaded, so this works even offline/cold.
+    const acField = findAutoCalcByGross(fieldName);
+    if (acField && !manualTaxOverride.current.has(acField.taxField)) {
+      const rate = resolveFieldRate(acField, getValues(acField.atlStatusField));
+      if (rate) {
+        const taxVal = Math.round(numericValue * rate);
+        setValue(acField.taxField, taxVal);
+        const taxEl = document.getElementById(acField.taxField);
+        if (taxEl) taxEl.value = formatNumber(taxVal);
+      }
+    }
   };
 
   const toggleSection = (sectionKey) => {
@@ -1249,6 +1301,7 @@ const AdjustableTaxForm = () => {
                               const gross = parseFloat(getValues(field.grossField)) || 0;
                               const rate = resolveFieldRate(field, getValues(field.atlStatusField));
                               setValue(field.taxField, Math.round(gross * rate));
+                              manualTaxOverride.current.delete(field.taxField); // re-enable auto-calc
                               setRefreshKey((k) => k + 1);
                             }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 text-navy/50 transition-colors hover:text-navy"

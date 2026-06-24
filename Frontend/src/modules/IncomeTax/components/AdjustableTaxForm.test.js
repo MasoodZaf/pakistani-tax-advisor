@@ -38,7 +38,13 @@ jest.mock('../../../contexts/TaxYearContext', () => ({
 }));
 jest.mock('../../../hooks/useTaxRates', () => ({
   useTaxRates: () => ({
-    rates: { withholding: {}, slabs: [], surcharge: { rate: 0, threshold: Infinity } },
+    rates: {
+      // electricity_bill_235 @ 7.5% — supplied so the test exercises the DB-rate
+      // path; the form also has a static 0.075 fallback if this is absent.
+      withholding: { electricity_bill_235: { rate: 0.075 } },
+      slabs: [],
+      surcharge: { rate: 0, threshold: Infinity },
+    },
   }),
 }));
 
@@ -80,4 +86,60 @@ test('submitting persists total_adjustable_tax', async () => {
   const [step, payload] = mockSaveFormStep.mock.calls[0];
   expect(step).toBe('adjustable_tax');
   expect(payload.total_adjustable_tax).toBe(5000);
+});
+
+// --- Electricity-row auto-calc regression guard (just FIXED) ---------------
+//
+// "Electricity Bill of Domestic Consumer u/s 235 @7.5%" must auto-fill the
+// tax-collected cell = amount × 7.5% when the user enters the amount and BLURS
+// the amount field. The form writes the computed value straight into the
+// uncontrolled DOM input (id = electricity_bill_domestic_235_tax_collected),
+// so we read input.value for the assertion. Before the fix this stayed at 0.
+
+test('electricity row auto-calculates tax (7.5%) on amount blur — 200,000 -> 15,000', async () => {
+  const { container } = render(<AdjustableTaxForm />);
+
+  // Expand the "Utility Bills" section (where the electricity row lives).
+  await userEvent.click(screen.getByRole('button', { name: /Utility Bills/i }));
+
+  const amountInput = container.querySelector('#electricity_bill_domestic_235_gross_receipt');
+  const taxInput = container.querySelector('#electricity_bill_domestic_235_tax_collected');
+  expect(amountInput).toBeTruthy();
+  expect(taxInput).toBeTruthy();
+
+  await userEvent.type(amountInput, '200000');
+  fireEvent.blur(amountInput);
+
+  // 200000 × 0.075 = 15000 -> formatted "15,000" written into the tax DOM input.
+  await waitFor(() => expect(taxInput.value).toMatch(/15,000/));
+});
+
+test('electricity row respects a manual tax override (does NOT recalculate on amount change)', async () => {
+  const { container } = render(<AdjustableTaxForm />);
+
+  await userEvent.click(screen.getByRole('button', { name: /Utility Bills/i }));
+
+  const amountInput = container.querySelector('#electricity_bill_domestic_235_gross_receipt');
+  const taxInput = container.querySelector('#electricity_bill_domestic_235_tax_collected');
+
+  // 1) Enter an amount and blur -> auto-calc fills 15,000.
+  await userEvent.type(amountInput, '200000');
+  fireEvent.blur(amountInput);
+  await waitFor(() => expect(taxInput.value).toMatch(/15,000/));
+
+  // 2) User hand-edits the tax cell to a custom value, then blurs -> override.
+  await userEvent.clear(taxInput);
+  await userEvent.type(taxInput, '9999');
+  fireEvent.blur(taxInput);
+  await waitFor(() => expect(taxInput.value).toMatch(/9,999/));
+
+  // 3) Change the amount to 300,000 and blur. Auto-calc would be 22,500 — but
+  //    the manual override must win, so the tax cell stays 9,999.
+  await userEvent.clear(amountInput);
+  await userEvent.type(amountInput, '300000');
+  fireEvent.blur(amountInput);
+
+  await waitFor(() => expect(amountInput.value).toMatch(/300,000/));
+  expect(taxInput.value).toMatch(/9,999/);
+  expect(taxInput.value).not.toMatch(/22,500/);
 });

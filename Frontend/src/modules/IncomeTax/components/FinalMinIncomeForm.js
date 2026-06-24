@@ -241,7 +241,7 @@ const computeTotals = (vals) => {
 // now self-subscribes (useWatch) to ONLY its own value, so typing in one row
 // re-renders just that row; the parent form no longer calls watch() at all.
 
-const EditableNum = ({ control, name, setValue, getValues, className, ...rest }) => {
+const EditableNum = ({ control, name, setValue, getValues, className, onUserEdit, ...rest }) => {
   const value = useWatch({ control, name });
   return (
     <input
@@ -250,11 +250,15 @@ const EditableNum = ({ control, name, setValue, getValues, className, ...rest })
       className={className}
       value={formatNumber(value || 0)}
       onFocus={(e) => { e.target.value = ((getValues(name)) || 0).toString(); e.target.select(); }}
-      onChange={(e) => setValue(name, parseFloat(e.target.value.replace(/[^\d.-]/g, '')) || 0)}
+      onChange={(e) => {
+        setValue(name, parseFloat(e.target.value.replace(/[^\d.-]/g, '')) || 0);
+        if (onUserEdit) onUserEdit();
+      }}
       onBlur={(e) => {
         const numericValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
         setValue(name, numericValue);
         e.target.value = formatNumber(numericValue);
+        if (onUserEdit) onUserEdit();
       }}
       {...rest}
     />
@@ -269,7 +273,7 @@ const ReadonlyNum = ({ control, name, className, ...rest }) => {
 // One income row (amount / tax deducted / tax chargeable). Self-subscribes to
 // its own amount for the salary slab hint; everything else is delegated to the
 // self-subscribing inputs above.
-const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certWHT }) => {
+const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certWHT, manualTaxDeducted }) => {
   const amount = useWatch({ control, name: field.amountField });
   return (
     <div className="grid grid-cols-1 gap-2 py-3 md:grid-cols-[1fr_repeat(3,120px)] md:items-start md:gap-3">
@@ -376,6 +380,7 @@ const FinalMinRow = ({ field, control, setValue, getValues, calcSalaryTax, certW
             className={INPUT_CLASSES}
             placeholder="0"
             aria-label={`${field.label} — tax deducted`}
+            onUserEdit={() => manualTaxDeducted.current.add(field.taxDeductedField)}
           />
         )}
       </div>
@@ -487,7 +492,7 @@ const TotalsCard = ({ control }) => {
 // Headless auto-calc — fixed-rate rows derive tax chargeable + tax deducted from
 // amount × rate (ATL-aware ×2). Self-subscribes via useWatch so the effect runs
 // without the form body re-rendering. Renders nothing.
-const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate, isLoadingFromDB }) => {
+const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate, isLoadingFromDB, manualTaxDeducted }) => {
   const values = useWatch({ control });
   useEffect(() => {
     if (isLoadingFromDB.current) return;
@@ -516,9 +521,14 @@ const FinalMinAutoCalc = ({ control, setValue, resolveFinalTaxRate, isLoadingFro
         if (Math.abs((parseFloat(vals[field.taxChargeableField]) || 0) - calculatedTax) > 0.01) {
           setValue(field.taxChargeableField, calculatedTax);
         }
-        const existingTd = vals[field.taxDeductedField];
-        if (existingTd === null || existingTd === undefined || existingTd === '') {
-          setValue(field.taxDeductedField, calculatedTax);
+        // Tax deducted at source defaults to the chargeable (final tax is
+        // withheld in full at source). Track the amount like the chargeable cell
+        // does — a "fill only when empty" guard sticks at the 0 that the first
+        // keystroke seeds. Once the user hand-edits it, leave it alone.
+        if (!manualTaxDeducted.current.has(field.taxDeductedField)) {
+          if (Math.abs((parseFloat(vals[field.taxDeductedField]) || 0) - calculatedTax) > 0.01) {
+            setValue(field.taxDeductedField, calculatedTax);
+          }
         }
       });
     });
@@ -560,6 +570,10 @@ const FinalMinIncomeForm = () => {
   //   3) trigger the salary/CG auto-populate effects → setValue() overwriting
   //      the user's just-saved values back to the computed defaults.
   const isLoadingFromDB = useRef(false);
+
+  // Tax-deducted cells the user has hand-edited — auto-calc then leaves them
+  // alone (otherwise it would track the chargeable on every amount change).
+  const manualTaxDeducted = useRef(new Set());
 
   // Map form amount-field → DB rate_category (final_tax). Rates resolved via
   // useTaxRates(). Fields not listed here fall back to field.taxRate (kept as a
@@ -836,7 +850,7 @@ const FinalMinIncomeForm = () => {
       }}
     >
       {/* Headless: derives fixed-rate tax chargeable/deducted (ATL ×2 aware). */}
-      <FinalMinAutoCalc control={control} setValue={setValue} resolveFinalTaxRate={resolveFinalTaxRate} isLoadingFromDB={isLoadingFromDB} />
+      <FinalMinAutoCalc control={control} setValue={setValue} resolveFinalTaxRate={resolveFinalTaxRate} isLoadingFromDB={isLoadingFromDB} manualTaxDeducted={manualTaxDeducted} />
 
       <TaxFormShell
         title="Final / minimum tax income"
@@ -907,6 +921,7 @@ const FinalMinIncomeForm = () => {
                 getValues={getValues}
                 calcSalaryTax={calculateFBRSalaryTax}
                 certWHT={certWHT}
+                manualTaxDeducted={manualTaxDeducted}
               />
             ))}
           </CollapsibleSection>

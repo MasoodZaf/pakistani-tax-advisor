@@ -77,7 +77,10 @@ const ReductionsAutoCalc = ({ control, getValues, setValue, contextFormData, rat
 
     const maxTax = Math.round(profitAmount * behboodMaxRate);
     const current = parseFloat(getValues('behbood_certificates_tax_reduction')) || 0;
-    if (current === 0) {
+    // Recompute as the profit amount changes (same as the teacher row above). The
+    // old `current === 0` guard froze the field at the first non-zero partial when
+    // the amount was typed digit-by-digit, so it never reached the final value.
+    if (Math.abs(current - maxTax) > 0.5) {
       setValue('behbood_certificates_tax_reduction', maxTax);
     }
   }, [behboodYN, behboodAmount, behboodMaxRate, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
