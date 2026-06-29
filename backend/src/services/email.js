@@ -19,7 +19,7 @@ function isConfigured() {
 }
 
 function defaultFrom() {
-  return process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@mera-tax.com';
+  return process.env.SMTP_FROM || process.env.SMTP_USER || 'support@mera-tax.com';
 }
 
 function getTransporter() {
