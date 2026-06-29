@@ -13,6 +13,7 @@ import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import Login from './components/Auth/Login';
 import Landing from './components/Landing/Landing';
+import ConsentGate from './components/Legal/ConsentGate';
 
 // Route-level code-splitting (PERF-01): everything below the shell loads as its
 // own chunk on demand, so the entry bundle no longer carries the whole app
@@ -33,6 +34,11 @@ const FloatingChatWidget = lazy(() => import('./components/AIConsultant/Floating
 const Wizard = lazy(() => import('./components/Wizard/Wizard'));
 const ForcePasswordReset = lazy(() => import('./components/Auth/ForcePasswordReset'));
 const Launcher = lazy(() => import('./components/Launcher/Launcher'));
+// Public legal pages (Terms, Privacy, User Agreement, Consultant Agreement).
+const PrivacyPolicy = lazy(() => import('./components/Legal/PrivacyPolicy'));
+const TermsAndConditions = lazy(() => import('./components/Legal/TermsAndConditions'));
+const UserAgreement = lazy(() => import('./components/Legal/UserAgreement'));
+const ConsultantAgreement = lazy(() => import('./components/Legal/ConsultantAgreement'));
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // Full-screen fallback shown while a route chunk loads (mirrors the
@@ -172,7 +178,9 @@ const UserOnlyRoute = ({ children }) => {
   // user with no return). Onboarding is skipped for staff by needsOnboarding().
   if (needsOnboarding(user)) return <Navigate to="/onboarding" replace />;
 
-  return children;
+  // Consent gate — block entry to the main app until the current legal
+  // agreements are accepted (re-prompts when an agreement version is bumped).
+  return <ConsentGate>{children}</ConsentGate>;
 };
 
 // Layout Component
@@ -241,6 +249,13 @@ function App() {
               <Route path="/login" element={<Login />} />
               {/* /register redirects to the full onboarding flow */}
               <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+
+              {/* Public legal pages — readable without an account (also opened
+                  from the consent gate's "read" links and the footer). */}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/user-agreement" element={<UserAgreement />} />
+              <Route path="/consultant-agreement" element={<ConsultantAgreement />} />
 
               {/* Workspace hub — intermediate landing for staff to choose
                   between the App, Admin Console and Consultant Workspace. */}

@@ -85,7 +85,7 @@ async function maybeSend(reminder, taxYear) {
   const recipients = await adminEmails();
   const subject = reminder.subject(taxYear);
   const body = reminder.body(taxYear);
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@aurmak.com';
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@mera-tax.com';
 
   if (!transporter) {
     logger.warn('admin reminder: SMTP not configured, audit-only', { subject, recipients });

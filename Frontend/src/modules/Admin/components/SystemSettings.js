@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Monitor,
   Cpu,
-  HardDrive
+  HardDrive,
+  Mail,
+  Send
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -27,6 +29,8 @@ const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState('application');
   const [systemHealth, setSystemHealth] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   
   const settingCategories = {
     application: {
@@ -81,6 +85,23 @@ const SystemSettings = () => {
       // Health check failure is non-critical — no toast
     } finally {
       setLoadingHealth(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setSendingTestEmail(true);
+    try {
+      const to = testEmailTo.trim();
+      const res = await axios.post('/api/admin/email-test', to ? { to } : {});
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Test email sent');
+      } else {
+        toast.error(res.data?.message || 'Could not send test email');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Could not send test email');
+    } finally {
+      setSendingTestEmail(false);
     }
   };
 
@@ -348,6 +369,38 @@ const SystemSettings = () => {
                 <div>Status: Operational</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email delivery test — super_admin only. Confirms outbound SMTP
+          (e.g. Resend) works before relying on it in production. */}
+      {user?.role === 'super_admin' && (
+        <div className="bg-white dark:bg-[#151c30] rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center space-x-3 mb-2">
+            <Mail className="w-6 h-6 text-gray-600 dark:text-[#aab2cc]" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e7eaf3]">Email delivery</h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-[#aab2cc] mb-4">
+            Send a test email through the configured SMTP provider (e.g. Resend) to confirm outbound
+            email is working. Leave the field blank to send to your own address.
+          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <input
+              type="email"
+              value={testEmailTo}
+              onChange={(e) => setTestEmailTo(e.target.value)}
+              placeholder={user?.email || 'you@example.com'}
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-[#2a3450] rounded-lg bg-white dark:bg-[#0f1626] text-gray-900 dark:text-[#e7eaf3] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleSendTestEmail}
+              disabled={sendingTestEmail}
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+            >
+              {sendingTestEmail ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <span>{sendingTestEmail ? 'Sending…' : 'Send test email'}</span>
+            </button>
           </div>
         </div>
       )}

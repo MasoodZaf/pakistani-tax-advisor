@@ -156,7 +156,9 @@ app.use('/api/reports',           apiWriteLimiter, reportsRoutes);
 app.use('/api/personal-info',     apiWriteLimiter, personalInfoRoutes);
 app.use('/api/consultant-link',   apiWriteLimiter, require('./routes/consultantLink'));
 app.use('/api/notifications',     apiWriteLimiter, require('./routes/notifications'));
+app.use('/api/agreements',        apiWriteLimiter, require('./routes/agreements'));
 app.use('/api/admin/system-settings', apiWriteLimiter, systemSettingsRoutes);
+app.use('/api/admin/email-test',  apiWriteLimiter, require('./routes/emailTest'));
 
 // File upload routes — strict upload limiter
 app.use('/api/excel',       uploadLimiter, excelRoutes);

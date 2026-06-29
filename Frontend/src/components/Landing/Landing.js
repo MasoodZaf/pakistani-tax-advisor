@@ -557,9 +557,13 @@ function Footer() {
         <p style={{ fontSize: 12.5, color: 'var(--l-faint)', maxWidth: 460, lineHeight: 1.6, textAlign: 'center', flex: '1 1 280px', fontFamily: 'var(--l-mono)' }}>
           Independent tool for preparing Pakistani income tax returns. Not affiliated with FBR. Review your return before filing.
         </p>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {['Privacy', 'Terms', 'Help'].map(l => (
-            <span key={l} className="l-navlink" style={{ fontSize: 13, cursor: 'pointer' }}>{l}</span>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {[
+            { to: '/privacy', label: 'Privacy' },
+            { to: '/terms', label: 'Terms' },
+            { to: '/user-agreement', label: 'User Agreement' },
+          ].map(l => (
+            <Link key={l.to} to={l.to} className="l-navlink" style={{ fontSize: 13, cursor: 'pointer', textDecoration: 'none' }}>{l.label}</Link>
           ))}
         </div>
       </div>
