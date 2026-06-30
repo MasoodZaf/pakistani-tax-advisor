@@ -45,7 +45,7 @@ function ConsentScreen({ pending, onAccepted }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--surface, #faf8f2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Nunito', sans-serif" }}>
-      <div style={{ width: '100%', maxWidth: 560, background: 'var(--card, #fff)', border: '1px solid var(--l-border, #e3ddcf)', borderRadius: 18, padding: '32px 30px', boxShadow: '0 10px 40px rgba(20,30,60,0.08)' }}>
+      <div style={{ width: '100%', maxWidth: 560, background: 'var(--surface-raised)', border: '1px solid var(--line)', borderRadius: 18, padding: '32px 30px', boxShadow: '0 10px 40px rgba(20,30,60,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
           <span style={{ display: 'inline-flex', width: 38, height: 38, borderRadius: 10, background: 'var(--brand-on-cream-navy, #28396C)', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
             <ShieldCheck size={20} />
@@ -61,7 +61,7 @@ function ConsentScreen({ pending, onAccepted }) {
 
         <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
           {pending.map((p) => (
-            <label key={p.key} htmlFor={`agree-${p.key}`} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 14px', border: `1px solid ${checked[p.key] ? 'var(--brand-on-cream-navy, #28396C)' : 'var(--l-border, #e3ddcf)'}`, borderRadius: 12, cursor: 'pointer', background: checked[p.key] ? 'rgba(40,57,108,0.04)' : 'transparent', transition: 'border-color .15s, background .15s' }}>
+            <label key={p.key} htmlFor={`agree-${p.key}`} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 14px', border: `1px solid ${checked[p.key] ? 'var(--brand-on-cream-navy, #28396C)' : 'var(--line)'}`, borderRadius: 12, cursor: 'pointer', background: checked[p.key] ? 'rgba(40,57,108,0.04)' : 'transparent', transition: 'border-color .15s, background .15s' }}>
               <input
                 id={`agree-${p.key}`}
                 type="checkbox"
@@ -85,7 +85,7 @@ function ConsentScreen({ pending, onAccepted }) {
           disabled={!allChecked || submitting}
           style={{
             width: '100%', padding: '13px 18px', borderRadius: 11, border: 'none',
-            background: allChecked && !submitting ? '#28396C' : 'var(--l-border, #cfd6e4)',
+            background: allChecked && !submitting ? '#28396C' : 'var(--line)',
             color: '#fff', fontSize: 15, fontWeight: 700, cursor: allChecked && !submitting ? 'pointer' : 'not-allowed',
             fontFamily: "'Nunito', sans-serif", transition: 'background .15s',
           }}

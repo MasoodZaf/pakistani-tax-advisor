@@ -102,11 +102,11 @@ export default function ResetPassword() {
 }
 
 const wrap = { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface, #faf8f2)', padding: 24, fontFamily: "'Nunito', sans-serif" };
-const card = { width: '100%', maxWidth: 420, background: 'var(--card, #fff)', border: '1px solid var(--l-border, #e3ddcf)', borderRadius: 18, padding: '32px 30px', boxShadow: '0 10px 40px rgba(20,30,60,0.08)' };
+const card = { width: '100%', maxWidth: 420, background: 'var(--surface-raised)', border: '1px solid var(--line)', borderRadius: 18, padding: '32px 30px', boxShadow: '0 10px 40px rgba(20,30,60,0.08)' };
 const h1 = { fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 23, fontWeight: 800, color: 'var(--content, #1f2533)', margin: '0 0 6px', textAlign: 'center', letterSpacing: '-0.02em' };
 const sub = { fontSize: 14.5, lineHeight: 1.6, color: 'var(--content-muted, #5b6478)', margin: '0 0 22px', textAlign: 'center' };
 const label = { display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--content, #1f2533)', marginBottom: 7 };
-const input = { width: '100%', padding: '11px 40px 11px 38px', borderRadius: 11, border: '1px solid var(--l-border, #cfd6e4)', background: 'var(--surface, #fff)', color: 'var(--content, #1f2533)', fontSize: 15, fontFamily: "'Nunito', sans-serif", outline: 'none', boxSizing: 'border-box' };
+const input = { width: '100%', padding: '11px 40px 11px 38px', borderRadius: 11, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--content)', fontSize: 15, fontFamily: "'Nunito', sans-serif", outline: 'none', boxSizing: 'border-box' };
 const iconStyle = { position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--content-muted, #5b6478)' };
 const eyeBtn = { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--content-muted, #5b6478)', padding: 2 };
 const primaryBtn = { width: '100%', padding: '13px 18px', borderRadius: 11, border: 'none', background: '#28396C', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" };

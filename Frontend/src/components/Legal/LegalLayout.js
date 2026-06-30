@@ -49,7 +49,7 @@ export function LI({ children }) {
 export function Callout({ children }) {
   return (
     <div style={{
-      background: 'var(--surface-2, #f3f1ea)', border: '1px solid var(--l-border, #e3ddcf)',
+      background: 'var(--surface-raised)', border: '1px solid var(--line)',
       borderRadius: 12, padding: '14px 16px', margin: '8px 0 22px',
       fontSize: 13.5, lineHeight: 1.6, color: 'var(--content-muted, #5b6478)',
     }}>
@@ -69,7 +69,7 @@ export default function LegalLayout({ title, subtitle, children }) {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--surface, #faf8f2)', paddingBottom: 64, fontFamily: "'Nunito', sans-serif" }}>
       {/* Header bar */}
-      <header style={{ borderBottom: '1px solid var(--l-border, #e3ddcf)', padding: '18px 0', background: 'var(--surface, #faf8f2)' }}>
+      <header style={{ borderBottom: '1px solid var(--line)', padding: '18px 0', background: 'var(--surface, #faf8f2)' }}>
         <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <Link to="/" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
@@ -100,7 +100,7 @@ export default function LegalLayout({ title, subtitle, children }) {
 
         {children}
 
-        <footer style={{ marginTop: 48, paddingTop: 20, borderTop: '1px solid var(--l-border, #e3ddcf)', display: 'flex', flexWrap: 'wrap', gap: 18 }}>
+        <footer style={{ marginTop: 48, paddingTop: 20, borderTop: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', gap: 18 }}>
           {[
             { to: '/terms', label: 'Terms & Conditions' },
             { to: '/privacy', label: 'Privacy Policy' },
