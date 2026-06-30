@@ -75,7 +75,26 @@ async function rolloverOnce(now = new Date()) {
       return { changed: false, currentYear: target.tax_year };
     }
 
-    // Flip: clear is_current everywhere, set on the target.
+    // Do NOT move is_current onto a year that isn't open to filers yet.
+    //
+    // The app resolves the filing year with `is_current AND is_active`
+    // (getCurrentTaxYear, login, user provisioning, wizard). A new fiscal year
+    // is auto-created here with is_active=false until an admin reviews the
+    // Finance Act and updates the slabs. If we flipped is_current onto that
+    // inactive year, NO row would satisfy `is_current AND is_active` and the
+    // current-year lookup would throw — and it would do so during the prior
+    // year's filing season (e.g. 2025-26 returns are filed Jul–Sep, AFTER the
+    // 2026-27 fiscal year has already started). So is_current only advances
+    // once the new year is activated; until then it stays on the prior year.
+    if (!target.is_active) {
+      await client.query('COMMIT'); // keep the freshly-created row; leave is_current as-is
+      logger.info('taxYearRollover: new year not active yet — deferring is_current flip', {
+        taxYear: target.tax_year,
+      });
+      return { changed: false, deferred: true, currentYear: target.tax_year };
+    }
+
+    // Flip: clear is_current everywhere, set on the (now-active) target.
     await client.query('UPDATE tax_years SET is_current = false WHERE is_current = true');
     await client.query('UPDATE tax_years SET is_current = true WHERE id = $1', [target.id]);
 
