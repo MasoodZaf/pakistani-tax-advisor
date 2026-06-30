@@ -1,13 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="mtTile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#33477f"/>
-      <stop offset="1" stop-color="#1f2c52"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="15" fill="url(#mtTile)"/>
-  <rect x="1" y="1" width="62" height="62" rx="14" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
-  <path d="M18 21 L32 39.5 L46 21" fill="none" stroke="#B5E18B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 44 V20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
-  <path d="M46 44 V20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="MeraTax">
+  <rect width="512" height="512" rx="112" fill="#2a3a66"/>
+  <g transform="translate(-126.1 -44) scale(0.6316)">
+    <path d="M330 350 L455 468 L455 720 L382 720 Q330 720 330 668 Z" fill="#00A96B"/>
+    <path d="M382 230 Q407 230 425 248 L600 414 L775 248 Q793 230 818 230 L832 230 Q870 230 870 268 L870 348 L626 584 Q600 609 574 584 L330 348 L330 268 Q330 230 368 230 Z" fill="#00C979"/>
+    <path d="M870 400 L870 638 Q870 681 827 681 L759 681 Q735 681 719 665 L679 625 Q655 601 679 577 Z" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M748 603 L781 636 L839 563" fill="none" stroke="#06D884" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>
