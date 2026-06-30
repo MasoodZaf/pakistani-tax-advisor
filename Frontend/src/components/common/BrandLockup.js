@@ -21,7 +21,8 @@ let _seq = 0;
 const BrandLockup = ({ width = 220, tone = 'dark', showTagline = true, className, style, title = 'MeraTax' }) => {
   const uid = React.useMemo(() => `mtl${++_seq}`, []);
   const ink = tone === 'light' ? '#0A2742' : '#FFFFFF'; // wordmark/tagline + card outline
-  const vb = showTagline ? { y: 188, h: 832 } : { y: 188, h: 600 };
+  // Heights include the wordmark; the taller one also fits the tagline line.
+  const vb = showTagline ? { y: 188, h: 840 } : { y: 188, h: 792 };
   const height = Math.round((width * vb.h) / 1200);
 
   return (
