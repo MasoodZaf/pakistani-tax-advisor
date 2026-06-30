@@ -39,6 +39,9 @@ const PrivacyPolicy = lazy(() => import('./components/Legal/PrivacyPolicy'));
 const TermsAndConditions = lazy(() => import('./components/Legal/TermsAndConditions'));
 const UserAgreement = lazy(() => import('./components/Legal/UserAgreement'));
 const ConsultantAgreement = lazy(() => import('./components/Legal/ConsultantAgreement'));
+// Self-service password reset.
+const ForgotPassword = lazy(() => import('./components/Auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'));
 // import ImpersonationBanner from './components/Admin/ImpersonationBanner'; // Not needed for manual login flow
 
 // Full-screen fallback shown while a route chunk loads (mirrors the
@@ -249,6 +252,10 @@ function App() {
               <Route path="/login" element={<Login />} />
               {/* /register redirects to the full onboarding flow */}
               <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+
+              {/* Self-service password reset (public) */}
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Public legal pages — readable without an account (also opened
                   from the consent gate's "read" links and the footer). */}

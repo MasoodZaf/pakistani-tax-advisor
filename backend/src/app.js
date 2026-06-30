@@ -145,8 +145,11 @@ app.use(express.static('public'));
 // anti-brute-force limit. SSO endpoints accept ID tokens, so they need the
 // same throttle to prevent token-verification grinding and email enumeration.
 // /api/sso covers /sso/google, /sso/apple, /sso/link/*, /sso/unlink, /sso/status.
-app.use(['/api/login', '/api/register', '/api/sso', '/api/verify-session'], loginLimiter);
+app.use(['/api/login', '/api/register', '/api/sso', '/api/verify-session', '/api/forgot-password', '/api/reset-password'], loginLimiter);
 app.use('/api', authRoutes);
+// Self-service password reset (forgot-password / reset-password) — same strict
+// login limiter applied above.
+app.use('/api', require('./routes/passwordReset'));
 
 // Public read-only info (tax year config) — no auth, no throttle needed
 app.use('/api/tax-year', taxYearRoutes);

@@ -6,6 +6,7 @@ import { Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { storeToken } from '../../utils/tokenStorage';
 import { isStaff } from '../../utils/roles';
+import BrandLockup from '../common/BrandLockup';
 
 // Full-screen forced password reset for bulk-imported users logging in with a
 // temporary password. Every route guard redirects here while
@@ -73,6 +74,9 @@ const ForcePasswordReset = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--surface)' }}>
       <div className="bg-white dark:bg-[#151c30] rounded-brand shadow-brand p-8 w-full max-w-md">
+        <div className="flex justify-center mb-6" style={{ color: 'var(--content)' }}>
+          <BrandLockup width={160} tone="auto" showTagline={false} />
+        </div>
         <div className="flex items-center gap-3 mb-2">
           <span className="inline-grid place-items-center rounded-brand bg-lime/25 p-2 text-navy dark:text-[#e7eaf3]">
             <ShieldCheck className="w-6 h-6" />

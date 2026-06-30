@@ -10,6 +10,9 @@ import React from 'react';
  *   width       — rendered width in px (height scales to keep the ratio)
  *   tone        — 'dark'  → white wordmark/tagline + white card outline
  *                 'light' → navy wordmark/tagline + navy card outline
+ *                 'auto'  → inherits the host text colour (currentColor), so it
+ *                           adapts to light/dark theme automatically. Set the
+ *                           parent's CSS `color` (e.g. var(--content)).
  *   showTagline — include the "PAKISTAN'S SMART TAX COMPANION" line (default true)
  *
  * The green "M" and the green check are colour-stable; only the wordmark,
@@ -20,7 +23,8 @@ let _seq = 0;
 
 const BrandLockup = ({ width = 220, tone = 'dark', showTagline = true, className, style, title = 'MeraTax' }) => {
   const uid = React.useMemo(() => `mtl${++_seq}`, []);
-  const ink = tone === 'light' ? '#0A2742' : '#FFFFFF'; // wordmark/tagline + card outline
+  // wordmark/tagline + card outline colour
+  const ink = tone === 'auto' ? 'currentColor' : tone === 'light' ? '#0A2742' : '#FFFFFF';
   // Heights include the wordmark; the taller one also fits the tagline line.
   const vb = showTagline ? { y: 188, h: 840 } : { y: 188, h: 792 };
   const height = Math.round((width * vb.h) / 1200);

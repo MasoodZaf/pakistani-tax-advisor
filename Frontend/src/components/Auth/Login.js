@@ -470,7 +470,7 @@ const Login = () => {
                 />
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--content-muted)' }}>Remember me</span>
               </label>
-              <button type="button" onClick={() => toast('Contact your administrator to reset your password.', { icon: 'ℹ️' })}
+              <button type="button" onClick={() => navigate('/forgot-password')}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--content)', fontFamily: "'Nunito', sans-serif" }}>
                 Forgot password?
               </button>
