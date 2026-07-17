@@ -710,9 +710,21 @@ const FinalMinIncomeForm = () => {
     lastSyncedSalaryRef.current = sig;
 
     setValue('salary_u_s_12_7', salaryAmount);
-    const { tax } = calculateFBRSalaryTax(salaryAmount);
-    setValue('salary_u_s_12_7_tax_deducted', tax);
-  }, [formData['income'], rates, setValue, getStepData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Tax deducted is a factual figure — what the employer actually withheld and
+    // reported to FBR on its s.149 statement — so the slab number is only ever a
+    // pre-fill for a cell with nothing recorded in it. A stored non-zero value
+    // came from the user ("Use cert. WHT" or typing), and `manualTaxDeducted`
+    // can't tell us that after a refresh because it's a ref the remount empties.
+    // Treating the stored value as intent is what makes the certificate choice
+    // survive a reload; overwriting it replaced documented withholding with an
+    // estimate and overstated the refund claim by the difference.
+    const recorded = parseFloat(getValues('salary_u_s_12_7_tax_deducted')) || 0;
+    if (recorded === 0 && !manualTaxDeducted.current.has('salary_u_s_12_7_tax_deducted')) {
+      const { tax } = calculateFBRSalaryTax(salaryAmount);
+      setValue('salary_u_s_12_7_tax_deducted', tax);
+    }
+  }, [formData['income'], rates, setValue, getValues, getStepData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Field-level visibility — driven by the user's income-profile addons via
   // shared/formFieldVisibility.js. Pure salaried sees 0 of the 60 buckets

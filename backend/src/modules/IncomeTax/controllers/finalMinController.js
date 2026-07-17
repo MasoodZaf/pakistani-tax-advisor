@@ -8,6 +8,7 @@ const {
 const {
   getCurrentTaxYear,
 } = require('../helpers/taxFormsShared');
+const { toFinalMinFrontendShape } = require('../helpers/finalMinShape');
 
 const getFinalMinIncome = async (req, res) => {
   try {
@@ -185,36 +186,8 @@ const getFinalMinIncome = async (req, res) => {
       }
     }
 
-    // Transform database field names to frontend field names (add _amount suffix)
-    // Database stores: salary_u_s_12_7, salary_u_s_12_7_tax_deducted, salary_u_s_12_7_tax_chargeable
-    // Frontend expects: salary_u_s_12_7 (no suffix), but for dividends/investments it expects _amount suffix
-    const transformedData = {};
-    const fieldsWithoutAmountSuffix = ['salary_u_s_12_7']; // These fields don't need _amount suffix
-
-    for (const [key, value] of Object.entries(finalMinIncomeData)) {
-      // Skip metadata fields
-      if (['id', 'user_id', 'user_email', 'tax_return_id', 'tax_year_id', 'tax_year', 'is_complete', 'created_at', 'updated_at', 'last_updated_by'].includes(key)) {
-        transformedData[key] = value;
-        continue;
-      }
-
-      // If field ends with _tax_deducted or _tax_chargeable, keep as is
-      if (key.endsWith('_tax_deducted') || key.endsWith('_tax_chargeable')) {
-        transformedData[key] = value;
-        continue;
-      }
-
-      // For amount fields (those without _tax_deducted or _tax_chargeable suffix)
-      // Add _amount suffix for all fields except salary_u_s_12_7
-      if (!fieldsWithoutAmountSuffix.includes(key) &&
-          !key.endsWith('_tax_deducted') &&
-          !key.endsWith('_tax_chargeable') &&
-          !key.includes('total')) {
-        transformedData[`${key}_amount`] = value;
-      } else {
-        transformedData[key] = value;
-      }
-    }
+    // Map DB column names onto the field names the form binds.
+    const transformedData = toFinalMinFrontendShape(finalMinIncomeData);
 
     res.json({
       success: true,
@@ -498,7 +471,9 @@ const saveFinalMinIncome = async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows[0],
+      // Same shape as the read paths: the client resets its form from this
+      // payload, so a raw row here blanks every `_amount`-suffixed input.
+      data: toFinalMinFrontendShape(result.rows[0]),
       message: 'Final/min income data saved successfully with tax calculations',
       calculations: taxChargeableCalculations,
     });

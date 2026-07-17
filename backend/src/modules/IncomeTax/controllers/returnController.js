@@ -5,6 +5,7 @@ const {
   getCurrentTaxYear,
   recalculateFormCompletion,
 } = require('../helpers/taxFormsShared');
+const { toFinalMinFrontendShape } = require('../helpers/finalMinShape');
 
 const getCurrentReturn = async (req, res) => {
   try {
@@ -235,36 +236,8 @@ const getCurrentReturn = async (req, res) => {
           }
         }
 
-        // Transform database field names to frontend field names (add _amount suffix)
-        const transformedFinalMinData = {};
-        const fieldsWithoutAmountSuffix = ['salary_u_s_12_7']; // These fields don't need _amount suffix
-
-        for (const [key, value] of Object.entries(finalMinData)) {
-          // Skip metadata fields
-          if (['id', 'user_id', 'user_email', 'tax_return_id', 'tax_year_id', 'tax_year', 'is_complete', 'created_at', 'updated_at', 'last_updated_by'].includes(key)) {
-            transformedFinalMinData[key] = value;
-            continue;
-          }
-
-          // If field ends with _tax_deducted or _tax_chargeable, keep as is
-          if (key.endsWith('_tax_deducted') || key.endsWith('_tax_chargeable')) {
-            transformedFinalMinData[key] = value;
-            continue;
-          }
-
-          // For amount fields (those without _tax_deducted or _tax_chargeable suffix)
-          // Add _amount suffix for all fields except salary_u_s_12_7
-          if (!fieldsWithoutAmountSuffix.includes(key) &&
-              !key.endsWith('_tax_deducted') &&
-              !key.endsWith('_tax_chargeable') &&
-              !key.includes('total')) {
-            transformedFinalMinData[`${key}_amount`] = value;
-          } else {
-            transformedFinalMinData[key] = value;
-          }
-        }
-
-        response.formData.final_min_income = transformedFinalMinData;
+        // Map DB column names onto the field names the form binds.
+        response.formData.final_min_income = toFinalMinFrontendShape(finalMinData);
         logger.info(`Final/min income data found for user ${userId} (with auto-linking)`);
       } else if (incomeFormForFinalMin || adjustableTaxForFinalMin) {
         // No existing data - return auto-linked values with _amount suffix for all fields
