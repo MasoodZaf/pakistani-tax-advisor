@@ -85,9 +85,99 @@ function filterToAllowedColumns(tableName, columnsSet, payload, options = {}) {
   return allowed;
 }
 
+const componentCache = new Map();
+
+/**
+ * The set of columns a GENERATED total actually sums, read out of the
+ * generation expression itself.
+ *
+ * WHY THIS EXISTS — it is the fix for the defect that failed the first
+ * remediation pass. `validation.js` clamped a HARDCODED list of four credit
+ * heads while `credits_forms.total_credits` is a generated column summing
+ * eleven. `surrender_tax_credit_reduction` is an ordinary editable input on the
+ * shipping Credits form, was not on the list, and QA drove Rs 9,000,000 through
+ * it verbatim — turning a Rs 3,101,000 liability into a Rs 250,000 refund
+ * claim. Every hand-maintained list of column names in this codebase has gone
+ * stale at least once; the generated expression cannot, because it IS the
+ * definition of the total the engine reads.
+ *
+ * The expression Postgres stores looks like:
+ *   ((COALESCE(a, (0)::numeric) + COALESCE(b, (0)::numeric)) + COALESCE(c, ...))
+ * so the component names are exactly the identifiers wrapped in COALESCE.
+ * Anything else in there (casts, literals) is not a column and is ignored.
+ *
+ * Fails loudly rather than returning a partial set: a silently short list is
+ * precisely the failure being fixed, and a caller that clamps only some of the
+ * components is worse than one that refuses to run.
+ *
+ * @param {string} tableName   must be in ALLOWED_TABLES
+ * @param {string} totalColumn the GENERATED column whose summands are wanted
+ * @returns {Promise<string[]>} component column names, in expression order
+ */
+async function getGeneratedTotalComponents(tableName, totalColumn) {
+  if (!ALLOWED_TABLES.has(tableName)) {
+    throw new Error(`Table "${tableName}" is not in the save-form allow list`);
+  }
+  const cacheKey = `${tableName}.${totalColumn}`;
+  if (componentCache.has(cacheKey)) return componentCache.get(cacheKey);
+
+  const result = await pool.query(
+    `SELECT generation_expression, is_generated
+       FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+    [tableName, totalColumn]
+  );
+  if (result.rows.length === 0) {
+    throw new Error(`Column "${tableName}.${totalColumn}" does not exist`);
+  }
+  const { generation_expression: expr, is_generated: isGenerated } = result.rows[0];
+  if (isGenerated !== 'ALWAYS' || !expr) {
+    throw new Error(
+      `Column "${tableName}.${totalColumn}" is not a GENERATED column — its components `
+        + 'cannot be derived and must not be guessed.'
+    );
+  }
+
+  // Identifiers inside COALESCE(...) are the summands. Quoted identifiers are
+  // matched too; Postgres emits them for anything needing quoting.
+  const names = [];
+  const seen = new Set();
+  const re = /COALESCE\(\s*"?([a-zA-Z_][a-zA-Z0-9_$]*)"?\s*[,)]/gi;
+  let m;
+  while ((m = re.exec(expr)) !== null) {
+    const name = m[1];
+    if (!seen.has(name)) {
+      seen.add(name);
+      names.push(name);
+    }
+  }
+  if (names.length === 0) {
+    throw new Error(
+      `Could not parse any component columns out of "${tableName}.${totalColumn}"'s `
+        + `generation expression: ${expr}`
+    );
+  }
+
+  componentCache.set(cacheKey, names);
+  logger.info('Derived generated-total components', {
+    table: tableName,
+    total: totalColumn,
+    count: names.length,
+  });
+  return names;
+}
+
+/** Test seam — the process-lifetime caches are otherwise never invalidated. */
+function _resetColumnCaches() {
+  cache.clear();
+  componentCache.clear();
+}
+
 module.exports = {
   ALLOWED_TABLES,
   getAllowedColumns,
+  getGeneratedTotalComponents,
   filterToAllowedColumns,
   UnknownColumnsError,
+  _resetColumnCaches,
 };

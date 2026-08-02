@@ -29,6 +29,17 @@ let capturedFirst;
 const mockQuery = jest.fn(async (sql, params = []) => {
   const s = String(sql);
 
+  // The clamp derives its component set from the GENERATED total's own
+  // definition rather than a hand-kept name list (that list going stale is the
+  // exact defect being regression-tested here — see F-05). These are the real
+  // expressions Postgres reports for the two tables, copied verbatim from
+  // phase-t-realign-form-tables.sql, so a parser change that stops handling the
+  // real format fails here rather than in production.
+  if (/generation_expression/.test(s)) {
+    const expr = GENERATED_TOTALS[`${params[0]}.${params[1]}`];
+    if (!expr) return { rows: [] };
+    return { rows: [{ generation_expression: expr, is_generated: 'ALWAYS' }] };
+  }
   if (/information_schema\.columns/.test(s)) {
     // Every key any test posts must be an "allowed column" or saveFormData
     // silently drops it and the assertion would pass for the wrong reason.
@@ -58,6 +69,28 @@ const mockQuery = jest.fn(async (sql, params = []) => {
   return { rows: [] };
 });
 
+// Verbatim from phase-t-realign-form-tables.sql. `total_credits` sums ELEVEN
+// components; the pass that failed QA clamped four of them by name, and
+// `surrender_tax_credit_reduction` — an ordinary editable input on the shipping
+// Credits form — carried Rs 9,000,000 through unclamped into a refund claim.
+const GENERATED_TOTALS = {
+  'credits_forms.total_credits':
+    '(((((COALESCE(charitable_donations_tax_credit, (0)::numeric) '
+    + '+ COALESCE(charitable_donations_associate_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(pension_fund_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(surrender_tax_credit_reduction, (0)::numeric)) '
+    + '+ COALESCE(investment_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(other_credits, (0)::numeric))',
+  'reductions_forms.total_reductions':
+    '((((((COALESCE(teacher_researcher_tax_reduction, (0)::numeric) '
+    + '+ COALESCE(behbood_certificates_tax_reduction, (0)::numeric)) '
+    + '+ COALESCE(capital_gain_immovable_50_reduction, (0)::numeric)) '
+    + '+ COALESCE(capital_gain_immovable_75_reduction, (0)::numeric)) '
+    + '+ COALESCE(export_income_reduction, (0)::numeric)) '
+    + '+ COALESCE(industrial_undertaking_reduction, (0)::numeric)) '
+    + '+ COALESCE(other_reductions, (0)::numeric))',
+};
+
 // Union of every column the tests touch across the four form tables.
 const ALLOWED_COLUMNS = [
   'tax_return_id',
@@ -85,6 +118,8 @@ const ALLOWED_COLUMNS = [
   'charitable_donations_associate_tax_credit',
   'pension_fund_amount',
   'pension_fund_tax_credit',
+  'surrender_tax_credit_reduction',
+  'other_credits',
   'total_tax_credits',
   // reductions
   'behbood_certificates_amount',
@@ -352,7 +387,21 @@ describe('POST /deductions — s.60C professional expenses (AUDIT §5 case 5)', 
 
 // ───────────────────────────────────────────────────────────────────────────
 describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)', () => {
-  test('a donation credit above 30% of taxable income is clamped', async () => {
+  // Every figure below is on taxable income 1,000,000, where the FA-2025
+  // salaried slabs charge 1% on the excess over 600,000:
+  //     normal tax   = 4,000
+  //     average rate = 4,000 / 1,000,000 = 0.004
+  // The statutory credit is `(A/B) × C` — the average rate applied to the
+  // eligible amount — NOT the eligible amount itself.
+  //
+  // The first remediation pass clamped at C and these tests asserted C. That
+  // is roughly two orders of magnitude too generous at this income, and QA
+  // proved it was not academic: with the clamp firing and logging, a taxable
+  // income of 3,000,000 still went from a 300,000 liability to nil, because
+  // the "cap" of 900,000 dwarfed the 90,000 the statute actually allows.
+  // The expectations here are re-based onto the correct arithmetic.
+
+  test('a donation credit is the average rate applied to 30% of taxable income', async () => {
     stored.income = incomeRow(1000000); // taxable 1,000,000, no allowances stored
 
     const res = await request(buildApp()).post('/api/tax-forms/credits').send({
@@ -363,8 +412,9 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     });
 
     expect(res.status).toBe(200);
-    expect(num(captured.values.charitable_donations_tax_credit)).toBe(300000);
-    expect(num(captured.values.total_tax_credits)).toBe(300000);
+    // eligible = min(9,999,999, 30% × 1,000,000) = 300,000 → × 0.004 = 1,200
+    expect(num(captured.values.charitable_donations_tax_credit)).toBe(1200);
+    expect(num(captured.values.total_tax_credits)).toBe(1200);
   });
 
   test('the associate proviso is 15%, not 30%', async () => {
@@ -376,7 +426,8 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
       charitable_donations_associate_tax_credit: 9999999,
     });
 
-    expect(num(captured.values.charitable_donations_associate_tax_credit)).toBe(150000);
+    // eligible = 15% × 1,000,000 = 150,000 → × 0.004 = 600
+    expect(num(captured.values.charitable_donations_associate_tax_credit)).toBe(600);
   });
 
   test('pension credit is capped at 20% of taxable income', async () => {
@@ -386,10 +437,13 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
       .post('/api/tax-forms/credits')
       .send({ taxYear: '2025-26', pension_fund_amount: 9999999, pension_fund_tax_credit: 9999999 });
 
-    expect(num(captured.values.pension_fund_tax_credit)).toBe(200000);
+    // eligible = 20% × 1,000,000 = 200,000 → × 0.004 = 800
+    expect(num(captured.values.pension_fund_tax_credit)).toBe(800);
   });
 
-  test('an inflated total_tax_credits cannot bypass the per-credit caps', async () => {
+  test('a credit with no underlying contribution is refused entirely', async () => {
+    // There is no s.61 credit without a donation. Posting a bare credit figure
+    // with no amount behind it used to be accepted at face value.
     stored.income = incomeRow(1000000);
 
     await request(buildApp()).post('/api/tax-forms/credits').send({
@@ -398,7 +452,71 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
       total_tax_credits: 99999999,
     });
 
+    expect(num(captured.values.charitable_donations_tax_credit)).toBe(0);
+    expect(num(captured.values.total_tax_credits)).toBe(0);
+  });
+
+  test('an inflated total_tax_credits cannot bypass the per-credit caps', async () => {
+    stored.income = incomeRow(1000000);
+
+    await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      charitable_donations_amount: 250000,
+      charitable_donations_tax_credit: 1000,
+      total_tax_credits: 99999999,
+    });
+
+    // eligible = min(250,000, 300,000) = 250,000 → × 0.004 = 1,000, which is
+    // exactly what was claimed, so the head stands and only the total is cut.
+    expect(num(captured.values.charitable_donations_tax_credit)).toBe(1000);
     expect(num(captured.values.total_tax_credits)).toBe(1000);
+  });
+
+  test('F-05: a credit head with NO statutory rule is still bounded by the tax in charge', async () => {
+    // `surrender_tax_credit_reduction` is an ordinary editable input on the
+    // shipping Credits form and was not on the hand-written clamp list. QA put
+    // Rs 9,000,000 through it and turned a real liability into a refund CLAIM
+    // against FBR. The component set now comes from the generated total's own
+    // definition, so a head cannot escape by not being thought of.
+    stored.income = incomeRow(1000000); // normal tax 4,000
+
+    const res = await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      surrender_tax_credit_reduction: 9000000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(num(captured.values.surrender_tax_credit_reduction)).toBe(4000);
+    expect(res.body.statutory_adjustments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'surrender_tax_credit_reduction',
+          claimed: 9000000,
+          allowed: 4000,
+        }),
+      ])
+    );
+  });
+
+  test('R-01: credits saved BEFORE the income form are not destroyed', async () => {
+    // The clamp used to run against a zero base, write zeros, and never restore
+    // them. Nothing in the UI requires the income form first, so this was
+    // ordinary use — and it pushes tax UP, so no taxpayer reports it.
+    stored.income = null;
+
+    const res = await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      charitable_donations_amount: 250000,
+      charitable_donations_tax_credit: 1000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(num(captured.values.charitable_donations_amount)).toBe(250000);
+    expect(num(captured.values.charitable_donations_tax_credit)).toBe(1000);
+    // The user is told the check is deferred rather than left to assume it passed.
+    expect(res.body.statutory_adjustments).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: 'tax_credits' })])
+    );
   });
 
   test('the declared donation itself is NOT capped — only the credit is', async () => {

@@ -7,6 +7,7 @@ const {
   toAmount,
   round2,
 } = require('../helpers/statutoryLimits');
+const { getGeneratedTotalComponents } = require('../helpers/tableColumns');
 
 // Absolute sanity ceiling for any single money field. This is NOT a statutory
 // limit — the statutory limits live in helpers/statutoryLimits.js and are
@@ -39,8 +40,20 @@ class ValidationMiddleware {
       }
     }
 
-    // Convert to number
-    const numericValue = parseFloat(value);
+    // Convert to number.
+    //
+    // The commas and surrounding whitespace MUST be stripped first, exactly as
+    // the controllers' own cleaning loops do (`adjustableTaxController.js`,
+    // `finalMinController.js`, `routes/incomeForm.js`). Bare
+    // `parseFloat('1,200,000')` is **1** — it stops at the first comma — and 1
+    // sails through both the `min` and the `max` check. The stored figure was
+    // never wrong (nothing consumes `req.sanitizedData`; the controllers
+    // re-parse the raw body correctly), but every range check in this class was
+    // being evaluated against a number two orders of magnitude too small, so a
+    // comma-formatted amount could not be caught by the ceiling it was supposed
+    // to be tested against.
+    const numericValue =
+      typeof value === 'string' ? parseFloat(value.trim().replace(/,/g, '')) : parseFloat(value);
 
     // Check if conversion was successful
     if (isNaN(numericValue)) {
@@ -526,6 +539,13 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
     [userId, taxYear]
   );
   const i = inc.rows[0] || {};
+  // Whether ANY income has been declared yet. Load-bearing for R-01: with no
+  // income row every cap evaluates to zero, so clamping would write zeros over
+  // a taxpayer's credits and — because the clamp only ever runs on save — never
+  // restore them when the income form is filled in afterwards. QA lost a whole
+  // Credits form this way by entering the forms out of order, which is not a
+  // misuse: nothing in the UI requires income first.
+  const hasIncomeRow = inc.rows.length > 0;
   const totalIncome =
     toAmount(i.annual_salary_wages_total) +
     toAmount(i.total_non_cash_benefits) +
@@ -555,10 +575,63 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
 
   return {
     totalIncome,
+    hasIncomeRow,
     preAllowanceTaxableIncome,
     taxableIncome: Math.max(0, totalIncome - allowances),
     deductionsRow: d,
   };
+}
+
+/**
+ * Record that a limit could not be measured yet, WITHOUT touching the figures.
+ *
+ * The alternative — clamping against an unknown base — writes zeros that no
+ * later save restores. Deferring is safe because the engine bounds credits and
+ * reductions again at computation time against the income that exists then
+ * (`taxCalculationService.js`, "bounded by the tax they offset"), so nothing
+ * unlawful can reach a filed return through this door.
+ */
+function recordDeferral(req, res, what) {
+  recordAdjustment(req, res, {
+    field: what,
+    claimed: null,
+    allowed: null,
+    rule:
+      'No income has been declared for this tax year yet, so the statutory ceiling cannot be '
+      + 'measured. Your figures were saved unchanged and will be checked against the limits '
+      + 'once the Income form is completed.',
+  });
+}
+
+/**
+ * The ceiling that binds EVERY credit and reduction head, whatever it is named.
+ *
+ * A credit or a reduction extinguishes tax. Neither can exceed the tax in
+ * charge, and neither can ever pay money to the taxpayer — a refund arises only
+ * from tax actually PAID (withholding, advance tax), never from a relief. So
+ * `tax in charge` is a hard, statute-independent upper bound on every head,
+ * including heads the app has no specific rule for (`other_credits`,
+ * `other_reductions`, `surrender_tax_credit_reduction`, and anything added
+ * later).
+ *
+ * This is what the previous pass got wrong. It clamped four credit heads by
+ * name, and the components it missed were not exotic: `surrender_tax_credit_
+ * reduction` is a plain editable input on the shipping Credits form. Rs
+ * 9,000,000 went in verbatim and produced a Rs 250,000 refund CLAIM against
+ * FBR out of a Rs 3,101,000 liability.
+ *
+ * The component set is therefore derived from the GENERATED total's own
+ * definition (`getGeneratedTotalComponents`) rather than from a list kept by
+ * hand. `handledHeads` are the ones a caller has already bounded by their own
+ * statutory rule; everything else gets the universal ceiling.
+ */
+function clampRemainingHeads(req, res, { components, merged, handledHeads, ceiling, rule }) {
+  for (const field of components) {
+    if (handledHeads.has(field)) continue;
+    if (!Object.prototype.hasOwnProperty.call(req.body, field)) continue;
+    clampField(req, res, field, ceiling, rule);
+    merged[field] = req.body[field];
+  }
 }
 
 /** Uniform failure for an enforcement middleware that cannot do its job. */
@@ -596,8 +669,15 @@ async function enforceDeductionLimits(req, res, next) {
     const bases = await loadIncomeBases(req.user.id, taxYear, req.body);
     const ti = bases.preAllowanceTaxableIncome;
 
+    // R-01 — see recordDeferral(). With no income row every allowance ceiling
+    // is zero, so clamping here would wipe the form. The refusal of a relief
+    // that DOES NOT EXIST is a separate matter and still applies below: it
+    // needs no income base to decide.
+    const incomeKnown = bases.hasIncomeRow;
+    if (!incomeKnown) recordDeferral(req, res, 'deductible_allowances');
+
     // ── s.60D — education ──
-    if (Object.prototype.hasOwnProperty.call(req.body, 'educational_expenses_amount')) {
+    if (incomeKnown && Object.prototype.hasOwnProperty.call(req.body, 'educational_expenses_amount')) {
       const children = toAmount(
         req.body.educational_expenses_children_count ??
           bases.deductionsRow.educational_expenses_children_count ??
@@ -617,14 +697,41 @@ async function enforceDeductionLimits(req, res, next) {
           : toAmount(feeSource);
 
       const cap = limits.capEducationU60D(ti, children, tuitionFee);
+
+      // R-02 — A CAP OF ZERO HAS TWO COMPLETELY DIFFERENT CAUSES AND THEY MUST
+      // NOT SHARE A MESSAGE. The previous pass told a taxpayer on Rs 1,400,000
+      // that their claim was refused because "taxable income is not less than
+      // the eligibility threshold" — which is false; they were 100,000 under
+      // it. The real cause was that no child count had been entered, so limb
+      // (c) evaluated to zero. A wrong reason is worse than no reason: it sends
+      // the taxpayer to fix a figure that was never the problem, and it pushes
+      // tax UP, so nobody complains and the defect never surfaces.
+      const threshold = rates?.deductionThresholds?.education_max_taxable_income?.fixedAmount;
+      const overThreshold = typeof threshold === 'number' && !(ti < threshold);
+
+      if (cap === 0 && !overThreshold && toAmount(req.body.educational_expenses_amount) > 0) {
+        // Eligible on income, but no quantum has been established. Refusing to
+        // zero it silently: ask for the missing figure instead.
+        return res.status(400).json({
+          success: false,
+          message:
+            'To claim the education allowance u/s 60D, enter the number of children the tuition '
+            + 'fee was paid for (and the fee itself). The allowance is the least of 5% of the '
+            + 'fee, 25% of taxable income, and the per-child cap — none of which can be worked '
+            + 'out without them.',
+          field: 'educational_expenses_children_count',
+        });
+      }
+
       clampField(
         req,
         res,
         'educational_expenses_amount',
         cap,
-        cap === 0
+        overThreshold
           ? 'ITO 2001 s.60D — taxable income is not less than the eligibility threshold'
-          : 'ITO 2001 s.60D — per-child cap × eligible children'
+          : 'ITO 2001 s.60D — the least of 5% of the tuition fee, 25% of taxable income, '
+            + 'and the per-child cap × eligible children'
       );
     }
 
@@ -653,7 +760,7 @@ async function enforceDeductionLimits(req, res, next) {
           'No statutory basis — s.60C (deductible allowance for profit on debt) was omitted '
             + 'by Finance Act 2022 and never covered professional or point-of-sale expenses'
         );
-      } else {
+      } else if (incomeKnown) {
         // The POS amount is a form-only field (not a DB column) and may not be
         // posted. Where it is absent the 5%-of-POS limb cannot be tested, so only
         // the 25%-of-taxable-income limb and the income threshold apply.
@@ -677,16 +784,48 @@ async function enforceDeductionLimits(req, res, next) {
       }
     }
 
+    // ── The catch-all allowance heads ──
+    //
+    // `other_deductions` is a free-text money field with no statutory rule
+    // attached, and it was completely unbounded: QA entered 11,200,000 against
+    // 11,200,000 of income and took taxable income — and therefore the whole
+    // liability — to zero, with no adjustment recorded. `zakat`, `ushr` and the
+    // foreign-tax figure are the same shape.
+    //
+    // These are genuinely open-ended reliefs, so the app has no percentage to
+    // apply. What it does have is arithmetic: a deduction FROM income cannot
+    // exceed the income it is deducted from. That bound is not a guess and does
+    // not need counsel to confirm it.
+    if (incomeKnown) {
+      for (const field of ['other_deductions', 'zakat', 'zakat_paid_amount', 'ushr']) {
+        clampField(
+          req,
+          res,
+          field,
+          bases.totalIncome,
+          'A deduction from income cannot exceed the income declared for the year.'
+        );
+      }
+    }
+
     // ── Recompute the total the engine actually reads ──
     const merged = { ...bases.deductionsRow, ...req.body };
     const recomputedTotal = round2(
-      toAmount(merged.professional_expenses_amount) +
-        toAmount(merged.educational_expenses_amount) +
-        toAmount(merged.zakat_paid_amount) +
-        toAmount(merged.zakat) +
-        toAmount(merged.ushr) +
-        toAmount(merged.tax_paid_foreign_country) +
-        toAmount(merged.other_deductions)
+      Math.min(
+        toAmount(merged.professional_expenses_amount) +
+          toAmount(merged.educational_expenses_amount) +
+          toAmount(merged.zakat_paid_amount) +
+          toAmount(merged.zakat) +
+          toAmount(merged.ushr) +
+          toAmount(merged.tax_paid_foreign_country) +
+          toAmount(merged.other_deductions),
+        // Same bound on the aggregate: individually-lawful heads must not sum
+        // past total income. Taxable income floors at zero either way, but an
+        // over-sized total silently re-qualifies the taxpayer for income-tested
+        // reliefs further down (QA's R-07). Not applied before income is known
+        // — that would be the R-01 data-loss bug again.
+        incomeKnown ? bases.totalIncome : Number.POSITIVE_INFINITY
+      )
     );
     const postedTotal = toAmount(req.body.total_deduction_from_income);
     req.body.total_deduction_from_income = recomputedTotal;
@@ -711,20 +850,22 @@ async function enforceDeductionLimits(req, res, next) {
 /**
  * s.61 + s.63 — tax credits.
  *
- * The credit is `(A/B) × C` where C is the LOWER of the amount given and the
- * statutory percentage of taxable income. A taxpayer may lawfully donate more
- * than the cap, so the declared amount is left alone; what is bounded is the
- * CREDIT, and `eligible × averageRate ≤ eligible ≤ cap` makes the cap a hard,
- * provable upper bound on it.
+ * THE CREDIT IS `(A/B) × C`, NOT `C`.
+ *   A = tax assessed before the credit,  B = taxable income,  C = the LOWER of
+ *   the amount given and the statutory percentage of taxable income.
  *
- * That bound is deliberately looser than the exact `(A/B) × C`. It closes the
- * door QA demonstrated (an over-cap credit zeroing the liability) without this
- * middleware re-implementing the engine's average-rate arithmetic and drifting
- * from it. Computing the exact credit belongs in the engine — see the handoff.
+ * The previous pass clamped the credit at `C` — the eligible AMOUNT — which is
+ * roughly an order of magnitude too loose, because `A/B` is the average rate.
+ * QA's case: taxable income 3,000,000, tax 300,000, average rate 10%. The cap
+ * allowed a 900,000 credit where the statute allows 90,000, so a liability of
+ * 300,000 still went to zero *after* clamping. The clamp fired, logged, and
+ * changed nothing that mattered.
  *
- * `total_tax_credits` is recomputed from the components for the same reason
- * the deductions total is: `taxCalculationService.js:271` reads the total, not
- * the components.
+ * The exact figure is computed here. The average rate is the engine's own slab
+ * walk (`CalculationService.calculateProgressiveTax`) so the two cannot drift.
+ *
+ * A taxpayer may lawfully donate more than the cap, so the declared AMOUNT is
+ * never touched — only the credit it generates.
  */
 async function enforceCreditLimits(req, res, next) {
   try {
@@ -735,34 +876,108 @@ async function enforceCreditLimits(req, res, next) {
     const bases = await loadIncomeBases(req.user.id, taxYear, null);
     const ti = bases.taxableIncome;
 
-    const donationCap = limits.capDonationU61(ti, false);
-    const associateCap = limits.capDonationU61(ti, true);
-    const pensionCap = limits.capPensionU63(ti);
+    // R-01 — see recordDeferral(). Never clamp against an unmeasurable base.
+    if (!bases.hasIncomeRow) {
+      recordDeferral(req, res, 'tax_credits');
+      return next();
+    }
 
-    clampField(req, res, 'charitable_donations_tax_credit', donationCap,
-      'ITO 2001 s.61 — credit limited to the tax on the lower of the donation and 30% of taxable income');
-    clampField(req, res, 'charitable_donations_associate_tax_credit', associateCap,
-      'ITO 2001 s.61 proviso — associate donation limited to 15% of taxable income');
-    clampField(req, res, 'pension_fund_tax_credit', pensionCap,
-      'ITO 2001 s.63 — credit limited to the tax on the lower of the contribution and 20% of taxable income');
-    clampField(req, res, 'pension_contribution_tax_credit', pensionCap,
-      'ITO 2001 s.63 — credit limited to the tax on the lower of the contribution and 20% of taxable income');
-
-    // Recompute the total the engine reads, from whatever credit columns the
-    // table actually carries (discovered, not hardcoded, so a new credit row
-    // cannot silently escape the total).
     const stored = await pool.query(
       `SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2`,
       [req.user.id, taxYear]
     );
     const merged = { ...(stored.rows[0] || {}), ...req.body };
-    // `_reduction` catches `surrender_tax_credit_reduction`, which the form
-    // counts in its own total.
-    const componentKeys = Object.keys(merged).filter(
-      (k) => /_(tax_credit|reduction)$/.test(k) && !k.startsWith('total_') && !/_yn$/.test(k)
-    );
+
+    // A = tax before credits; B = taxable income. Average, not marginal: a
+    // credit is apportioned over the whole progressive base.
+    const normalTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
+    const avgRate = ti > 0 ? normalTax / ti : 0;
+
+    /** (A/B) × min(amountGiven, statutory % of taxable income) */
+    const creditOn = (amountField, eligibleCap) =>
+      round2(Math.min(toAmount(merged[amountField]), eligibleCap) * avgRate);
+
+    const handled = new Map([
+      [
+        'charitable_donations_tax_credit',
+        [
+          creditOn('charitable_donations_amount', limits.capDonationU61(ti, false)),
+          'ITO 2001 s.61 — credit is (tax ÷ taxable income) × the lower of the donation and '
+            + '30% of taxable income',
+        ],
+      ],
+      [
+        'charitable_donations_associate_tax_credit',
+        [
+          creditOn('charitable_donations_associate_amount', limits.capDonationU61(ti, true)),
+          'ITO 2001 s.61 proviso — associate donations are limited to 15% of taxable income '
+            + 'before the average rate is applied',
+        ],
+      ],
+      [
+        'pension_fund_tax_credit',
+        [
+          creditOn('pension_fund_amount', limits.capPensionU63(ti)),
+          'ITO 2001 s.63 — credit is (tax ÷ taxable income) × the lower of the contribution '
+            + 'and 20% of taxable income',
+        ],
+      ],
+      [
+        'pension_contribution_tax_credit',
+        [
+          creditOn('pension_contribution_amount', limits.capPensionU63(ti)),
+          'ITO 2001 s.63 — credit is (tax ÷ taxable income) × the lower of the contribution '
+            + 'and 20% of taxable income',
+        ],
+      ],
+    ]);
+
+    // FA-2025 housing-loan profit-on-debt credit. Off unless the owner has
+    // supplied its statutory parameters at Admin -> Statutory Reliefs — the
+    // quantum is an open legal question and guessing it is what produced the
+    // bogus "professional expenses u/s 60C" allowance. With no configuration the
+    // eligible amount is 0, so the head is refused exactly like any other relief
+    // the app cannot cite.
+    if (Object.prototype.hasOwnProperty.call(req.body, 'housing_loan_profit_tax_credit')) {
+      const configured = limits.housingLoanCreditConfigured();
+      const eligible = limits.capHousingLoanProfitCredit(
+        ti,
+        merged.housing_loan_profit_amount
+      );
+      handled.set('housing_loan_profit_tax_credit', [
+        round2(eligible * avgRate),
+        configured
+          ? 'Finance Act 2025 — credit is (tax ÷ taxable income) × the least of the profit on '
+            + 'debt paid, the configured share of taxable income, and the configured ceiling'
+          : 'The housing-loan profit-on-debt credit is not configured for this tax year. Its '
+            + 'statutory quantum has not been settled, so the app does not grant it.',
+      ]);
+    }
+
+    for (const [field, [cap, rule]] of handled) {
+      clampField(req, res, field, cap, rule);
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) merged[field] = req.body[field];
+    }
+
+    // Every OTHER component of the generated total — including heads this app
+    // has no specific rule for — is bounded by the tax in charge. See
+    // clampRemainingHeads() for why a name list is not acceptable here.
+    const components = await getGeneratedTotalComponents('credits_forms', 'total_credits');
+    clampRemainingHeads(req, res, {
+      components,
+      merged,
+      handledHeads: new Set(handled.keys()),
+      ceiling: normalTax,
+      rule:
+        'A tax credit cannot exceed the tax it is set against. Relief extinguishes tax; only '
+        + 'tax actually paid can be refunded.',
+    });
+
+    // Recompute the total the engine reads FIRST (`total_tax_credits`), from
+    // the same component set the generated column uses — so the plain column
+    // and the generated one cannot disagree.
     const recomputedTotal = round2(
-      componentKeys.reduce((sum, k) => sum + toAmount(merged[k]), 0)
+      components.reduce((sum, k) => sum + toAmount(merged[k]), 0)
     );
     const postedTotal = toAmount(req.body.total_tax_credits);
     if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_credits')) {
@@ -804,22 +1019,65 @@ async function enforceReductionLimits(req, res, next) {
     const bases = await loadIncomeBases(req.user.id, taxYear, null);
     const ti = bases.taxableIncome;
 
+    // R-01 — see recordDeferral(). Never clamp against an unmeasurable base.
+    if (!bases.hasIncomeRow) {
+      recordDeferral(req, res, 'tax_reductions');
+      return next();
+    }
+
+    const stored = await pool.query(
+      `SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2`,
+      [req.user.id, taxYear]
+    );
+    const merged = { ...(stored.rows[0] || {}), ...req.body };
+
+    // ONE base and ONE slab walk for every head in this form. F-17: Behbood was
+    // moved onto the post-allowance taxable income while the teacher rebate was
+    // left on a different figure, so the same form disagreed with itself about
+    // what the taxpayer earned. Both now derive from `ti`.
+    const normalTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
+    const avgRate = ti > 0 ? normalTax / ti : 0;
+    const handledHeads = new Set();
+
     if (Object.prototype.hasOwnProperty.call(req.body, 'behbood_certificates_tax_reduction')) {
-      const stored = await pool.query(
-        `SELECT behbood_certificates_amount FROM reductions_forms WHERE user_id = $1 AND tax_year = $2`,
-        [req.user.id, taxYear]
+      handledHeads.add('behbood_certificates_tax_reduction');
+
+      // THE PROFIT IS ITSELF A CLAIM AND MUST BE BOUNDED. The relief is derived
+      // from it, so an unbounded profit is an unbounded relief no matter how
+      // carefully the derivation is written: QA posted
+      // `behbood_certificates_amount: 100,000,000` against 11,200,000 of
+      // declared income and took a Rs 3,101,000 liability to zero via a
+      // 22,687,500 "relief". Behbood profit is part of the taxpayer's own
+      // declared income, so declared income is its ceiling — a profit larger
+      // than everything you earned is not a profit.
+      const claimedProfit = toAmount(
+        req.body.behbood_certificates_amount ?? merged.behbood_certificates_amount ?? 0
       );
-      const profit = toAmount(
-        req.body.behbood_certificates_amount ?? stored.rows[0]?.behbood_certificates_amount ?? 0
-      );
+      const profit = Math.min(claimedProfit, bases.totalIncome);
+      if (
+        claimedProfit > profit &&
+        Object.prototype.hasOwnProperty.call(req.body, 'behbood_certificates_amount')
+      ) {
+        req.body.behbood_certificates_amount = round2(profit);
+        recordAdjustment(req, res, {
+          field: 'behbood_certificates_amount',
+          claimed: round2(claimedProfit),
+          allowed: round2(profit),
+          rule:
+            'Behbood/Pensioners\' Benefit profit is part of your declared income and cannot '
+            + 'exceed it. Declare the profit as income first.',
+        });
+      }
 
       // Average, not marginal: tax on a component of one progressive base
       // apportions at the average rate.
-      const normalTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
-      const avgRate = ti > 0 ? normalTax / ti : 0;
       const taxOnProfitAtAvgRate = profit * avgRate;
 
-      const cap = limits.behboodReliefCl6(profit, taxOnProfitAtAvgRate);
+      // Second, independent bound: relief cannot exceed the tax actually
+      // charged. behboodReliefCl6 already subtracts the ceiling from the tax on
+      // the profit, so this only bites if the profit bound above is ever
+      // widened — belt and braces on the head that produced the refund claim.
+      const cap = Math.min(limits.behboodReliefCl6(profit, taxOnProfitAtAvgRate), normalTax);
       clampField(
         req,
         res,
@@ -848,6 +1106,7 @@ async function enforceReductionLimits(req, res, next) {
       // deactivated row simply drops out of the set and lands here as undefined.
       // Reading the object as a scalar would give NaN -> 0 and would block the
       // rebate even in the years it is lawful.
+      handledHeads.add('teacher_researcher_tax_reduction');
       const teacherRate = Number(rates?.reductions?.teacher_researcher?.rate) || 0;
       if (teacherRate <= 0) {
         clampField(
@@ -861,28 +1120,39 @@ async function enforceReductionLimits(req, res, next) {
       } else {
         // Available this year: still cap it at the statutory percentage of the
         // salary tax, so an inflated figure cannot pass through unchecked.
-        const salaryTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
+        // `normalTax` is the same slab walk on the same base every other head
+        // in this form uses (F-17).
         clampField(
           req,
           res,
           'teacher_researcher_tax_reduction',
-          round2(salaryTax * teacherRate),
+          round2(normalTax * teacherRate),
           `2nd Sched Pt III cl.(3A) — rebate limited to ${(teacherRate * 100).toFixed(0)}% of the tax payable on salary income`
         );
       }
     }
 
-    // Recompute the total the engine reads.
-    const stored = await pool.query(
-      `SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2`,
-      [req.user.id, taxYear]
-    );
-    const merged = { ...(stored.rows[0] || {}), ...req.body };
-    const componentKeys = Object.keys(merged).filter(
-      (k) => /_(tax_reduction|reductions?)$/.test(k) && !k.startsWith('total_') && !/_yn$/.test(k)
-    );
+    for (const field of handledHeads) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) merged[field] = req.body[field];
+    }
+
+    // Every OTHER component of the generated total is bounded by the tax in
+    // charge. `other_reductions`, the two immovable-property heads and the
+    // export/industrial heads all reach this path; none of them was bounded
+    // before, and each is an editable input.
+    const components = await getGeneratedTotalComponents('reductions_forms', 'total_reductions');
+    clampRemainingHeads(req, res, {
+      components,
+      merged,
+      handledHeads,
+      ceiling: normalTax,
+      rule:
+        'A tax reduction cannot exceed the tax it is set against. Relief extinguishes tax; only '
+        + 'tax actually paid can be refunded.',
+    });
+
     const recomputedTotal = round2(
-      componentKeys.reduce((sum, k) => sum + toAmount(merged[k]), 0)
+      components.reduce((sum, k) => sum + toAmount(merged[k]), 0)
     );
     const postedTotal = toAmount(req.body.total_tax_reductions);
     if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_reductions')) {

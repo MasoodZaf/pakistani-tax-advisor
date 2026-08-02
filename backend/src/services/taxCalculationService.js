@@ -24,6 +24,9 @@ const toNum = (v) => {
 /** Clamp to a non-negative finite number. Used on every client-supplied figure. */
 const nonNeg = (v) => Math.max(0, toNum(v));
 
+/** Round to whole paisa. Money never carries float dust out of this service. */
+const round2 = (n) => Math.round(n * 100) / 100;
+
 /**
  * Pick between two column names that are two dialects of the SAME field
  * (e.g. `zakat_paid_amount` (modern) vs `zakat` (legacy)). Returns the first
@@ -441,23 +444,72 @@ class TaxCalculationService {
 
     const totalTaxBeforeAdjustments = normalIncomeTax + surcharge + capitalGainsTax;
 
-    // ── Reductions (teacher, Behbood, immovable-property ex-serv) ──
-    const totalReductions =
+    // ── Reductions and credits — BOUNDED BY THE TAX THEY OFFSET ──
+    //
+    // This is the authoritative bound, and it is here rather than only on the
+    // write path for two reasons.
+    //
+    // 1. The write path can be bypassed, and was. QA posted straight to
+    //    /api/tax-forms/credits and to the preview endpoint; whatever the save
+    //    middleware does, THIS function produces the number that reaches the
+    //    return, so this is where the guarantee has to hold.
+    // 2. Save-time clamping cannot be complete on its own. Forms are filled in
+    //    any order, so a credit saved before the income form has no measurable
+    //    ceiling. The save path deliberately defers in that case (R-01: it used
+    //    to write zeros and never restore them) — which is only safe because
+    //    the bound below always runs.
+    //
+    // The rule needs no statute: relief EXTINGUISHES tax. It cannot exceed the
+    // tax in charge, and it can never pay money out. A refund arises only from
+    // tax actually paid — withholding, advance tax — which is handled much
+    // further down and is unaffected by this.
+    //
+    // `Math.max(0, ...)` below is NOT this bound. It silently truncates the
+    // result to zero while leaving the over-claim invisible, so a Rs 9,000,000
+    // "surrender tax credit" against a Rs 3,101,000 liability looked identical
+    // to a lawful full extinguishment. The excess is now refused explicitly and
+    // reported, so it shows up on the return instead of vanishing.
+    const claimedReductions =
       toNum(reductionsData?.total_tax_reductions) ||
       toNum(reductionsData?.total_reductions) ||
       0;
+    const claimedFormCredits = pickDialect(
+      creditsData?.total_tax_credits,
+      creditsData?.total_credits
+    );
 
-    // ── Credits (donations, pension). Keep as-is if the form has totaled them. ──
-    const formCredits = pickDialect(creditsData?.total_tax_credits, creditsData?.total_credits);
+    // Reductions apply first, then credits against what is left. Ordering only
+    // matters for how the refusal is attributed, not for the tax due.
+    const totalReductions = Math.min(nonNeg(claimedReductions), totalTaxBeforeAdjustments);
+    const refusedReductions = round2(nonNeg(claimedReductions) - totalReductions);
+
+    const creditHeadroom = Math.max(0, totalTaxBeforeAdjustments - totalReductions);
+    const formCredits = Math.min(nonNeg(claimedFormCredits), creditHeadroom);
+    const refusedCredits = round2(nonNeg(claimedFormCredits) - formCredits);
+
+    if (refusedReductions > 0 || refusedCredits > 0) {
+      logger.warn('Relief claim exceeded the tax in charge and was refused at computation', {
+        totalTaxBeforeAdjustments,
+        claimedReductions,
+        refusedReductions,
+        claimedFormCredits,
+        refusedCredits,
+      });
+    }
 
     // Foreign tax relief lands here, having been removed from the income-side
     // deduction total above. NOTE: s.103 caps this at the Pakistan tax
     // attributable to the foreign-source income, which cannot be computed —
     // the app captures the foreign tax PAID but never the foreign INCOME it was
-    // paid on, so there is no base to apportion against. The Math.max(0, ...)
-    // floor below is the only bound in force: an oversized foreign credit can
-    // zero the liability but can never create a refund.
-    const totalCredits = formCredits + foreignTaxCredit;
+    // paid on, so there is no base to apportion against. What CAN be said is
+    // that s.103 relief, like every other relief, cannot exceed the Pakistan
+    // tax still in charge; that much is applied here, and the missing
+    // apportionment is recorded as a known gap rather than left silent.
+    const foreignHeadroom = Math.max(0, creditHeadroom - formCredits);
+    const allowedForeignCredit = Math.min(nonNeg(foreignTaxCredit), foreignHeadroom);
+    const refusedForeignCredit = round2(nonNeg(foreignTaxCredit) - allowedForeignCredit);
+
+    const totalCredits = formCredits + allowedForeignCredit;
 
     const netTaxPayable = Math.max(0, totalTaxBeforeAdjustments - totalReductions - totalCredits);
 
@@ -611,6 +663,14 @@ class TaxCalculationService {
         formCredits,
         foreignTaxCredit,
         totalCredits,
+        // What the taxpayer asked for versus what the tax in charge allowed.
+        // Surfaced rather than silently truncated so an over-claim is visible
+        // on the return instead of looking like a lawful nil liability.
+        claimedReductions: round2(nonNeg(claimedReductions)),
+        refusedReductions,
+        claimedCredits: round2(nonNeg(claimedFormCredits)),
+        refusedCredits,
+        refusedForeignCredit,
         netTaxPayable,
         superTax,
         finalMinTaxChargeable,
