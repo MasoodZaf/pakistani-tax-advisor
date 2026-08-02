@@ -804,6 +804,49 @@ async function enforceReductionLimits(req, res, next) {
       );
     }
 
+    // ── Teacher / researcher 25% rebate — availability is YEAR-DEPENDENT ────
+    // Clause (3A), Part III, Second Schedule (inserted by Finance Act 2025)
+    // restored this rebate retrospectively from 1-Jul-2022 but it CEASES TO HAVE
+    // EFFECT AFTER 30-JUN-2025. It is therefore lawful for tax years 2023, 2024
+    // and 2025 only, and unavailable for tax year 2026 onwards — where Pakistan's
+    // "tax year 2026" is the year ended 30-Jun-2026, i.e. this app's '2025-26'.
+    //
+    // The rate row for the expired year is deactivated by phase-z19, which stops
+    // the client auto-calculating it. That alone is not enough: the field is
+    // user-editable, so a typed figure would still be stored and would still
+    // reduce the liability. The reduction is only allowed here when a rate is
+    // actually configured for the year being filed — absence of a rate means the
+    // relief does not exist, never "fall back and allow it".
+    if (Object.prototype.hasOwnProperty.call(req.body, 'teacher_researcher_tax_reduction')) {
+      // getRateSet() returns { rate, minAmount, maxAmount, fixedAmount, ... }
+      // per category — NOT a bare number — and it filters on is_active, so a
+      // deactivated row simply drops out of the set and lands here as undefined.
+      // Reading the object as a scalar would give NaN -> 0 and would block the
+      // rebate even in the years it is lawful.
+      const teacherRate = Number(rates?.reductions?.teacher_researcher?.rate) || 0;
+      if (teacherRate <= 0) {
+        clampField(
+          req,
+          res,
+          'teacher_researcher_tax_reduction',
+          0,
+          '2nd Sched Pt III cl.(3A) — the 25% teacher/researcher rebate ceased to have '
+            + 'effect after 30-Jun-2025 and is not available for tax year 2026 onwards'
+        );
+      } else {
+        // Available this year: still cap it at the statutory percentage of the
+        // salary tax, so an inflated figure cannot pass through unchecked.
+        const salaryTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
+        clampField(
+          req,
+          res,
+          'teacher_researcher_tax_reduction',
+          round2(salaryTax * teacherRate),
+          `2nd Sched Pt III cl.(3A) — rebate limited to ${(teacherRate * 100).toFixed(0)}% of the tax payable on salary income`
+        );
+      }
+    }
+
     // Recompute the total the engine reads.
     const stored = await pool.query(
       `SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2`,

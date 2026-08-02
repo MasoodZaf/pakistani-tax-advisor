@@ -450,16 +450,60 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
     expect(num(captured.values.behbood_certificates_tax_reduction)).toBe(226875);
   });
 
-  test('an inflated total_tax_reductions is recomputed from the components', async () => {
-    stored.income = incomeRow(800000);
+  test('teacher rebate is REFUSED for a year where no rate is configured', async () => {
+    // Clause (3A), Pt III, 2nd Sched ceased to have effect after 30-Jun-2025, so
+    // it is unavailable for tax year 2026 = this app's 2025-26. phase-z19
+    // deactivates the row; is_active filtering then drops it from the rate set,
+    // so it arrives here as undefined. The field is user-editable, so a typed
+    // figure must be refused server-side and not merely left un-autocalculated.
+    stored.income = incomeRow(5000000);
+    delete RATES.reductions.teacher_researcher;
 
     await request(buildApp()).post('/api/tax-forms/reductions').send({
       taxYear: '2025-26',
-      teacher_researcher_tax_reduction: 5000,
+      teacher_researcher_reduction_yn: 'Y',
+      teacher_researcher_tax_reduction: 250000,
+    });
+
+    expect(num(captured.values.teacher_researcher_tax_reduction)).toBe(0);
+  });
+
+  test('teacher rebate is allowed, but capped, for a year where it IS lawful', async () => {
+    // Guards against the inverse error: blocking the rebate in the years it is
+    // genuinely available (tax years 2023-2025) would over-charge a teacher who
+    // is still filing or revising TY2025.
+    stored.income = incomeRow(5000000);
+    RATES.reductions.teacher_researcher = { rate: 0.25, fixedAmount: 0 };
+
+    await request(buildApp()).post('/api/tax-forms/reductions').send({
+      taxYear: '2024-25',
+      teacher_researcher_reduction_yn: 'Y',
+      teacher_researcher_tax_reduction: 9999999, // wildly inflated
+    });
+
+    // 5,000,000 → normal tax 931,000; 25% → 232,750.
+    expect(num(captured.values.teacher_researcher_tax_reduction)).toBe(232750);
+    delete RATES.reductions.teacher_researcher;
+  });
+
+  test('an inflated total_tax_reductions is recomputed from the components', async () => {
+    // Uses the teacher field WITH its rate configured, so the component is
+    // lawful and survives. (It previously posted 5,000 with no rate configured;
+    // the teacher guard now correctly refuses that, which made the total 0 and
+    // stopped this test exercising the recompute it exists to test.)
+    // Income 5,000,000 → normal tax 931,000 → 25% rebate 232,750.
+    stored.income = incomeRow(5000000);
+    RATES.reductions.teacher_researcher = { rate: 0.25, fixedAmount: 0 };
+
+    await request(buildApp()).post('/api/tax-forms/reductions').send({
+      taxYear: '2024-25',
+      teacher_researcher_reduction_yn: 'Y',
+      teacher_researcher_tax_reduction: 232750,
       total_tax_reductions: 88888888,
     });
 
-    expect(num(captured.values.total_tax_reductions)).toBe(5000);
+    expect(num(captured.values.total_tax_reductions)).toBe(232750);
+    delete RATES.reductions.teacher_researcher;
   });
 });
 
