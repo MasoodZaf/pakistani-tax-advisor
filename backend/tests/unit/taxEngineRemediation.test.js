@@ -94,34 +94,76 @@ describe('D1 · deductions are monotonic', () => {
   //                              -> professional expenses DISCARDED
   //                              -> taxable 1,300,000 -> tax 17,000
   // Adding a legitimate Rs 100,000 deduction RAISED tax from 0 to 17,000.
-  test('adding education expense on top of professional expenses cannot raise tax', () => {
-    const profOnly = compute({
+  // NOTE ON THE HEADS USED: the audit's original case paired PROFESSIONAL with
+  // education expenses. phase-z19 retired the "professional expenses" relief (it
+  // was cited to s.60C, the profit-on-debt allowance, omitted by Finance Act
+  // 2022, and never covered these expenses), so it is no longer relieved and
+  // cannot carry a monotonicity test. Zakat is substituted: it is a genuine
+  // deduction from income, it exercises the identical code path — the `||` chain
+  // that preferred the generated `total_deductions` column — and it reproduces
+  // the same defect shape. The property under test is unchanged.
+  test('adding education expense on top of zakat cannot raise tax', () => {
+    const zakatOnly = compute({
       income: salary(1400000),
       deductions: {
-        professional_expenses_amount: 1000000,
+        zakat_paid_amount: 1000000,
         total_deductions: 0,
         total_deduction_from_income: 0,
       },
     });
 
-    const profPlusEdu = compute({
+    const zakatPlusEdu = compute({
       income: salary(1400000),
       deductions: {
-        professional_expenses_amount: 1000000,
+        zakat_paid_amount: 1000000,
         educational_expenses_amount: 100000,
-        // What the generated column really produces: education only.
+        // What the generated column really produces for this pair.
         total_deductions: 100000,
         total_deduction_from_income: 0,
       },
     });
 
-    // Baseline produced 0 then 17,000. Both must now deduct the full 1,100,000.
-    expect(profOnly.income.deductibleAllowances).toBe(1000000);
-    expect(profPlusEdu.income.deductibleAllowances).toBe(1100000);
+    // Both must deduct the full 1,100,000 — the component sum, not the column.
+    expect(zakatOnly.income.deductibleAllowances).toBe(1000000);
+    expect(zakatPlusEdu.income.deductibleAllowances).toBe(1100000);
 
     // THE monotonicity assertion: more lawful deduction, never more tax.
-    expect(profPlusEdu.tax.netTaxPayable).toBeLessThanOrEqual(profOnly.tax.netTaxPayable);
-    expect(profPlusEdu.tax.netTaxPayable).toBe(0);
+    expect(zakatPlusEdu.tax.netTaxPayable).toBeLessThanOrEqual(zakatOnly.tax.netTaxPayable);
+    expect(zakatPlusEdu.tax.netTaxPayable).toBe(0);
+  });
+
+  test('the retired "professional expenses" relief is not deducted', () => {
+    // phase-z19 deactivated the rate rows. Gating the engine term on the config
+    // (rather than deleting it) is what stops rows saved BEFORE the retirement
+    // from keeping the unlawful deduction until the taxpayer happens to re-save.
+    const legacyRow = compute({
+      income: salary(1400000),
+      deductions: { professional_expenses_amount: 1000000, total_deductions: 0 },
+    });
+
+    expect(legacyRow.income.deductibleAllowances).toBe(0);
+    expect(legacyRow.tax.netTaxPayable).toBe(28000); // the lawful figure
+    // Surfaced, not silently dropped.
+    expect(legacyRow.income.reclassifiedFromDeductions.professionalExpensesUnrelieved)
+      .toBe(1000000);
+  });
+
+  test('it is relieved again the moment the rate rows are reinstated', () => {
+    // Reactivation must be a CONFIG change, not a code change, so that counsel
+    // finding a basis does not require a deploy.
+    const reinstated = compute({
+      income: salary(1400000),
+      deductions: { professional_expenses_amount: 1000000, total_deductions: 0 },
+      rates: {
+        ...FA2025_RATES,
+        deductionThresholds: {
+          prof_expenses_max_taxable_income: { rate: 0, fixedAmount: 1500000 },
+        },
+      },
+    });
+
+    expect(reinstated.income.deductibleAllowances).toBe(1000000);
+    expect(reinstated.income.reclassifiedFromDeductions.professionalExpensesUnrelieved).toBe(0);
   });
 
   // Generalised property: sweep a second head of relief upward and assert tax
@@ -173,6 +215,9 @@ describe('D1 · deductions are monotonic', () => {
     expect(r.income.reclassifiedFromDeductions).toEqual({
       taxPaidForeignCountry: 500000,
       advanceTaxOnDeductionsForm: 250000,
+      // Zero here because this row claims no professional expenses; the key is
+      // present because the retired relief is always reported (phase-z19).
+      professionalExpensesUnrelieved: 0,
     });
   });
 });

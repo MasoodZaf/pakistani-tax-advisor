@@ -628,28 +628,53 @@ async function enforceDeductionLimits(req, res, next) {
       );
     }
 
-    // ── s.60C — professional expenses in respect of a POS ──
+    // ── "Professional expenses in respect of a POS" ──
+    //
+    // This relief is RETIRED by phase-z19: it was cited to s.60C, which was the
+    // deductible allowance for PROFIT ON DEBT and was omitted by Finance Act
+    // 2022 — it never covered professional or point-of-sale expenses. See that
+    // migration's header for the full reasoning.
+    //
+    // "Relief not configured" must be handled here as an EXPECTED state, not as
+    // a missing-configuration error. statutoryLimits' rateOf() throws when a key
+    // is absent, which is right for a rate that ought to exist — but a
+    // deliberately deactivated relief would then 503 the whole deductions save
+    // and make the form unusable. So probe for the threshold row first and, when
+    // it is gone, simply refuse the field.
     if (Object.prototype.hasOwnProperty.call(req.body, 'professional_expenses_amount')) {
-      // The POS amount is a form-only field (not a DB column) and may not be
-      // posted. Where it is absent the 5%-of-POS limb cannot be tested, so only
-      // the 25%-of-taxable-income limb and the income threshold apply.
-      const posSupplied = Object.prototype.hasOwnProperty.call(
-        req.body,
-        'professional_expenses_pos_amount'
-      );
-      const pos = toAmount(req.body.professional_expenses_pos_amount);
-      const cap = posSupplied
-        ? limits.capProfessionalU60C(ti, pos)
-        : limits.capProfessionalU60C(ti, Number.MAX_SAFE_INTEGER); // 25% limb only
-      clampField(
-        req,
-        res,
-        'professional_expenses_amount',
-        cap,
-        cap === 0
-          ? 'ITO 2001 s.60C — taxable income is not less than the eligibility threshold'
-          : 'ITO 2001 s.60C — lower of 5% of POS amount and 25% of taxable income'
-      );
+      const reliefConfigured = Boolean(rates?.deductionThresholds?.prof_expenses_max_taxable_income);
+
+      if (!reliefConfigured) {
+        clampField(
+          req,
+          res,
+          'professional_expenses_amount',
+          0,
+          'No statutory basis — s.60C (deductible allowance for profit on debt) was omitted '
+            + 'by Finance Act 2022 and never covered professional or point-of-sale expenses'
+        );
+      } else {
+        // The POS amount is a form-only field (not a DB column) and may not be
+        // posted. Where it is absent the 5%-of-POS limb cannot be tested, so only
+        // the 25%-of-taxable-income limb and the income threshold apply.
+        const posSupplied = Object.prototype.hasOwnProperty.call(
+          req.body,
+          'professional_expenses_pos_amount'
+        );
+        const pos = toAmount(req.body.professional_expenses_pos_amount);
+        const cap = posSupplied
+          ? limits.capProfessionalU60C(ti, pos)
+          : limits.capProfessionalU60C(ti, Number.MAX_SAFE_INTEGER); // 25% limb only
+        clampField(
+          req,
+          res,
+          'professional_expenses_amount',
+          cap,
+          cap === 0
+            ? 'ITO 2001 s.60C — taxable income is not less than the eligibility threshold'
+            : 'ITO 2001 s.60C — lower of 5% of POS amount and 25% of taxable income'
+        );
+      }
     }
 
     // ── Recompute the total the engine actually reads ──

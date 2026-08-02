@@ -332,7 +332,19 @@ class TaxCalculationService {
     // on the write path (lane A); this function must stay monotonic regardless.
     const deductionZakat = pickDialect(deductionsData?.zakat_paid_amount, deductionsData?.zakat);
     const deductionUshr = nonNeg(deductionsData?.ushr);
-    const deductionProfessional = nonNeg(deductionsData?.professional_expenses_amount);
+    // "Professional expenses in respect of a POS" is deducted ONLY while the
+    // relief is configured. phase-z19 retired it (cited s.60C, which was the
+    // profit-on-debt allowance, omitted by Finance Act 2022, and never covered
+    // these expenses). Gating on the rate config rather than deleting the term
+    // does two things: rows saved BEFORE the retirement stop being relieved
+    // (otherwise every existing taxpayer keeps the unlawful deduction until they
+    // happen to re-save), and reactivation stays a config change if the owner's
+    // tax counsel identifies a basis we could not find.
+    const professionalReliefConfigured = Boolean(
+      rates?.deductionThresholds?.prof_expenses_max_taxable_income
+    );
+    const professionalClaimed = nonNeg(deductionsData?.professional_expenses_amount);
+    const deductionProfessional = professionalReliefConfigured ? professionalClaimed : 0;
     const deductionEducational = pickDialect(
       deductionsData?.educational_expenses_amount,
       deductionsData?.education_expense_amount
@@ -361,6 +373,11 @@ class TaxCalculationService {
     const reclassifiedFromDeductions = {
       taxPaidForeignCountry: foreignTaxCredit,
       advanceTaxOnDeductionsForm,
+      // Non-zero only where a legacy row still carries a figure for the retired
+      // "professional expenses" relief. Surfaced rather than silently dropped, so
+      // the figure the taxpayer entered is visible and explainable instead of
+      // quietly vanishing from their computation.
+      professionalExpensesUnrelieved: professionalReliefConfigured ? 0 : professionalClaimed,
     };
 
     const taxableIncomeExcludingCG = Math.max(0, totalIncome - incomeFromCapitalGains - deductibleAllowances);
