@@ -21,6 +21,7 @@ import {
   FormNav,
 } from '../../../components/forms';
 import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
+import { computeWealthReconciliation } from '../../../utils/wealthReconciliation';
 
 // Inflow/outflow input fields the reconciliation calc depends on.
 const RECON_INPUT_FIELDS = [
@@ -51,50 +52,21 @@ const WealthReconCalc = ({ control, formData, setValue, onResult }) => {
       return;
     }
     try {
-      const wealthData   = formData?.wealth    || {};
-      const incomeData   = formData?.income    || {};
-      const expensesData = formData?.expenses  || {};
-      const finalTaxData = formData?.final_tax || {};
-
-      const netAssetsCurrent  = parseFloat(wealthData.net_worth_current_year)
-        || (parseFloat(wealthData.total_assets_current_year  || 0) - parseFloat(wealthData.total_liabilities_current_year  || 0));
-      const netAssetsPrevious = parseFloat(wealthData.net_worth_previous_year)
-        || (parseFloat(wealthData.total_assets_previous_year || 0) - parseFloat(wealthData.total_liabilities_previous_year || 0));
-      const netAssetsIncrease = netAssetsCurrent - netAssetsPrevious;
-
-      const incomeNormalTax    = parseFloat(incomeData.total_employment_income || incomeData.total_taxable_income || 0);
-      const incomeExemptFromTax= parseFloat(incomeData.income_exempt_from_tax  || incomeData.total_exempt_income   || 0);
-      const incomeFinalTax     = parseFloat(finalTaxData.total_final_tax || 0);
-      const foreignRemittance  = parseFloat(wv.foreign_remittance   || 0);
-      const inheritance        = parseFloat(wv.inheritance          || 0);
-      const giftInflow         = parseFloat(wv.gift_value           || 0);
-      const assetGainLoss      = parseFloat(wv.asset_disposal_gain_loss || 0);
-      const otherInflows       = parseFloat(wv.other_inflows        || 0);
-      const totalInflows = incomeNormalTax + incomeExemptFromTax + incomeFinalTax +
-                           foreignRemittance + inheritance + giftInflow + assetGainLoss + otherInflows;
-
-      const personalExpenses   = parseFloat(expensesData.total_expenses || wv.personal_expenses || 0);
-      const adjustmentsOutflows= parseFloat(wv.adjustments_outflows || 0);
-      const giftOutflow        = parseFloat(wv.gift_outflow   || 0);
-      const lossOnDisposal     = parseFloat(wv.loss_on_disposal    || 0);
-      const totalOutflows = personalExpenses + adjustmentsOutflows + giftOutflow + lossOnDisposal;
-
-      const calculatedNetIncrease = totalInflows - totalOutflows;
-      const unreconciledDiff      = netAssetsIncrease - calculatedNetIncrease;
-
-      const reconciliation = {
-        net_assets_current_year:  netAssetsCurrent,
-        net_assets_previous_year: netAssetsPrevious,
-        net_assets_increase:      netAssetsIncrease,
-        income_normal_tax:        incomeNormalTax,
-        income_exempt_from_tax:   incomeExemptFromTax,
-        income_final_tax:         incomeFinalTax,
-        total_inflows:            totalInflows,
-        personal_expenses:        personalExpenses,
-        total_outflows:           totalOutflows,
-        calculated_net_increase:  calculatedNetIncrease,
-        unreconciled_difference:  unreconciledDiff,
-      };
+      // Arithmetic lives in utils/wealthReconciliation.js (unit-tested there).
+      // Two faults used to understate declared inflows badly enough to
+      // manufacture a BLOCKING gap: exempt income was subtracted twice (the
+      // B15 contra is negative and total_employment_income is already net of
+      // it), and income_final_tax read the legacy `final_tax` step, a
+      // structurally-always-zero wrong-table read.
+      const reconciliation = computeWealthReconciliation({
+        wealth:         formData?.wealth || {},
+        income:         formData?.income || {},
+        expenses:       formData?.expenses || {},
+        finalMin:       formData?.final_min_income || {},
+        legacyFinalTax: formData?.final_tax || {},
+        inputs:         wv,
+      });
+      const unreconciledDiff = reconciliation.unreconciled_difference;
 
       Object.entries(reconciliation).forEach(([key, value]) => setValue(key, value));
       onResult(reconciliation, unreconciledDiff);
@@ -128,13 +100,27 @@ const WealthReconciliationForm = () => {
     setValue,
     reset,
     control,
-    getValues,
     formState: { isDirty }
   } = useForm({
     defaultValues: getStepData('wealth_reconciliation')
   });
 
   useUnsavedChangesWarning(isDirty);
+
+  // Move the caret to a reconciliation field without touching its value.
+  // TaxFormRow renders `id={name}`, so the field id is the field name.
+  const focusField = useCallback((field) => {
+    const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
+    if (!el) return;
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+    el.focus();
+  }, []);
 
   // Sync form when saved data loads from API (handles page refresh / navigation back)
   useEffect(() => {
@@ -281,51 +267,54 @@ const WealthReconciliationForm = () => {
           </div>
         </div>
 
-        {/* Quick balance helper — pick a likely bucket and we add the difference. */}
+        {/* Where to look next.
+            This block used to offer one-click buttons that wrote the ENTIRE
+            unreconciled difference into Foreign Remittance / Inheritance / Gift
+            — directly beneath its own warning that FBR audit-flags inflated
+            remittances. Combined with the hard submit block (422
+            WEALTH_RECON_UNBALANCED) that made clicking the button the user's
+            rational way out, i.e. the app inviting a false declaration. The
+            buttons now only move focus to the field; the taxpayer types their
+            own figure, from their own records. Do not reintroduce a pre-filled
+            amount here. */}
         {!balanced && (
           <div className="rounded-brand-lg border border-navy/20 bg-navy/[0.03] px-4 py-3">
-            <h2 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Quick balance</h2>
+            <h2 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">Where to look next</h2>
             <p className="mt-1 font-body text-xs text-slate-600 dark:text-[#aab2cc]">
               {unreconciledDifference > 0
-                ? `Your asset increase exceeds declared inflows by ${formatCurrency(unreconciledDifference)}. The most likely sources are below — pick one and we'll add the difference to it.`
-                : `Your declared inflows exceed your asset increase by ${formatCurrency(Math.abs(unreconciledDifference))}. Either reduce an inflow or add to outflows below.`}
+                ? `Your asset increase exceeds declared inflows by ${formatCurrency(unreconciledDifference)}. Something that funded your assets is probably not declared yet — check the categories below against your own records, and enter the real amount.`
+                : `Your declared inflows exceed your asset increase by ${formatCurrency(Math.abs(unreconciledDifference))}. An outflow is probably missing, or an inflow is overstated. Check the categories below against your own records.`}
+            </p>
+            <p className="mt-2 font-body text-xs font-semibold text-red-700 dark:text-red-300">
+              Enter only amounts you actually received or paid and can evidence. Never enter a figure
+              simply to make this balance — an inflated remittance, inheritance or gift is a false
+              declaration and is exactly what FBR audit-flags. If your records genuinely do not
+              explain the difference, leave it and get advice.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {(unreconciledDifference > 0
                 ? [
-                    { field: 'foreign_remittance',       label: 'Foreign Remittance' },
+                    { field: 'foreign_remittance',       label: 'Foreign remittance' },
                     { field: 'inheritance',              label: 'Inheritance' },
-                    { field: 'gift_value',               label: 'Gift Received' },
-                    { field: 'other_inflows',            label: 'Other Inflows' },
+                    { field: 'gift_value',               label: 'Gift received' },
+                    { field: 'other_inflows',            label: 'Other inflows' },
                   ]
                 : [
-                    { field: 'gift_outflow',             label: 'Gift Given' },
-                    { field: 'adjustments_outflows',     label: 'Other Adjustments' },
-                    { field: 'loss_on_disposal',         label: 'Loss on Disposal' },
+                    { field: 'gift_outflow',             label: 'Gift given' },
+                    { field: 'adjustments_outflows',     label: 'Other adjustments' },
+                    { field: 'loss_on_disposal',         label: 'Loss on disposal' },
                   ]
-              ).map(({ field, label }) => {
-                const current = parseFloat(getValues(field) || 0);
-                const next    = unreconciledDifference > 0
-                  ? current + unreconciledDifference
-                  : current + Math.abs(unreconciledDifference);
-                return (
-                  <button
-                    key={field}
-                    type="button"
-                    onClick={() => setValue(field, Math.round(next * 100) / 100)}
-                    className="rounded-brand border-[1.5px] border-navy/30 bg-white dark:bg-[#151c30] px-3 py-2 text-left font-body text-xs font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20"
-                  >
-                    Add to {label}
-                    <span className="mt-0.5 block font-body text-[11px] font-normal tabular-nums text-slate-500 dark:text-[#7e88a6]">
-                      {formatCurrency(current)} → {formatCurrency(next)}
-                    </span>
-                  </button>
-                );
-              })}
+              ).map(({ field, label }) => (
+                <button
+                  key={field}
+                  type="button"
+                  onClick={() => focusField(field)}
+                  className="rounded-brand border-[1.5px] border-navy/30 bg-white dark:bg-[#151c30] px-3 py-2 text-left font-body text-xs font-semibold text-navy dark:text-[#e7eaf3] transition-colors hover:bg-navy/5 focus:outline-none focus-visible:ring-4 focus-visible:ring-navy/20"
+                >
+                  Go to {label}
+                </button>
+              ))}
             </div>
-            <p className="mt-3 font-body text-[11px] italic text-slate-500 dark:text-[#7e88a6]">
-              Only use a category that reflects your actual financial activity. Picking the wrong bucket is worse than leaving it unbalanced — FBR can audit-flag inflated remittances or inheritances.
-            </p>
           </div>
         )}
 

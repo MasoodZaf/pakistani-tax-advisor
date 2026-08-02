@@ -8,7 +8,25 @@
 #
 # psql connection params come from the container's env (POSTGRES_USER,
 # POSTGRES_DB) — the entrypoint exports them for us.
+#
+# ---------------------------------------------------------------------------
+# LC_ALL=C IS LOAD-BEARING. DO NOT REMOVE IT.
+# ---------------------------------------------------------------------------
+# Bash glob expansion sorts by LC_COLLATE. Under a UTF-8 locale, glibc's
+# collation ignores punctuation, so `phase-t1-add-*.sql` sorts BEFORE
+# `phase-t-realign-form-tables.sql`. phase-t-realign does 28 DROP/CREATE TABLE
+# operations on the form tables — so running it AFTER phase-t1 destroys every
+# column phase-t1 just added, and phase-u / phase-z5 then fail on the missing
+# columns. Under LC_ALL=C the hyphen sorts before '1' and the order is correct.
+#
+# Demonstrated (glibc, debian:12):
+#     LC_ALL=C          sort ->  a-b  a1b  ab   (phase-t-realign FIRST, correct)
+#     LC_ALL=en_US.UTF-8 sort ->  a1b  a-b  ab   (phase-t1-*     first, destructive)
+#
+# This is the long-standing "fresh-init migration chain is broken" bug. Under
+# LC_ALL=C the whole chain applies cleanly with zero failures.
 set -e
+export LC_ALL=C
 
 MIGRATIONS_DIR=/db-migrations
 

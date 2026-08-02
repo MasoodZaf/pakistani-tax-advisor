@@ -103,7 +103,12 @@ jobs:
       - name: Apply phase migrations
         run: |
           cd backend
-          for f in $(ls database/migrations/phase-*.sql | sort); do
+          # LC_ALL=C IS LOAD-BEARING — do not drop it. Under a UTF-8 locale glibc
+          # ignores punctuation when collating, so phase-t1-* sorts BEFORE
+          # phase-t-realign-form-tables.sql, which then DROP/CREATEs the form
+          # tables and wipes the columns phase-t1 just added. LC_ALL=C sorts the
+          # hyphen before '1' and the whole chain applies cleanly.
+          for f in $(ls database/migrations/phase-*.sql | LC_ALL=C sort); do
             echo "applying $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done

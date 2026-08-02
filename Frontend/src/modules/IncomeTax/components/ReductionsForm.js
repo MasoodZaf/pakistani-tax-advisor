@@ -17,6 +17,8 @@ import reductionsHelp from '../../../help/reductionsHelp';
 import { TaxFormShell, AmountRow, FormNav, LiveTotalsProvider, LiveAmount, LiveWhen } from '../../../components/forms';
 import FormEmptyState from './FormEmptyState';
 import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarning';
+import { formatCurrency } from '../../../utils/currency';
+import { behboodReliefCl6, normalTaxBase, progressiveTax } from '../../../utils/taxMath';
 
 // PERF-02: the two auto-calc effects run here (headless) so their field
 // subscriptions don't re-render the whole form. Each watches only the field(s)
@@ -37,7 +39,11 @@ const ReductionsAutoCalc = ({ control, getValues, setValue, contextFormData, rat
                     parseFloat(finalMinData.salary_tax_chargeable) ||
                     parseFloat(finalMinData.salary_employees_tax_chargeable) || 0;
 
-    // Fallback: derive salary tax from income context + slab walk.
+    // Fallback: derive salary tax from income context + slab walk. The tax on
+    // one component of a single progressive base is apportioned at the AVERAGE
+    // rate (salaryShare × total tax) — the Behbood row below now uses the same
+    // method. Arithmetic unchanged; the slab walk moved to utils/taxMath.js so
+    // both rows share one implementation.
     if (salaryTax === 0) {
       const incomeData = contextFormData['income'] || {};
       const salary = parseFloat(incomeData.total_employment_income) ||
@@ -45,15 +51,7 @@ const ReductionsAutoCalc = ({ control, getValues, setValue, contextFormData, rat
       const otherTaxable = parseFloat(incomeData.other_income_no_min_tax_total) || 0;
       const totalTaxable = salary + otherTaxable;
       if (totalTaxable > 0 && rates?.slabs?.length) {
-        let totalTax = 0;
-        for (const s of rates.slabs) {
-          const minI = Number(s.min_income), maxI = s.max_income == null ? Infinity : Number(s.max_income);
-          const rate = Number(s.tax_rate);
-          const lower = minI > 0 ? minI - 1 : 0;
-          if (totalTaxable <= lower) continue;
-          const ceil = Math.min(totalTaxable, maxI);
-          if (ceil - lower > 0 && rate > 0) totalTax += (ceil - lower) * rate;
-        }
+        const totalTax = progressiveTax(totalTaxable, rates.slabs);
         const salaryShare = salary / totalTaxable;
         salaryTax = Math.round(totalTax * salaryShare);
       }
@@ -68,25 +66,77 @@ const ReductionsAutoCalc = ({ control, getValues, setValue, contextFormData, rat
     }
   }, [teacherYN, contextFormData, teacherReductionRate, rates, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Behbood certificate cap (2nd Sched Pt III cl.6).
+  // Behbood certificate relief (2nd Sched Pt III cl.6).
+  //
+  // cl.6 caps the TAX on the profit at 5%; the relief is the tax charged IN
+  // EXCESS of that ceiling — which is what the FBR row label says. The old code
+  // computed the ceiling correctly (it named the variable `maxTax`) and then
+  // wrote the ceiling itself into the reduction field, which is wrong in BOTH
+  // directions: over-relief in the 1% slab (where no tax above 5% is charged at
+  // all) and under-relief at 35%. See utils/taxMath.js `behboodReliefCl6`.
   useEffect(() => {
     if (behboodYN !== 'Y') return;
     if (!behboodMaxRate) return;
+    if (!rates?.slabs?.length) return; // wait for slabs
 
     const profitAmount = parseFloat(behboodAmount) || 0;
     if (profitAmount <= 0) return;
 
-    const maxTax = Math.round(profitAmount * behboodMaxRate);
+    const { relief } = behboodReliefCl6({
+      profit: profitAmount,
+      taxableIncome: normalTaxBase(contextFormData),
+      slabs: rates.slabs,
+      maxRate: behboodMaxRate,
+    });
+
     const current = parseFloat(getValues('behbood_certificates_tax_reduction')) || 0;
     // Recompute as the profit amount changes (same as the teacher row above). The
     // old `current === 0` guard froze the field at the first non-zero partial when
     // the amount was typed digit-by-digit, so it never reached the final value.
-    if (Math.abs(current - maxTax) > 0.5) {
-      setValue('behbood_certificates_tax_reduction', maxTax);
+    if (Math.abs(current - relief) > 0.5) {
+      setValue('behbood_certificates_tax_reduction', relief);
     }
-  }, [behboodYN, behboodAmount, behboodMaxRate, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [behboodYN, behboodAmount, behboodMaxRate, contextFormData, rates, getValues, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
+};
+
+// Shows the cl.6 working under the Behbood reduction input so the figure is
+// auditable rather than a bare number the user has to trust. Self-subscribes so
+// it does not re-render the rest of the form.
+const BehboodBasisHint = ({ control, contextFormData, rates, behboodMaxRate }) => {
+  const behboodYN = useWatch({ control, name: 'behbood_certificates_reduction_yn' });
+  const behboodAmount = useWatch({ control, name: 'behbood_certificates_amount' });
+
+  const profit = parseFloat(behboodAmount) || 0;
+  if (behboodYN !== 'Y' || profit <= 0 || !behboodMaxRate || !rates?.slabs?.length) return null;
+
+  const working = behboodReliefCl6({
+    profit,
+    taxableIncome: normalTaxBase(contextFormData),
+    slabs: rates.slabs,
+    maxRate: behboodMaxRate,
+  });
+
+  if (!working.applicable) {
+    return (
+      <p className="mt-1 text-right font-body text-xs text-amber-700 dark:text-amber-300">
+        No relief yet — declare this profit as income on the Income form first. cl.6 relieves tax
+        actually charged, so there is nothing to relieve until the profit is in your taxable income.
+      </p>
+    );
+  }
+
+  const ratePct = (working.averageRate * 100).toFixed(4).replace(/\.?0+$/, '');
+  const ceilingPct = (Number(behboodMaxRate) * 100).toFixed(2).replace(/\.?0+$/, '');
+
+  return (
+    <p className="mt-1 text-right font-body text-xs text-slate-500 dark:text-[#7e88a6]">
+      Tax on {formatCurrency(profit)} at your average rate of {ratePct}% ={' '}
+      {formatCurrency(Math.round(working.taxOnProfit))}, less the {ceilingPct}% cl.6 ceiling of{' '}
+      {formatCurrency(Math.round(working.ceiling))} = {formatCurrency(working.relief)}.
+    </p>
+  );
 };
 
 const ReductionsForm = () => {
@@ -156,11 +206,11 @@ const ReductionsForm = () => {
     },
     {
       id: 'behbood_certificates_reduction',
-      description: 'Tax Reduction on Charged on Behbood Certificates / Pensioner\'s Benefit Account in excess of applicable rate',
+      description: 'Tax Reduction on Tax Charged on Behbood Certificates / Pensioner\'s Benefit Account in excess of applicable rate',
       yesNo: 'Y',
       amount: 'behbood_certificates_amount',
       taxReduction: 'behbood_certificates_tax_reduction',
-      limits: 'Tax shall not exceed 5% of profit — auto-calculated when amount entered',
+      limits: 'Tax on this profit is capped at 5%. The reduction is the tax charged above that ceiling — nil if your average rate is already under 5%.',
       autoCalc: true
     },
     {
@@ -380,6 +430,14 @@ const ReductionsForm = () => {
                       <LiveWhen control={control} field={item.taxReduction}>
                         <p className="mt-1 text-right font-body text-xs text-slate-400 dark:text-[#7e88a6]">Auto-calculated — editable</p>
                       </LiveWhen>
+                    )}
+                    {item.id === 'behbood_certificates_reduction' && (
+                      <BehboodBasisHint
+                        control={control}
+                        contextFormData={contextFormData}
+                        rates={rates}
+                        behboodMaxRate={behboodMaxRate}
+                      />
                     )}
                     {errors[item.taxReduction] && (
                       <p role="alert" className="mt-1 text-right font-body text-xs text-red-600 dark:text-red-300">{errors[item.taxReduction].message}</p>

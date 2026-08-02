@@ -166,10 +166,14 @@ describe('TaxCalculationService._computeFromInputs', () => {
   // Salary 0, capital gain 1.5m, CGT (per-form computed) 175k.
   // Taxable excl CG = 0 → normal tax = 0, surcharge = 0.
   // Total chargeable = CGT = 175k.
+  // NOTE (2026-08 remediation): this used to key off `total_capital_gain_tax`
+  // (singular) — a column that does not exist on capital_gain_forms. The engine
+  // read it as a third fallback, so the test passed against a phantom field
+  // while real rows silently produced 0. Repointed at the real column.
   test('all-CGT: no salary, only capital-gains tax flows through', () => {
     const r = compute({
       income:       income({ salary: 0 }),
-      capital_gain: { total_capital_gain: 1500000, total_capital_gain_tax: 175000 },
+      capital_gain: { total_capital_gain: 1500000, capital_gains_tax_chargeable: 175000 },
     });
     expect(r.income.incomeFromSalary).toBe(0);
     expect(r.income.incomeFromCapitalGains).toBe(1500000);
@@ -258,10 +262,16 @@ describe('TaxCalculationService._computeFromInputs', () => {
   //   400k @ 35% = 140,000
   //   ─────────────────
   //   Normal tax  = 756,000
+  // NOTE (2026-08 remediation): this test used to set `total_deductions: 500000`
+  // directly. That column is GENERATED (phase-t-realign-form-tables.sql:435) and
+  // cannot be written independently of its components, so the test was asserting
+  // behaviour the database can never produce — it was encoding the very defect
+  // that made the tax function non-monotonic in deductions. Driven from the real
+  // component columns instead; the totals under test are unchanged.
   test('deductible allowances reduce taxable income', () => {
     const r = compute({
       income:     income({ salary: 5000000 }),
-      deductions: { total_deductions: 500000 },
+      deductions: { zakat_paid_amount: 200000, educational_expenses_amount: 300000 },
     });
     expect(r.income.deductibleAllowances).toBe(500000);
     expect(r.income.taxableIncomeExcludingCG).toBe(4500000);

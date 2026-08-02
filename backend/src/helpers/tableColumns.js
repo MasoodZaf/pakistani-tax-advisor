@@ -39,22 +39,48 @@ async function getAllowedColumns(tableName) {
   return cols;
 }
 
-function filterToAllowedColumns(tableName, columnsSet, payload) {
+// Thrown when a save payload carries keys that are not columns on the target
+// table and the caller asked for strict handling. Carries every offending key —
+// the old behaviour logged `sample: rejected.slice(0, 5)` at warn level and
+// returned HTTP 200, so 24 dropped Final Tax keys were undiagnosable from the
+// logs and invisible to the user (PM-PHASE15 §10).
+class UnknownColumnsError extends Error {
+  constructor(tableName, keys) {
+    super(`Save payload for ${tableName} contains ${keys.length} unknown field(s)`);
+    this.name = 'UnknownColumnsError';
+    this.table = tableName;
+    this.keys = keys;
+  }
+}
+
+/**
+ * @param {object} [options]
+ * @param {boolean} [options.strict]  throw UnknownColumnsError instead of dropping
+ * @param {Set<string>} [options.ignore] keys the server computes itself: dropped
+ *                                       silently, never an error
+ */
+function filterToAllowedColumns(tableName, columnsSet, payload, options = {}) {
+  const { strict = false, ignore } = options;
   const allowed = {};
   const rejected = [];
   for (const [key, value] of Object.entries(payload)) {
     if (columnsSet.has(key)) {
       allowed[key] = value;
+    } else if (ignore && ignore.has(key)) {
+      // Server-computed / generated column echoed back by the client.
     } else {
       rejected.push(key);
     }
   }
   if (rejected.length > 0) {
-    logger.warn('Dropped unknown keys in save payload', {
+    // Log EVERY rejected key. Truncating to five is what made the Final Tax
+    // loss undiagnosable in production logs.
+    logger[strict ? 'error' : 'warn']('Dropped unknown keys in save payload', {
       table: tableName,
       count: rejected.length,
-      sample: rejected.slice(0, 5),
+      keys: rejected,
     });
+    if (strict) throw new UnknownColumnsError(tableName, rejected);
   }
   return allowed;
 }
@@ -63,4 +89,5 @@ module.exports = {
   ALLOWED_TABLES,
   getAllowedColumns,
   filterToAllowedColumns,
+  UnknownColumnsError,
 };

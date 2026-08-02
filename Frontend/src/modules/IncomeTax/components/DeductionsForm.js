@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import HelpHint from '../../../components/Help/HelpHint';
 import deductionsHelp from '../../../help/deductionsHelp';
 import { formatCurrency } from '../../../utils/currency';
+import { totalIncomeExcludingCG, preAllowanceTaxableIncome } from '../../../utils/taxMath';
 import MobileExpensesWidget from '../../../components/MobileExpenses/MobileExpensesWidget';
 import {
   TaxFormShell,
@@ -120,10 +121,30 @@ const DeductionsForm = () => {
   // Prior year pre-fill
 
   // ── Income threshold checks ──────────────────────────────────────────────────
-  const incomeData = contextFormData['income'] || {};
-  const taxableIncome =
-    (parseFloat(incomeData.total_employment_income) || parseFloat(incomeData.annual_salary_wages_total) || 0)
-    + (parseFloat(incomeData.other_income_no_min_tax_total) || 0);
+  //
+  // ⚠️  The SERVER is authoritative for these limits (lane A,
+  // backend/src/helpers/statutoryLimits.js). What follows only previews the
+  // server's answer so the UI and the filed return agree — it is NOT the
+  // enforcement point. Client-side-only enforcement is the root cause the
+  // 2026-08 audit was raised on.
+  //
+  // The statute gates s.60C and s.60D on TAXABLE income, not gross. The old
+  // code summed employment + other income with nothing subtracted, which is
+  // wrong in both directions: a taxpayer whose gross is 1.6M but whose taxable
+  // income is 1.4M was denied both allowances outright, and the 25% s.60C cap
+  // was computed on an inflated base so it bound later than it should.
+  //
+  // Base = total income excluding capital gains, less the deductible allowances
+  // that are not themselves income-gated (Zakat, Ushr, foreign tax, other).
+  // The two gated allowances (60C, 60D) are deliberately NOT subtracted: a
+  // taxpayer must not be able to become eligible for an allowance by claiming
+  // it. This is `preAllowanceTaxableIncome` in
+  // backend/src/middleware/validation.js — the base the server enforces on.
+  const zakatPaid = useWatch({ control, name: 'zakat_paid_amount' });
+  const grossIncome = totalIncomeExcludingCG(contextFormData);
+  const taxableIncome = preAllowanceTaxableIncome(contextFormData, {
+    zakat_paid_amount: parseFloat(zakatPaid) || 0,
+  });
 
   // DB-sourced thresholds (rate_type='deduction_threshold').
   //   prof_expenses_max_taxable_income  → Rs 1.5M income cap to qualify
@@ -139,12 +160,16 @@ const DeductionsForm = () => {
   const EDU_DEDUCTION_PER_CHILD  = dt?.education_per_child_cap?.fixedAmount;
   const EDU_MAX_CHILDREN         = dt?.education_max_children?.fixedAmount;
 
+  // The statute says taxable income "less than" Rs 1,500,000 — strict `<`, not
+  // `<=`. At exactly the threshold the allowance is NOT available.
+  // `taxableIncome === 0` keeps both rows open before the Income form is filled
+  // in; the server still has the final say at save time.
   const profExpEligible = PROF_EXP_THRESHOLD === undefined
     ? false
-    : (taxableIncome === 0 || taxableIncome <= PROF_EXP_THRESHOLD);
+    : (taxableIncome === 0 || taxableIncome < PROF_EXP_THRESHOLD);
   const eduExpEligible  = EDU_THRESHOLD === undefined
     ? false
-    : (taxableIncome === 0 || taxableIncome <= EDU_THRESHOLD);
+    : (taxableIncome === 0 || taxableIncome < EDU_THRESHOLD);
 
   // (auto-calc effects relocated to <DeductionsAutoCalc> — see module scope)
   // ────────────────────────────────────────────────────────────────────────────
@@ -153,7 +178,7 @@ const DeductionsForm = () => {
   const deductionItems = [
     {
       id: 'professional_expenses',
-      description: 'Professional expenses in respect of POS u/s 60C (taxable income ≤ Rs 1.5M only)',
+      description: 'Professional expenses in respect of POS u/s 60C (taxable income under Rs 1.5M only)',
       yesNo: 'Y',
       amount: 'professional_expenses_amount',
       limits: 'Lower of: 5% of POS amount OR 25% of taxable income',
@@ -170,11 +195,11 @@ const DeductionsForm = () => {
     },
     {
       id: 'education_expense',
-      description: 'Education expense deduction u/s 60D (taxable income ≤ Rs 1.5M; Rs 60,000 per child, max 2 children)',
+      description: 'Education expense deduction u/s 60D (taxable income under Rs 1.5M; Rs 60,000 per child, max 2 children)',
       yesNo: 'Y',
       amount: 'education_expense_deduction',
       limits: 'Rs 60,000 × no. of children (max 2)',
-      incomeThreshold: PROF_EXP_THRESHOLD,
+      incomeThreshold: EDU_THRESHOLD,
       eligible: eduExpEligible,
       computed: true
     }
@@ -237,7 +262,8 @@ const DeductionsForm = () => {
     <div id="deductions-help">
       <h3 className="font-display text-sm font-bold text-navy dark:text-[#e7eaf3]">About deductible allowances</h3>
       <ul className="mt-1 space-y-1 font-body text-sm text-slate-600 dark:text-[#aab2cc]">
-        <li>Professional expenses: for taxpayers with POS and taxable income up to Rs 1.5M.</li>
+        <li>Professional expenses: for taxpayers with POS and taxable income under Rs 1.5M.</li>
+        <li>The Rs 1.5M test is on <strong className="text-navy dark:text-[#e7eaf3]">taxable</strong> income — total income less Zakat and other non-gated allowances — not gross.</li>
         <li>Zakat: a straight deduction for Zakat paid under the Zakat and Usher Ordinance.</li>
         <li>Professional expenses are the lower of 5% of the amount paid or 25% of taxable income.</li>
         <li>Deductible allowances reduce your taxable income before tax is calculated.</li>
@@ -294,10 +320,17 @@ const DeductionsForm = () => {
 
         {taxableIncome > 0 && (
           <div className="rounded-brand border border-navy/20 bg-navy/[0.03] px-4 py-3 font-body text-sm text-navy dark:border-[#2a3450] dark:bg-white/5 dark:text-[#e7eaf3]">
-            Taxable income from your Income form: <strong className="tabular-nums">{formatCurrency(taxableIncome)}</strong>.
-            {taxableIncome > PROF_EXP_THRESHOLD && (
+            Taxable income used for these limits:{' '}
+            <strong className="tabular-nums">{formatCurrency(taxableIncome)}</strong>.
+            <span className="mt-1 block text-slate-500 dark:text-[#7e88a6]">
+              Total income from your Income form {formatCurrency(grossIncome)}
+              {(parseFloat(zakatPaid) || 0) > 0 && <> less Zakat {formatCurrency(parseFloat(zakatPaid) || 0)}</>}.
+              The s.60C and s.60D thresholds are tested on taxable income, not gross.
+            </span>
+            {!profExpEligible && !eduExpEligible && (
               <span className="mt-1 block text-slate-500 dark:text-[#7e88a6]">
-                Professional expenses and education deduction are not applicable — income exceeds the Rs 1.5M threshold.
+                Professional expenses and education deduction are not applicable — taxable income is
+                not below the {PROF_EXP_THRESHOLD !== undefined ? formatCurrency(PROF_EXP_THRESHOLD) : 'Rs 1.5M'} threshold.
               </span>
             )}
           </div>
@@ -403,7 +436,10 @@ const DeductionsForm = () => {
                 )}
 
                 {ineligible && (
-                  <p className="mt-1 font-body text-xs text-slate-500 dark:text-[#7e88a6]">Not applicable — taxable income exceeds Rs 1.5M.</p>
+                  <p className="mt-1 font-body text-xs text-slate-500 dark:text-[#7e88a6]">
+                    Not applicable — taxable income is not below the{' '}
+                    {item.incomeThreshold !== undefined ? formatCurrency(item.incomeThreshold) : 'Rs 1.5M'} threshold.
+                  </p>
                 )}
               </div>
             );

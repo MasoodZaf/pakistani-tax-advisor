@@ -6,6 +6,23 @@ const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 const {
   getCurrentTaxYear,
 } = require('../helpers/taxFormsShared');
+const {
+  toDbColumn,
+  toAdjustableTaxFrontendShape,
+  readEitherName,
+  resolveHeadRate,
+  NON_ATL_RATE_GAPS,
+} = require('../helpers/adjustableTaxShape');
+const { getAllowedColumns } = require('../../../helpers/tableColumns');
+
+// Active Taxpayer (filer) status. Mirrors the coercion in finalMinController —
+// the only other place in the app that has an ATL flag — so the two forms read
+// the same answer identically. Absent/unanswered defaults to filer.
+const parseIsATL = (answer) =>
+  !(
+    answer === false || answer === 'false' ||
+    answer === 'no' || answer === 0 || answer === '0'
+  );
 
 const getAdjustableTax = async (req, res) => {
   try {
@@ -184,7 +201,10 @@ const getAdjustableTax = async (req, res) => {
 
     res.json({
       success: true,
-      data: adjustableTaxData,
+      // 236C READ-BACK: the row carries the 63-byte-truncated column names.
+      // Emitting them unmapped is what let the next save write 0 over the
+      // stored value (see helpers/adjustableTaxShape.js).
+      data: toAdjustableTaxFrontendShape(adjustableTaxData),
       autoLinked: incomeFormData ? true : false,
       message: 'Adjustable tax data retrieved successfully',
     });
@@ -205,6 +225,29 @@ const saveAdjustableTax = async (req, res) => {
     const taxYear = req.body.taxYear || await getCurrentTaxYear();
     const isComplete = req.body.isComplete || false;
     const formData = req.body;
+    // ATL/non-filer. `adjustable_tax_forms` had no filer concept at all, so a
+    // declared non-filer was charged filer withholding. 236CB is the one head
+    // in this form with a legislated ATL/non-ATL rate pair — the server was
+    // already loading both rates and shipping them to the client in
+    // `taxRatesUsed`, and then never using either. Read the flag off this form
+    // first, fall back to the Final/Min form's persisted answer (the only other
+    // place the user is asked), then default to filer.
+    let isATL = parseIsATL(formData.is_atl);
+    if (formData.is_atl === undefined || formData.is_atl === null) {
+      try {
+        const atlRow = await pool.query(
+          'SELECT is_atl FROM final_min_income_forms WHERE user_id = $1 AND tax_year = $2',
+          [userId, taxYear]
+        );
+        if (atlRow.rows.length > 0 && atlRow.rows[0].is_atl !== null &&
+            atlRow.rows[0].is_atl !== undefined) {
+          isATL = parseIsATL(atlRow.rows[0].is_atl);
+        }
+      } catch (e) {
+        // Column not present yet (pre-45bb80c schema) — stay on the default.
+        logger.warn('Could not read is_atl from final_min_income_forms:', e.message);
+      }
+    }
 
     logger.info(`Saving adjustable tax data for user ${userId}, tax year ${taxYear}`);
 
@@ -436,13 +479,22 @@ const saveAdjustableTax = async (req, res) => {
       getNumericValue(formData.saleTransferImmoveableProperty236C?.taxCollected) ||
       0;
 
+    // 236C same-year pair: accept BOTH the full-length application name and the
+    // 63-byte-truncated DB column name. A client that replays a GET response
+    // verbatim (the browser after a reload, or any read-modify-write API
+    // client) sends the truncated key; reading only the full name made it
+    // `undefined` and `|| 0` then wrote a zero over the stored figure.
     cleanedData.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt =
-      getNumericValue(formData.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt) ||
+      getNumericValue(
+        readEitherName(formData, 'tax_deducted_236c_property_purchased_sold_same_year_gross_receipt')
+      ) ||
       getNumericValue(formData.taxDeducted236CPropertyPurchasedSoldSameYear?.grossReceipt) ||
       0;
 
     cleanedData.tax_deducted_236c_property_purchased_sold_same_year_tax_collected =
-      getNumericValue(formData.tax_deducted_236c_property_purchased_sold_same_year_tax_collected) ||
+      getNumericValue(
+        readEitherName(formData, 'tax_deducted_236c_property_purchased_sold_same_year_tax_collected')
+      ) ||
       getNumericValue(formData.taxDeducted236CPropertyPurchasedSoldSameYear?.taxCollected) ||
       0;
 
@@ -629,6 +681,67 @@ const saveAdjustableTax = async (req, res) => {
       return calculatedValue ?? 0;
     };
 
+    // ── 236CB functions / gatherings — the one ATL-rated head on this form ──
+    // Rates come from tax_rates_config (category `withholding`), never a
+    // literal. If the pair is missing from the table we fall back to the user's
+    // own figure rather than inventing a rate.
+    const gatherings236cbGross =
+      cleanedData.functions_gatherings_charges_236cb_gross_receipt || 0;
+    // Resolved through the 27-head ATL table rather than a hand-picked pair, so
+    // every head that gains a non-filer rate row in tax_rates_config starts
+    // honouring `is_atl` with no code change. Today 236CB is the only head with
+    // a pair — see ATL_PAIRED_HEADS / NON_ATL_RATE_GAPS.
+    const gatherings236cbRate = resolveHeadRate(
+      'functions_gatherings_charges_236cb', isATL, taxRates
+    ).rate;
+    const gatherings236cbCalculated =
+      Number.isFinite(parseFloat(gatherings236cbRate)) && gatherings236cbGross > 0
+        ? Math.round(gatherings236cbGross * parseFloat(gatherings236cbRate) * 100) / 100
+        : null;
+
+    // A statutory-rate head cannot legitimately withhold zero on a positive
+    // gross: a 0 here is the frozen `'0.00'` the previous save wrote and the
+    // client echoed back, not a user's intent. Recompute in that case, so the
+    // non-filer rate actually reaches the row instead of being frozen out on
+    // every save after the first. Any non-zero user figure still wins.
+    const suppliedGatherings236cbTax = userTax(
+      'functions_gatherings_charges_236cb_tax_collected',
+      formData.functionsGatheringsCharges236CB,
+      'taxCollected',
+      gatherings236cbCalculated
+    );
+    const functionsGatherings236cbTax =
+      (!suppliedGatherings236cbTax || suppliedGatherings236cbTax === 0) &&
+      gatherings236cbCalculated !== null
+        ? gatherings236cbCalculated
+        : suppliedGatherings236cbTax || 0;
+
+    if (gatherings236cbCalculated !== null) {
+      logger.info('236CB withholding computed at ATL-aware rate', {
+        isATL,
+        rate: gatherings236cbRate,
+        gross: gatherings236cbGross,
+        tax: functionsGatherings236cbTax,
+      });
+    }
+
+    // Audit F-02 residual. A declared non-filer is still charged the FILER rate
+    // on every head that has a rate row but no non-filer row in
+    // tax_rates_config. Not patched by doubling in code — surfaced so it cannot
+    // be recorded as fixed while it is open on 11 of the 12 rated heads.
+    if (!isATL) {
+      const gapsWithMoney = NON_ATL_RATE_GAPS.filter(
+        (h) => (cleanedData[`${h}_gross_receipt`] || 0) > 0
+      );
+      if (gapsWithMoney.length > 0) {
+        logger.warn(
+          'Non-filer charged FILER withholding rates: tax_rates_config has no ' +
+          'non-ATL row for these heads',
+          { userId, taxYear, heads: gapsWithMoney }
+        );
+      }
+    }
+
     // Prepare data for the complex database structure (maintain backward compatibility)
     const adjustableTaxData = {
       tax_return_id: taxReturnId,
@@ -694,14 +807,19 @@ const saveAdjustableTax = async (req, res) => {
       prepaid_internet_card_236_1e_tax_collected: cleanedData.prepaid_internet_card_236_1e_tax_collected || 0,
       sale_transfer_immoveable_property_236c_gross_receipt: cleanedData.sale_transfer_immoveable_property_236c_gross_receipt || 0,
       sale_transfer_immoveable_property_236c_tax_collected: cleanedData.sale_transfer_immoveable_property_236c_tax_collected || 0,
-      tax_deducted_236c_property_purchased_sold_same_year_gross_recei: cleanedData.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt || 0,
-      tax_deducted_236c_property_purchased_sold_same_year_tax_collect: cleanedData.tax_deducted_236c_property_purchased_sold_same_year_tax_collected || 0,
+      // Written under the real (truncated) column names via the single mapping
+      // in helpers/adjustableTaxShape.js — the literals used to be spelled out
+      // here with no inverse anywhere, which is how the read path drifted.
+      [toDbColumn('tax_deducted_236c_property_purchased_sold_same_year_gross_receipt')]:
+        cleanedData.tax_deducted_236c_property_purchased_sold_same_year_gross_receipt || 0,
+      [toDbColumn('tax_deducted_236c_property_purchased_sold_same_year_tax_collected')]:
+        cleanedData.tax_deducted_236c_property_purchased_sold_same_year_tax_collected || 0,
       tax_deducted_236c_property_purchased_prior_year_gross_receipt: cleanedData.tax_deducted_236c_property_purchased_prior_year_gross_receipt || 0,
       tax_deducted_236c_property_purchased_prior_year_tax_collected: cleanedData.tax_deducted_236c_property_purchased_prior_year_tax_collected || 0,
       purchase_transfer_immoveable_property_236k_gross_receipt: cleanedData.purchase_transfer_immoveable_property_236k_gross_receipt || 0,
       purchase_transfer_immoveable_property_236k_tax_collected: cleanedData.purchase_transfer_immoveable_property_236k_tax_collected || 0,
       functions_gatherings_charges_236cb_gross_receipt: cleanedData.functions_gatherings_charges_236cb_gross_receipt || 0,
-      functions_gatherings_charges_236cb_tax_collected: cleanedData.functions_gatherings_charges_236cb_tax_collected || 0,
+      functions_gatherings_charges_236cb_tax_collected: functionsGatherings236cbTax,
       withholding_tax_sale_considerations_37e_gross_receipt: cleanedData.withholding_tax_sale_considerations_37e_gross_receipt || 0,
       withholding_tax_sale_considerations_37e_tax_collected: cleanedData.withholding_tax_sale_considerations_37e_tax_collected || 0,
       advance_fund_23a_part_i_second_schedule_gross_receipt: cleanedData.advance_fund_23a_part_i_second_schedule_gross_receipt || 0,
@@ -719,6 +837,20 @@ const saveAdjustableTax = async (req, res) => {
     // was a TOCTOU race — two concurrent saves could both miss the row and both
     // INSERT, hitting the UNIQUE(user_id, tax_year) constraint with a 500. The
     // upsert collapses it to one statement. is_complete is sticky (BE-06).
+    // Persist the Active-Taxpayer answer so a declared non-filer survives a
+    // reload instead of silently reverting to filer rates. Gated on the column
+    // actually existing: this is a safe no-op until lane E's phase-z13
+    // migration adds `adjustable_tax_forms.is_atl`, and the computation above
+    // has already used the flag either way.
+    try {
+      const atlColumns = await getAllowedColumns('adjustable_tax_forms');
+      if (atlColumns.has('is_atl')) {
+        adjustableTaxData.is_atl = isATL;
+      }
+    } catch (e) {
+      logger.warn('Could not check adjustable_tax_forms columns for is_atl:', e.message);
+    }
+
     const identityKeys = new Set(['tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year']);
     const columns = Object.keys(adjustableTaxData);
     const values = columns.map((c) => adjustableTaxData[c]);
@@ -744,7 +876,10 @@ const saveAdjustableTax = async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows[0],
+      // Same reshape as the GET — the save response is what the form resets
+      // from, so the two paths must return the identical shape or the next
+      // save loses the 236C pair.
+      data: toAdjustableTaxFrontendShape(result.rows[0]),
       message: 'Adjustable tax data saved successfully',
       calculations: calculations,
       taxRatesUsed: taxRates,

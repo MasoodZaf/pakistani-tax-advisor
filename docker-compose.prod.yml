@@ -121,6 +121,11 @@ services:
       dockerfile: Dockerfile
       args:
         REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
+        # The origin the app actually calls. Empty => the Dockerfile falls back
+        # to REACT_APP_API_URL, so leaving it unset changes nothing. Baked into
+        # the bundle at BUILD time — changing it needs `up -d --build frontend`,
+        # a restart will not pick it up.
+        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-}
         REACT_APP_GOOGLE_OAUTH_CLIENT_ID: ${REACT_APP_GOOGLE_OAUTH_CLIENT_ID:-}
         REACT_APP_APPLE_SERVICES_ID: ${REACT_APP_APPLE_SERVICES_ID:-}
     container_name: tax_advisor_frontend

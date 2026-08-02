@@ -58,28 +58,74 @@ app.use(compression());
 // health checks — while still enforcing a strict allowlist for every browser
 // origin. The dev localhost origin is only added outside production so it can't
 // be used as an allowed origin against the live API.
+// The allowlist is environment-driven: CORS_ORIGINS (comma-separated) is the
+// canonical list, FRONTEND_URL is accepted as a single-origin shorthand so the
+// existing .env files keep working. DEFAULT_PRODUCTION_ORIGINS is a floor, not
+// a config: it only applies when neither variable is set, so a deployment that
+// forgets them still serves the live site instead of 403-ing every browser.
+// (It exists because the allowlist had drifted to contain ONLY the retired
+// staging host https://tax.aurmak.com, whose DNS now points elsewhere.)
+const DEFAULT_PRODUCTION_ORIGINS = [
+  'https://mera-tax.com',
+  'https://www.mera-tax.com',
+];
+
+function getAllowedOrigins() {
+  const configured = [
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
+    process.env.FRONTEND_URL,
+  ].filter(Boolean);
+
+  const base = configured.length > 0
+    ? configured
+    : (process.env.NODE_ENV === 'production' ? DEFAULT_PRODUCTION_ORIGINS : []);
+
+  // The dev origin is added only outside production, so it can never become an
+  // allowed origin against the live API.
+  return [
+    ...base,
+    ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
+  ];
+}
+
+// Auth is via `Authorization: Bearer`, not cookies, so a request with no Origin
+// cannot ride a victim's session — those are the legitimate non-browser callers
+// (Expo mobile, curl, healthchecks) and are allowed through.
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  return getAllowedOrigins().includes(origin);
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = [
-      ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
-      ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
-      process.env.FRONTEND_URL,
-    ].filter(Boolean);
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      logger.warn('CORS: blocked disallowed origin', { origin });
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Never `callback(new Error(...))` here: cors propagates it to the error
+    // handler, which turns every cross-origin write into an HTTP 500. Signal
+    // "not allowed" with `false` and let the guard below set the real status.
+    callback(null, isAllowedOrigin(origin));
   },
   credentials: true,
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
 app.use(cors(corsOptions));
+
+// A rejected origin gets an explicit 403, not a 500. Preflights never reach
+// here — the cors middleware above answers OPTIONS itself, simply without the
+// Access-Control-Allow-Origin header, which is what makes the browser block it.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (isAllowedOrigin(origin)) return next();
+
+  logger.warn('CORS: blocked disallowed origin', {
+    origin,
+    method: req.method,
+    path: req.originalUrl,
+  });
+  return res.status(403).json({
+    status: 'error',
+    message: 'Origin not allowed',
+  });
+});
 
 // Parse JSON bodies — explicit size limit to cap DoS surface.
 app.use(express.json({ limit: '1mb' }));

@@ -6,6 +6,7 @@ const {
   recalculateFormCompletion,
 } = require('../helpers/taxFormsShared');
 const { toFinalMinFrontendShape } = require('../helpers/finalMinShape');
+const { toAdjustableTaxFrontendShape } = require('../helpers/adjustableTaxShape');
 
 const getCurrentReturn = async (req, res) => {
   try {
@@ -170,7 +171,11 @@ const getCurrentReturn = async (req, res) => {
       const adjustableTaxResult = _adjustableTaxResult;
 
       if (adjustableTaxResult.rows.length > 0) {
-        response.formData.adjustable_tax = adjustableTaxResult.rows[0];
+        // Same reshape as GET/POST /api/tax-forms/adjustable-tax. This endpoint
+        // seeds the form's state too, so returning the raw row here would leave
+        // the 236C read-back hole open through a second door.
+        response.formData.adjustable_tax =
+          toAdjustableTaxFrontendShape(adjustableTaxResult.rows[0]);
         logger.info(`Adjustable tax data found for user ${userId}`);
       }
     } catch (error) {

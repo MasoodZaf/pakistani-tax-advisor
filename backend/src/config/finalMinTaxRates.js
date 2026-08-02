@@ -240,23 +240,151 @@ const FINAL_MIN_FIELD_RATE = {
 };
 
 /**
+ * Heads whose statutory rate lives in `tax_rates_config` rather than the static
+ * table above. The rate is READ FROM THE DATABASE — never duplicated here — so
+ * the table stays the single authority and a rate change is a data change.
+ *
+ * `atlKeys` is an ordered candidate list of `rate_category` values within
+ * rate_type='final_tax'; the first one present in the loaded rate set wins.
+ * More than one key exists because the seed history left two rows describing
+ * the same statutory line; both are seeded at 0.20 in-repo (phase-b line 21-23
+ * sets `profit_debt_15_final` to the FA-2025 20%, and phase-j line 65 seeds
+ * `profit_debt_151_up_to_5m` at 0.200 with a 0–5,000,000 band), so the order
+ * cannot change the computed figure. Asserted in the tests.
+ */
+const FINAL_MIN_FIELD_DB_RATE = {
+  // s.7B interest income / profit on debt, individual, up to Rs 5M.
+  //
+  // This head previously had NO rate anywhere, so `lineChargeable` fell through
+  // to echoing the withheld amount: tax_chargeable === tax_deducted, the line
+  // self-cancelled, and an under-withheld savings account filed an UNDER-STATED
+  // return in silence. Demonstrated live: 444,444 gross with 44,444 withheld
+  // produced 44,444 chargeable where the statutory figure is 88,889.
+  //
+  // It is a MAPPING, not a new rate: the 20% has been in tax_rates_config since
+  // phase-b. There is no non-filer row for this line in the table, so `nonAtlKeys`
+  // is empty and a non-filer is charged the filer rate with an explicit
+  // `nonAtlRateMissing` flag rather than a doubled rate invented in code.
+  interest_income_profit_debt_7b_up_to_5m: {
+    atlKeys: ['profit_debt_15_final', 'profit_debt_151_up_to_5m'],
+    nonAtlKeys: [],
+    section: 'ITO 2001 s.7B / s.151 — profit on debt (individual, up to Rs 5M)',
+  },
+};
+
+/**
+ * Heads with no fixed statutory rate BY NATURE — the rate is the taxpayer's own
+ * average/relevant rate, is variable, or the line is computed by another form.
+ * For these, tax_chargeable = tax_deducted is a defensible rule and it is
+ * DECLARED here, so it can be told apart from a rate that is merely missing.
+ */
+const FINAL_MIN_VARIABLE_HEADS = new Set([
+  'profit_debt_national_savings_defence_39_14a',   // variable
+  'employment_termination_benefits_12_6_avg_rate', // taxpayer's average rate
+  'salary_arrears_12_7_relevant_rate',             // relevant rate
+  'salary_u_s_12_7',                               // from the main tax computation
+  'capital_gain',                                  // owned by the Capital Gains form
+]);
+
+/**
+ * Heads where the field name and the FBR Tax Card DISAGREE. A rate here would
+ * be invented, so none is set — but the line must NOT quietly adopt whatever
+ * the client says was withheld either. Callers surface these loudly; the
+ * withheld amount is retained only so the save is not blocked and so we never
+ * invent a refund.
+ */
+const FINAL_MIN_UNRESOLVED_HEADS = new Set([
+  // >5M sukuk is Minimum Tax on the Tax Card — no fixed 25% final-tax line.
+  'return_on_investment_sukuk_u_s_151_1a_25pc',
+  // Field says 10%/20%; Tax Card §151A (premature disposal) is 15%/30% Advance
+  // Tax. Direct conflict — needs the field reconciled to a section.
+  'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc',
+]);
+
+const RATE_SOURCE = {
+  STATIC: 'static',
+  DB: 'db',
+  VARIABLE: 'variable',
+  UNRESOLVED: 'unresolved',
+  UNCLASSIFIED: 'unclassified',
+};
+
+/**
+ * Resolve the statutory rate for a final/min head.
+ * @param {string} fieldBase
+ * @param {boolean} isATL
+ * @param {object|null} dbRates  TaxRateService.getFinalTaxRates() output:
+ *                               { [rate_category]: { rate, ... } }
+ * @returns {{rate:number|null, source:string, rateKey:string|null,
+ *            nonAtlRateMissing:boolean, note:string|null}}
+ */
+function resolveLineRate(fieldBase, isATL = true, dbRates = null) {
+  const base = {
+    rate: null, source: RATE_SOURCE.UNCLASSIFIED, rateKey: null,
+    nonAtlRateMissing: false, note: null,
+  };
+
+  const pair = FINAL_MIN_FIELD_RATE[fieldBase];
+  if (pair) {
+    return { ...base, rate: isATL ? pair.atl : pair.nonAtl, source: RATE_SOURCE.STATIC };
+  }
+
+  const dbMap = FINAL_MIN_FIELD_DB_RATE[fieldBase];
+  if (dbMap) {
+    const keys = (!isATL && dbMap.nonAtlKeys.length) ? dbMap.nonAtlKeys : dbMap.atlKeys;
+    for (const key of keys) {
+      const row = dbRates && dbRates[key];
+      if (row && Number.isFinite(row.rate)) {
+        return {
+          ...base,
+          rate: row.rate,
+          source: RATE_SOURCE.DB,
+          rateKey: key,
+          nonAtlRateMissing: !isATL && dbMap.nonAtlKeys.length === 0,
+          note: dbMap.section,
+        };
+      }
+    }
+    // Mapped, but the rate row is absent from tax_rates_config for this year.
+    // That is a data gap, not a variable line — it must be visible.
+    return {
+      ...base,
+      source: RATE_SOURCE.UNRESOLVED,
+      note: `${dbMap.section} — no rate row found in tax_rates_config ` +
+            `(looked for: ${dbMap.atlKeys.join(', ')})`,
+    };
+  }
+
+  if (FINAL_MIN_VARIABLE_HEADS.has(fieldBase)) {
+    return { ...base, source: RATE_SOURCE.VARIABLE };
+  }
+  if (FINAL_MIN_UNRESOLVED_HEADS.has(fieldBase)) {
+    return { ...base, source: RATE_SOURCE.UNRESOLVED, note: 'field↔section rate conflict' };
+  }
+  return base;
+}
+
+/**
  * Compute a final/min line's tax_chargeable = gross × statutory rate (audit
- * TAX-01), picking the filer (ATL) or non-filer rate from the Tax Card pair.
- *   - Verified line (in FINAL_MIN_FIELD_RATE): gross × rate when the gross is
- *     provided; otherwise fall back to the withheld amount (some users enter
- *     only the WHT certificate value — never invent a refund).
- *   - Any other line: keep the withheld amount until its rate is reconciled.
+ * TAX-01), picking the filer (ATL) or non-filer rate.
+ *   - Verified static line (FINAL_MIN_FIELD_RATE): gross × Tax Card rate.
+ *   - DB-mapped line (FINAL_MIN_FIELD_DB_RATE): gross × the rate read from
+ *     tax_rates_config — pass `dbRates` or it cannot resolve.
+ *   - Anything else: keep the withheld amount (never invent a refund). Callers
+ *     must surface the non-VARIABLE cases; see resolveLineRate().
+ * Gross-absent lines always fall back to the withheld amount — some users enter
+ * only the WHT certificate value.
  * @param {string}  fieldBase    e.g. 'prize_bond_cross_world_puzzle_156'
  * @param {number}  grossAmount
  * @param {number}  taxDeducted
  * @param {boolean} isATL        true = Active Taxpayer (filer); defaults true.
+ * @param {object}  [dbRates]    TaxRateService.getFinalTaxRates() output
  * @returns {number} integer rupees
  */
-function lineChargeable(fieldBase, grossAmount, taxDeducted, isATL = true) {
-  const pair = FINAL_MIN_FIELD_RATE[fieldBase];
+function lineChargeable(fieldBase, grossAmount, taxDeducted, isATL = true, dbRates = null) {
   const deducted = Number(taxDeducted) || 0;
-  if (!pair) return deducted;
-  const rate = isATL ? pair.atl : pair.nonAtl;
+  const { rate } = resolveLineRate(fieldBase, isATL, dbRates);
+  if (rate === null) return deducted;
   const amount = Number(grossAmount) || 0;
   return amount > 0 ? Math.round(amount * rate) : deducted;
 }
@@ -266,5 +394,10 @@ module.exports = {
   calculateTaxChargeable,
   getTaxRate,
   FINAL_MIN_FIELD_RATE,
+  FINAL_MIN_FIELD_DB_RATE,
+  FINAL_MIN_VARIABLE_HEADS,
+  FINAL_MIN_UNRESOLVED_HEADS,
+  RATE_SOURCE,
+  resolveLineRate,
   lineChargeable,
 };

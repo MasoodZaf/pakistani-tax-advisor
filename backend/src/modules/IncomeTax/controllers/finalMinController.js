@@ -214,7 +214,11 @@ const saveFinalMinIncome = async (req, res) => {
     logger.info(`Saving final/min income data for user ${userId}, tax year ${taxYear}`);
 
     // Import tax rate configuration
-    const { calculateTaxChargeable, FINAL_MIN_TAX_RATES, lineChargeable } = require('../../../config/finalMinTaxRates');
+    const {
+      calculateTaxChargeable, FINAL_MIN_TAX_RATES, lineChargeable,
+      resolveLineRate, RATE_SOURCE,
+    } = require('../../../config/finalMinTaxRates');
+    const TaxRateService = require('../../../services/taxRateService');
 
     // Get or create tax return (validated + typed via Prisma helper)
     let taxReturnId;
@@ -370,12 +374,63 @@ const saveFinalMinIncome = async (req, res) => {
       // Salary u/s 12(7) — variable, computed from the main tax computation.
       salary_u_s_12_7_tax_chargeable: 0,
     };
+    // Statutory final-tax rates from tax_rates_config. Heads mapped in
+    // FINAL_MIN_FIELD_DB_RATE (currently s.7B profit on debt) resolve their rate
+    // from here — the table is the authority, nothing is hardcoded. A failure to
+    // load is loud: without it those heads fall back to echoing the withheld
+    // amount, which is precisely the silent under-statement being fixed.
+    let dbFinalTaxRates = {};
+    try {
+      dbFinalTaxRates = await TaxRateService.getFinalTaxRates(taxYear);
+    } catch (e) {
+      logger.error(
+        `Final-tax rate set unavailable for ${taxYear} — DB-rated final/min heads ` +
+        `cannot be computed and will fall back to the withheld amount: ${e.message}`
+      );
+    }
+
+    // Heads whose chargeable figure is NOT computed from a statutory rate.
+    // `variable` is a declared, defensible fallback (average/relevant rate, or
+    // owned by another form). `unresolved` is a defect surface: the rate is
+    // missing or the field↔section mapping conflicts, and the line is silently
+    // adopting the client's withheld figure. Both are reported; unresolved lines
+    // carrying money are logged at error level so they cannot pass unnoticed
+    // the way the s.7B head did.
+    const rateDiagnostics = { variable: [], unresolved: [], nonAtlRateMissing: [] };
+
     for (const base of FINAL_MIN_LINE_BASES) {
+      const gross = getNumericValue(formData[`${base}_amount`]);
+      const deducted = getNumericValue(formData[`${base}_tax_deducted`]);
       taxChargeableCalculations[`${base}_tax_chargeable`] = lineChargeable(
-        base,
-        getNumericValue(formData[`${base}_amount`]),
-        getNumericValue(formData[`${base}_tax_deducted`]),
-        isATL,
+        base, gross, deducted, isATL, dbFinalTaxRates,
+      );
+
+      const resolution = resolveLineRate(base, isATL, dbFinalTaxRates);
+      if (resolution.nonAtlRateMissing) rateDiagnostics.nonAtlRateMissing.push(base);
+      if (resolution.rate !== null) continue;
+      const entry = { field: base, gross, taxDeducted: deducted, reason: resolution.note };
+      if (resolution.source === RATE_SOURCE.VARIABLE) {
+        rateDiagnostics.variable.push(entry);
+      } else {
+        rateDiagnostics.unresolved.push({ ...entry, source: resolution.source });
+      }
+    }
+
+    const unresolvedWithMoney = rateDiagnostics.unresolved.filter(
+      (e) => e.gross > 0 || e.taxDeducted > 0
+    );
+    if (unresolvedWithMoney.length > 0) {
+      logger.error(
+        'Final/Min lines have no statutory rate and are adopting the withheld ' +
+        'amount as tax chargeable — the return may be UNDER-STATED on these lines',
+        { userId, taxYear, isATL, lines: unresolvedWithMoney }
+      );
+    }
+    if (rateDiagnostics.nonAtlRateMissing.length > 0 && !isATL) {
+      logger.warn(
+        'Non-filer charged the filer rate: tax_rates_config has no non-ATL row ' +
+        'for these final/min heads',
+        { userId, taxYear, lines: rateDiagnostics.nonAtlRateMissing }
       );
     }
 
@@ -476,6 +531,11 @@ const saveFinalMinIncome = async (req, res) => {
       data: toFinalMinFrontendShape(result.rows[0]),
       message: 'Final/min income data saved successfully with tax calculations',
       calculations: taxChargeableCalculations,
+      // Which lines were computed from a statutory rate and which merely
+      // adopted the withheld figure. Surfaced so an under-stated line is
+      // visible to QA and the UI instead of being invisible in a log nobody
+      // reads — the same class of defect as the warn-level key dropping.
+      rateDiagnostics,
     });
   } catch (error) {
     logger.error('Error saving final/min income data:', error);

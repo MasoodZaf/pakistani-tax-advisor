@@ -67,7 +67,10 @@ jobs:
           # Canonical init = ../schema.sql (repo root), NOT the unusable Prisma
           # 0_init migration (DEFAULT-based generated columns Postgres rejects).
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ../schema.sql
-          for f in $(ls database/migrations/phase-*.sql | sort); do
+          # LC_ALL=C IS LOAD-BEARING — see the identical note in backend.yml.
+          # UTF-8 collation ignores the hyphen, putting phase-t1-* before
+          # phase-t-realign-form-tables.sql, which then wipes phase-t1's columns.
+          for f in $(ls database/migrations/phase-*.sql | LC_ALL=C sort); do
             echo "applying $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done

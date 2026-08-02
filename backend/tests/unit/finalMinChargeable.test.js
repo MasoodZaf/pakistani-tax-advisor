@@ -78,7 +78,11 @@ describe('lineChargeable — Final/Min statutory chargeable (TAX-01, FBR Tax Car
   test.each([
     'return_on_investment_sukuk_u_s_151_1a_25pc',     // >5M sukuk = Minimum Tax, no fixed final rate
     'profit_debt_151a_saa_sab_atl_10pc_non_atl_20pc', // field 10/20 vs Tax Card §151A 15/30
-    'interest_income_profit_debt_7b_up_to_5m',        // s.7B vs s.151 mapping unclear
+    // s.7B is now rated from tax_rates_config, not from FINAL_MIN_FIELD_RATE.
+    // It still keeps the withheld amount when no dbRates are supplied, which is
+    // what this call asserts; see laneC-controllers-persistence.test.js for the
+    // computed 88,889 case and for the loud handling of a missing rate set.
+    'interest_income_profit_debt_7b_up_to_5m',
     'profit_debt_national_savings_defence_39_14a',    // variable
     'employment_termination_benefits_12_6_avg_rate',  // average rate
     'salary_arrears_12_7_relevant_rate',              // relevant rate

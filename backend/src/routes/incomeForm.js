@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
 const CalculationService = require('../services/calculationService');
 const ensureTaxReturn = require('../helpers/ensureTaxReturn');
+const { recalculateFormCompletion } = require('../modules/IncomeTax/helpers/taxFormsShared');
 
 const router = express.Router();
 
@@ -74,6 +75,9 @@ router.post('/:taxYear', auth, async (req, res) => {
     const userId = req.user.id;
     const userEmail = req.user.email;
     const formData = req.body;
+    // "Complete & next" on the income step. Coerced the same way saveFormData
+    // coerces it for the other 11 forms.
+    const isComplete = formData.isComplete === true || formData.isComplete === 'true';
 
     // Link the income form to its tax return. This endpoint historically did
     // NOT set tax_return_id (unlike every other form via saveFormData), leaving
@@ -164,9 +168,11 @@ router.post('/:taxYear', auth, async (req, res) => {
         retirement_from_approved_funds, directorship_fee, other_cash_benefits,
         employer_contribution_provident, taxable_car_value, other_taxable_subsidies,
         profit_on_debt_15_percent, profit_on_debt_12_5_percent,
-        other_taxable_income_rent, other_taxable_income_others
+        other_taxable_income_rent, other_taxable_income_others,
+        is_complete
       ) VALUES (
-        $1, $2, $19, $20, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+        $1, $2, $19, $20, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        $21
       )
       ON CONFLICT (user_id, tax_year)
       DO UPDATE SET
@@ -188,6 +194,13 @@ router.post('/:taxYear', auth, async (req, res) => {
         profit_on_debt_12_5_percent = EXCLUDED.profit_on_debt_12_5_percent,
         other_taxable_income_rent = EXCLUDED.other_taxable_income_rent,
         other_taxable_income_others = EXCLUDED.other_taxable_income_others,
+        -- BE-06 sticky completion, identical to saveFormData's rule for the
+        -- other 11 forms: a partial "Save data" must not un-complete a form the
+        -- user already finished; only an explicit completion flips it true.
+        -- This endpoint never wrote is_complete at all, so income_forms.is_complete
+        -- was false for every user ever, which made all_forms_complete — and
+        -- therefore submission — unreachable.
+        is_complete = income_forms.is_complete OR EXCLUDED.is_complete,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *;
     `;
@@ -202,11 +215,21 @@ router.post('/:taxYear', auth, async (req, res) => {
       dbData.other_taxable_subsidies, dbData.profit_on_debt_15_percent,
       dbData.profit_on_debt_12_5_percent, dbData.other_taxable_income_rent,
       dbData.other_taxable_income_others,
-      taxReturnId, userEmail   // $19, $20
+      taxReturnId, userEmail,  // $19, $20
+      isComplete               // $21
     ];
 
     const result = await pool.query(query, values);
     const savedForm = result.rows[0];
+
+    // Refresh form_completion_status so the progress counter and
+    // all_forms_complete reflect the write immediately, the same way
+    // saveFormData does for every other form. Never fail the save on this.
+    try {
+      await recalculateFormCompletion(userId, taxYear);
+    } catch (e) {
+      logger.warn(`Income form completion recalc failed for user ${userId}: ${e.message}`);
+    }
 
     logger.info(`Income form data saved successfully for user ${userId}, tax year ${taxYear}`, {
       annual_basic_salary: savedForm.annual_basic_salary,

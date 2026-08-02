@@ -14,10 +14,45 @@ const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 const CalculationService = require('./calculationService');
 const TaxRateService = require('./taxRateService');
+const { superTaxU4C } = require('../helpers/statutoryLimits');
 
 const toNum = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+};
+
+/** Clamp to a non-negative finite number. Used on every client-supplied figure. */
+const nonNeg = (v) => Math.max(0, toNum(v));
+
+/**
+ * Pick between two column names that are two dialects of the SAME field
+ * (e.g. `zakat_paid_amount` (modern) vs `zakat` (legacy)). Returns the first
+ * non-zero one so a row written in either dialect reads back correctly.
+ *
+ * This is deliberately NOT used across different heads of relief — doing that
+ * is what made the deduction total non-monotonic (see `deductibleAllowances`).
+ */
+const pickDialect = (...vals) => {
+  for (const v of vals) {
+    const n = toNum(v);
+    if (n !== 0) return n;
+  }
+  return 0;
+};
+
+/**
+ * s.7B limit. Profit on debt up to this amount is a separate block charged at a
+ * final rate; above it, the profit is chargeable at normal slab rates. Read the
+ * bound from the rate row when it carries a real one, otherwise fall back to the
+ * statutory Rs 5,000,000 that the column names themselves encode
+ * (`interest_income_profit_debt_7b_up_to_5m`). Not a rate — a statutory bound.
+ */
+const S7B_DEFAULT_LIMIT = 5_000_000;
+const SENTINEL_UNBOUNDED = 1e11; // seeds use 999999999999 to mean "no upper bound"
+
+const resolveS7bLimit = (finalTaxRates) => {
+  const max = toNum(finalTaxRates?.profit_debt_15_final?.maxAmount);
+  return max > 0 && max < SENTINEL_UNBOUNDED ? max : S7B_DEFAULT_LIMIT;
 };
 
 class TaxCalculationService {
@@ -213,25 +248,120 @@ class TaxCalculationService {
     // ── Income buckets ──
     const incomeFromSalary =
       toNum(incomeData?.b16_annual_salary_wages_total) + toNum(incomeData?.b23_total_non_cash_benefits);
-    const incomeFromOtherSources =
-      toNum(incomeData?.b28_other_income_min_tax_total) + toNum(incomeData?.b33_other_income_no_min_tax_total);
+
+    // Profit on debt (s.7B). `b28_other_income_min_tax_total` is a GENERATED
+    // column = profit_on_debt_15_percent + profit_on_debt_12_5_percent
+    // (phase-t-realign-form-tables.sql:129). Up to the s.7B limit this is a
+    // SEPARATE BLOCK charged at a final rate — it must NOT enter the slab base.
+    // It previously did, which slab-taxed an ordinary saver's bank profit:
+    // salary 3,000,000 + profit 1,000,000 was charged 586,000 (slab on the full
+    // 4,000,000) where the law charges 300,000 on the salary and takes the
+    // profit at the final rate. Above the limit the profit IS chargeable at
+    // normal rates, so the conversion is bounded, not blanket.
+    const profitOnDebtDeclared = pickDialect(
+      incomeData?.b28_other_income_min_tax_total,
+      toNum(incomeData?.profit_on_debt_15_percent) + toNum(incomeData?.profit_on_debt_12_5_percent)
+    );
+    const otherIncomeNormal = toNum(incomeData?.b33_other_income_no_min_tax_total);
+
+    const s7bLimit = resolveS7bLimit(rates?.finalTax);
+    const s7bRateCfg = rates?.finalTax?.profit_debt_15_final;
+    const s7bRate = toNum(s7bRateCfg?.rate);
+
+    // Only treat the block as final-taxed when we actually have a configured
+    // rate. Without one we would zero-rate real income — so fail loud and leave
+    // it in the slab base (over-charging, but never silently under-stating).
+    const s7bRateAvailable = s7bRate > 0;
+    if (!s7bRateAvailable && profitOnDebtDeclared > 0) {
+      logger.error(
+        'final_tax rate "profit_debt_15_final" is not configured — profit on debt ' +
+        'is being charged at slab rates as a fail-loud fallback',
+        { taxYear, profitOnDebtDeclared }
+      );
+    }
+
+    const profitOnDebtIsFinal =
+      s7bRateAvailable && profitOnDebtDeclared > 0 && profitOnDebtDeclared <= s7bLimit;
+
+    // De-duplicate against the Final/Min form: if the taxpayer also declared the
+    // same 7B receipt there, that stream already charges it (see
+    // finalMinTaxChargeable below) and we must not charge it twice.
+    const s7bAlsoOnFinalMinForm = nonNeg(finalMinData?.interest_income_profit_debt_7b_up_to_5m);
+    const profitOnDebtFinalBase = profitOnDebtIsFinal
+      ? Math.max(0, profitOnDebtDeclared - s7bAlsoOnFinalMinForm)
+      : 0;
+    const profitOnDebtFinalTax = Math.round(profitOnDebtFinalBase * s7bRate);
+
+    // Profit on debt only joins the normal (slab) base when it is NOT final.
+    const profitOnDebtInNormalBase = profitOnDebtIsFinal ? 0 : profitOnDebtDeclared;
+    const incomeFromOtherSources = profitOnDebtInNormalBase + otherIncomeNormal;
     const incomeFromCapitalGains = toNum(capitalGainsData?.total_capital_gain);
 
     const totalIncome = incomeFromSalary + incomeFromOtherSources + incomeFromCapitalGains;
 
-    // ── Deductible allowances ──
-    // DB-computed column `total_deduction_from_income` / `total_deductions`
-    // already sums zakat + ushr + professional expenses + education + other.
-    // Read that if present; otherwise fall back to individual components.
+    // ── Deductible allowances (s.60 series — these reduce TAXABLE INCOME) ──
+    // SCHEMA NOTE, verified against the DDL that created the live table
+    // (backend/database/migrations/phase-t-realign-form-tables.sql:431,435).
+    // The previous comment here claimed the generated column "already sums
+    // zakat + ushr + professional expenses + education + other". That was FALSE
+    // — it was written against a schema that does not exist. What is really there:
+    //
+    //   total_deductions          GENERATED = educational_expenses_amount
+    //                                       + zakat_paid_amount + ushr
+    //                                       + tax_paid_foreign_country
+    //                                       + advance_tax + other_deductions
+    //   total_deduction_from_income  PLAIN, client-writable NUMERIC DEFAULT 0
+    //
+    // Three defects followed from reading those:
+    //  1. `total_deductions` EXCLUDES professional_expenses_amount. The old
+    //     `||` chain preferred it and only fell through to the component sum
+    //     when it was 0 — so professional expenses deducted in full when they
+    //     were the only head and were SILENTLY DROPPED as soon as any other
+    //     head was non-zero. That made the tax function NON-MONOTONIC IN
+    //     DEDUCTIONS: adding Rs 100,000 of legitimate education expense RAISED
+    //     tax from Rs 0 to Rs 17,000. Adding a lawful deduction must never
+    //     increase tax.
+    //  2. `total_deduction_from_income` is not a derived total at all — it is a
+    //     plain column any caller can post, and it was read FIRST. Never trust it.
+    //  3. `total_deductions` INCLUDES tax_paid_foreign_country and advance_tax,
+    //     which are credits/payments against LIABILITY, not deductions from
+    //     INCOME. Subtracting them from taxable income is over-relief.
+    //
+    // So: always sum the components, explicitly, and only the ones that are
+    // genuinely deductions from income. Statutory caps on each head are enforced
+    // on the write path (lane A); this function must stay monotonic regardless.
+    const deductionZakat = pickDialect(deductionsData?.zakat_paid_amount, deductionsData?.zakat);
+    const deductionUshr = nonNeg(deductionsData?.ushr);
+    const deductionProfessional = nonNeg(deductionsData?.professional_expenses_amount);
+    const deductionEducational = pickDialect(
+      deductionsData?.educational_expenses_amount,
+      deductionsData?.education_expense_amount
+    );
+    const deductionOther = nonNeg(deductionsData?.other_deductions);
+
     const deductibleAllowances =
-      toNum(deductionsData?.total_deduction_from_income) ||
-      toNum(deductionsData?.total_deductions) ||
-      (toNum(deductionsData?.zakat_paid_amount) +
-       toNum(deductionsData?.zakat) +
-       toNum(deductionsData?.ushr) +
-       toNum(deductionsData?.professional_expenses_amount) +
-       toNum(deductionsData?.educational_expenses_amount) +
-       toNum(deductionsData?.other_deductions));
+      deductionZakat + deductionUshr + deductionProfessional + deductionEducational + deductionOther;
+
+    // These two sit on the deductions form but are NOT deductions from income.
+    // The generated column lumped them in, which over-relieved income. Removing
+    // them is only half the fix: dropping them entirely would leave a taxpayer
+    // who paid foreign tax with no relief ANYWHERE — worse than the original
+    // bug, which at least gave them something. So each is re-homed below to
+    // where it actually belongs, and surfaced here so the reclassification is
+    // explicit rather than implicit:
+    //   tax_paid_foreign_country -> a CREDIT against tax payable (relief for
+    //                               tax already suffered abroad)
+    //   advance_tax              -> a PAYMENT already made, against the final
+    //                               balance, NOT a credit
+    // The distinction matters: treating a payment as a credit would understate
+    // tax chargeable while still crediting the payment — counting it twice.
+    const foreignTaxCredit = nonNeg(deductionsData?.tax_paid_foreign_country);
+    const advanceTaxOnDeductionsForm = nonNeg(deductionsData?.advance_tax);
+
+    const reclassifiedFromDeductions = {
+      taxPaidForeignCountry: foreignTaxCredit,
+      advanceTaxOnDeductionsForm,
+    };
 
     const taxableIncomeExcludingCG = Math.max(0, totalIncome - incomeFromCapitalGains - deductibleAllowances);
     const taxableIncomeIncludingCG = taxableIncomeExcludingCG + incomeFromCapitalGains;
@@ -248,16 +378,49 @@ class TaxCalculationService {
       surcharge = Math.round(normalIncomeTax * rates.surcharge.rate);
     }
 
-    // ── CGT: use the per-form computed value (CGT rules vary by asset class).
-    // The form saves `capital_gains_tax_chargeable` directly (matches the
-    // CGT column on the Capital Gains form's row totals); DB also has the
-    // older `total_capital_gains_tax` generated column for legacy schema
-    // writes. The singular `total_capital_gain_tax` was a non-existent
-    // column ref — previously returned 0 silently. ──
-    const capitalGainsTax =
-      toNum(capitalGainsData?.capital_gains_tax_chargeable) ||
-      toNum(capitalGainsData?.total_capital_gains_tax) ||
-      toNum(capitalGainsData?.total_capital_gain_tax);
+    // ── CGT ──
+    // Previously this read three candidate stored fields and got 0 from all
+    // three, so capital gains were charged nothing. Why each one is empty:
+    //   * `capital_gains_tax_chargeable` — a PLAIN client-writable column
+    //     (DEFAULT 0) that the modern form does not populate; and being
+    //     client-writable it is not a figure the server may trust anyway.
+    //   * `total_capital_gains_tax`  — GENERATED, but only over the LEGACY
+    //     columns (property_1_year, property_2_3_years, securities,
+    //     other_capital_gains_tax). The modern form writes the
+    //     `<class>_taxable` columns instead, which that expression never reads
+    //     — while `total_capital_gain` (the income figure, used above) DOES
+    //     read them. Hence gains present, tax zero.
+    //   * `total_capital_gain_tax` — never existed as a column at all.
+    //
+    // Compute the charge instead, from the per-class taxable amounts at
+    // DB-driven rates. Every `capital_gains` rate_category in tax_rates_config
+    // is named to match a `<rate_category>_taxable` column on
+    // capital_gain_forms 1:1, so this stays correct as classes are added and
+    // never hardcodes a rate.
+    const capitalGainsTax = (() => {
+      const cg = capitalGainsData || {};
+      const cgRates = rates?.capitalGains || {};
+      let computed = 0;
+      let matchedClasses = 0;
+
+      for (const [category, cfg] of Object.entries(cgRates)) {
+        const amount = nonNeg(cg[`${category}_taxable`]);
+        if (amount === 0) continue;
+        matchedClasses += 1;
+        computed += amount * toNum(cfg?.rate);
+      }
+
+      if (matchedClasses > 0) return Math.round(computed);
+
+      // Legacy rows that predate the per-class columns. Refusing these outright
+      // would silently zero a real CGT charge, so they still fall through —
+      // clamped, and only when no per-class data exists to compute from.
+      // Trusting a client-written figure is a WRITE-path concern; the engine
+      // must not turn it into a silent under-statement here.
+      return Math.round(
+        nonNeg(cg.capital_gains_tax_chargeable) || nonNeg(cg.total_capital_gains_tax)
+      );
+    })();
 
     const totalTaxBeforeAdjustments = normalIncomeTax + surcharge + capitalGainsTax;
 
@@ -268,21 +431,33 @@ class TaxCalculationService {
       0;
 
     // ── Credits (donations, pension). Keep as-is if the form has totaled them. ──
-    const totalCredits = toNum(creditsData?.total_tax_credits) || toNum(creditsData?.total_credits) || 0;
+    const formCredits = pickDialect(creditsData?.total_tax_credits, creditsData?.total_credits);
+
+    // Foreign tax relief lands here, having been removed from the income-side
+    // deduction total above. NOTE: s.103 caps this at the Pakistan tax
+    // attributable to the foreign-source income, which cannot be computed —
+    // the app captures the foreign tax PAID but never the foreign INCOME it was
+    // paid on, so there is no base to apportion against. The Math.max(0, ...)
+    // floor below is the only bound in force: an oversized foreign credit can
+    // zero the liability but can never create a refund.
+    const totalCredits = formCredits + foreignTaxCredit;
 
     const netTaxPayable = Math.max(0, totalTaxBeforeAdjustments - totalReductions - totalCredits);
 
-    // ── Super tax u/s 4C (DB-driven brackets) ──
-    const superTax = (() => {
-      const income = taxableIncomeIncludingCG;
-      if (income <= 0) return 0;
-      for (const b of rates.superTax) {
-        if (income >= b.minIncome && income <= b.maxIncome) {
-          return Math.round(income * b.rate);
-        }
-      }
-      return 0;
-    })();
+    // ── Super tax u/s 4C ──
+    // Delegated to lane A's shared helper rather than reimplemented here, per
+    // the remediation contract's agreed signature `superTaxU4C(income, rates)`.
+    //
+    // The bug it fixes: the old loop matched on the CLOSED interval
+    // [minIncome, maxIncome] and returned 0 when nothing matched, which broke
+    // twice over — the seeds are 1 rupee apart (tier_1 ends 200,000,000,
+    // tier_2 starts 200,000,001), so a non-integer income such as
+    // 200,000,000.75 fell between them and was charged NOTHING; and a NULL top
+    // bound became NaN, where `income <= NaN` is false, so the very highest
+    // incomes fell through as well. The helper instead walks the tiers in
+    // ascending order keeping the highest one whose exclusive lower bound the
+    // income has cleared, which is continuous over the whole real line.
+    const superTax = superTaxU4C(taxableIncomeIncludingCG, rates);
 
     // ── Final / fixed / min income tax — separate stream (dividends s.150,
     //   sukuk s.151(1A), profit-on-debt s.7B, prize bonds s.156, bonus
@@ -303,21 +478,96 @@ class TaxCalculationService {
     // would double-count CGT for every capital-gains filer (audit UX-03).
     // Fall back to grand_total − capital_gain for rows predating the subtotal
     // column.
-    const finalMinTaxChargeable =
+    const finalMinTaxChargeable = Math.max(
+      0,
       finalMinData?.subtotal_tax_chargeable != null
         ? toNum(finalMinData.subtotal_tax_chargeable)
-        : toNum(finalMinData?.grand_total_tax_chargeable) - toNum(finalMinData?.capital_gain_tax_chargeable);
+        : toNum(finalMinData?.grand_total_tax_chargeable) - toNum(finalMinData?.capital_gain_tax_chargeable)
+    );
+    // Each row is client-supplied; a negative "deduction" would inflate the
+    // balance payable, so clamp per row rather than on the sum.
     const finalMinTaxDeducted = Object.entries(finalMinData || {})
       .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
-      .reduce((s, [, v]) => s + toNum(v), 0);
+      .reduce((s, [, v]) => s + nonNeg(v), 0);
 
-    const totalTaxChargeable = netTaxPayable + superTax + finalMinTaxChargeable;
+    const totalTaxChargeable =
+      netTaxPayable + superTax + finalMinTaxChargeable + profitOnDebtFinalTax;
 
     // ── Advance / withholding tax paid (pool every stream) ──
-    const adjustableWHT = toNum(adjustableData?.total_tax_collected) || toNum(adjustableData?.total_adjustable_tax);
-    const advanceTax = toNum(adjustableData?.advance_tax_u_s_147);
-    const withholdingTax = adjustableWHT + finalMinTaxDeducted;
-    const balancePayableRefundable = totalTaxChargeable - withholdingTax - advanceTax;
+    // INTEGRITY BOUND (audit blocker: unbounded refund vector). Every figure
+    // below is client-supplied and previously fed straight into an unfloored
+    // subtraction, so a posted withholding of ~1e9 produced
+    // balancePayableRefundable = -999,699,999: an unbounded refund claim.
+    //
+    // Note this is a DIFFERENT door from the over-cap-credit one. `netTaxPayable`
+    // is already floored at Math.max(0, ...), which stops a credit from creating
+    // a refund — and does nothing whatsoever for this path, because the refund is
+    // produced downstream of that floor. Closing one leaves the other open.
+    //
+    // The fix is on the INPUTS, not the output: clamping the output to zero would
+    // destroy legitimate refunds, which are ordinary for an over-withheld salaried
+    // filer. Two bounds, both derived rather than arbitrary:
+    //   1. A negative payment is never valid — clamp each to 0.
+    //   2. Tax withheld cannot exceed the receipts it was withheld from. Credit
+    //      at most the taxpayer's own declared gross receipts and record the
+    //      excess instead of paying it out.
+    // A genuine refund still flows through as a negative balance; only the
+    // physically impossible portion is refused.
+    const adjustableWHT = pickDialect(
+      adjustableData?.total_tax_collected,
+      adjustableData?.total_adjustable_tax
+    );
+    // Advance tax. A payment reduces the BALANCE, never the tax chargeable.
+    //
+    // These two columns are two surfaces asking for the SAME money, not two
+    // separate payments. Both forms ask for advance tax, so a taxpayer entering
+    // one payment on both is doing the natural thing — and summing them credited
+    // it TWICE, inflating the refund with no bad intent required. Never add
+    // them: take a canonical source and fall back.
+    //
+    // s.147 on the adjustable-tax form is canonical (it is the statutory
+    // declaration surface for advance tax). The deductions-form column is used
+    // only when the canonical one is absent, so a user who filled only that
+    // form still gets credit. When both are present and DIFFER we take the
+    // canonical figure and surface the discrepancy rather than silently
+    // choosing — the same principle as reclassifiedFromDeductions.
+    const advanceTaxS147 = nonNeg(adjustableData?.advance_tax_u_s_147);
+    const advanceTax = pickDialect(advanceTaxS147, advanceTaxOnDeductionsForm);
+
+    const advanceTaxDuplicateDeclaration =
+      advanceTaxS147 > 0 && advanceTaxOnDeductionsForm > 0
+        ? {
+            canonicalS147: advanceTaxS147,
+            deductionsForm: advanceTaxOnDeductionsForm,
+            credited: advanceTax,
+            differs: advanceTaxS147 !== advanceTaxOnDeductionsForm,
+          }
+        : null;
+
+    if (advanceTaxDuplicateDeclaration?.differs) {
+      logger.warn('Advance tax declared on both forms with different figures — crediting s.147', {
+        taxYear,
+        ...advanceTaxDuplicateDeclaration,
+      });
+    }
+    const withholdingTax = nonNeg(adjustableWHT) + finalMinTaxDeducted;
+
+    const declaredGrossReceipts =
+      totalIncome + profitOnDebtFinalBase + nonNeg(finalMinData?.subtotal);
+    const claimedPayments = withholdingTax + advanceTax;
+    const creditablePayments = Math.min(claimedPayments, Math.max(0, declaredGrossReceipts));
+    const rejectedPaymentClaim = claimedPayments - creditablePayments;
+
+    if (rejectedPaymentClaim > 0) {
+      logger.error('Withholding/advance claim exceeds declared gross receipts — excess refused', {
+        taxYear,
+        claimedPayments,
+        declaredGrossReceipts,
+        rejectedPaymentClaim,
+      });
+    }
+
+    const balancePayableRefundable = totalTaxChargeable - creditablePayments;
 
     const breakdown = {
       taxYear,
@@ -328,6 +578,10 @@ class TaxCalculationService {
         incomeFromCapitalGains,
         totalIncome,
         deductibleAllowances,
+        reclassifiedFromDeductions,
+        profitOnDebtDeclared,
+        profitOnDebtFinalBase,
+        profitOnDebtIsFinal,
         taxableIncomeExcludingCG,
         taxableIncomeIncludingCG,
       },
@@ -337,10 +591,13 @@ class TaxCalculationService {
         capitalGainsTax,
         totalTaxBeforeAdjustments,
         totalReductions,
+        formCredits,
+        foreignTaxCredit,
         totalCredits,
         netTaxPayable,
         superTax,
         finalMinTaxChargeable,
+        profitOnDebtFinalTax,
         totalTaxChargeable,
       },
       payments: {
@@ -348,6 +605,10 @@ class TaxCalculationService {
         finalMinTaxDeducted,
         withholdingTax,
         advanceTax,
+        advanceTaxDuplicateDeclaration,
+        claimedPayments,
+        creditablePayments,
+        rejectedPaymentClaim,
         balancePayableRefundable,
       },
       rates: {

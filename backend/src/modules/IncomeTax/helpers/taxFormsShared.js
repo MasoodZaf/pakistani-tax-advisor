@@ -7,7 +7,13 @@ const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
 const {
   getAllowedColumns,
   filterToAllowedColumns,
+  UnknownColumnsError,
 } = require('../../../helpers/tableColumns');
+const {
+  SERVER_COMPUTED: FINAL_TAX_SERVER_COMPUTED,
+  canonicaliseFinalTaxPayload,
+  explainRejectedKey,
+} = require('./finalTaxShape');
 
 // Helper: fetch the current tax year from the DB at runtime (not hardcoded)
 async function getCurrentTaxYear() {
@@ -197,7 +203,36 @@ const saveFormData = async (tableName, formKey, req, res) => {
       last_updated_by: userId,
     };
 
-    const clientFields = filterToAllowedColumns(tableName, allowedColumns, cleanFormData);
+    // Final Tax is strict: its payload contract is pinned in
+    // helpers/finalTaxShape.js, so an unknown key is a defect (a missing
+    // column or a client sending a name nothing owns) and must fail loudly
+    // rather than silently under-state the return. Other tables keep the
+    // permissive path until their dialect is pinned the same way.
+    const strictTable = tableName === 'final_tax_forms';
+    const payloadForSave = strictTable
+      ? canonicaliseFinalTaxPayload(cleanFormData)
+      : cleanFormData;
+
+    let clientFields;
+    try {
+      clientFields = filterToAllowedColumns(tableName, allowedColumns, payloadForSave, {
+        strict: strictTable,
+        ignore: strictTable ? FINAL_TAX_SERVER_COMPUTED : undefined,
+      });
+    } catch (e) {
+      if (e instanceof UnknownColumnsError) {
+        logger.error(`Refusing ${formKey} save: unknown fields`, { keys: e.keys });
+        return res.status(422).json({
+          success: false,
+          message:
+            'Save refused: the server cannot store every field you submitted, so it did not ' +
+            'save a partial return. No data was changed.',
+          unknownFields: e.keys.map((k) => ({ field: k, reason: explainRejectedKey(k) })),
+        });
+      }
+      throw e;
+    }
+
     const dataToSave = { ...clientFields, ...serverFields };
 
     // Identity fields never get overwritten on ON CONFLICT UPDATE.
@@ -232,11 +267,31 @@ const saveFormData = async (tableName, formKey, req, res) => {
       `RETURNING *`;
 
     const result = await pool.query(sql, values);
+    let savedRow = result.rows[0];
+
+    // tax_computation_forms accepts no figures from the client (lane A), so the
+    // row would otherwise sit at DEFAULT 0. Populate every substantive column
+    // from the engine now, and return the populated row so the client renders
+    // real figures rather than zeros. A computation that cannot run (no income
+    // form yet) leaves the row as-is — it must not lose the completion flag.
+    if (tableName === 'tax_computation_forms') {
+      try {
+        const {
+          populateTaxComputationFromEngine,
+        } = require('../controllers/computationController');
+        const populated = await populateTaxComputationFromEngine(userId, userEmail, taxYear);
+        if (populated) savedRow = populated;
+      } catch (e) {
+        logger.error(
+          `Tax computation populate failed for user ${userId} ${taxYear}: ${e.message}`
+        );
+      }
+    }
 
     logger.info(`${formKey} data saved for user ${userId}`);
     res.json({
       success: true,
-      data: result.rows[0],
+      data: savedRow,
       message: `${formKey} data saved successfully`,
     });
   } catch (error) {

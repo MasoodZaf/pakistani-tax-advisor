@@ -14,7 +14,24 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
     ports:
-      - "5432:5432"
+      # Bound to the loopback interface ON PURPOSE. A bare "5432:5432" publishes
+      # on 0.0.0.0, and docker's iptables rules are inserted ahead of ufw — so
+      # the DB ends up reachable from the internet even though ufw says the port
+      # is closed. That has already cost one production outage and left a
+      # production-data clone exposed on staging for ~3 weeks.
+      #
+      # The server-local, untracked docker-compose.override.yml also pins this
+      # (prod 127.0.0.1:5432, staging 127.0.0.1:5433). That override must remain
+      # an ergonomics choice, never the only thing standing between the database
+      # and the public internet — which is what this line is for.
+      # The host PORT is env-tunable (staging uses 5433 alongside prod's 5432 on
+      # the same box); the host INTERFACE is hardcoded and deliberately is not.
+      #
+      # Compose merges `ports` by APPENDING, it does not replace — which is
+      # precisely why the override never protected anything: the tracked
+      # 0.0.0.0 binding survived alongside it. Set DB_HOST_PORT in .env rather
+      # than adding a second ports entry in an override file.
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Init order matches docker-entrypoint-initdb.d (lex sort):

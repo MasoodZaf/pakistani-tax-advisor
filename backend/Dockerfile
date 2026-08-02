@@ -6,9 +6,14 @@
 # caller), this can move back to node:18-alpine for a smaller image.
 FROM node:18-bookworm-slim
 
+# HOME is stated explicitly rather than inherited from /etc/passwd: Chromium's
+# crashpad handler writes its database under $HOME and aborts the whole browser
+# launch if it is missing or unwritable. The directory is created and chown'd to
+# uid 1001 further down — the two must stay in sync.
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=production
+    NODE_ENV=production \
+    HOME=/home/nodejs
 
 # System deps: Chromium + the minimum fonts/libs to render PDFs, plus curl
 # for the HEALTHCHECK below.
@@ -50,9 +55,24 @@ RUN npm ci --only=production && npm cache clean --force
 COPY backend/ ./
 COPY shared/ /app/shared/
 
-# Non-root runtime user
+# Non-root runtime user.
+#
+# The home directory MUST exist and be writable by uid 1001. `useradd` records
+# /home/nodejs in /etc/passwd (so docker sets HOME=/home/nodejs), but with
+# --no-create-home the directory was never created — and Chromium's crashpad
+# handler creates its crash database under $HOME *before* the browser starts.
+# With a missing HOME every launch died with
+#   chrome_crashpad_handler: --database is required
+#   Trace/breakpoint trap (core dumped)
+# which killed ALL PDF generation in production and staging (QA INF-04).
+# No Chromium flag fixes this — not --disable-crash-reporter, --disable-breakpad,
+# --disable-dev-shm-usage, nor --crashpad-handler-database. Only a writable HOME
+# does. Do not remove the mkdir/chown below.
 RUN groupadd -r --gid 1001 nodejs \
  && useradd -r --uid 1001 --gid nodejs --no-create-home nodejs \
+ && mkdir -p /home/nodejs \
+ && chown -R nodejs:nodejs /home/nodejs \
+ && chmod 755 /home/nodejs \
  && chown -R nodejs:nodejs /app \
  # /backups is a docker volume mount-point owned by root unless we pre-create
  # it with the right ownership inside the image. Without this the nightly

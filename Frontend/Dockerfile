@@ -16,6 +16,15 @@ COPY . .
 # Build the application
 ARG REACT_APP_API_URL=http://localhost:3001
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+# REACT_APP_API_BASE_URL is the name the app code reads (lane D). It exists
+# because the API origin was previously HARDCODED in the bundle to the retired
+# staging host, so a DNS change silently broke every write in a shipped build.
+# Defaults to REACT_APP_API_URL so existing .env / CI setups keep working
+# unchanged; set it explicitly to override just the API origin.
+# NOTE: this is baked in at BUILD time (CRA inlines REACT_APP_* into the bundle).
+# Changing it therefore requires a frontend REBUILD, not a container restart.
+ARG REACT_APP_API_BASE_URL=
+ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL:-$REACT_APP_API_URL}
 # SSO public identifiers (safe as build args). Empty defaults keep the
 # respective sign-in buttons gracefully unconfigured.
 ARG REACT_APP_GOOGLE_OAUTH_CLIENT_ID=

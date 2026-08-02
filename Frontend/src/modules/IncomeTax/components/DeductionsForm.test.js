@@ -78,3 +78,72 @@ test('typing a POS amount auto-fills professional_expenses_amount to the lower-o
   });
   expect(Number(deductionInput.value)).not.toBe(0);
 });
+
+/**
+ * The s.60C / s.60D threshold is on TAXABLE income, not gross.
+ *
+ * Gross 1,600,000 with 200,000 of Zakat paid is taxable income of 1,400,000 —
+ * the taxpayer IS eligible. The pre-fix form summed employment + other income
+ * with nothing subtracted and denied both allowances outright.
+ */
+test('Zakat brings a gross-ineligible taxpayer back under the threshold', async () => {
+  mockFormData = { deductions: {}, income: { total_employment_income: 1600000 } };
+  const { container } = render(<DeductionsForm />);
+
+  // Gross 1.6M → the POS sub-input is not rendered yet.
+  expect(container.querySelector('#professional_expenses_pos_amount')).toBeNull();
+
+  await userEvent.type(container.querySelector('#zakat_paid_amount'), '200000');
+
+  await waitFor(() => {
+    expect(container.querySelector('#professional_expenses_pos_amount')).not.toBeNull();
+  });
+});
+
+/**
+ * The statute says taxable income "less than" Rs 1,500,000. Exactly at the
+ * threshold is NOT eligible; the pre-fix code used `<=`.
+ */
+test('exactly at the threshold is not eligible', async () => {
+  mockFormData = { deductions: {}, income: { total_employment_income: 1500000 } };
+  const { container } = render(<DeductionsForm />);
+
+  expect(container.querySelector('#professional_expenses_pos_amount')).toBeNull();
+  expect(screen.getAllByText(/not below the/i).length).toBeGreaterThan(0);
+});
+
+/**
+ * The threshold base has to match the buckets the server charges the slabs on.
+ * The pre-fix form read only `other_income_no_min_tax_total` and silently
+ * dropped `other_income_min_tax_total`, so a taxpayer at 1,600,000 total looked
+ * like 1,400,000 and was offered an allowance the server would refuse.
+ */
+test('minimum-tax other income counts toward the threshold', async () => {
+  mockFormData = {
+    deductions: {},
+    income: { total_employment_income: 1400000, other_income_min_tax_total: 200000 },
+  };
+  const { container } = render(<DeductionsForm />);
+
+  expect(container.querySelector('#professional_expenses_pos_amount')).toBeNull();
+});
+
+/**
+ * The 25% s.60C cap is computed on taxable income too. Gross 1,400,000 less
+ * 200,000 Zakat = 1,200,000 taxable → cap 300,000, not the 350,000 a gross
+ * basis would allow. (Client-side preview only — the server is authoritative.)
+ */
+test('the 25% cap is computed on taxable income, not gross', async () => {
+  mockFormData = { deductions: {}, income: { total_employment_income: 1400000 } };
+  const { container } = render(<DeductionsForm />);
+
+  await userEvent.type(container.querySelector('#zakat_paid_amount'), '200000');
+  await userEvent.type(container.querySelector('#professional_expenses_pos_amount'), '10000000');
+
+  const deductionInput = container.querySelector('input[name="professional_expenses_amount"]');
+  await waitFor(() => {
+    // min(5% × 10,000,000 = 500,000 ; 25% × 1,200,000 = 300,000)
+    expect(Number(deductionInput.value)).toBe(300000);
+  });
+  expect(Number(deductionInput.value)).not.toBe(350000); // the gross-basis figure
+});

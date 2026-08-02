@@ -4,6 +4,93 @@ const { checkReadiness } = require('../../../services/readinessService');
 const {
   getCurrentTaxYear,
 } = require('../helpers/taxFormsShared');
+const { getAllowedColumns, filterToAllowedColumns } = require('../../../helpers/tableColumns');
+const {
+  toTaxComputationRow,
+  NO_ENGINE_COUNTERPART,
+  KNOWN_GENERATED_COLUMN_GAPS,
+} = require('../helpers/taxComputationShape');
+const ensureTaxReturn = require('../../../helpers/ensureTaxReturn');
+
+/**
+ * Populate tax_computation_forms from the engine.
+ *
+ * The POST endpoint accepts no figures (lane A stripped them — the headline
+ * columns are GENERATED over the inputs, so a client value became the stored
+ * liability). Every substantive column is therefore written here, from
+ * TaxCalculationService's breakdown, never from the request body.
+ *
+ * Returns the persisted row, or null when the computation cannot run (no income
+ * form yet). Never throws into the caller's save — a failure to compute must not
+ * lose the user's completion flag.
+ */
+const populateTaxComputationFromEngine = async (userId, userEmail, taxYear) => {
+  const TaxCalculationService = require('../../../services/taxCalculationService');
+
+  let breakdown;
+  try {
+    breakdown = await TaxCalculationService.calculateTaxComputation(userId, taxYear);
+  } catch (e) {
+    logger.warn(
+      `Tax computation not populated for user ${userId} ${taxYear}: ${e.message}`
+    );
+    return null;
+  }
+
+  const { values } = toTaxComputationRow(breakdown);
+
+  const taxReturnId = await ensureTaxReturn(userId, userEmail, taxYear);
+  const taxYearRow = await pool.query(
+    'SELECT id FROM tax_years WHERE tax_year = $1',
+    [taxYear]
+  );
+  if (taxYearRow.rows.length === 0) {
+    throw new Error(`Invalid tax year "${taxYear}"`);
+  }
+
+  const allowedColumns = await getAllowedColumns('tax_computation_forms');
+  // Filters out any column this deployment's schema does not have (phase-w /
+  // phase-t1 may or may not be applied), and would flag a mapping key that is
+  // not a column at all.
+  const safeValues = filterToAllowedColumns('tax_computation_forms', allowedColumns, values);
+
+  const dataToSave = {
+    ...safeValues,
+    tax_return_id: taxReturnId,
+    user_id: userId,
+    user_email: userEmail,
+    tax_year_id: taxYearRow.rows[0].id,
+    tax_year: taxYear,
+    last_updated_by: userId,
+  };
+
+  const identityKeys = new Set([
+    'tax_return_id', 'user_id', 'user_email', 'tax_year_id', 'tax_year',
+  ]);
+  const columns = Object.keys(dataToSave);
+  const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+  const updateAssignments = columns
+    .filter((c) => !identityKeys.has(c))
+    .map((c) => `${c} = EXCLUDED.${c}`)
+    .concat(['updated_at = CURRENT_TIMESTAMP'])
+    .join(', ');
+
+  const result = await pool.query(
+    `INSERT INTO tax_computation_forms (${columns.join(', ')}) ` +
+    `VALUES (${placeholders}) ` +
+    `ON CONFLICT (user_id, tax_year) DO UPDATE SET ${updateAssignments} ` +
+    `RETURNING *`,
+    columns.map((c) => dataToSave[c])
+  );
+
+  logger.info(`Tax computation populated from engine for user ${userId} ${taxYear}`, {
+    columnsWritten: Object.keys(safeValues).length,
+    leftAtZero: Object.keys(NO_ENGINE_COUNTERPART),
+    generatedColumnGaps: Object.keys(KNOWN_GENERATED_COLUMN_GAPS),
+  });
+
+  return result.rows[0];
+};
 
 const getTaxComputation = async (req, res) => {
   try {
@@ -159,6 +246,27 @@ const getTaxComputation = async (req, res) => {
       balance_tax_payable: toNum(existingTaxComputation?.balance_tax_payable),
     };
 
+    // Server-computed columns, straight off the persisted row. These are
+    // populated from the engine on save (populateTaxComputationFromEngine);
+    // surfacing them here is what stops the seven headline figures reading 0 on
+    // screen now that the endpoint no longer accepts them from the client.
+    // Read-only for the client — POSTing them back is ignored (lane A's
+    // stripServerComputedFields).
+    for (const col of [
+      'income_from_salary', 'other_income_subject_to_min_tax',
+      'income_loss_other_sources', 'total_income', 'deductible_allowances',
+      'taxable_income_excluding_cg', 'capital_gains_loss',
+      'taxable_income_including_cg', 'normal_income_tax', 'surcharge_amount',
+      'capital_gains_tax', 'normal_tax_including_surcharge_cgt',
+      'tax_reductions', 'net_tax_payable', 'super_tax', 'final_fixed_tax',
+      'minimum_tax_on_other_income', 'total_tax_liability', 'advance_tax_paid',
+      'balance_payable',
+    ]) {
+      if (existingTaxComputation && existingTaxComputation[col] !== undefined) {
+        taxComputation[col] = toNum(existingTaxComputation[col]);
+      }
+    }
+
     // Log the auto-linked values
     logger.info('Tax Computation auto-linked values:', {
       income_from_salary: taxComputation.income_from_salary,
@@ -245,4 +353,9 @@ const submitReturn = async (req, res) => {
   }
 };
 
-module.exports = { getTaxComputation, getReadiness, submitReturn };
+module.exports = {
+  getTaxComputation,
+  getReadiness,
+  submitReturn,
+  populateTaxComputationFromEngine,
+};
