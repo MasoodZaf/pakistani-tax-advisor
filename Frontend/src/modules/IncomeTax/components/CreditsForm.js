@@ -4,6 +4,7 @@ import { useTaxForm } from '../../../contexts/TaxFormContext';
 import { useTaxYear } from '../../../contexts/TaxYearContext';
 import { useTaxRates } from '../../../hooks/useTaxRates';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { visibleFieldsFor } from '../../../shared/formFieldVisibility';
 import {
   Gift,
@@ -23,10 +24,11 @@ import { useUnsavedChangesWarning } from '../../../hooks/useUnsavedChangesWarnin
 // donation/contribution field; the current credit value isn't needed (the
 // effects always overwrite). Logic byte-identical to the former in-component
 // effects (computeRebateCredit moved here verbatim).
-const CreditsAutoCalc = ({ control, setValue, taxableIncome, normalTax, avgRate, donationCap, donationAssociateCap, pensionCap }) => {
+const CreditsAutoCalc = ({ control, setValue, taxableIncome, normalTax, avgRate, donationCap, donationAssociateCap, pensionCap, housingLoan }) => {
   const donation = useWatch({ control, name: 'charitable_donations_amount' });
   const donationAssociate = useWatch({ control, name: 'charitable_donations_associate_amount' });
   const pension = useWatch({ control, name: 'pension_fund_amount' });
+  const housingProfit = useWatch({ control, name: 'housing_loan_profit_amount' });
 
   const computeRebateCredit = (actualAmount, capPct) => {
     if (!taxableIncome || !normalTax || !actualAmount || !capPct) return 0;
@@ -57,6 +59,26 @@ const CreditsAutoCalc = ({ control, setValue, taxableIncome, normalTax, avgRate,
       setValue('pension_fund_tax_credit', computeRebateCredit(amount, pensionCap));
     }
   }, [pension, taxableIncome, normalTax, pensionCap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // FA-2025 housing-loan profit-on-debt credit. Unlike the three above, this one
+  // is only offered when the server says it is configured, and its ceilings come
+  // from that same response — the quantum is an unsettled legal question and the
+  // app must not carry a guessed cap of its own. `housingLoan` is null when the
+  // relief is off, in which case nothing is written to the field at all.
+  useEffect(() => {
+    if (!housingLoan?.available) return;
+    const paid = parseFloat(housingProfit) || 0;
+    if (taxableIncome <= 0 || paid <= 0) {
+      setValue('housing_loan_profit_tax_credit', 0);
+      return;
+    }
+    // LEAST of the profit paid and whichever configured ceilings are switched on.
+    const limbs = [paid];
+    if (housingLoan.taxableIncomePct > 0) limbs.push(taxableIncome * housingLoan.taxableIncomePct);
+    if (housingLoan.absoluteCap > 0) limbs.push(housingLoan.absoluteCap);
+    const eligible = Math.max(0, Math.min(...limbs));
+    setValue('housing_loan_profit_tax_credit', Math.round(eligible * avgRate));
+  }, [housingProfit, taxableIncome, normalTax, housingLoan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 };
@@ -137,6 +159,25 @@ const CreditsForm = () => {
   const { rates } = useTaxRates(currentTaxYear);
 
   const [showHelp, setShowHelp] = useState(false);
+
+  // Which OPTIONAL reliefs the server will actually honour for this tax year.
+  // Never inferred client-side: a form that offers a relief the server refuses
+  // invites a claim, silently zeroes it on save, and shows the taxpayer nothing
+  // but a figure that changed. The teacher/researcher rebate did exactly that
+  // for tax year 2026.
+  const [reliefs, setReliefs] = useState(null);
+  useEffect(() => {
+    if (!currentTaxYear) return;
+    let cancelled = false;
+    axios
+      .get('/api/tax-forms/relief-availability', { params: { taxYear: currentTaxYear } })
+      .then((r) => { if (!cancelled && r.data?.success) setReliefs(r.data.reliefs); })
+      // On failure the optional rows stay hidden. That refuses a relief rather
+      // than inviting one, which is the safe direction to fail in.
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentTaxYear]);
+  const housingLoan = reliefs?.housing_loan_profit_credit || null;
 
   const {
     register,
@@ -252,6 +293,30 @@ const CreditsForm = () => {
       limitPct: 0.20
     },
     {
+      id: 'housing_loan_profit_on_debt',
+      description: 'Tax Credit for Profit on Debt on your own house (Finance Act 2025)',
+      yesNo: 'Y',
+      amount: 'housing_loan_profit_amount',
+      taxReduction: 'housing_loan_profit_tax_credit',
+      limits: housingLoan
+        ? `Rebate at avg rate. Eligible = LEAST of profit paid${
+            housingLoan.taxableIncomePct > 0
+              ? `, ${(housingLoan.taxableIncomePct * 100).toFixed(0)}% of taxable income`
+              : ''
+          }${
+            housingLoan.absoluteCap > 0
+              ? `, Rs ${housingLoan.absoluteCap.toLocaleString('en-PK')}`
+              : ''
+          }. House up to 2,500 sq ft or flat up to 2,000 sq ft; not claimable again for 15 years — your own declaration.`
+        : '',
+      autoCalc: true,
+      // The percentage limb is the only one this row's live hint can express; the
+      // rupee ceiling is applied by the auto-calc and stated in `limits` above.
+      limitPct: housingLoan?.taxableIncomePct || 0,
+      // Gated on the SERVER's answer, not on the field-visibility manifest.
+      requiresRelief: 'housing_loan_profit_credit',
+    },
+    {
       id: 'surrender_tax_credit_investments',
       description: 'Surrender of Tax Credit on Investments in Shares disposed off before time limit',
       yesNo: '-',
@@ -261,7 +326,7 @@ const CreditsForm = () => {
       autoCalc: false,
       limitPct: null
     }
-  ], []);
+  ], [housingLoan]);
 
   // Field-level visibility — driven by income profile. Pure salaried sees
   // only charitable-donations row (3 fields). Pension addon unlocks
@@ -274,8 +339,16 @@ const CreditsForm = () => {
     [addons, showAdvanced]
   );
   const visibleCreditItems = useMemo(
-    () => creditItems.filter((item) => visibleFields.has(item.amount)),
-    [creditItems, visibleFields]
+    () => creditItems.filter((item) =>
+      // A relief-gated row is shown iff the server says the relief is live. It is
+      // deliberately outside the field-visibility manifest: the manifest keys off
+      // the taxpayer's income profile, whereas this keys off whether the relief
+      // legally exists this year — two different questions.
+      item.requiresRelief
+        ? Boolean(reliefs?.[item.requiresRelief]?.available)
+        : visibleFields.has(item.amount)
+    ),
+    [creditItems, visibleFields, reliefs]
   );
   // Count is from the FORM's actual creditItems array (not the broader
   // manifest set), so it tells the user how many extra ROWS this toggle
@@ -346,7 +419,8 @@ const CreditsForm = () => {
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onCompleteAndNext(); }}>
-      <CreditsAutoCalc control={control} setValue={setValue} taxableIncome={taxableIncome} normalTax={normalTax} avgRate={avgRate} donationCap={donationCap} donationAssociateCap={donationAssociateCap} pensionCap={pensionCap} />
+      <CreditsAutoCalc control={control} setValue={setValue} taxableIncome={taxableIncome} normalTax={normalTax} avgRate={avgRate} donationCap={donationCap} donationAssociateCap={donationAssociateCap} pensionCap={pensionCap} housingLoan={housingLoan}
+        />
       <LiveTotalsProvider control={control} compute={(v) => ({ total: sumCredits(v) })}>
       <TaxFormShell
         title="Tax credits"

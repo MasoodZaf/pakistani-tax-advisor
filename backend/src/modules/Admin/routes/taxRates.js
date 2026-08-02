@@ -20,6 +20,7 @@ const { pool } = require('../../../config/database');
 const logger = require('../../../utils/logger');
 const jwtAuth = require('../../../middleware/auth');
 const { insertAudit } = require('../../../helpers/auditLog');
+const TaxRateService = require('../../../services/taxRateService');
 
 const router = express.Router();
 
@@ -80,8 +81,19 @@ router.get('/', jwtAuth, async (req, res) => {
     const { taxYear, rateType } = req.query;
     if (!taxYear) return res.status(400).json({ error: 'taxYear is required' });
 
+    // A rate that has been DEACTIVATED is exactly the one an administrator most
+    // needs to see: phase-z19 retired the teacher rebate and the professional-
+    // expenses allowance by flipping is_active, and with an is_active-only list
+    // they became invisible here — so the only surface for reviewing or undoing
+    // those decisions was raw SQL. Inactive rows are excluded by default (they
+    // are not in force) but are one query parameter away.
+    const includeInactive = ['1', 'true', 'yes'].includes(
+      String(req.query.includeInactive || '').toLowerCase()
+    );
+
     const params = [taxYear];
-    let sql = `SELECT * FROM tax_rates_config WHERE tax_year = $1 AND is_active = true`;
+    let sql = `SELECT * FROM tax_rates_config WHERE tax_year = $1`;
+    if (!includeInactive) sql += ` AND is_active = true`;
     if (rateType) {
       if (!RATE_TYPES.includes(rateType)) {
         return res.status(400).json({ error: `Unknown rate_type. Allowed: ${RATE_TYPES.join(', ')}` });
@@ -138,6 +150,10 @@ router.post('/', jwtAuth, requireSuperAdmin, async (req, res) => {
         toNum(fixed_amount) ?? 0, description || null, fbr_reference || null,
       ]
     );
+
+    // Rate bundles are cached per tax year with a TTL. Without this purge the
+    // edit appears to succeed and changes nothing until the cache expires.
+    TaxRateService.purgeCache(tax_year);
 
     await insertAudit(pool, {
       userId: req.user.id,
@@ -198,6 +214,8 @@ router.put('/:id', jwtAuth, requireSuperAdmin, async (req, res) => {
       ]
     );
 
+    TaxRateService.purgeCache(existing.tax_year);
+
     await insertAudit(pool, {
       userId: req.user.id,
       userEmail: req.user.email,
@@ -234,6 +252,8 @@ router.delete('/:id', jwtAuth, requireSuperAdmin, async (req, res) => {
     if (before.rows.length === 0) return res.status(404).json({ error: 'Rate not found' });
 
     await pool.query('DELETE FROM tax_rates_config WHERE id = $1', [id]);
+
+    TaxRateService.purgeCache(before.rows[0].tax_year);
 
     await insertAudit(pool, {
       userId: req.user.id,

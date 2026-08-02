@@ -77,6 +77,71 @@ router.param('taxYear', Validation.validateTaxYearParam);
 // GET /api/tax-forms/current-return - Get current tax return with all form data
 router.get('/current-return', auth, getCurrentReturn);
 
+/**
+ * GET /api/tax-forms/relief-availability?taxYear=2025-26
+ *
+ * Which OPTIONAL reliefs are switched on for a tax year, so a form can show or
+ * hide the inputs that belong to them.
+ *
+ * The forms must not decide this for themselves. A relief that the server will
+ * refuse — because it expired, or because its statutory basis is unsettled —
+ * should not have a visible input inviting a claim: the taxpayer fills it in,
+ * the server zeroes it, and the only feedback is a figure that quietly changed.
+ * The teacher/researcher rebate did exactly that for tax year 2026.
+ *
+ * Availability is derived from `tax_rates_config` (the same rows Admin ->
+ * Statutory Reliefs edits), never from a client-side constant, so answering one
+ * of the open legal questions shows up in the UI without a rebuild.
+ */
+router.get('/relief-availability', auth, async (req, res) => {
+  try {
+    const TaxRateService = require('../../../services/taxRateService');
+    const { getCurrentTaxYear } = require('../helpers/taxFormsShared');
+    const taxYear = req.query.taxYear || (await getCurrentTaxYear());
+    const rates = await TaxRateService.getAllRates(taxYear);
+
+    const cfg = rates?.creditCaps?.housing_loan_profit_on_debt;
+    res.json({
+      success: true,
+      taxYear,
+      reliefs: {
+        teacher_researcher_reduction: {
+          available: Number(rates?.reductions?.teacher_researcher?.rate) > 0,
+          reason:
+            'Clause (3A), Part III, Second Schedule (Finance Act 2025) restored the 25% rebate '
+            + 'retrospectively from 1-Jul-2022 but it ceased to have effect after 30-Jun-2025.',
+        },
+        professional_expenses_allowance: {
+          available: Boolean(rates?.deductionThresholds?.prof_expenses_max_taxable_income),
+          reason:
+            'Cited to s.60C, which was the profit-on-debt allowance and was omitted by Finance '
+            + 'Act 2022; it never covered professional or point-of-sale expenses.',
+        },
+        housing_loan_profit_credit: {
+          available: Boolean(cfg),
+          // The caps are published so the form can show the taxpayer what binds
+          // their claim instead of silently trimming it after they save.
+          taxableIncomePct: cfg ? Number(cfg.rate) || 0 : 0,
+          absoluteCap: cfg ? Number(cfg.fixedAmount) || 0 : 0,
+          reason:
+            'Finance Act 2025 reintroduced housing profit-on-debt relief as a tax credit. Its '
+            + 'quantum is not configured, so the app does not offer it.',
+        },
+        education_threshold_inclusive:
+          Number(rates?.deductionThresholds?.education_threshold_inclusive?.rate) === 1,
+      },
+    });
+  } catch (err) {
+    // A form that cannot learn what is available must not guess. Failing here
+    // means the optional inputs stay hidden, which refuses relief rather than
+    // inviting a claim the server will reject.
+    res.status(503).json({
+      success: false,
+      message: 'Relief availability could not be determined. Please retry.',
+    });
+  }
+});
+
 // POST /api/tax-forms/create-return - Create a new tax return
 router.post('/create-return', auth, createReturn);
 

@@ -6,6 +6,7 @@ import UserManagement from './components/UserManagement';
 import SystemSettings from './components/SystemSettings';
 import UserTaxRecords from './components/UserTaxRecords';
 import TaxRatesManager from './components/TaxRatesManager';
+import StatutoryReliefsManager from './components/StatutoryReliefsManager';
 import AdminManagement from './components/AdminManagement';
 import AuditLogs from './components/AuditLogs';
 import PlaybookManager from './components/PlaybookManager';
@@ -68,6 +69,14 @@ const AdminModule = () => {
         element={
           <SuperAdminRoute>
             <TaxRatesManager />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="statutory-reliefs"
+        element={
+          <SuperAdminRoute>
+            <StatutoryReliefsManager />
           </SuperAdminRoute>
         }
       />

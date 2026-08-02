@@ -1,6 +1,7 @@
 const express = require('express');
 const adminRoutes = require('./routes/admin');
 const taxRatesRoutes = require('./routes/taxRates');
+const statutoryReliefsRoutes = require('./routes/statutoryReliefs');
 const ratesBundleRoutes = require('./routes/ratesBundle');
 const playbookRoutes = require('./routes/playbook');
 
@@ -8,6 +9,7 @@ const router = express.Router();
 
 // Mounted before the catch-all adminRoutes so they aren't shadowed.
 router.use('/tax-rates', taxRatesRoutes);
+router.use('/statutory-reliefs', statutoryReliefsRoutes);
 router.use('/rates-bundle', ratesBundleRoutes);
 router.use('/playbook', playbookRoutes);
 

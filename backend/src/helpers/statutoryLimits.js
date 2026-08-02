@@ -42,16 +42,33 @@
  * ---------------------------------------------------------------------------
  *  - Thresholds compare **taxable** income, not gross. (The browser summed
  *    gross: `DeductionsForm.js:124-126`.)
- *  - s.60C / s.60D read "**less than**" Rs 1,500,000 — strict `<`, not `<=`.
- *    A taxpayer at exactly 1,500,000 is NOT eligible.
+ *  - s.60D reads "**less than**" Rs 1,500,000 — strict `<`, not `<=`, so a
+ *    taxpayer at exactly 1,500,000 is not eligible. Sources disagree on this
+ *    wording, so it is an ADMIN SETTING with the strict reading as the default;
+ *    see `capEducationU60D`.
  *
- * OPEN LEGAL QUESTION — DO NOT RESOLVE IN CODE
- * -------------------------------------------
- * The codebase's own citations for the professional-expenses allowance
- * (s.60C) and the teacher/researcher reduction (s.100C) are self-contradictory
- * — s.100C is the NPO credit, s.60C the repealed house-financing allowance.
- * The *mechanism* is implemented here; the *rates* stay DB-driven so counsel's
- * answer is a `tax_rates_config` row change and not a code change.
+ * OPEN LEGAL QUESTIONS ARE ADMIN SETTINGS, NOT CODE CONSTANTS
+ * ----------------------------------------------------------
+ * Where the law is genuinely unsettled, or where the app's own citation turned
+ * out to be wrong, the *mechanism* lives here and the *decision* lives in
+ * `tax_rates_config`, editable at Admin -> Statutory Reliefs with an audit
+ * trail. The owner's tax counsel can then settle a question without a deploy,
+ * and nothing here silently assumes an answer.
+ *
+ * Three such questions are live (see `modules/Admin/routes/statutoryReliefs.js`
+ * for the full statutory background on each):
+ *
+ *  - the s.60D threshold operator, above;
+ *  - "professional expenses u/s 60C", which was cited to a section that was
+ *    omitted by Finance Act 2022 and never covered these expenses. Retired by
+ *    phase-z19; re-enableable if counsel finds a basis this research could not;
+ *  - the FA-2025 housing-loan profit-on-debt TAX CREDIT, which the app does not
+ *    implement. The mechanism now exists and stays inert until the owner
+ *    supplies its statutory parameters, because guessing a cap would be worse
+ *    than not offering the relief.
+ *
+ * Defaults are always the CONSERVATIVE reading — deny the relief — because a
+ * missing configuration row must never widen a claim.
  */
 
 const TaxRateService = require('../services/taxRateService');
@@ -180,8 +197,27 @@ function capEducationU60D(taxableIncome, children, tuitionFeePaid, rates) {
     'fixedAmount'
   );
 
-  // Statute: "less than". Exactly at the threshold is NOT eligible.
-  if (!(ti < threshold)) return 0;
+  // ── THE COMPARISON OPERATOR IS AN ADMIN SETTING, NOT A CODE CONSTANT ──
+  //
+  // Published sources disagree on whether s.60D(2) reads "less than"
+  // Rs 1,500,000 or "does not exceed" it. The difference changes the answer for
+  // exactly one taxpayer — the one whose taxable income is precisely the
+  // threshold — so it is not worth guessing, and it is not something this file
+  // should decide on the owner's behalf either way.
+  //
+  // The app therefore ships the strict reading (`<`, the conservative one: it
+  // denies the allowance at the boundary rather than granting something that
+  // may not exist) and exposes the choice as an editable setting in
+  // Admin -> Statutory Reliefs, backed by
+  // `deduction_threshold/education_threshold_inclusive`. When the owner's tax
+  // counsel settles the wording, flipping it is a rate-row change with an audit
+  // entry — not a deploy.
+  //
+  // Absent row => strict, i.e. the behaviour that shipped. Never widen a relief
+  // by default on account of a missing configuration row.
+  const inclusive = rates?.deductionThresholds?.education_threshold_inclusive?.rate === 1;
+  const eligibleOnIncome = inclusive ? ti <= threshold : ti < threshold;
+  if (!eligibleOnIncome) return 0;
 
   const maxChildren = rateOf(rates, 'deductionThresholds', 'education_max_children', 'fixedAmount');
   const perChild = rateOf(rates, 'deductionThresholds', 'education_per_child_cap', 'fixedAmount');
@@ -253,6 +289,68 @@ function capProfessionalU60C(taxableIncome, posAmount, rates) {
   if (pos <= 0) return 0;
 
   return round2(Math.min(pos * posPct, ti * incomePct));
+}
+
+// ── FA-2025 housing-loan profit-on-debt TAX CREDIT ───────────────────────────
+
+/**
+ * The Finance Act 2025 relief for profit on debt on a taxpayer's own house.
+ *
+ * WHAT THIS IS AND WHY IT IS OFF BY DEFAULT
+ * -----------------------------------------
+ * The old s.60C deductible allowance for profit on debt was omitted by Finance
+ * Act 2022. FA-2025 brought back a housing relief but as a **tax credit**, not a
+ * deductible allowance — profit on debt on a house up to 2,500 sq ft or a flat
+ * up to 2,000 sq ft, not claimable again for 15 years.
+ *
+ * The app does not implement it, which means every taxpayer entitled to it is
+ * currently OVER-paying. That is a real gap and it is the reason this function
+ * exists. What this function deliberately does NOT do is invent the quantum:
+ * the research behind phase-z19 could not establish the cap from a primary
+ * source, and a guessed ceiling on a credit is exactly the class of error that
+ * produced the "professional expenses u/s 60C" defect in the first place.
+ *
+ * So the mechanism is here and INERT until the owner supplies the parameters at
+ * Admin -> Statutory Reliefs. No configuration row => returns 0 => the credit is
+ * simply not offered, and the form field for it is not shown. That is the
+ * conservative failure mode: the taxpayer is no worse off than before this
+ * function existed, and nobody gets a relief the app cannot cite.
+ *
+ * Shape, once configured — the standard credit form `(A/B) × C`:
+ *   C = the LEAST of
+ *         the profit on debt actually paid,
+ *         `rate` × taxable income        (skipped when rate is 0)
+ *         `fixedAmount` rupees           (skipped when fixedAmount is 0)
+ *   credit = C × the average rate, applied by the caller.
+ *
+ * @param {number} taxableIncome
+ * @param {number} profitPaid   profit on debt paid on the qualifying property
+ * @param {object} rates
+ * @returns {number} the ELIGIBLE AMOUNT (`C`), or 0 when the relief is not
+ *                   configured for this tax year
+ */
+function capHousingLoanProfitCredit(taxableIncome, profitPaid, rates) {
+  const cfg = rates?.creditCaps?.housing_loan_profit_on_debt;
+  if (!cfg) return 0; // relief not configured — see above, this is intentional
+
+  const paid = toAmount(profitPaid);
+  if (paid <= 0) return 0;
+
+  const ti = toAmount(taxableIncome);
+  const limbs = [paid];
+
+  const pct = Number(cfg.rate);
+  if (Number.isFinite(pct) && pct > 0) limbs.push(ti * pct);
+
+  const absolute = Number(cfg.fixedAmount);
+  if (Number.isFinite(absolute) && absolute > 0) limbs.push(absolute);
+
+  return round2(Math.max(0, Math.min(...limbs)));
+}
+
+/** Whether the housing-loan credit is configured for this tax year at all. */
+function housingLoanCreditConfigured(rates) {
+  return Boolean(rates?.creditCaps?.housing_loan_profit_on_debt);
 }
 
 // ── 2nd Sched Pt III cl.6 — Behbood / Pensioners' Benefit certificates ───────
@@ -367,6 +465,9 @@ function bindRates(rates) {
       capEducationU60D(taxableIncome, children, tuitionFeePaid, rates),
     capProfessionalU60C: (taxableIncome, posAmount) =>
       capProfessionalU60C(taxableIncome, posAmount, rates),
+    capHousingLoanProfitCredit: (taxableIncome, profitPaid) =>
+      capHousingLoanProfitCredit(taxableIncome, profitPaid, rates),
+    housingLoanCreditConfigured: () => housingLoanCreditConfigured(rates),
     behboodReliefCl6: (profit, taxOnProfitAtAvgRate) =>
       behboodReliefCl6(profit, taxOnProfitAtAvgRate, rates),
     superTaxU4C: (income) => superTaxU4C(income, rates),
@@ -380,6 +481,8 @@ module.exports = {
   capPensionU63,
   capEducationU60D,
   capProfessionalU60C,
+  capHousingLoanProfitCredit,
+  housingLoanCreditConfigured,
   behboodReliefCl6,
   superTaxU4C,
   // exported for the write-path middleware and its tests

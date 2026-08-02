@@ -6,7 +6,7 @@ import {
   Home, FileText, BarChart3, Settings,
   Users, Shield, FileSpreadsheet, TrendingUp, MessageCircle,
   ChevronLeft, ChevronRight, LogOut,
-  Percent, UserCog, Activity, Archive, BookOpen, LayoutGrid
+  Percent, UserCog, Activity, Archive, BookOpen, LayoutGrid, Scale
 } from 'lucide-react';
 import { isStaff as isStaffRole, isElevated as isElevatedRole } from '../../utils/roles';
 import BrandMark from '../common/BrandMark';
@@ -303,6 +303,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
                     <div className="sb-divider" />
                     {!collapsed && <div className="sb-section">Super Admin</div>}
                     <NavItem item={{ name: 'Tax Rates',       href: '/admin/tax-rates',       icon: Percent  }} />
+                    <NavItem item={{ name: 'Statutory Reliefs', href: '/admin/statutory-reliefs', icon: Scale }} />
                     <NavItem item={{ name: 'Admin Accounts',  href: '/admin/admin-accounts',  icon: UserCog  }} />
                   </>
                 )}
