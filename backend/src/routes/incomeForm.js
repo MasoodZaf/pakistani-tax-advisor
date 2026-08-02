@@ -5,8 +5,39 @@ const logger = require('../utils/logger');
 const CalculationService = require('../services/calculationService');
 const ensureTaxReturn = require('../helpers/ensureTaxReturn');
 const { recalculateFormCompletion } = require('../modules/IncomeTax/helpers/taxFormsShared');
+const {
+  guardMoneyFields,
+  assertStorable,
+  parseMoneyInput,
+} = require('../middleware/numericGuards');
 
 const router = express.Router();
+
+// Every money input this route accepts. Kept at module scope because it is now
+// TWO things: the cleaning loop's field list (as it always was) and the
+// `alsoGuard` set handed to the money guard. One list, so a field added here
+// is validated automatically instead of quietly bypassing validation — the
+// stale-hardcoded-list failure mode QA rejected the last remediation pass for.
+//
+// The schema-derived half of the guarded set covers the annual fields (they are
+// income_forms columns). What this list adds is the derived inputs that are NOT
+// columns: the monthly_* fields, which CalculationService annualises, and the
+// alias fields consumed by the same service.
+const INCOME_MONEY_INPUTS = [
+  // Monthly fields (will be converted to annual)
+  'monthly_basic_salary', 'monthly_allowances', 'monthly_house_rent_allowance',
+  'monthly_conveyance_allowance', 'monthly_medical_allowance',
+  // Annual fields (direct input)
+  'annual_basic_salary', 'allowances', 'bonus', 'medical_allowance',
+  'pension_from_ex_employer', 'employment_termination_payment',
+  'retirement_from_approved_funds', 'directorship_fee', 'other_cash_benefits',
+  'employer_contribution_provident', 'taxable_car_value', 'other_taxable_subsidies',
+  'profit_on_debt_15_percent', 'profit_on_debt_12_5_percent',
+  'other_taxable_income_rent', 'other_taxable_income_others',
+  // Additional fields for comprehensive calculation
+  'bonus_commission', 'retirement_amount', 'noncash_benefits_gross',
+  'provident_fund_contribution', 'gratuity', 'rent_income', 'other_income'
+];
 
 // Validate any :taxYear segment up front (SEC-09).
 router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
@@ -69,7 +100,15 @@ router.get('/:taxYear', auth, async (req, res) => {
 });
 
 // POST /api/income-form/:taxYear - Create or update income form data with Excel calculations
-router.post('/:taxYear', auth, async (req, res) => {
+// Money guard runs AFTER auth so an anonymous caller gets 401 rather than a 400
+// that would confirm which columns exist. Rejects (400, all offending fields at
+// once): unparseable non-empty amounts (F-09, previously stored as 0.00 with a
+// "saved" message), negative amounts (F-07), and amounts above the column's
+// DECIMAL(15,2) ceiling (F-08, previously an opaque 500).
+router.post('/:taxYear', auth, guardMoneyFields({
+  table: 'income_forms',
+  alsoGuard: INCOME_MONEY_INPUTS,
+}), async (req, res) => {
   try {
     const { taxYear } = req.params;
     const userId = req.user.id;
@@ -91,41 +130,22 @@ router.post('/:taxYear', auth, async (req, res) => {
       directorship_fee: formData.directorship_fee
     });
 
-    // Clean and validate all input data
+    // Clean all input fields.
+    //
+    // parseMoneyInput is the SAME parser the money guard validated with, so a
+    // value that passed the guard cannot mean something different here. The
+    // lenient behaviours it preserves ("1,200,000", "1.2e6", padded whitespace,
+    // decimals) are QA-verified and must not change.
+    //
+    // Reaching this point, `supplied: false` is the only remaining fallback-to-0
+    // case — blank means "the user did not fill this in", which is legitimate on
+    // an incrementally saved form. Junk can no longer reach here: the guard
+    // returned 400 before the handler ran, so a figure is never silently
+    // replaced with 0.00 while the user is told the form saved (F-09).
     const cleanedData = {};
-    const allFields = [
-      // Monthly fields (will be converted to annual)
-      'monthly_basic_salary', 'monthly_allowances', 'monthly_house_rent_allowance',
-      'monthly_conveyance_allowance', 'monthly_medical_allowance',
-      // Annual fields (direct input)
-      'annual_basic_salary', 'allowances', 'bonus', 'medical_allowance',
-      'pension_from_ex_employer', 'employment_termination_payment',
-      'retirement_from_approved_funds', 'directorship_fee', 'other_cash_benefits',
-      'employer_contribution_provident', 'taxable_car_value', 'other_taxable_subsidies',
-      'profit_on_debt_15_percent', 'profit_on_debt_12_5_percent',
-      'other_taxable_income_rent', 'other_taxable_income_others',
-      // Additional fields for comprehensive calculation
-      'bonus_commission', 'retirement_amount', 'noncash_benefits_gross',
-      'provident_fund_contribution', 'gratuity', 'rent_income', 'other_income'
-    ];
-
-    // Clean all input fields
-    for (const field of allFields) {
-      const value = formData[field];
-      if (value === '' || value === null || value === undefined) {
-        cleanedData[field] = 0;
-      } else if (typeof value === 'string') {
-        const numericValue = parseFloat(value.replace(/,/g, ''));
-        if (isNaN(numericValue)) {
-          cleanedData[field] = 0; // Default to 0 for invalid values
-        } else {
-          cleanedData[field] = numericValue;
-        }
-      } else if (typeof value === 'number') {
-        cleanedData[field] = value;
-      } else {
-        cleanedData[field] = 0;
-      }
+    for (const field of INCOME_MONEY_INPUTS) {
+      const parsed = parseMoneyInput(formData[field]);
+      cleanedData[field] = parsed.supplied && parsed.valid ? parsed.value : 0;
     }
 
     // Calculate Excel formulas using CalculationService
@@ -158,6 +178,27 @@ router.post('/:taxYear', auth, async (req, res) => {
       other_taxable_income_others: calculations.other_income || cleanedData.other_taxable_income_others || 0,
       // Note: Calculated fields are handled by database generated columns
     };
+
+    // Second F-08 gate, on the values actually about to be bound.
+    //
+    // The middleware can only see what the client sent. CalculationService
+    // DERIVES most of dbData — monthly_basic_salary is multiplied by 12, several
+    // fields are summed — so an input that is individually storable can still
+    // produce a figure past DECIMAL(15,2). Without this check that path is still
+    // a Postgres 22003 surfaced as an opaque 500. Same helper, same maxima, so
+    // the two gates cannot disagree.
+    const storabilityErrors = await assertStorable('income_forms', dbData);
+    if (storabilityErrors.length > 0) {
+      logger.warn(`Income form rejected: ${storabilityErrors.length} unstorable computed amount(s)`, {
+        userId,
+        fields: storabilityErrors.map((e) => `${e.field}:${e.code}`)
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'The calculated amounts are too large to be saved. Please check the figures you entered.',
+        errors: storabilityErrors
+      });
+    }
 
     // Use UPSERT with only input fields (generated columns are calculated automatically)
     const query = `
