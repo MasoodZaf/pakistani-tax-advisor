@@ -9,6 +9,68 @@ const router = express.Router();
 // Validate any :taxYear segment up front (SEC-09).
 router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
 
+// ---------------------------------------------------------------------------
+// FBR acknowledgement-slip header derivation (R-03).
+//
+// The three header fields on the printed return — Tax Year, Period and Due
+// Date — used to be hardcoded to the 2023-24 return. A PDF generated for
+// 2025-26 therefore carried TY2024 headers wrapped around TY2025-26 figures:
+// a document that contradicts itself is worse than no document, because a
+// filer may hand it to FBR believing it describes the year on the cover.
+//
+// The one thing to get right here: Pakistan names a tax year after the
+// calendar year in which it ENDS, not the one in which it starts. The app's
+// internal string '2025-26' means the fiscal year 1-Jul-2025 → 30-Jun-2026,
+// and FBR calls that "Tax Year 2026". Getting this backwards (stamping 2025)
+// mislabels the return by a whole year and is the single most repeated
+// mistake in this codebase — hence the explicit end-year arithmetic below
+// instead of anything that reads the leading four digits and calls it done.
+//
+// Due date: for an individual filing a salary return under s.114(1), the
+// statutory due date is 30 September following the close of the tax year,
+// i.e. 30-Sep of the tax-year-end calendar year. (Extensions granted by FBR
+// circular in a given year are not modelled — the slip shows the statutory
+// date, which is what IRIS itself prints.)
+//
+// No fallback year. If the tax-year string cannot be parsed we throw, because
+// the failure mode we are fixing IS a silent default: a wrong-but-plausible
+// year on a statutory document is undetectable to the person holding it,
+// whereas a failed download is obvious and gets reported.
+const TAX_YEAR_STRING = /^(\d{4})-(\d{2}|\d{4})$/;
+
+function deriveTaxYearHeader(taxYearString) {
+  const raw = typeof taxYearString === 'string' ? taxYearString.trim() : '';
+  const match = TAX_YEAR_STRING.exec(raw);
+  if (!match) {
+    throw new Error(
+      `Cannot derive FBR return header: malformed tax year ${JSON.stringify(taxYearString)}. ` +
+      'Expected "YYYY-YY" (e.g. "2025-26").'
+    );
+  }
+
+  const startYear = Number(match[1]);
+  // Two-digit suffixes inherit the start year's century, then roll forward if
+  // that lands us before the start year ('1999-00' → 2000, not 1900).
+  let endYear = match[2].length === 4
+    ? Number(match[2])
+    : Number(`${String(startYear).slice(0, 2)}${match[2]}`);
+  if (match[2].length === 2 && endYear < startYear) endYear += 100;
+
+  if (endYear !== startYear + 1) {
+    throw new Error(
+      `Cannot derive FBR return header: tax year ${JSON.stringify(taxYearString)} does not span ` +
+      'exactly one fiscal year (1-Jul → 30-Jun of the following calendar year).'
+    );
+  }
+
+  return {
+    // What FBR calls the year — the LATER calendar year.
+    taxYearLabel: String(endYear),
+    period: `01-Jul-${startYear} - 30-Jun-${endYear}`,
+    dueDate: `30-Sep-${endYear}`,
+  };
+}
+
 // Get comprehensive tax calculation summary with proper calculations
 // Build the canonical tax-calculation summary IN-PROCESS. Used by the route
 // below AND the FBR PDF endpoint — the PDF used to HTTP self-call this route
@@ -538,13 +600,62 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
       expectedValues: { taxableIncome: 21595004, taxChargeable: 7135349 }
     });
 
+    // Taxpayer identity for the acknowledgement slip (R-03).
+    //
+    // Why this query exists at all: the block below used to read `apiResponse.user`,
+    // `apiResponse.returnNumber`, `apiResponse.taxYear` and `apiResponse.filingStatus`,
+    // but buildTaxCalculationSummary returns only { summary, rawData, calculations,
+    // breakdown, computationError } — it has never had a `user` key. Every one of
+    // those reads was undefined, which is why Name / Address / Registration No
+    // printed as "N/A" on every PDF ever generated, and why Tax Year fell through
+    // to the hardcoded literal. The data was always available; nobody was fetching it.
+    //
+    // personal_information is the IRIS pre-fill snapshot, keyed per (user, tax year) —
+    // it is the right source because a return must show the taxpayer's details AS
+    // FILED for that year (address and employer change between years; the archived
+    // TY2024 PDF must not silently acquire a 2026 address). `users` is the fallback
+    // for filers who have not completed the personal-information form yet.
+    //
+    // Registration No: for an individual, FBR's registration number IS the NTN,
+    // which for a Pakistani national is the CNIC. Preference order follows how
+    // explicit the datum is — an entered FBR number beats a derived one.
+    const taxpayerResult = await pool.query(`
+      SELECT u.name        AS account_name,
+             u.phone       AS account_phone,
+             u.cnic        AS account_cnic,
+             pi.full_name, pi.ntn, pi.fbr_registration_number, pi.cnic AS pi_cnic,
+             pi.residential_address, pi.city, pi.province, pi.mobile_number
+      FROM users u
+      LEFT JOIN personal_information pi
+        ON pi.user_id = u.id AND pi.tax_year = $2
+      WHERE u.id = $1
+    `, [userId, taxYear]).catch(err => {
+      // A missing profile must not block the download — the template already
+      // renders 'N/A' for anything absent.
+      logger.warn('Could not load taxpayer details for PDF header:', err.message);
+      return { rows: [] };
+    });
+
+    const t = taxpayerResult.rows[0] || {};
+    const taxpayer = {
+      name: t.full_name || t.account_name || null,
+      address: [t.residential_address, t.city, t.province].filter(Boolean).join(', ') || null,
+      phone: t.mobile_number || t.account_phone || null,
+      registrationNo: t.fbr_registration_number || t.ntn || t.pi_cnic || t.account_cnic || null,
+    };
+
+    const taxReturnRow = taxReturnResult.rows[0];
+
     // Map the corrected API response to the format expected by the FBR HTML template
     const taxData = {
       // User information
-      user: apiResponse.user || {},
-      returnNumber: apiResponse.returnNumber || '',
-      taxYear: apiResponse.taxYear || '',
-      filingStatus: apiResponse.filingStatus || '',
+      user: taxpayer,
+      returnNumber: taxReturnRow.return_number || '',
+      // Authoritative: read off the tax_returns/tax_years join above, not off the
+      // calculation payload. generateFBRHTML derives Period / Tax Year / Due Date
+      // from this and throws if it is unusable.
+      taxYear,
+      filingStatus: taxReturnRow.filing_status || '',
 
       // Tax calculations from TaxCalculationService (via tax-calculation-summary).
       grossIncome: apiResponse.calculations?.grossIncome || 0,
@@ -637,6 +748,12 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
 
 // Function to generate FBR-formatted HTML for PDF
 function generateFBRHTML(taxData) {
+  // Derived once and reused by all three page headers, so the acknowledgement
+  // slip, the return and the wealth statement can never disagree about which
+  // year the document covers. Throws on a malformed tax year — see
+  // deriveTaxYearHeader for why there is deliberately no fallback.
+  const header = deriveTaxYearHeader(taxData.taxYear);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -851,16 +968,16 @@ function generateFBRHTML(taxData) {
     </div>
     <div>
       <p><strong>Registration No:</strong> ${taxData.user?.registrationNo || 'N/A'}</p>
-      <p><strong>Tax Year:</strong> ${taxData.taxYear || '2024'}</p>
-      <p><strong>Period:</strong> 01-Jul-2023 - 30-Jun-2024</p>
+      <p><strong>Tax Year:</strong> ${header.taxYearLabel}</p>
+      <p><strong>Period:</strong> ${header.period}</p>
       <p><strong>Medium:</strong></p>
-      <p><strong>Due Date:</strong> 30-Sep-2024</p>
+      <p><strong>Due Date:</strong> ${header.dueDate}</p>
       <p><strong>Document Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
     </div>
   </div>
 
   <div class="barcode-area">
-    |||||||| ${taxData.user?.registrationNo || '1100010065467'} ||||||||
+    |||||||| ${taxData.user?.registrationNo || 'N/A'} ||||||||
   </div>
 
   <table>
@@ -941,16 +1058,16 @@ function generateFBRHTML(taxData) {
     </div>
     <div>
       <p><strong>Registration No:</strong> ${taxData.user?.registrationNo || 'N/A'}</p>
-      <p><strong>Tax Year:</strong> ${taxData.taxYear || '2024'}</p>
-      <p><strong>Period:</strong> 01-Jul-2023 - 30-Jun-2024</p>
+      <p><strong>Tax Year:</strong> ${header.taxYearLabel}</p>
+      <p><strong>Period:</strong> ${header.period}</p>
       <p><strong>Medium:</strong></p>
-      <p><strong>Due Date:</strong> 30-Sep-2024</p>
+      <p><strong>Due Date:</strong> ${header.dueDate}</p>
       <p><strong>Document Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
     </div>
   </div>
 
   <div class="barcode-area">
-    |||||||| ${taxData.user?.registrationNo || '1100010065467'} ||||||||
+    |||||||| ${taxData.user?.registrationNo || 'N/A'} ||||||||
   </div>
 
   <h3 class="section-header">Salary</h3>
@@ -1070,16 +1187,16 @@ function generateFBRHTML(taxData) {
     </div>
     <div>
       <p><strong>Registration No:</strong> ${taxData.user?.registrationNo || 'N/A'}</p>
-      <p><strong>Tax Year:</strong> ${taxData.taxYear || '2024'}</p>
-      <p><strong>Period:</strong> 01-Jul-2023 - 30-Jun-2024</p>
+      <p><strong>Tax Year:</strong> ${header.taxYearLabel}</p>
+      <p><strong>Period:</strong> ${header.period}</p>
       <p><strong>Medium:</strong></p>
-      <p><strong>Due Date:</strong> 30-Sep-2024</p>
+      <p><strong>Due Date:</strong> ${header.dueDate}</p>
       <p><strong>Document Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
     </div>
   </div>
 
   <div class="barcode-area">
-    |||||||| ${taxData.user?.registrationNo || '1100010065467'} ||||||||
+    |||||||| ${taxData.user?.registrationNo || 'N/A'} ||||||||
   </div>
 
   <h3 class="section-header">Computations</h3>
@@ -1338,3 +1455,6 @@ function generateFBRHTML(taxData) {
 }
 
 module.exports = router;
+// Exported for unit tests only — the router remains the module's default export
+// so `app.use('/api/reports', require('./routes/reports'))` is unchanged.
+module.exports.deriveTaxYearHeader = deriveTaxYearHeader;

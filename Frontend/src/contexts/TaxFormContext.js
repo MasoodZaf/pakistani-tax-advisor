@@ -397,21 +397,52 @@ export const TaxFormProvider = ({ children }) => {
     }
   };
 
+  // "Calculate tax" on the forms overview (F-12 / R-03b).
+  //
+  // This used to POST /api/tax-forms/calculate, which is not mounted anywhere in
+  // the backend and has always returned 404 — the button could only ever show
+  // "Tax calculation failed". The live computation endpoint is
+  // GET /api/tax-computation/:taxYear, which re-links every form and returns the
+  // same canonical breakdown the PDF and the summary panel are built from, so
+  // it is a read, not a write: nothing was persisted by the old call and nothing
+  // is persisted by this one.
+  //
+  // Shape note: the endpoint returns the nested breakdown
+  // (`payments.balancePayableRefundable`, a signed figure — positive = payable,
+  // negative = refundable). Dashboard reads the flat snake_case
+  // `additional_tax_due` / `refund_due` that the dead endpoint was presumed to
+  // return, so those two are derived here rather than changing Dashboard, which
+  // belongs to another lane. The full computation is passed through untouched
+  // for any consumer that wants the detail.
   const calculateTax = async () => {
     if (!taxReturn) {
       toast.error('No tax return found');
       return;
     }
 
+    const taxYear = taxReturn.tax_year;
+    if (!taxYear) {
+      toast.error('No tax year on this return');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await axios.post('/api/tax-forms/calculate', {
-        taxReturnId: taxReturn.id
-      });
+      const response = await axios.get(`/api/tax-computation/${encodeURIComponent(taxYear)}`);
 
-      setTaxCalculation(response.data.calculation);
+      const computation = response.data?.data;
+      if (!computation) throw new Error('Tax computation returned no data');
+
+      const balance = Number(computation.payments?.balancePayableRefundable) || 0;
+      const calculation = {
+        ...computation,
+        additional_tax_due: Math.max(0, balance),
+        refund_due: Math.max(0, -balance),
+      };
+
+      setTaxCalculation(calculation);
       toast.success('Tax calculation completed');
-      return response.data.calculation;
+      return calculation;
     } catch (error) {
       const message = error.response?.data?.message || 'Tax calculation failed';
       toast.error(message);

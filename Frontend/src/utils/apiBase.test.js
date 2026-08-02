@@ -68,9 +68,58 @@ test('a non-absolute override is rejected and falls back to same-origin', () => 
   spy.mockRestore();
 });
 
-test('localhost still points at the dev backend, and honours the legacy var', () => {
-  expect(loadApiBase({ hostname: 'localhost' })).toBe('http://localhost:3001');
-  expect(
-    loadApiBase({ hostname: 'localhost', env: { REACT_APP_API_URL: 'http://localhost:4001' } })
-  ).toBe('http://localhost:4001');
+// R-04: hostname must never imply a backend port.
+//
+// The old behaviour returned 'http://localhost:3001' for ANY loopback hostname
+// with no env var set. On the shared box 3001 is PRODUCTION's backend and
+// staging is 3002, so that default let a staging browser session reach the
+// production API through a tunnel. Local dev is now opt-in, by env, per port.
+describe('R-04 — no inferred backend port', () => {
+  test.each(['localhost', '127.0.0.1', '::1'])(
+    'a bare %s host falls back to same-origin, never to :3001',
+    (hostname) => {
+      const base = loadApiBase({ hostname });
+      expect(base).toBe('');
+      expect(base).not.toMatch(/3001/);
+    }
+  );
+
+  test('local development is opt-in via REACT_APP_API_BASE_URL', () => {
+    expect(
+      loadApiBase({ hostname: 'localhost', env: { REACT_APP_API_BASE_URL: 'http://localhost:3002' } })
+    ).toBe('http://localhost:3002');
+  });
+
+  test('the legacy REACT_APP_API_URL still works on localhost when explicitly set', () => {
+    expect(
+      loadApiBase({ hostname: 'localhost', env: { REACT_APP_API_URL: 'http://localhost:4001' } })
+    ).toBe('http://localhost:4001');
+  });
+
+  test('REACT_APP_API_BASE_URL wins over the legacy var on localhost too', () => {
+    expect(
+      loadApiBase({
+        hostname: 'localhost',
+        env: {
+          REACT_APP_API_BASE_URL: 'http://localhost:3002',
+          REACT_APP_API_URL: 'http://localhost:3001',
+        },
+      })
+    ).toBe('http://localhost:3002');
+  });
+
+  test('a loopback base leaked in by the Dockerfile default is refused on a real host', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    // Frontend/Dockerfile defaults REACT_APP_API_BASE_URL to REACT_APP_API_URL,
+    // which defaults to http://localhost:3001 — an image built with neither set
+    // must still not aim a deployed page at a loopback port.
+    expect(
+      loadApiBase({
+        hostname: 'tax.aurmak.com',
+        env: { REACT_APP_API_BASE_URL: 'http://localhost:3001' },
+      })
+    ).toBe('');
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });
