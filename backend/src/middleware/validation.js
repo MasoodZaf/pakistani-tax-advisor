@@ -76,11 +76,31 @@ class ValidationMiddleware {
     // being evaluated against a number two orders of magnitude too small, so a
     // comma-formatted amount could not be caught by the ceiling it was supposed
     // to be tested against.
-    const numericValue =
-      typeof value === 'string' ? parseFloat(value.trim().replace(/,/g, '')) : parseFloat(value);
+    // A partially-parseable string must be REFUSED, not truncated. `parseFloat`
+    // stops at the first unusable character and returns what it has, so
+    // "12,00x,000" became 1200 — Rs 12,000,000 read as Rs 1,200, passing both
+    // the min and the max check. Same grammar as `numericGuards.parseMoneyInput`,
+    // deliberately: two parsers that disagree about what a number is are how a
+    // figure gets past one gate and through the other.
+    let numericValue;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      // Thousands separators must actually group thousands — "1,2,3" would
+      // otherwise strip to a perfectly acceptable 123.
+      const grouped =
+        !trimmed.includes(',') ||
+        /^\d{1,3}(?:,\d{3})*$/.test(trimmed.replace(/^[+-]/, '').split('.')[0]);
+      const stripped = trimmed.replace(/,/g, '');
+      numericValue =
+        grouped && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(stripped)
+          ? Number(stripped)
+          : NaN;
+    } else {
+      numericValue = typeof value === 'number' ? value : NaN;
+    }
 
     // Check if conversion was successful
-    if (isNaN(numericValue)) {
+    if (!Number.isFinite(numericValue)) {
       return { isValid: false, error: `${fieldName} must be a valid number` };
     }
 
@@ -1049,12 +1069,38 @@ async function enforceCreditLimits(req, res, next) {
         + 'tax actually paid can be refunded.',
     });
 
+    // ── THE AGGREGATE, NOT JUST THE HEADS ──
+    //
+    // Each head being individually within the tax in charge does not make the
+    // SUM lawful. One POST setting all 13 components to the full liability was
+    // accepted and stored `total_credits = 49,882,000` against a Rs 7.1M charge.
+    // The engine refuses the excess, so the tax was never wrong — but the stored
+    // return was, and a return is a document: it gets read, exported to the PDF,
+    // and copied forward to next year.
+    //
+    // Refusing the SAVE is the wrong remedy — it would reject a form the user can
+    // then neither fix nor abandon. Instead the excess is reported per-head, so
+    // the response names what has to come down and by how much, and the total
+    // written is the lawful one.
+    const rawTotal = components.reduce((sum, k) => sum + toAmount(merged[k]), 0);
+    if (rawTotal > normalTax) {
+      recordAdjustment(req, res, {
+        field: 'total_tax_credits',
+        claimed: round2(rawTotal),
+        allowed: round2(normalTax),
+        rule:
+          'Your credits add up to more than the tax in charge. Each one is individually within '
+          + 'the limit, but together they exceed the tax they are set against — only the tax in '
+          + 'charge can be extinguished.',
+      });
+    }
+
     // Recompute the total the engine reads FIRST (`total_tax_credits`), from
     // the same component set the generated column uses — so the plain column
-    // and the generated one cannot disagree.
-    const recomputedTotal = round2(
-      components.reduce((sum, k) => sum + toAmount(merged[k]), 0)
-    );
+    // and the generated one cannot disagree. Bounded above by the tax in charge;
+    // NOT floored, because a net-negative total is a lawful add-back (a
+    // surrender reversal) and must survive.
+    const recomputedTotal = round2(Math.min(rawTotal, normalTax));
     const postedTotal = toAmount(req.body.total_tax_credits);
     if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_credits')) {
       req.body.total_tax_credits = recomputedTotal;
@@ -1228,9 +1274,20 @@ async function enforceReductionLimits(req, res, next) {
         + 'tax actually paid can be refunded.',
     });
 
-    const recomputedTotal = round2(
-      components.reduce((sum, k) => sum + toAmount(merged[k]), 0)
-    );
+    // Same aggregate bound as the credits side: individually-lawful heads must
+    // not sum past the tax they offset.
+    const rawTotal = components.reduce((sum, k) => sum + toAmount(merged[k]), 0);
+    if (rawTotal > normalTax) {
+      recordAdjustment(req, res, {
+        field: 'total_tax_reductions',
+        claimed: round2(rawTotal),
+        allowed: round2(normalTax),
+        rule:
+          'Your reductions add up to more than the tax in charge. Each one is individually within '
+          + 'its limit, but together they exceed the tax they are set against.',
+      });
+    }
+    const recomputedTotal = round2(Math.min(rawTotal, normalTax));
     const postedTotal = toAmount(req.body.total_tax_reductions);
     if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_reductions')) {
       req.body.total_tax_reductions = recomputedTotal;

@@ -210,11 +210,35 @@ describe('bindRates — the shape other lanes code against', () => {
 });
 
 describe('s.60D — the three limbs (phase-z14 made limb (a) storable)', () => {
+  // LIMB (a) IS A PERCENTAGE OF THE FEE, NOT THE FEE.
+  //
+  // These cases previously asserted the whole fee, which is twenty times the
+  // limb and — on any realistic fee — so large that limb (a) never bound at all.
+  // So the limb looked implemented and was effectively absent: taxable
+  // 1,400,000, fee 200,000, 2 children, a claim of 115,000 was stored in full
+  // against a true entitlement of 10,000.
+  const WITH_FEE_PCT = {
+    ...RATES,
+    deductionThresholds: {
+      ...RATES.deductionThresholds,
+      education_tuition_fee_pct: { rate: 0.05, fixedAmount: 0 },
+    },
+  };
+
   test('the allowance is the LEAST of the limbs, not the child limb alone', () => {
-    // Limb (a) tuition fee 30,000 vs limb (c) 2 x 60,000 = 120,000.
-    expect(capEducationU60D(1400000, 2, 30000, RATES)).toBe(30000);
-    // Fee above the child limb → the child limb binds.
-    expect(capEducationU60D(1400000, 2, 500000, RATES)).toBe(120000);
+    // Limb (a) = 5% x 600,000 = 30,000, vs limb (c) 2 x 60,000 = 120,000.
+    expect(capEducationU60D(1400000, 2, 600000, WITH_FEE_PCT)).toBe(30000);
+    // A fee whose 5% clears the child limb → the child limb binds.
+    // 5% x 10,000,000 = 500,000 > 120,000.
+    expect(capEducationU60D(1400000, 2, 10000000, WITH_FEE_PCT)).toBe(120000);
+  });
+
+  test('QA NEW-1: the fee limb is 5% of the fee, not 100% of it', () => {
+    // The exact reproduction. Fee 200,000 → limb (a) = 10,000.
+    expect(capEducationU60D(1400000, 2, 200000, WITH_FEE_PCT)).toBe(10000);
+    // Without the percentage row the limb is SKIPPED, never defaulted — a
+    // guessed percentage is how "professional expenses u/s 60C" came to exist.
+    expect(capEducationU60D(1400000, 2, 200000, RATES)).toBe(120000);
   });
 
   test('an unstated fee does not zero the allowance', () => {
@@ -245,7 +269,15 @@ describe('s.60D — the three limbs (phase-z14 made limb (a) storable)', () => {
     };
     // least of (120,000 children, 25% x 400,000 = 100,000)
     expect(capEducationU60D(400000, 2, undefined, seeded)).toBe(100000);
-    // and the fee still competes: least of (30,000, 100,000, 120,000)
-    expect(capEducationU60D(400000, 2, 30000, seeded)).toBe(30000);
+    // The fee limb needs its own percentage row to compete at all.
+    const bothSeeded = {
+      ...seeded,
+      deductionThresholds: {
+        ...seeded.deductionThresholds,
+        education_tuition_fee_pct: { rate: 0.05, fixedAmount: 0 },
+      },
+    };
+    // least of (5% x 600,000 = 30,000 | 100,000 | 120,000)
+    expect(capEducationU60D(400000, 2, 600000, bothSeeded)).toBe(30000);
   });
 });

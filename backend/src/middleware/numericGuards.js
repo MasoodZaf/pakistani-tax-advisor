@@ -163,10 +163,48 @@ function parseMoneyInput(value) {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (trimmed === '') return { supplied: false, valid: true, value: null };
-    // Comma stripping keeps "1,200,000" working; parseFloat keeps "1.2e6" and
-    // surrounding whitespace working. Both are QA-verified behaviours.
-    const parsed = parseFloat(trimmed.replace(/,/g, ''));
-    if (Number.isNaN(parsed)) {
+
+    // THOUSANDS SEPARATORS MUST ACTUALLY SEPARATE THOUSANDS.
+    //
+    // Blind comma-stripping is lossy in a way that hides typing mistakes:
+    // "1,2,3" strips to "123" and passes as a perfectly good number, so a
+    // mis-typed amount becomes a plausible one. If commas are present they must
+    // group correctly — 1-3 digits, then any number of `,ddd` groups — before
+    // the integer part is allowed through.
+    if (trimmed.includes(',')) {
+      const integerPart = trimmed.replace(/^[+-]/, '').split('.')[0];
+      if (!/^\d{1,3}(?:,\d{3})*$/.test(integerPart)) {
+        return { supplied: true, valid: false, value: null };
+      }
+    }
+
+    // Comma stripping keeps "1,200,000" working; the numeric grammar keeps
+    // "1.2e6" and surrounding whitespace working. Both are QA-verified.
+    const stripped = trimmed.replace(/,/g, '');
+
+    // PARSE THE WHOLE STRING OR NONE OF IT.
+    //
+    // `parseFloat` stops at the first character it cannot use and returns what it
+    // has, so partial garbage came back as a plausible number and passed every
+    // check downstream:
+    //     "12,00x,000" -> parseFloat("1200x000") -> 1200      (Rs 1,200)
+    //     "1,2,3"      -> 123
+    //     "1e"         -> 1
+    //     "0x10"       -> 0
+    // The first of those is the dangerous one: Rs 12,000,000 silently became
+    // Rs 1,200 and the save reported success. That is F-09 again by a different
+    // door — the earlier fix only caught input with NO leading digits.
+    //
+    // The grammar below is exactly what the working formats need and nothing
+    // more: optional sign, digits with an optional decimal part (or a bare
+    // decimal like ".5"), and an optional exponent. Anything with a stray
+    // character anywhere is refused outright rather than truncated.
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(stripped)) {
+      return { supplied: true, valid: false, value: null };
+    }
+
+    const parsed = Number(stripped);
+    if (!Number.isFinite(parsed)) {
       return { supplied: true, valid: false, value: null };
     }
     return { supplied: true, valid: true, value: parsed };

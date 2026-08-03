@@ -230,11 +230,29 @@ function capEducationU60D(taxableIncome, children, tuitionFeePaid, rates) {
 
   const limbs = [limbChildren];
 
-  // Limb (a) — the tuition fee actually paid. Storable since phase-z14
-  // (`deductions_forms.tuition_fee_amount`). Only binds when a figure has been
-  // captured: a taxpayer who has not stated a fee must not be zeroed by it.
+  // Limb (a) — a PERCENTAGE of the tuition fee actually paid, not the whole fee.
+  //
+  // This pushed the raw fee, which is not the limb: s.60D allows the least of
+  // 5% of the fee, 25% of taxable income, and the per-child cap. Pushing 100% of
+  // the fee makes limb (a) twenty times too generous and, on any realistic fee,
+  // so large that it never binds at all — so the limb was effectively absent
+  // while appearing to be implemented. Measured: taxable 1,400,000, fee 200,000,
+  // 2 children, claim 115,000 → stored 115,000 against a true entitlement of
+  // 10,000, with no adjustment recorded.
+  //
+  // Worse than the number: the rule text shown to the taxpayer described the
+  // 5% calculation, so the message and the arithmetic disagreed — the same class
+  // of defect as the false s.60D threshold reason (R-02).
+  //
+  // phase-z19 seeded `education_tuition_fee_pct` for exactly this and nothing
+  // read it. No rate is invented here: with no row the limb is SKIPPED rather
+  // than defaulted, because a guessed percentage is how "professional expenses
+  // u/s 60C" came to exist.
   if (tuitionFeePaid !== undefined && tuitionFeePaid !== null && tuitionFeePaid !== '') {
-    limbs.push(toAmount(tuitionFeePaid));
+    const feePct = rates?.deductionThresholds?.education_tuition_fee_pct?.rate;
+    if (typeof feePct === 'number' && Number.isFinite(feePct) && feePct > 0) {
+      limbs.push(toAmount(tuitionFeePaid) * feePct);
+    }
   }
 
   // Limb (b) — a percentage of taxable income. NO RATE IS INVENTED HERE. There

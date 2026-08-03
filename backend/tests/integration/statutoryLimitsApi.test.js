@@ -190,6 +190,10 @@ const RATES = {
     education_max_taxable_income: { rate: 0, fixedAmount: 1500000 },
     education_per_child_cap: { rate: 0, fixedAmount: 60000 },
     education_max_children: { rate: 0, fixedAmount: 2 },
+    // s.60D limb (a): 5% OF the tuition fee, seeded by phase-z19. Nothing read
+    // it, so the limb pushed 100% of the fee and was twenty times too generous
+    // — large enough on a realistic fee that it never bound at all.
+    education_tuition_fee_pct: { rate: 0.05, fixedAmount: 0 },
   },
   reductions: { behbood_certificate_max_rate: { rate: 0.05, fixedAmount: 0 } },
   finalTax: {},
@@ -868,20 +872,42 @@ describe('POST /wealth_forms, /wealth_reconciliation_forms — signed figures su
 });
 
 describe('s.60D limb (a) — tuition fee (phase-z14)', () => {
-  test('a Rs 30,000 fee caps the allowance below the Rs 120,000 child limb', async () => {
+  test('a Rs 600,000 fee caps the allowance at 5% of it, below the child limb', async () => {
     await request(buildApp()).post('/api/tax-forms/deductions').send({
       taxYear: '2025-26',
-      tuition_fee_amount: 30000,
+      tuition_fee_amount: 600000,
       educational_expenses_amount: 120000,
       educational_expenses_children_count: 2,
     });
 
-    // s.60D grants the LEAST of the limbs: 30,000 < 120,000.
+    // s.60D grants the LEAST of the limbs: 5% x 600,000 = 30,000 < 120,000.
     expect(num(captured.values.educational_expenses_amount)).toBe(30000);
     // The fee itself is a stated fact, not a claim — never clamped.
-    expect(num(captured.values.tuition_fee_amount)).toBe(30000);
+    expect(num(captured.values.tuition_fee_amount)).toBe(600000);
     // ...and deliberately not part of the allowance total.
     expect(num(captured.values.total_deduction_from_income)).toBe(30000);
+  });
+
+  test('QA NEW-1: the fee limb is 5% of the fee, not the whole fee', async () => {
+    // The exact reproduction: fee 200,000 entitles 10,000, and a 115,000 claim
+    // was being stored in full with no adjustment recorded.
+    const res = await request(buildApp()).post('/api/tax-forms/deductions').send({
+      taxYear: '2025-26',
+      tuition_fee_amount: 200000,
+      educational_expenses_amount: 115000,
+      educational_expenses_children_count: 2,
+    });
+
+    expect(num(captured.values.educational_expenses_amount)).toBe(10000);
+    expect(res.body.statutory_adjustments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'educational_expenses_amount',
+          claimed: 115000,
+          allowed: 10000,
+        }),
+      ])
+    );
   });
 
   test('no fee stated → the taxpayer is not zeroed by the limb', async () => {

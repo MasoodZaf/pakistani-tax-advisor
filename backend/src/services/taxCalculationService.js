@@ -469,23 +469,83 @@ class TaxCalculationService {
     // "surrender tax credit" against a Rs 3,101,000 liability looked identical
     // to a lawful full extinguishment. The excess is now refused explicitly and
     // reported, so it shows up on the return instead of vanishing.
-    const claimedReductions =
+    // ── A RETIRED RELIEF MUST BE REFUSED HERE TOO, NOT ONLY ON SAVE ──
+    //
+    // Deactivating the teacher/researcher rate row stopped NEW claims, and the
+    // save path refuses the field when it is posted. Neither touches a figure
+    // ALREADY SITTING IN THE ROW from before the retirement — and the save clamp
+    // cannot, because it only ever sees fields the client actually sends.
+    //
+    // Staging's untouched baseline proved the gap: `teacher_researcher_tax_
+    // reduction = 671,422` with the rate inactive for 2025-26, and the engine
+    // applied every rupee of an expired rebate with `refusedReductions: 0`.
+    // Every existing return carrying the old figure was understated until it
+    // happened to be re-saved.
+    //
+    // So the engine subtracts the heads whose relief no longer exists for the
+    // year being computed, from the total it was handed. Derived from
+    // `tax_rates_config`, so answering one of the open legal questions in
+    // Admin -> Statutory Reliefs takes effect on stored returns immediately.
+    const retiredReliefHeads = [];
+    if (!(Number(rates?.reductions?.teacher_researcher?.rate) > 0)) {
+      retiredReliefHeads.push({
+        field: 'teacher_researcher_tax_reduction',
+        reason:
+          '2nd Sched Pt III cl.(3A) — the 25% teacher/researcher rebate ceased to have effect '
+          + 'after 30-Jun-2025',
+      });
+    }
+
+    const declaredReductions =
       toNum(reductionsData?.total_tax_reductions) ||
       toNum(reductionsData?.total_reductions) ||
       0;
+    let retiredReductionsRemoved = 0;
+    for (const head of retiredReliefHeads) {
+      const stale = toNum(reductionsData?.[head.field]);
+      if (stale > 0) {
+        retiredReductionsRemoved += stale;
+        logger.warn('Retired relief removed from a stored return at computation', {
+          taxYear,
+          field: head.field,
+          amount: stale,
+          reason: head.reason,
+        });
+      }
+    }
+    const claimedReductions = declaredReductions - retiredReductionsRemoved;
+
     const claimedFormCredits = pickDialect(
       creditsData?.total_tax_credits,
       creditsData?.total_credits
     );
 
-    // Reductions apply first, then credits against what is left. Ordering only
-    // matters for how the refusal is attributed, not for the tax due.
-    const totalReductions = Math.min(nonNeg(claimedReductions), totalTaxBeforeAdjustments);
-    const refusedReductions = round2(nonNeg(claimedReductions) - totalReductions);
+    // ── A NEGATIVE CREDIT TOTAL IS AN ADD-BACK AND MUST NOT BE FLOORED ──
+    //
+    // `nonNeg()` here was a Rs 500,000 UNDERSTATEMENT. Surrendering an
+    // investment credit (shares disposed of inside the holding period) means the
+    // credit already allowed goes back onto the tax payable, and the app records
+    // that as a negative entry which makes the credit total negative. Flooring
+    // the total at zero silently threw the add-back away: a stored
+    // `total_credits` of −500,000 arrived here as 0, so the reversal did nothing
+    // and no refusal was flagged anywhere. The write path was fixed to accept
+    // and preserve the negative; this is where it was then discarded.
+    //
+    // So the bound is one-sided, and deliberately so:
+    //   • a POSITIVE total is capped at the tax in charge (relief cannot exceed
+    //     the tax, and cannot pay money out);
+    //   • a NEGATIVE total passes through untouched and INCREASES the tax, which
+    //     is the whole point of a reversal.
+    // `Math.min` alone gives exactly that — a negative is already below the cap.
+    const totalReductions = Math.min(toNum(claimedReductions), totalTaxBeforeAdjustments);
+    const refusedReductions = round2(Math.max(0, toNum(claimedReductions) - totalReductions));
 
-    const creditHeadroom = Math.max(0, totalTaxBeforeAdjustments - totalReductions);
-    const formCredits = Math.min(nonNeg(claimedFormCredits), creditHeadroom);
-    const refusedCredits = round2(nonNeg(claimedFormCredits) - formCredits);
+    // Headroom is measured against POSITIVE relief only. A negative reduction
+    // total has increased the tax, so it must not also be treated as having
+    // consumed the room a lawful credit could use.
+    const creditHeadroom = Math.max(0, totalTaxBeforeAdjustments - Math.max(0, totalReductions));
+    const formCredits = Math.min(toNum(claimedFormCredits), creditHeadroom);
+    const refusedCredits = round2(Math.max(0, toNum(claimedFormCredits) - formCredits));
 
     if (refusedReductions > 0 || refusedCredits > 0) {
       logger.warn('Relief claim exceeded the tax in charge and was refused at computation', {
@@ -505,7 +565,7 @@ class TaxCalculationService {
     // that s.103 relief, like every other relief, cannot exceed the Pakistan
     // tax still in charge; that much is applied here, and the missing
     // apportionment is recorded as a known gap rather than left silent.
-    const foreignHeadroom = Math.max(0, creditHeadroom - formCredits);
+    const foreignHeadroom = Math.max(0, creditHeadroom - Math.max(0, formCredits));
     const allowedForeignCredit = Math.min(nonNeg(foreignTaxCredit), foreignHeadroom);
     const refusedForeignCredit = round2(nonNeg(foreignTaxCredit) - allowedForeignCredit);
 
@@ -555,9 +615,34 @@ class TaxCalculationService {
     );
     // Each row is client-supplied; a negative "deduction" would inflate the
     // balance payable, so clamp per row rather than on the sum.
-    const finalMinTaxDeducted = Object.entries(finalMinData || {})
+    const finalMinTaxWithheld = Object.entries(finalMinData || {})
       .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
       .reduce((s, [, v]) => s + nonNeg(v), 0);
+
+    // ── EXCESS TAX ON A FINAL-TAX STREAM IS NOT REFUNDABLE ──
+    //
+    // Tax deducted under a FINAL tax regime discharges the liability on that
+    // income and nothing more; it is not an advance payment against the rest of
+    // the return. Crediting the whole of it produced a refund the taxpayer is
+    // not entitled to: a chargeable amount of 700,000 against 1,050,000 withheld
+    // gave `balancePayableRefundable: -600,000` where only the 250,000 of
+    // ordinary adjustable withholding is refundable — a 350,000 overstatement,
+    // and a refund claim to FBR that would not survive scrutiny.
+    //
+    // Only the portion matching the final-tax charge is credited here. The excess
+    // is surfaced rather than dropped, because it is usually a data-entry error
+    // worth showing the taxpayer (a figure entered on the wrong row), and
+    // occasionally a genuine over-deduction to take up with the withholding agent.
+    const finalMinTaxDeducted = Math.min(finalMinTaxWithheld, finalMinTaxChargeable);
+    const finalMinTaxWithheldInExcess = round2(finalMinTaxWithheld - finalMinTaxDeducted);
+    if (finalMinTaxWithheldInExcess > 0) {
+      logger.warn('Final-tax withholding exceeds the final-tax charge; excess is not refundable', {
+        taxYear,
+        finalMinTaxChargeable,
+        finalMinTaxWithheld,
+        finalMinTaxWithheldInExcess,
+      });
+    }
 
     const totalTaxChargeable =
       netTaxPayable + superTax + finalMinTaxChargeable + profitOnDebtFinalTax;
@@ -666,9 +751,13 @@ class TaxCalculationService {
         // What the taxpayer asked for versus what the tax in charge allowed.
         // Surfaced rather than silently truncated so an over-claim is visible
         // on the return instead of looking like a lawful nil liability.
-        claimedReductions: round2(nonNeg(claimedReductions)),
+        claimedReductions: round2(toNum(claimedReductions)),
         refusedReductions,
-        claimedCredits: round2(nonNeg(claimedFormCredits)),
+        // Relief the taxpayer's stored return still claims but the law no longer
+        // grants for this year. Surfaced separately from `refusedReductions`
+        // because the cause is different: not "too much", but "no longer exists".
+        retiredReliefRemoved: round2(retiredReductionsRemoved),
+        claimedCredits: round2(toNum(claimedFormCredits)),
         refusedCredits,
         refusedForeignCredit,
         netTaxPayable,
@@ -679,7 +768,9 @@ class TaxCalculationService {
       },
       payments: {
         adjustableWHT,
+        finalMinTaxWithheld,
         finalMinTaxDeducted,
+        finalMinTaxWithheldInExcess,
         withholdingTax,
         advanceTax,
         advanceTaxDuplicateDeclaration,

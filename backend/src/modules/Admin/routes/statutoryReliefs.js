@@ -82,7 +82,12 @@ async function loadRows(taxYear, question) {
 }
 
 // ── GET /api/admin/statutory-reliefs ─────────────────────────────────────────
-router.get('/', jwtAuth, async (req, res) => {
+//
+// super_admin on the READ too. The PUT was gated and the GET was not, so any
+// signed-in taxpayer could pull the whole catalogue — including the free-text
+// counsel notes, which name the adviser who settled each question and are
+// exactly the kind of privileged internal reasoning a filer should not see.
+router.get('/', jwtAuth, requireSuperAdmin, async (req, res) => {
   try {
     const taxYear = req.query.taxYear;
     if (!taxYear) return res.status(400).json({ error: 'taxYear is required' });
@@ -207,14 +212,20 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
             fbr_reference: authority || q.citation,
           });
         }
-        await client.query('COMMIT');
-        TaxRateService.purgeCache(taxYear);
-        await insertAudit(pool, {
+        // AUDIT BEFORE COMMIT, IN THE SAME TRANSACTION.
+        //
+        // This branch used to COMMIT first and audit afterwards, which is the
+        // worst possible order for a `severity: 'critical', mandatory: true`
+        // record: when the audit insert failed, the config change was already
+        // permanent, the operator was told the save had failed, and there was no
+        // trace of who changed a statutory setting. Inside the transaction the
+        // two either both land or neither does.
+        await insertAudit(client, {
           userId: req.user.id,
           userEmail: req.user.email,
           action: 'update',
           tableName: 'tax_rates_config',
-          recordId: q.key,
+          recordId: null,
           oldValue: before.map((r) => ({ is_active: r?.is_active ?? null })),
           newValue: { key: q.key, taxYear, applied, counselNote },
           category: 'statutory_relief_decision',
@@ -223,6 +234,8 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
           userAgent: req.headers['user-agent'],
           mandatory: true,
         });
+        await client.query('COMMIT');
+        TaxRateService.purgeCache(taxYear);
         return res.json({
           success: true,
           key: q.key,
@@ -268,20 +281,20 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Setting has no writable control' });
     }
 
-    await client.query('COMMIT');
-
-    // getAllRates caches per tax year with a TTL. Without this the setting would
-    // appear saved and change nothing until the cache happened to expire, which
-    // is the worst possible behaviour for a control that moves money: the
-    // operator sees success, tests it, sees no effect, and changes it again.
-    TaxRateService.purgeCache(taxYear);
-
-    await insertAudit(pool, {
+    // Audit INSIDE the transaction and BEFORE the commit — see the note in the
+    // not_configured branch. A statutory decision that lands without an audit
+    // row, or an audit row without the decision, are both unacceptable.
+    await insertAudit(client, {
       userId: req.user.id,
       userEmail: req.user.email,
       action: 'update',
       tableName: 'tax_rates_config',
-      recordId: q.key,
+      // `record_id` is a uuid column. Passing the setting key put a plain string
+      // into it, which made the WHOLE admin write path fail with `invalid input
+      // syntax for type uuid` — no statutory setting could be changed at all.
+      // The rows this touches are identified by (tax_year, rate_type,
+      // rate_category), not by one id, so the key belongs in newValue.
+      recordId: null,
       oldValue: before.map((r) => ({
         rate_category: r?.rate_category ?? null,
         tax_rate: r ? toNum(r.tax_rate) : null,
@@ -295,6 +308,14 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
       userAgent: req.headers['user-agent'],
       mandatory: true,
     });
+
+    await client.query('COMMIT');
+
+    // getAllRates caches per tax year with a TTL. Without this the setting would
+    // appear saved and change nothing until the cache happened to expire, which
+    // is the worst possible behaviour for a control that moves money: the
+    // operator sees success, tests it, sees no effect, and changes it again.
+    TaxRateService.purgeCache(taxYear);
 
     const after = await loadRows(taxYear, q);
     res.json({

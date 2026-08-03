@@ -575,3 +575,148 @@ describe('D6 · refund claims are bounded by declared receipts', () => {
     expect(r.payments.balancePayableRefundable).toBe(0);
   });
 });
+
+// =============================================================================
+// DEFECT 7 — RELIEF THAT MUST *INCREASE* TAX WAS BEING THROWN AWAY
+// =============================================================================
+// QA's blocking finding on the second re-audit, reproduced against the engine.
+//
+// Surrendering an investment credit (shares disposed of inside the holding
+// period) adds the credit already allowed back onto the tax payable. The app
+// records that as a negative entry, so the credit total goes negative — and
+// `nonNeg()` on the way in silently turned it into zero. The reversal was
+// preserved on disk and ignored in the calculation: Rs 500,000 of tax vanished
+// with no refusal flag anywhere.
+describe('D7 · a negative credit total is an ADD-BACK, not zero', () => {
+
+  test('a surrender reversal increases the tax by its full amount', () => {
+    const base = compute({ income: salary(5000000) });
+    const withReversal = compute({
+      income: salary(5000000),
+      credits: { total_tax_credits: -500000 },
+    });
+
+    expect(withReversal.tax.netTaxPayable)
+      .toBe(base.tax.netTaxPayable + 500000);
+    // It is not an over-claim, so nothing is "refused" — it is simply applied.
+    expect(withReversal.tax.refusedCredits).toBe(0);
+    expect(withReversal.tax.claimedCredits).toBe(-500000);
+  });
+
+  test('the positive side is still capped at the tax in charge', () => {
+    const r = compute({
+      income: salary(5000000),
+      credits: { total_tax_credits: 99999999 },
+    });
+    expect(r.tax.netTaxPayable).toBe(0);
+    expect(r.tax.refusedCredits).toBeGreaterThan(0);
+  });
+
+  test('a negative reduction total also increases the tax', () => {
+    const base = compute({ income: salary(5000000) });
+    const r = compute({
+      income: salary(5000000),
+      reductions: { total_tax_reductions: -250000 },
+    });
+    expect(r.tax.netTaxPayable)
+      .toBe(base.tax.netTaxPayable + 250000);
+  });
+
+  test('a negative reduction does not eat the headroom a lawful credit needs', () => {
+    // The reversal has INCREASED the tax, so a credit must still have the whole
+    // charge available to it. Treating a negative reduction as having consumed
+    // headroom would refuse a lawful credit for no reason.
+    const r = compute({
+      income: salary(5000000),
+      reductions: { total_tax_reductions: -250000 },
+      credits: { total_tax_credits: 100000 },
+    });
+    expect(r.tax.refusedCredits).toBe(0);
+    expect(r.tax.totalCredits).toBe(100000);
+  });
+});
+
+// =============================================================================
+// DEFECT 8 — A RETIRED RELIEF SITTING IN A STORED ROW WAS STILL GRANTED
+// =============================================================================
+// Deactivating the teacher/researcher rate row stopped new claims, and the save
+// path refuses the field when posted. Neither touches a figure ALREADY in the
+// row — and the save clamp cannot, because it only sees fields the client sends.
+//
+// Staging's untouched baseline had `teacher_researcher_tax_reduction = 671,422`
+// with the rate inactive for 2025-26, and the engine applied every rupee of an
+// expired rebate. Every stored return carrying the old figure was understated
+// until it happened to be re-saved.
+describe('D8 · retired relief is refused at computation, not only on save', () => {
+
+  const withTeacherRate = {
+    ...FA2025_RATES,
+    reductions: { teacher_researcher: { rate: 0.25 } },
+  };
+
+  test('an expired rebate stored in the row is removed', () => {
+    const base = compute({ income: salary(5000000) });
+    const r = compute({
+      income: salary(5000000),
+      reductions: {
+        teacher_researcher_tax_reduction: 671422,
+        total_tax_reductions: 671422,
+      },
+    });
+
+    // No rate configured for the year → the relief does not exist → no effect.
+    expect(r.tax.netTaxPayable).toBe(base.tax.netTaxPayable);
+    expect(r.tax.retiredReliefRemoved).toBe(671422);
+  });
+
+  test('the SAME figure is honoured in a year where the rebate is lawful', () => {
+    // The bound must key off the rate configuration, not the field name — the
+    // rebate is lawful for tax years 2023-2025 and returns for those years are
+    // still being filed and revised.
+    const r = compute({
+      income: salary(5000000),
+      reductions: {
+        teacher_researcher_tax_reduction: 200000,
+        total_tax_reductions: 200000,
+      },
+      rates: withTeacherRate,
+    });
+    expect(r.tax.retiredReliefRemoved).toBe(0);
+    expect(r.tax.totalReductions).toBe(200000);
+  });
+});
+
+// =============================================================================
+// DEFECT 9 — EXCESS TAX ON A FINAL-TAX STREAM WAS TREATED AS REFUNDABLE
+// =============================================================================
+// Tax deducted under a FINAL regime discharges the liability on that income and
+// nothing more; it is not an advance payment against the rest of the return.
+// Crediting all of it produced a refund claim the taxpayer is not entitled to.
+describe('D9 · final-tax withholding above the final-tax charge is not refundable', () => {
+
+  test('only the portion matching the charge is credited', () => {
+    const r = compute({
+      income: salary(5000000),
+      final_min: {
+        subtotal_tax_chargeable: 700000,
+        dividend_u_s_150_tax_deducted: 1050000,
+      },
+    });
+
+    expect(r.payments.finalMinTaxWithheld).toBe(1050000);
+    expect(r.payments.finalMinTaxDeducted).toBe(700000);
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(350000);
+  });
+
+  test('withholding at or below the charge is credited in full', () => {
+    const r = compute({
+      income: salary(5000000),
+      final_min: {
+        subtotal_tax_chargeable: 700000,
+        dividend_u_s_150_tax_deducted: 500000,
+      },
+    });
+    expect(r.payments.finalMinTaxDeducted).toBe(500000);
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(0);
+  });
+});

@@ -269,3 +269,57 @@ describe('all offending fields are reported in one response', () => {
     expect(captured).toBeUndefined();
   });
 });
+
+// =============================================================================
+// F-09, second door — PARTIALLY parseable strings
+// =============================================================================
+// The first fix caught input with no leading digits ("not-a-number" -> 400) and
+// missed input that STARTS numeric and then goes wrong. `parseFloat` stops at
+// the first unusable character and returns what it already has, so the value
+// came back as a plausible number and passed every check downstream:
+//
+//     "12,00x,000" -> parseFloat("1200x000") -> 1200
+//
+// Rs 12,000,000 was stored as Rs 1,200 and the save reported success. That is a
+// four-order-of-magnitude silent corruption of a figure the taxpayer typed, and
+// it is far worse than the zero the original F-09 produced, because 1,200 looks
+// like a real answer.
+describe('F-09 (second door) — a string must parse in FULL or be refused', () => {
+  const REFUSED = [
+    ['12,00x,000', 'QA\'s reproduction — became Rs 1,200'],
+    ['1,2,3', 'became 123'],
+    ['1e', 'became 1'],
+    ['0x10', 'became 0'],
+    ['1200000abc', 'trailing garbage'],
+    ['12 34', 'internal space'],
+    ['--500', 'double sign'],
+    ['1.2.3', 'two decimal points'],
+    ['1,200,000 PKR', 'a currency suffix a user might paste'],
+  ];
+
+  test.each(REFUSED)('%s is refused, not truncated (%s)', async (value) => {
+    const res = await post({ annual_basic_salary: value });
+    expect(res.status).toBe(400);
+    expect(res.body.errors.map((e) => e.field)).toContain('annual_basic_salary');
+    expect(captured).toBeUndefined();
+  });
+
+  // The formats QA verified as working must still work — this fix must not be
+  // paid for by rejecting anything a real user types.
+  const ACCEPTED = [
+    ['1,200,000', 1200000],
+    ['1200000.75', 1200000.75],
+    ['  1200000  ', 1200000],
+    ['1.2e6', 1200000],
+    ['0', 0],
+    ['.5', 0.5],
+    ['1200000.', 1200000],
+    ['+1200000', 1200000],
+  ];
+
+  test.each(ACCEPTED)('%s still parses to %s', async (value, expected) => {
+    const res = await post({ annual_basic_salary: value });
+    expect(res.status).toBe(200);
+    expect(Number(captured.values.annual_basic_salary)).toBe(expected);
+  });
+});
