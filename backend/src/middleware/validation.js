@@ -1084,40 +1084,70 @@ async function enforceCreditLimits(req, res, next) {
     const creditOn = (amountField, eligibleCap) =>
       round2(Math.min(toAmount(merged[amountField]), eligibleCap) * avgRate);
 
-    const handled = new Map([
-      [
-        'charitable_donations_tax_credit',
-        [
-          creditOn('charitable_donations_amount', limits.capDonationU61(ti, false)),
+    // ── ONE STATUTORY CAP PER RELIEF, NOT ONE PER COLUMN ────────────────────
+    //
+    // s.63 is a SINGLE credit with a SINGLE ceiling of 20% of taxable income.
+    // The form has TWO columns for it (`pension_fund_*` and
+    // `pension_contribution_*`) and this code used to cap each one separately
+    // against the full 20% — so a taxpayer entering the same Rs 5,000,000
+    // contribution on both got the credit TWICE, up to 40% of taxable income.
+    // Nothing about that requires bad intent: both fields ask for a pension
+    // contribution, so entering one payment on both is the natural mistake, and
+    // it is the same shape as the advance-tax double-declaration the engine
+    // already had to close.
+    //
+    // s.61 is the same story with its proviso: the 30% general limit and the 15%
+    // associate limit are two limbs of one relief, and the aggregate cannot
+    // exceed the general 30%.
+    //
+    // So the ceiling is measured once per RELIEF and allocated across that
+    // relief's columns in order. A taxpayer who genuinely splits a contribution
+    // across both columns keeps the full lawful credit; one who enters it twice
+    // gets it once.
+    const creditGroups = [
+      {
+        eligibleCap: limits.capDonationU61(ti, false),
+        associateSubCap: limits.capDonationU61(ti, true),
+        rule:
           'ITO 2001 s.61 — credit is (tax ÷ taxable income) × the lower of the donation and '
-            + '30% of taxable income',
+          + '30% of taxable income, measured across BOTH donation columns together. The '
+          + 'associate proviso limits the associate column to 15% within that.',
+        heads: [
+          { amount: 'charitable_donations_amount', credit: 'charitable_donations_tax_credit' },
+          {
+            amount: 'charitable_donations_associate_amount',
+            credit: 'charitable_donations_associate_tax_credit',
+            subCap: true,
+          },
         ],
-      ],
-      [
-        'charitable_donations_associate_tax_credit',
-        [
-          creditOn('charitable_donations_associate_amount', limits.capDonationU61(ti, true)),
-          'ITO 2001 s.61 proviso — associate donations are limited to 15% of taxable income '
-            + 'before the average rate is applied',
-        ],
-      ],
-      [
-        'pension_fund_tax_credit',
-        [
-          creditOn('pension_fund_amount', limits.capPensionU63(ti)),
+      },
+      {
+        eligibleCap: limits.capPensionU63(ti),
+        rule:
           'ITO 2001 s.63 — credit is (tax ÷ taxable income) × the lower of the contribution '
-            + 'and 20% of taxable income',
+          + 'and 20% of taxable income. This is ONE ceiling for the relief: the fund and '
+          + 'contribution columns share it, so the same payment entered on both is credited once.',
+        heads: [
+          { amount: 'pension_fund_amount', credit: 'pension_fund_tax_credit' },
+          { amount: 'pension_contribution_amount', credit: 'pension_contribution_tax_credit' },
         ],
-      ],
-      [
-        'pension_contribution_tax_credit',
-        [
-          creditOn('pension_contribution_amount', limits.capPensionU63(ti)),
-          'ITO 2001 s.63 — credit is (tax ÷ taxable income) × the lower of the contribution '
-            + 'and 20% of taxable income',
-        ],
-      ],
-    ]);
+      },
+    ];
+
+    const handled = new Map();
+    for (const group of creditGroups) {
+      let remaining = group.eligibleCap;
+      for (const head of group.heads) {
+        // The associate limb has its own, tighter sub-cap inside the shared one.
+        const headCeiling =
+          head.subCap && typeof group.associateSubCap === 'number'
+            ? Math.min(remaining, group.associateSubCap)
+            : remaining;
+        const eligible = Math.min(toAmount(merged[head.amount]), Math.max(0, headCeiling));
+        remaining = Math.max(0, remaining - eligible);
+        handled.set(head.credit, [round2(eligible * avgRate), group.rule]);
+      }
+    }
 
     // FA-2025 housing-loan profit-on-debt credit. Off unless the owner has
     // supplied its statutory parameters at Admin -> Statutory Reliefs — the

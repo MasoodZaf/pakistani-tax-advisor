@@ -80,13 +80,24 @@ const mockQuery = jest.fn(async (sql, params = []) => {
 // `surrender_tax_credit_reduction` — an ordinary editable input on the shipping
 // Credits form — carried Rs 9,000,000 through unclamped into a refund claim.
 const GENERATED_TOTALS = {
+  // Verbatim from production after phase-z20 — THIRTEEN components. The fixture
+  // used to name six, so the clamp under test saw a component set less than half
+  // the size of the real one and every "all heads are bounded" assertion was
+  // weaker than it read.
   'credits_forms.total_credits':
-    '(((((COALESCE(charitable_donations_tax_credit, (0)::numeric) '
+    '((((((((((((COALESCE(charitable_donations_tax_credit, (0)::numeric) '
     + '+ COALESCE(charitable_donations_associate_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(pension_contribution_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(life_insurance_premium_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(provident_fund_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(voluntary_pension_scheme_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(investment_shares_tax_credit, (0)::numeric)) '
+    + '+ COALESCE(investment_tax_credit_tax_credit, (0)::numeric)) '
     + '+ COALESCE(pension_fund_tax_credit, (0)::numeric)) '
     + '+ COALESCE(surrender_tax_credit_reduction, (0)::numeric)) '
     + '+ COALESCE(investment_tax_credit, (0)::numeric)) '
-    + '+ COALESCE(other_credits, (0)::numeric))',
+    + '+ COALESCE(other_credits, (0)::numeric)) '
+    + '+ COALESCE(housing_loan_profit_tax_credit, (0)::numeric))',
   'reductions_forms.total_reductions':
     '((((((COALESCE(teacher_researcher_tax_reduction, (0)::numeric) '
     + '+ COALESCE(behbood_certificates_tax_reduction, (0)::numeric)) '
@@ -141,6 +152,10 @@ const ALLOWED_COLUMNS = [
   'charitable_donations_associate_tax_credit',
   'pension_fund_amount',
   'pension_fund_tax_credit',
+  // Both s.63 columns. They are real on production and staging, and the mock
+  // omitting the second is why nothing caught the relief being credited twice.
+  'pension_contribution_amount',
+  'pension_contribution_tax_credit',
   'surrender_tax_credit_reduction',
   'other_credits',
   // reductions
@@ -464,6 +479,64 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     // right is the whole of it. The posted total is stripped rather than trusted.
     expect(captured.values).not.toHaveProperty('total_tax_credits');
     expect(captured.values).not.toHaveProperty('total_credits');
+  });
+
+  test('F-05b: ONE s.63 ceiling for both pension columns, not one each', async () => {
+    // s.63 is a single credit with a single 20%-of-taxable-income ceiling. The
+    // form has two columns for it and each was capped against the FULL 20%, so
+    // the same contribution entered on both was credited twice — up to 40% of
+    // taxable income. Both fields ask for a pension contribution, so this needs
+    // no bad intent, only a user filling in what the form asks.
+    stored.income = incomeRow(1000000); // tax 4,000, average rate 0.004
+
+    await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      pension_fund_amount: 5000000,
+      pension_fund_tax_credit: 999999,
+      pension_contribution_amount: 5000000,
+      pension_contribution_tax_credit: 999999,
+    });
+
+    // Shared eligible cap = 20% x 1,000,000 = 200,000 -> x 0.004 = 800 TOTAL.
+    // The first column consumes it; the second gets nothing.
+    expect(num(captured.values.pension_fund_tax_credit)).toBe(800);
+    expect(num(captured.values.pension_contribution_tax_credit)).toBe(0);
+  });
+
+  test('a genuinely SPLIT contribution still gets the whole lawful credit', async () => {
+    // The fix must not punish a taxpayer who spreads one lawful contribution
+    // across the two columns.
+    stored.income = incomeRow(1000000);
+
+    await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      pension_fund_amount: 120000,
+      pension_fund_tax_credit: 999999,
+      pension_contribution_amount: 80000,
+      pension_contribution_tax_credit: 999999,
+    });
+
+    // 120,000 + 80,000 = 200,000, exactly the cap -> 480 + 320 = 800 in total.
+    expect(num(captured.values.pension_fund_tax_credit)).toBe(480);
+    expect(num(captured.values.pension_contribution_tax_credit)).toBe(320);
+  });
+
+  test('the two donation limbs share the 30% ceiling, associate capped at 15%', async () => {
+    stored.income = incomeRow(1000000);
+
+    await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      charitable_donations_amount: 250000,
+      charitable_donations_tax_credit: 999999,
+      charitable_donations_associate_amount: 250000,
+      charitable_donations_associate_tax_credit: 999999,
+    });
+
+    // General limb takes 250,000 of the shared 300,000; the associate limb is
+    // left 50,000 (below its own 150,000 sub-cap). 1,000 + 200 = 1,200 total,
+    // which is the 30% ceiling at the average rate — not 1,200 + 600.
+    expect(num(captured.values.charitable_donations_tax_credit)).toBe(1000);
+    expect(num(captured.values.charitable_donations_associate_tax_credit)).toBe(200);
   });
 
   test('the associate proviso is 15%, not 30%', async () => {
