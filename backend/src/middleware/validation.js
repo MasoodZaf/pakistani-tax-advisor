@@ -17,6 +17,30 @@ const { getGeneratedTotalComponents } = require('../helpers/tableColumns');
 const MONEY_SANITY_MAX = 999999999999.99;
 
 /**
+ * Credit fields that are legitimately SIGNED, and why.
+ *
+ * `surrender_tax_credit_reduction` records the reversal required when shares
+ * that attracted an investment credit are disposed of inside the holding
+ * period: the credit already allowed is ADDED BACK to the tax payable. The
+ * generated `total_credits` column sums this field with a PLUS sign and the
+ * Credits form documents it as "negative credit (reversal)", so the correct
+ * entry is negative — and a blanket `min: 0` rejected it outright.
+ *
+ * The result was that the reversal could not be recorded correctly at all: a
+ * taxpayer entering the right (negative) figure got HTTP 400, and one entering
+ * a positive figure had their tax REDUCED by the amount it should have been
+ * increased by. Found by live re-test on staging, not by any test.
+ *
+ * `total_tax_credits` follows, because a return whose only credit entry is a
+ * surrender has a negative total. It is recomputed server-side from the
+ * components regardless, so accepting the sign here costs nothing.
+ */
+const SIGNED_CREDIT_FIELDS = new Set([
+  'surrender_tax_credit_reduction',
+  'total_tax_credits',
+]);
+
+/**
  * Comprehensive input validation middleware for tax forms
  */
 class ValidationMiddleware {
@@ -249,7 +273,13 @@ class ValidationMiddleware {
       const validation = ValidationMiddleware.validateNumeric(
         req.body[field],
         field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        { min: 0, max: MONEY_SANITY_MAX, allowNull: true }
+        {
+          // Almost every credit field is non-negative. Two are not, and blanket
+          // `min: 0` made the RIGHT answer unsaveable on both.
+          min: SIGNED_CREDIT_FIELDS.has(field) ? -MONEY_SANITY_MAX : 0,
+          max: MONEY_SANITY_MAX,
+          allowNull: true,
+        }
       );
 
       if (!validation.isValid) {
@@ -567,6 +597,16 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
     toAmount(d.tax_paid_foreign_country) +
     toAmount(d.other_deductions);
 
+  // Income that is NOT salary. Behbood/Pensioners' Benefit profit is profit on
+  // debt, so it can only come out of this bucket — a taxpayer whose entire
+  // declared income is salary has no certificate profit to relieve. Bounding the
+  // Behbood claim by TOTAL income (which is what the first fix did) is far too
+  // loose: it let a pure-salary filer on Rs 22,700,000 claim Rs 22,700,000 of
+  // "certificate profit" and take Rs 5,991,000 of relief on income that was
+  // never profit on debt at all.
+  const nonSalaryIncome =
+    toAmount(i.other_income_min_tax_total) + toAmount(i.other_income_no_min_tax_total);
+
   const preAllowanceTaxableIncome = Math.max(0, totalIncome - otherAllowances);
   const allowances =
     otherAllowances +
@@ -575,6 +615,7 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
 
   return {
     totalIncome,
+    nonSalaryIncome,
     hasIncomeRow,
     preAllowanceTaxableIncome,
     taxableIncome: Math.max(0, totalIncome - allowances),
@@ -959,6 +1000,41 @@ async function enforceCreditLimits(req, res, next) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) merged[field] = req.body[field];
     }
 
+    // ── SURRENDER OF A CREDIT ADDS TAX BACK; IT DOES NOT GRANT RELIEF ──
+    //
+    // `surrender_tax_credit_reduction` records the reversal required when shares
+    // that attracted an investment credit are disposed of inside the holding
+    // period: the credit already allowed is ADDED to the tax payable. The form
+    // itself documents the field as "negative credit (reversal)" and expects a
+    // negative figure, because the generated `total_credits` adds this column
+    // with a PLUS sign.
+    //
+    // So a POSITIVE value here is the claim inverted — it reduces tax by the
+    // amount that should have increased it. The generic "cannot exceed the tax in
+    // charge" ceiling does not catch that: bounding a nonsense claim at the full
+    // liability still extinguishes the full liability, which is exactly what a
+    // live re-test on staging showed after the first bound went in (Rs 9,000,000
+    // clamped to Rs 7,126,000 and the whole charge still went to nil).
+    //
+    // Zero is the ceiling. A taxpayer with nothing to surrender leaves it at 0;
+    // one with a reversal enters it negative and their tax goes UP, as it should.
+    if (Object.prototype.hasOwnProperty.call(req.body, 'surrender_tax_credit_reduction')) {
+      const claimed = toAmount(req.body.surrender_tax_credit_reduction);
+      if (claimed > 0) {
+        req.body.surrender_tax_credit_reduction = 0;
+        merged.surrender_tax_credit_reduction = 0;
+        recordAdjustment(req, res, {
+          field: 'surrender_tax_credit_reduction',
+          claimed: round2(claimed),
+          allowed: 0,
+          rule:
+            'Surrendering a tax credit ADDS it back to the tax payable — it is not a relief. '
+            + 'Enter the reversal as a negative figure; a positive one would reduce your tax by '
+            + 'the amount it is supposed to increase it.',
+        });
+      }
+    }
+
     // Every OTHER component of the generated total — including heads this app
     // has no specific rule for — is bounded by the tax in charge. See
     // clampRemainingHeads() for why a name list is not acceptable here.
@@ -966,7 +1042,7 @@ async function enforceCreditLimits(req, res, next) {
     clampRemainingHeads(req, res, {
       components,
       merged,
-      handledHeads: new Set(handled.keys()),
+      handledHeads: new Set([...handled.keys(), 'surrender_tax_credit_reduction']),
       ceiling: normalTax,
       rule:
         'A tax credit cannot exceed the tax it is set against. Relief extinguishes tax; only '
@@ -1053,7 +1129,7 @@ async function enforceReductionLimits(req, res, next) {
       const claimedProfit = toAmount(
         req.body.behbood_certificates_amount ?? merged.behbood_certificates_amount ?? 0
       );
-      const profit = Math.min(claimedProfit, bases.totalIncome);
+      const profit = Math.min(claimedProfit, bases.nonSalaryIncome);
       if (
         claimedProfit > profit &&
         Object.prototype.hasOwnProperty.call(req.body, 'behbood_certificates_amount')
@@ -1064,8 +1140,9 @@ async function enforceReductionLimits(req, res, next) {
           claimed: round2(claimedProfit),
           allowed: round2(profit),
           rule:
-            'Behbood/Pensioners\' Benefit profit is part of your declared income and cannot '
-            + 'exceed it. Declare the profit as income first.',
+            'Behbood/Pensioners\' Benefit profit is profit on debt, so it cannot exceed the '
+            + 'non-salary income you have declared for the year. Declare the certificate profit '
+            + 'as income on the Income form first.',
         });
       }
 

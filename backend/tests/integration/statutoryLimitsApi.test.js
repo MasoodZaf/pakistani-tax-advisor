@@ -211,11 +211,21 @@ function buildApp() {
 }
 
 /** Salary that produces a given taxable income once allowances are applied. */
-function incomeRow(salary) {
+/**
+ * `total` is the taxpayer's whole declared income; `nonSalary` is how much of it
+ * is NOT salary (profit on debt and the like), with the remainder as salary.
+ *
+ * The split matters for Behbood/Pensioners' Benefit relief: certificate profit
+ * IS profit on debt, so it can only come out of the non-salary bucket. A
+ * pure-salary filer has no certificate profit to relieve, and treating total
+ * income as the ceiling let one claim relief on salary — see the abuse case at
+ * the end of the Behbood block.
+ */
+function incomeRow(total, nonSalary = 0) {
   return {
-    annual_salary_wages_total: String(salary),
+    annual_salary_wages_total: String(Math.max(0, total - nonSalary)),
     total_non_cash_benefits: '0',
-    other_income_min_tax_total: '0',
+    other_income_min_tax_total: String(nonSalary),
     other_income_no_min_tax_total: '0',
   };
 }
@@ -473,12 +483,38 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
   });
 
   test('F-05: a credit head with NO statutory rule is still bounded by the tax in charge', async () => {
-    // `surrender_tax_credit_reduction` is an ordinary editable input on the
-    // shipping Credits form and was not on the hand-written clamp list. QA put
-    // Rs 9,000,000 through it and turned a real liability into a refund CLAIM
-    // against FBR. The component set now comes from the generated total's own
-    // definition, so a head cannot escape by not being thought of.
+    // `other_credits` is a free-text head with no percentage the app can apply,
+    // and it was not on the hand-written clamp list. The component set now comes
+    // from the generated total's own definition, so a head cannot escape simply
+    // by not having been thought of.
     stored.income = incomeRow(1000000); // normal tax 4,000
+
+    const res = await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      other_credits: 9000000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(num(captured.values.other_credits)).toBe(4000);
+    expect(res.body.statutory_adjustments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'other_credits',
+          claimed: 9000000,
+          allowed: 4000,
+        }),
+      ])
+    );
+  });
+
+  test('surrendering a credit ADDS tax back — a positive figure is refused outright', async () => {
+    // QA's refund-claim payload. Bounding it at the tax in charge is NOT enough
+    // and a live re-test proved it: Rs 9,000,000 clamped to the full Rs 7,126,000
+    // liability still took the whole charge to nil. The field records a REVERSAL
+    // (shares disposed of inside the holding period), the generated total adds it
+    // with a plus sign, and the form documents it as a negative entry — so a
+    // positive value reduces tax by the amount that should have increased it.
+    stored.income = incomeRow(1000000);
 
     const res = await request(buildApp()).post('/api/tax-forms/credits').send({
       taxYear: '2025-26',
@@ -486,16 +522,26 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     });
 
     expect(res.status).toBe(200);
-    expect(num(captured.values.surrender_tax_credit_reduction)).toBe(4000);
+    expect(num(captured.values.surrender_tax_credit_reduction)).toBe(0);
+    expect(num(captured.values.total_tax_credits ?? 0)).toBe(0);
     expect(res.body.statutory_adjustments).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          field: 'surrender_tax_credit_reduction',
-          claimed: 9000000,
-          allowed: 4000,
-        }),
+        expect.objectContaining({ field: 'surrender_tax_credit_reduction', allowed: 0 }),
       ])
     );
+  });
+
+  test('a genuine negative surrender is preserved — it must increase the tax', async () => {
+    stored.income = incomeRow(1000000);
+
+    await request(buildApp()).post('/api/tax-forms/credits').send({
+      taxYear: '2025-26',
+      surrender_tax_credit_reduction: -15000,
+      total_tax_credits: -15000,
+    });
+
+    expect(num(captured.values.surrender_tax_credit_reduction)).toBe(-15000);
+    expect(num(captured.values.total_tax_credits)).toBe(-15000);
   });
 
   test('R-01: credits saved BEFORE the income form are not destroyed', async () => {
@@ -540,7 +586,9 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
     // Tax attributable to the profit at the average rate is ~1,250, already
     // under the 25,000 ceiling. The app granted 25,000 — 12.5× the taxpayer's
     // entire normal tax — and the excess spilled over into unrelated CGT.
-    stored.income = incomeRow(800000);
+    // 500,000 of the 800,000 is certificate profit, which is what a real
+    // Behbood holder declares.
+    stored.income = incomeRow(800000, 500000);
 
     const res = await request(buildApp()).post('/api/tax-forms/reductions').send({
       taxYear: '2025-26',
@@ -557,7 +605,7 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
   test('relief is granted where the 5% ceiling really is breached', async () => {
     // Taxable 11,200,000 → normal tax 3,101,000 → average 27.6875%.
     // Profit 1,000,000 → tax on profit 276,875, ceiling 50,000 → relief 226,875.
-    stored.income = incomeRow(11200000);
+    stored.income = incomeRow(11200000, 1000000);
 
     await request(buildApp()).post('/api/tax-forms/reductions').send({
       taxYear: '2025-26',
@@ -622,6 +670,30 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
 
     expect(num(captured.values.total_tax_reductions)).toBe(232750);
     delete RATES.reductions.teacher_researcher;
+  });
+
+  test('a pure-salary filer cannot invent certificate profit', async () => {
+    // Found by live re-test on staging AFTER the first bound went in. Bounding
+    // the profit by TOTAL income let a filer whose entire income was salary
+    // claim all of it as Behbood profit: Rs 22,700,000 of "certificate profit"
+    // yielded Rs 5,991,000 of relief on money that was never profit on debt.
+    // Certificate profit is profit on debt, so non-salary income is the ceiling.
+    stored.income = incomeRow(11200000, 0); // every rupee is salary
+
+    const res = await request(buildApp()).post('/api/tax-forms/reductions').send({
+      taxYear: '2025-26',
+      behbood_certificates_amount: 11200000,
+      behbood_certificates_tax_reduction: 3051000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(num(captured.values.behbood_certificates_amount)).toBe(0);
+    expect(num(captured.values.behbood_certificates_tax_reduction)).toBe(0);
+    expect(res.body.statutory_adjustments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: 'behbood_certificates_amount', allowed: 0 }),
+      ])
+    );
   });
 });
 
