@@ -169,7 +169,16 @@ async function buildTaxCalculationSummary(userId, taxYear) {
     const exemptIncome   = parseFloat(incomeData?.income_exempt_from_tax || 0) +
                            parseFloat(incomeData?.non_cash_benefit_exempt || 0);
     const balance        = breakdown ? breakdown.payments.balancePayableRefundable : 0;
-    const finalTax       = breakdown ? parseFloat(breakdown.finalTax || 0)       : 0;
+    // `breakdown.finalTax` HAS NEVER EXISTED — the engine returns the final-tax
+    // charge as `tax.finalMinTaxChargeable` plus the separate s.7B
+    // `tax.profitOnDebtFinalTax`. So this read was `undefined || 0` on every
+    // return ever generated, and the final-tax line reported nil while the same
+    // amount was inside Tax Chargeable. It went unnoticed because the PDF had no
+    // final-tax row to print it on until the Computations table was completed.
+    const finalTax = breakdown
+      ? parseFloat(breakdown.tax?.finalMinTaxChargeable || 0)
+        + parseFloat(breakdown.tax?.profitOnDebtFinalTax || 0)
+      : 0;
 
     const calculations = breakdown
       ? {
