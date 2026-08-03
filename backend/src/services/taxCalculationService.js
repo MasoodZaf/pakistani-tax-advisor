@@ -14,7 +14,8 @@ const { pool } = require('../config/database');
 const logger = require('../utils/logger');
 const CalculationService = require('./calculationService');
 const TaxRateService = require('./taxRateService');
-const { superTaxU4C } = require('../helpers/statutoryLimits');
+const { superTaxU4C, surchargeU4AB, reliefCeiling: reliefCeilingFor } = require('../helpers/statutoryLimits');
+const { getGeneratedTotalComponents } = require('../helpers/tableColumns');
 
 const toNum = (v) => {
   const n = Number(v);
@@ -52,6 +53,87 @@ const pickDialect = (...vals) => {
  */
 const S7B_DEFAULT_LIMIT = 5_000_000;
 const SENTINEL_UNBOUNDED = 1e11; // seeds use 999999999999 to mean "no upper bound"
+
+/**
+ * The component columns that make up each relief total, read from the GENERATED
+ * total's own definition in the live schema.
+ *
+ * Why the engine needs these, and not just the total.
+ *
+ * The engine used to subtract a retired relief from the total it was handed:
+ * `claimedReductions = declaredTotal − staleTeacherRebate`. That is only sound
+ * if the total actually CONTAINS the stale head, and nothing guaranteed it did.
+ * A preview posting `{ teacher_researcher_tax_reduction: 671422 }` with no total
+ * key produced `claimedReductions = −671,422`, and since the bound on relief is
+ * deliberately one-sided (a negative total is an add-back and must raise tax),
+ * that landed as a Rs 671,422 OVER-CHARGE with no error and no flag. The stored
+ * path escaped only because `total_reductions` is GENERATED over exactly those
+ * components — a schema coincidence, not a check.
+ *
+ * Summing the components and simply omitting the retired heads removes the whole
+ * class: there is no subtraction to get wrong. The names come from the database
+ * so they cannot drift from it (the same reasoning as
+ * `getGeneratedTotalComponents` in the middleware), and the lookup is cached per
+ * process, so this costs one query per boot.
+ *
+ * Resolution failure is not fatal — the engine falls back to the declared total
+ * with a bounded removal. A schema surprise must not stop a taxpayer computing
+ * their return.
+ */
+async function resolveReliefComponents() {
+  try {
+    const [credits, reductions] = await Promise.all([
+      getGeneratedTotalComponents('credits_forms', 'total_credits'),
+      getGeneratedTotalComponents('reductions_forms', 'total_reductions'),
+    ]);
+    return { credits, reductions };
+  } catch (err) {
+    logger.warn('Relief component columns could not be resolved; falling back to declared totals', {
+      message: err.message,
+    });
+    return null;
+  }
+}
+
+/**
+ * The relief total, preferring the sum of components over the declared total.
+ *
+ * `excluded` heads are dropped rather than subtracted — see
+ * resolveReliefComponents() for why that distinction is the entire fix.
+ *
+ * When components cannot be resolved, or the row carries a total but none of the
+ * component keys (a summary-only payload), the declared total is used and the
+ * removal is bounded by it, so the result can never be pushed below zero by a
+ * head the total never included.
+ */
+function reliefTotalFromComponents(data, components, declaredTotal, excludedFields) {
+  const row = data || {};
+  const excluded = new Set(excludedFields);
+  let removed = 0;
+  for (const field of excluded) {
+    const stale = toNum(row[field]);
+    if (stale > 0) removed += stale;
+  }
+
+  const usable = Array.isArray(components)
+    ? components.filter((c) => Object.prototype.hasOwnProperty.call(row, c))
+    : [];
+
+  if (usable.length > 0) {
+    const sum = usable
+      .filter((c) => !excluded.has(c))
+      .reduce((s, c) => s + toNum(row[c]), 0);
+    return { total: round2(sum), removed: round2(removed), source: 'components' };
+  }
+
+  // Total-only payload: a head that is not present cannot be removed from it.
+  const bounded = Math.min(removed, Math.max(0, toNum(declaredTotal)));
+  return {
+    total: round2(toNum(declaredTotal) - bounded),
+    removed: round2(bounded),
+    source: 'declared_total',
+  };
+}
 
 const resolveS7bLimit = (finalTaxRates) => {
   const max = toNum(finalTaxRates?.profit_debt_15_final?.maxAmount);
@@ -186,6 +268,7 @@ class TaxCalculationService {
       finalMinData,
       rates,
       taxYear,
+      reliefComponents: await resolveReliefComponents(),
     });
   }
 
@@ -229,6 +312,7 @@ class TaxCalculationService {
       rates,
       taxYear,
       preview: true,
+      reliefComponents: await resolveReliefComponents(),
     });
   }
 
@@ -247,6 +331,7 @@ class TaxCalculationService {
     rates,
     taxYear,
     preview = false,
+    reliefComponents = null,
   }) {
     // ── Income buckets ──
     const incomeFromSalary =
@@ -393,10 +478,9 @@ class TaxCalculationService {
     );
 
     // ── Surcharge: DB-driven rate + threshold ──
-    let surcharge = 0;
-    if (taxableIncomeExcludingCG > rates.surcharge.threshold) {
-      surcharge = Math.round(normalIncomeTax * rates.surcharge.rate);
-    }
+    // s.4AB. Shared with the save-path gate so the ceiling relief is measured
+    // against is computed in exactly one place (statutoryLimits.surchargeU4AB).
+    const surcharge = surchargeU4AB(taxableIncomeExcludingCG, normalIncomeTax, rates);
 
     // ── CGT ──
     // Previously this read three candidate stored fields and got 0 from all
@@ -496,15 +580,9 @@ class TaxCalculationService {
       });
     }
 
-    const declaredReductions =
-      toNum(reductionsData?.total_tax_reductions) ||
-      toNum(reductionsData?.total_reductions) ||
-      0;
-    let retiredReductionsRemoved = 0;
     for (const head of retiredReliefHeads) {
       const stale = toNum(reductionsData?.[head.field]);
       if (stale > 0) {
-        retiredReductionsRemoved += stale;
         logger.warn('Retired relief removed from a stored return at computation', {
           taxYear,
           field: head.field,
@@ -513,12 +591,23 @@ class TaxCalculationService {
         });
       }
     }
-    const claimedReductions = declaredReductions - retiredReductionsRemoved;
 
-    const claimedFormCredits = pickDialect(
-      creditsData?.total_tax_credits,
-      creditsData?.total_credits
+    const reductionsTotal = reliefTotalFromComponents(
+      reductionsData,
+      reliefComponents?.reductions,
+      pickDialect(reductionsData?.total_tax_reductions, reductionsData?.total_reductions),
+      retiredReliefHeads.map((h) => h.field)
     );
+    const claimedReductions = reductionsTotal.total;
+    const retiredReductionsRemoved = reductionsTotal.removed;
+
+    const creditsTotal = reliefTotalFromComponents(
+      creditsData,
+      reliefComponents?.credits,
+      pickDialect(creditsData?.total_tax_credits, creditsData?.total_credits),
+      []
+    );
+    const claimedFormCredits = creditsTotal.total;
 
     // ── A NEGATIVE CREDIT TOTAL IS AN ADD-BACK AND MUST NOT BE FLOORED ──
     //
@@ -537,14 +626,61 @@ class TaxCalculationService {
     //   • a NEGATIVE total passes through untouched and INCREASES the tax, which
     //     is the whole point of a reversal.
     // `Math.min` alone gives exactly that — a negative is already below the cap.
-    const totalReductions = Math.min(toNum(claimedReductions), totalTaxBeforeAdjustments);
+    //
+    // ── THE CEILING IS THE NORMAL-INCOME BLOCK, NOT EVERY TAX IN THE RETURN ──
+    //
+    // It used to be `totalTaxBeforeAdjustments`, which includes capital gains tax.
+    // Capital gains on securities and property are a SEPARATE block charged at
+    // their own Division VIII/VII rates, and the reliefs this app knows about
+    // (s.61/s.63 credits, the Behbood ceiling, the teacher rebate) all attach to
+    // the normal-income charge. Letting them spill into the CGT block meant relief
+    // the save path had already measured as unlawful was granted anyway, against a
+    // charge it has nothing to do with: QA proved it with a Rs 2,000 normal charge
+    // and a Rs 1,000,000 CGT charge, where every rupee of a 15,700 credit was
+    // allowed. It also made the two gates disagree — the middleware bounds at the
+    // normal-income tax, the engine bounded at 500× that.
+    //
+    // One ceiling, used by both: the tax on the normal-income block. Surcharge is
+    // inside it (s.4AB charges 9% of the same Division I tax on the same income);
+    // capital gains, super tax and the final-tax streams are outside it and are
+    // therefore untouchable by relief.
+    const reliefCeiling = reliefCeilingFor(taxableIncomeExcludingCG, normalIncomeTax, rates);
+
+    // ── A NEGATIVE TOTAL RAISES TAX, SO IT NEEDS A CEILING OF ITS OWN ──
+    //
+    // The one-sided bound above is right, but "unbounded below" is not a bound.
+    // A mistyped reversal of −1,000,000,000,000 was added to the tax in full and
+    // produced a balance payable of Rs 1,000,007,767,340. The write path refuses
+    // figures that large, but the preview endpoint reaches this function directly.
+    //
+    // A surrender adds back credit previously ALLOWED, and a credit allowed in any
+    // year is at most the tax on that year's income — so it cannot credibly exceed
+    // the income declared here. Same arithmetic reasoning as "a deduction cannot
+    // exceed the income it is deducted from"; no statute needed, no guess.
+    const addBackCeiling = Math.max(0, totalIncome);
+    const boundAddBack = (claimed, label) => {
+      const n = toNum(claimed);
+      if (n >= -addBackCeiling) return n;
+      logger.error('Relief add-back exceeds declared income and was refused', {
+        taxYear,
+        label,
+        claimed: n,
+        allowed: -addBackCeiling,
+      });
+      return -addBackCeiling;
+    };
+
+    const boundedReductions = boundAddBack(claimedReductions, 'reductions');
+    const boundedCredits = boundAddBack(claimedFormCredits, 'credits');
+
+    const totalReductions = Math.min(boundedReductions, reliefCeiling);
     const refusedReductions = round2(Math.max(0, toNum(claimedReductions) - totalReductions));
 
     // Headroom is measured against POSITIVE relief only. A negative reduction
     // total has increased the tax, so it must not also be treated as having
     // consumed the room a lawful credit could use.
-    const creditHeadroom = Math.max(0, totalTaxBeforeAdjustments - Math.max(0, totalReductions));
-    const formCredits = Math.min(toNum(claimedFormCredits), creditHeadroom);
+    const creditHeadroom = Math.max(0, reliefCeiling - Math.max(0, totalReductions));
+    const formCredits = Math.min(boundedCredits, creditHeadroom);
     const refusedCredits = round2(Math.max(0, toNum(claimedFormCredits) - formCredits));
 
     if (refusedReductions > 0 || refusedCredits > 0) {
@@ -615,9 +751,46 @@ class TaxCalculationService {
     );
     // Each row is client-supplied; a negative "deduction" would inflate the
     // balance payable, so clamp per row rather than on the sum.
+    //
+    // `capital_gain_tax_deducted` is excluded for the same reason
+    // `subtotal_tax_chargeable` excludes the CGT charge — and the schema already
+    // draws exactly this line (`subtotal_tax_deducted` omits it,
+    // `grand_total_tax_deducted` includes it). Leaving it in meant the two sides
+    // of the final-tax cap below were measured on different bases: the charge
+    // without capital gains, the withholding with. A filer with Rs 300,000 of
+    // NCCPL-collected CGT and no other final-tax stream had all Rs 300,000
+    // classified as a non-refundable excess and credited NOTHING, while the CGT
+    // charge itself was still levied through `capitalGainsTax`. NCCPL collects
+    // this on every brokerage account, so it was not an edge case.
+    const FINAL_MIN_WITHHELD_EXCLUDED = new Set([
+      'salary_u_s_12_7_tax_deducted', // already inside adjustableData.total_tax_collected
+      'capital_gain_tax_deducted', // adjustable against the CGT charge, credited below
+    ]);
     const finalMinTaxWithheld = Object.entries(finalMinData || {})
-      .filter(([k]) => k.endsWith('_tax_deducted') && k !== 'salary_u_s_12_7_tax_deducted')
+      .filter(([k]) => k.endsWith('_tax_deducted') && !FINAL_MIN_WITHHELD_EXCLUDED.has(k))
       .reduce((s, [, v]) => s + nonNeg(v), 0);
+
+    // ── CGT WITHHELD IS ADJUSTABLE, AND WAS NEVER CREDITED AT ALL ──
+    //
+    // Capital gains tax collected at source (NCCPL on securities, the registrar
+    // on property) is adjustable against the CGT charge, not a final tax. The
+    // Capital Gains form has a `*_tax_deducted` column per class and the engine
+    // read none of them, so the charge was levied and the tax already paid on it
+    // was discarded — an over-charge of the whole withheld amount for every
+    // filer with securities or property disposals.
+    //
+    // The Final/Min form mirrors the same figure into `capital_gain_tax_deducted`
+    // (it auto-populates from the Gains form), so these are two surfaces asking
+    // for the SAME money. Adding them would credit it twice. The Gains form is
+    // canonical — it is the per-class declaration surface — with the mirrored row
+    // as the fallback, exactly as advance tax u/s 147 is handled below.
+    const capitalGainsWithheldOnGainsForm = Object.entries(capitalGainsData || {})
+      .filter(([k]) => k.endsWith('_tax_deducted'))
+      .reduce((s, [, v]) => s + nonNeg(v), 0);
+    const capitalGainsTaxWithheld = pickDialect(
+      capitalGainsWithheldOnGainsForm,
+      nonNeg(finalMinData?.capital_gain_tax_deducted)
+    );
 
     // ── EXCESS TAX ON A FINAL-TAX STREAM IS NOT REFUNDABLE ──
     //
@@ -704,7 +877,8 @@ class TaxCalculationService {
         ...advanceTaxDuplicateDeclaration,
       });
     }
-    const withholdingTax = nonNeg(adjustableWHT) + finalMinTaxDeducted;
+    const withholdingTax =
+      nonNeg(adjustableWHT) + finalMinTaxDeducted + capitalGainsTaxWithheld;
 
     const declaredGrossReceipts =
       totalIncome + profitOnDebtFinalBase + nonNeg(finalMinData?.subtotal);
@@ -744,6 +918,11 @@ class TaxCalculationService {
         surcharge,
         capitalGainsTax,
         totalTaxBeforeAdjustments,
+        // The ceiling every reduction and credit is measured against: the tax on
+        // the normal-income block only. Reported so the return shows WHY relief
+        // was refused, and so the figure can be reconciled against the save-time
+        // gate, which uses the same base.
+        reliefCeiling,
         totalReductions,
         formCredits,
         foreignTaxCredit,
@@ -759,6 +938,12 @@ class TaxCalculationService {
         retiredReliefRemoved: round2(retiredReductionsRemoved),
         claimedCredits: round2(toNum(claimedFormCredits)),
         refusedCredits,
+        // A reversal larger than the year's declared income is not credible and
+        // is refused. Reported so it cannot be mistaken for a lawful add-back.
+        refusedAddBack: round2(
+          Math.max(0, boundedReductions - toNum(claimedReductions))
+            + Math.max(0, boundedCredits - toNum(claimedFormCredits))
+        ),
         refusedForeignCredit,
         netTaxPayable,
         superTax,
@@ -771,6 +956,7 @@ class TaxCalculationService {
         finalMinTaxWithheld,
         finalMinTaxDeducted,
         finalMinTaxWithheldInExcess,
+        capitalGainsTaxWithheld,
         withholdingTax,
         advanceTax,
         advanceTaxDuplicateDeclaration,

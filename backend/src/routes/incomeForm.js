@@ -39,6 +39,54 @@ const INCOME_MONEY_INPUTS = [
   'provident_fund_contribution', 'gratuity', 'rent_income', 'other_income'
 ];
 
+/**
+ * Which request keys can set each stored column.
+ *
+ * WHY THIS EXISTS — THIS ENDPOINT WAS A FULL REPLACE AND IT DESTROYED DATA.
+ *
+ * The cleaning loop mapped every absent field to 0, and the UPSERT then set every
+ * column from EXCLUDED, so a POST carrying one field zeroed the other fifteen.
+ * `{"bonus": 5000}` wiped a Rs 22,700,000 salary. It cost the QA fixture twice
+ * and had to be restored from a dump both times; a real taxpayer using anything
+ * other than the full form — the mobile client, a retry, a partial autosave —
+ * would have silently lost their return with a "saved successfully" message.
+ *
+ * The fix has to distinguish two things the old code could not tell apart:
+ *
+ *   key ABSENT          -> not submitted. Keep whatever is stored.
+ *   key PRESENT, blank  -> the user cleared the field. Store 0.
+ *
+ * `parseMoneyInput` reports both as `supplied: false`, which is right for its
+ * purpose and wrong for this one, so presence is tested on the body itself.
+ *
+ * A column is preserved only when NONE of its contributing keys was sent —
+ * otherwise clearing a monthly field could not zero the annual column it feeds.
+ * The lists mirror `CalculationService.calculateIncomeFormFields` and the dbData
+ * fallback chain below; adding a source key to either without adding it here
+ * makes a field un-clearable, which is why they sit next to each other.
+ */
+const COLUMN_INPUT_SOURCES = {
+  annual_basic_salary: ['annual_basic_salary', 'monthly_basic_salary'],
+  allowances: ['allowances', 'monthly_allowances'],
+  bonus: ['bonus', 'bonus_commission'],
+  medical_allowance: ['medical_allowance', 'monthly_medical_allowance'],
+  pension_from_ex_employer: ['pension_from_ex_employer', 'retirement_amount'],
+  employment_termination_payment: ['employment_termination_payment'],
+  retirement_from_approved_funds: ['retirement_from_approved_funds'],
+  directorship_fee: ['directorship_fee'],
+  other_cash_benefits: ['other_cash_benefits'],
+  employer_contribution_provident: [
+    'employer_contribution_provident',
+    'provident_fund_contribution',
+  ],
+  taxable_car_value: ['taxable_car_value'],
+  other_taxable_subsidies: ['other_taxable_subsidies'],
+  profit_on_debt_15_percent: ['profit_on_debt_15_percent', 'profit_debt_15_percent'],
+  profit_on_debt_12_5_percent: ['profit_on_debt_12_5_percent', 'profit_debt_12_5_percent'],
+  other_taxable_income_rent: ['other_taxable_income_rent', 'rent_income'],
+  other_taxable_income_others: ['other_taxable_income_others', 'other_income'],
+};
+
 // Validate any :taxYear segment up front (SEC-09).
 router.param('taxYear', require('../middleware/validation').validateTaxYearParam);
 
@@ -178,6 +226,40 @@ router.post('/:taxYear', auth, guardMoneyFields({
       other_taxable_income_others: calculations.other_income || cleanedData.other_taxable_income_others || 0,
       // Note: Calculated fields are handled by database generated columns
     };
+
+    // ── MERGE, NOT REPLACE — see COLUMN_INPUT_SOURCES ──
+    //
+    // Any column the request said nothing about keeps its stored value. Without
+    // this the UPSERT below is a full replace and a one-field POST zeroes the
+    // rest of the return.
+    const existing = await pool.query(
+      `SELECT ${Object.keys(COLUMN_INPUT_SOURCES).join(', ')}
+         FROM income_forms WHERE user_id = $1 AND tax_year = $2`,
+      [userId, taxYear]
+    );
+    const storedRow = existing.rows[0];
+    const preserved = [];
+    if (storedRow) {
+      for (const [column, sources] of Object.entries(COLUMN_INPUT_SOURCES)) {
+        const submitted = sources.some((key) =>
+          Object.prototype.hasOwnProperty.call(formData, key)
+        );
+        if (submitted) continue;
+        const stored = parseMoneyInput(storedRow[column]);
+        const value = stored.valid && stored.value !== null ? stored.value : 0;
+        if (value !== dbData[column]) {
+          dbData[column] = value;
+          preserved.push(column);
+        }
+      }
+    }
+    if (preserved.length > 0) {
+      logger.info('Income form: partial save, untouched columns preserved', {
+        userId,
+        taxYear,
+        preserved,
+      });
+    }
 
     // Second F-08 gate, on the values actually about to be bound.
     //

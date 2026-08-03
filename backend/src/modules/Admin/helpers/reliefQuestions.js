@@ -27,6 +27,22 @@ const toNum = (v) => {
  *   'toggle'  — on/off, flipping `is_active` on every row in `rows`
  *   'params'  — supply numbers for the named `fields`, which also enables it
  */
+/**
+ * The effect of changing any of these settings, stated accurately.
+ *
+ * The old wording said a change 'takes effect on the next save or recalculation'
+ * and that 'returns already filed are not revisited'. Both halves were false and
+ * the second was the dangerous one: the engine reads `tax_rates_config` on EVERY
+ * computation, and the retired-relief check keys off these very rows, so flipping
+ * a setting silently re-computes every return for that year — including ones
+ * already filed. Telling an owner the opposite invites exactly the edit they
+ * would not have made.
+ */
+const RETROSPECTIVE_WARNING =
+  'This setting is read every time a return is computed, including when an existing return is '
+  + 'opened or a PDF is regenerated — so it applies RETROSPECTIVELY to every return for the tax '
+  + 'year you edit, filed or not. Change it deliberately.';
+
 const RELIEF_QUESTIONS = [
   {
     key: 'education_threshold_operator',
@@ -46,8 +62,8 @@ const RELIEF_QUESTIONS = [
       + 'legal opinion — it is simply the safer of two possibilities.',
     ifYouChangeIt:
       'Choosing the inclusive reading grants the allowance to taxpayers sitting exactly on the '
-      + 'threshold. It takes effect on the next save or recalculation of any affected return; '
-      + 'returns already filed are not revisited.',
+      + 'threshold. '
+      + RETROSPECTIVE_WARNING,
     control: 'choice',
     rows: [{ rateType: 'deduction_threshold', category: 'education_threshold_inclusive' }],
     options: [
@@ -89,7 +105,8 @@ const RELIEF_QUESTIONS = [
     ifYouChangeIt:
       'Enabling it restores a deduction the research could not cite. Do this only with a specific '
       + 'provision, and put that provision in the note below — it is what the app will show as its '
-      + 'authority, and what an audit will be judged on.',
+      + 'authority, and what an audit will be judged on.'
+      + ' ' + RETROSPECTIVE_WARNING,
     control: 'toggle',
     rows: [
       { rateType: 'deduction_threshold', category: 'prof_expenses_max_taxable_income' },
@@ -126,7 +143,8 @@ const RELIEF_QUESTIONS = [
       + 'taxable income you set, and the rupee ceiling you set. Leave either limb at 0 to switch '
       + 'that limb off. The 2,500 sq ft / 2,000 sq ft and 15-year conditions are NOT enforced by '
       + 'the app — they are questions of fact about the property, and the return relies on the '
-      + 'taxpayer\'s own declaration.',
+      + 'taxpayer\'s own declaration.'
+      + ' ' + RETROSPECTIVE_WARNING,
     control: 'params',
     rows: [{ rateType: 'credit_cap', category: 'housing_loan_profit_on_debt' }],
     fields: [

@@ -176,12 +176,21 @@ function normaliseMoneyString(raw) {
 
   // Arabic-Indic (U+0660..) and Extended Arabic-Indic (U+06F0..) digits.
   s = s.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-       .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
+       .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+       // Fullwidth digits (U+FF10..) arrive from IMEs and from spreadsheets
+       // saved on CJK locales. One reading each; previously refused outright.
+       .replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 0xff10));
   // Arabic decimal separator and thousands separator.
   s = s.replace(/٫/g, '.').replace(/٬/g, ',');
-
-  // Currency prefix and the "/-" or "/=" suffix.
-  s = s.replace(/^(?:rs\.?|pkr|₨)\s*/i, '').replace(/\s*\/[-=]$/, '').trim();
+  // Typographic minus and dashes, and the fullwidth forms of + - . , ( ).
+  // U+2212 is what macOS spreadsheets and most PDF exports emit for a
+  // negative, and it was fatal.
+  s = s.replace(/[−‒–—－]/g, '-')
+       .replace(/＋/g, '+')
+       .replace(/．/g, '.')
+       .replace(/，/g, ',')
+       .replace(/（/g, '(')
+       .replace(/）/g, ')');
 
   // Accounting negative: (1,200) means -1200. Only when it wraps the WHOLE
   // value, and it stays negative so a negative-amount guard still refuses it
@@ -193,6 +202,12 @@ function normaliseMoneyString(raw) {
     s = paren[1].trim();
   }
 
+  // Currency prefix and the "/-" or "/=" suffix. Stripped AFTER the brackets,
+  // because "(Rs 1,200)" puts the prefix inside them — the old order looked for
+  // "Rs" at position 0, found "(", and refused a form every accounting package
+  // produces.
+  s = s.replace(/^(?:rs\.?|pkr|₨)\s*/i, '').replace(/\s*\/[-=]$/, '').trim();
+
   const sign = s.match(/^[+-]/) ? s[0] : '';
   let body = sign ? s.slice(1).trim() : s;
 
@@ -201,6 +216,22 @@ function normaliseMoneyString(raw) {
   if (/\s/.test(body)) {
     if (!/^\d{1,3}(?: \d{3})*(?:\.\d+)?$/.test(body)) return null;
     body = body.replace(/ /g, ',');
+  }
+
+  // ── LAKH / CRORE GROUPING ──
+  //
+  // "12,00,000" is how Rs 1,200,000 is written across Pakistan and India: the
+  // last group is three digits, every group before it is two. The western
+  // grouping check downstream demands `d{1,3}(,ddd)*`, so the single most
+  // idiomatic local format for a large amount was rejected outright — worse than
+  // the strictness it came from, because the user is given no reason.
+  //
+  // Accepted only on the exact South Asian pattern, then the separators are
+  // removed so the western check has nothing to disagree with. Not a guess:
+  // "12,00,000" has one reading under this grammar, and "1,2,3" matches neither
+  // grammar and is still refused.
+  if (/^\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d+)?$/.test(body)) {
+    body = body.replace(/,/g, '');
   }
 
   const out = (negated ? '-' : sign) + body;

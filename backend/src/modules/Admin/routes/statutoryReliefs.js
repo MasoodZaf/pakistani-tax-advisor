@@ -323,9 +323,12 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
       key: q.key,
       taxYear,
       currentValue: q.readValue(after),
+      // Accurate, because the previous wording was not: the engine reads these
+      // rows on every computation, so the change is retrospective for the year.
       message:
-        'Saved. This changes how returns are computed from the next save or recalculation; '
-        + 'returns already filed are not revisited.',
+        'Saved. Every return for ' + taxYear + ' will be computed against this setting from now '
+        + 'on, including returns already filed — they are recomputed whenever they are opened or '
+        + 'exported.',
     });
   } catch (e) {
     try {

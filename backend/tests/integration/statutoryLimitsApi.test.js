@@ -41,9 +41,15 @@ const mockQuery = jest.fn(async (sql, params = []) => {
     return { rows: [{ generation_expression: expr, is_generated: 'ALWAYS' }] };
   }
   if (/information_schema\.columns/.test(s)) {
-    // Every key any test posts must be an "allowed column" or saveFormData
-    // silently drops it and the assertion would pass for the wrong reason.
-    return { rows: ALLOWED_COLUMNS.map((column_name) => ({ column_name })) };
+    // TWO DIFFERENT QUESTIONS, and conflating them is what let the phantom-total
+    // defect through. `getAllowedColumns` filters `is_generated = 'NEVER'` and
+    // answers "may a save WRITE this?"; `getAllColumnNames` has no such clause
+    // and answers "does this column EXIST?". The mock routes on that clause, so
+    // a generated total is visible to the stripper and invisible to the writer —
+    // exactly as in Postgres.
+    const writableOnly = /is_generated\s*=\s*'NEVER'/.test(s);
+    const names = writableOnly ? ALLOWED_COLUMNS : [...ALLOWED_COLUMNS, ...GENERATED_COLUMNS];
+    return { rows: names.map((column_name) => ({ column_name })) };
   }
   if (/FROM tax_years/.test(s)) return { rows: [{ id: 'ty-uuid', tax_year: '2025-26' }] };
   if (/INSERT INTO tax_returns/.test(s)) return { rows: [{ id: 'tr-uuid' }] };
@@ -91,6 +97,24 @@ const GENERATED_TOTALS = {
     + '+ COALESCE(other_reductions, (0)::numeric))',
 };
 
+/**
+ * The GENERATED totals. They EXIST but can never be written, so they belong here
+ * and not in ALLOWED_COLUMNS.
+ *
+ * `total_tax_credits`, `total_tax_reductions` and `total_deduction_from_income`
+ * used to sit in ALLOWED_COLUMNS. None of them is a column on ANY environment —
+ * not production, not staging, not schema.sql. The mock invented them, so three
+ * tests asserting that "the recomputed total is stored" passed against a
+ * fiction while the real stored total went unchecked. QA read back
+ * `total_credits = 15,700` against a Rs 2,000 charge on a return this suite
+ * called clean.
+ */
+const GENERATED_COLUMNS = [
+  'total_credits',
+  'total_reductions',
+  'total_deductions',
+];
+
 // Union of every column the tests touch across the four form tables.
 const ALLOWED_COLUMNS = [
   'tax_return_id',
@@ -110,7 +134,6 @@ const ALLOWED_COLUMNS = [
   'tax_paid_foreign_country',
   'advance_tax',
   'other_deductions',
-  'total_deduction_from_income',
   // credits
   'charitable_donations_amount',
   'charitable_donations_tax_credit',
@@ -120,12 +143,10 @@ const ALLOWED_COLUMNS = [
   'pension_fund_tax_credit',
   'surrender_tax_credit_reduction',
   'other_credits',
-  'total_tax_credits',
   // reductions
   'behbood_certificates_amount',
   'behbood_certificates_tax_reduction',
   'teacher_researcher_tax_reduction',
-  'total_tax_reductions',
   // capital gains
   'property_1_year',
   'total_capital_gain',
@@ -259,7 +280,11 @@ describe('POST /deductions — s.60D education expense (AUDIT §5)', () => {
 
     expect(res.status).toBe(200);
     expect(num(captured.values.educational_expenses_amount)).toBe(60000);
-    expect(num(captured.values.total_deduction_from_income)).toBe(60000);
+    // No total is asserted, and none is written. `deductions_forms.total_deductions`
+    // is GENERATED from the components, so clamping the component IS the fix; the
+    // plain `total_deduction_from_income` this used to assert on is not a column on
+    // any environment.
+    expect(captured.values).not.toHaveProperty('total_deduction_from_income');
     expect(res.body.statutory_adjustments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -373,7 +398,11 @@ describe('POST /deductions — s.60C professional expenses (AUDIT §5 case 5)', 
       educational_expenses_children_count: 2,
     });
 
-    expect(num(captured.values.total_deduction_from_income)).toBe(150000);
+    // Both components survive the clamp, which is what monotonicity requires.
+    // The stored total is the database's own sum of them.
+    expect(num(captured.values.professional_expenses_amount)).toBe(50000);
+    expect(num(captured.values.educational_expenses_amount)).toBe(100000);
+    expect(captured.values).not.toHaveProperty('total_deduction_from_income');
   });
 
   test('an inflated client-supplied total cannot bypass the component caps', async () => {
@@ -386,11 +415,14 @@ describe('POST /deductions — s.60C professional expenses (AUDIT §5 case 5)', 
       total_deduction_from_income: 5000000,
     });
 
-    expect(num(captured.values.total_deduction_from_income)).toBe(60000);
+    // The posted total is STRIPPED, not rewritten — it is not a column, and the
+    // real total is generated from the components. The over-claim is reported.
+    expect(captured.values).not.toHaveProperty('total_deduction_from_income');
+    expect(num(captured.values.educational_expenses_amount)).toBe(60000);
     expect(res.body.statutory_adjustments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          field: 'total_deduction_from_income',
+          field: 'deductible_allowance_aggregate',
           claimed: 5000000,
           allowed: 60000,
         }),
@@ -428,7 +460,10 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     expect(res.status).toBe(200);
     // eligible = min(9,999,999, 30% × 1,000,000) = 300,000 → × 0.004 = 1,200
     expect(num(captured.values.charitable_donations_tax_credit)).toBe(1200);
-    expect(num(captured.values.total_tax_credits)).toBe(1200);
+    // `total_credits` is GENERATED over the components, so the component being
+    // right is the whole of it. The posted total is stripped rather than trusted.
+    expect(captured.values).not.toHaveProperty('total_tax_credits');
+    expect(captured.values).not.toHaveProperty('total_credits');
   });
 
   test('the associate proviso is 15%, not 30%', async () => {
@@ -467,7 +502,7 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     });
 
     expect(num(captured.values.charitable_donations_tax_credit)).toBe(0);
-    expect(num(captured.values.total_tax_credits)).toBe(0);
+    expect(captured.values).not.toHaveProperty('total_tax_credits');
   });
 
   test('an inflated total_tax_credits cannot bypass the per-credit caps', async () => {
@@ -483,7 +518,7 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     // eligible = min(250,000, 300,000) = 250,000 → × 0.004 = 1,000, which is
     // exactly what was claimed, so the head stands and only the total is cut.
     expect(num(captured.values.charitable_donations_tax_credit)).toBe(1000);
-    expect(num(captured.values.total_tax_credits)).toBe(1000);
+    expect(captured.values).not.toHaveProperty('total_tax_credits');
   });
 
   test('F-05: a credit head with NO statutory rule is still bounded by the tax in charge', async () => {
@@ -527,7 +562,6 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
 
     expect(res.status).toBe(200);
     expect(num(captured.values.surrender_tax_credit_reduction)).toBe(0);
-    expect(num(captured.values.total_tax_credits ?? 0)).toBe(0);
     expect(res.body.statutory_adjustments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ field: 'surrender_tax_credit_reduction', allowed: 0 }),
@@ -541,11 +575,12 @@ describe('POST /credits — s.61 / s.63 caps (AUDIT §12 blocker 1, F-05 door 1)
     await request(buildApp()).post('/api/tax-forms/credits').send({
       taxYear: '2025-26',
       surrender_tax_credit_reduction: -15000,
-      total_tax_credits: -15000,
     });
 
+    // The negative component survives, so the generated total is negative and the
+    // engine adds the reversal back onto the tax. Flooring it here was a Rs 500,000
+    // understatement on a real return.
     expect(num(captured.values.surrender_tax_credit_reduction)).toBe(-15000);
-    expect(num(captured.values.total_tax_credits)).toBe(-15000);
   });
 
   test('R-01: credits saved BEFORE the income form are not destroyed', async () => {
@@ -603,7 +638,7 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
 
     expect(res.status).toBe(200);
     expect(num(captured.values.behbood_certificates_tax_reduction)).toBe(0);
-    expect(num(captured.values.total_tax_reductions)).toBe(0);
+    expect(captured.values).not.toHaveProperty('total_tax_reductions');
   });
 
   test('relief is granted where the 5% ceiling really is breached', async () => {
@@ -656,7 +691,7 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
     delete RATES.reductions.teacher_researcher;
   });
 
-  test('an inflated total_tax_reductions is recomputed from the components', async () => {
+  test('an inflated client-supplied total is stripped, never stored', async () => {
     // Uses the teacher field WITH its rate configured, so the component is
     // lawful and survives. (It previously posted 5,000 with no rate configured;
     // the teacher guard now correctly refuses that, which made the total 0 and
@@ -672,7 +707,12 @@ describe('POST /reductions — Behbood cl.6 (AUDIT §8)', () => {
       total_tax_reductions: 88888888,
     });
 
-    expect(num(captured.values.total_tax_reductions)).toBe(232750);
+    // `total_tax_reductions` is not a column anywhere. Assigning it (which the
+    // previous pass did) wrote a key the save path dropped, so the check reported
+    // success and the stored `total_reductions` — generated from the components —
+    // went unverified. Now it is stripped and the component is what is asserted.
+    expect(captured.values).not.toHaveProperty('total_tax_reductions');
+    expect(num(captured.values.teacher_researcher_tax_reduction)).toBe(232750);
     delete RATES.reductions.teacher_researcher;
   });
 
@@ -884,8 +924,9 @@ describe('s.60D limb (a) — tuition fee (phase-z14)', () => {
     expect(num(captured.values.educational_expenses_amount)).toBe(30000);
     // The fee itself is a stated fact, not a claim — never clamped.
     expect(num(captured.values.tuition_fee_amount)).toBe(600000);
-    // ...and deliberately not part of the allowance total.
-    expect(num(captured.values.total_deduction_from_income)).toBe(30000);
+    // ...and deliberately not part of the allowance, which is the clamped
+    // education amount alone.
+    expect(num(captured.values.educational_expenses_amount)).toBe(30000);
   });
 
   test('QA NEW-1: the fee limb is 5% of the fee, not the whole fee', async () => {

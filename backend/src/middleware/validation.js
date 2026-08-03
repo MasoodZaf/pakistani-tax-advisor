@@ -7,7 +7,7 @@ const {
   toAmount,
   round2,
 } = require('../helpers/statutoryLimits');
-const { getGeneratedTotalComponents } = require('../helpers/tableColumns');
+const { getGeneratedTotalComponents, getAllColumnNames } = require('../helpers/tableColumns');
 // ONE money parser for the whole application. Two parsers that disagree about
 // what a number is are how a figure gets past one gate and through the other,
 // so `validateNumeric` below delegates rather than keeping its own grammar.
@@ -683,6 +683,122 @@ function clampRemainingHeads(req, res, { components, merged, handledHeads, ceili
   }
 }
 
+/**
+ * The AGGREGATE bound: the components of a relief total, taken together.
+ *
+ * WHAT THE PREVIOUS ATTEMPT DID, AND WHY IT DID NOTHING. It recomputed the sum
+ * and assigned it to `total_tax_credits` / `total_tax_reductions`. Those columns
+ * DO NOT EXIST — not on production, not on staging, not in schema.sql. Only the
+ * GENERATED `total_credits` / `total_reductions` do. So the assignment created a
+ * key the save path then dropped, the check "passed", and QA read back a stored
+ * `total_credits` of 15,700 against a Rs 2,000 charge. Three tests agreed with
+ * the code because the test mock had invented the columns.
+ *
+ * That is also why nothing here recomputes a total. The total is GENERATED from
+ * the components by the database, so once the components are right the total is
+ * right by construction — and any total this middleware wrote would either abort
+ * the UPDATE (posting to a generated column is an error) or be silently dropped.
+ * Both were happening.
+ *
+ * WHAT IT DOES INSTEAD:
+ *
+ *  1. Strips any total column from the body. A client echoing back
+ *     `total_credits` aborts the write; one echoing back `total_tax_credits`
+ *     wastes a round trip and hides the real total behind a fiction.
+ *
+ *  2. Reports the aggregate excess, per head, without touching the figures.
+ *     Reducing the heads would be wrong: each has already been bounded by its own
+ *     statutory formula above, and two individually LAWFUL credits can perfectly
+ *     well sum past the tax in charge — s.61 and s.63 have no carry-forward, so
+ *     the excess is simply not admissible, not fraudulent. Falsifying a
+ *     taxpayer's declared donation to make the arithmetic tidy is not this
+ *     middleware's call. Rejecting the save is worse still: it would refuse a
+ *     lawful return the user can then neither fix nor abandon.
+ *
+ * The BINDING happens where it has to — at computation, against the same
+ * ceiling this function uses (`taxCalculationService`, `reliefCeiling`). The two
+ * gates now measure against the same base; they used to differ by 500×, so
+ * relief the save path called unlawful was granted anyway.
+ *
+ * Returns null always — the signature keeps a rejection channel open for a
+ * future rule that genuinely must refuse a save, and keeps both call sites
+ * identical.
+ */
+async function enforceAggregate(req, res, { table, components, merged, ceiling, label }) {
+  // (1) Never let a total reach the write path. Two kinds arrive:
+  //   - real GENERATED columns (`total_credits`), which ABORT the UPDATE;
+  //   - names that are not columns at all (`total_tax_credits`), which the
+  //     forms post on every save and which the write path drops with a warning.
+  // Both are stripped here, so the log stops carrying a "dropped unknown keys"
+  // line for every ordinary save and a genuine unknown key stays visible.
+  const totalColumns = await getTotalColumnNames(table);
+  for (const col of [...totalColumns, ...CLIENT_TOTAL_ALIASES]) {
+    if (Object.prototype.hasOwnProperty.call(req.body, col)) delete req.body[col];
+  }
+
+  // (2) Measure the aggregate over the components that will actually be stored.
+  const contributions = components
+    .map((field) => ({ field, amount: toAmount(merged[field]) }))
+    .filter(({ amount }) => amount !== 0);
+  const aggregate = round2(contributions.reduce((s, c) => s + c.amount, 0));
+
+  // A net-NEGATIVE aggregate is a lawful add-back (a surrendered investment
+  // credit goes back onto the tax payable). It is not an over-claim and must
+  // never be floored — flooring it was a Rs 500,000 understatement on a real
+  // return.
+  if (aggregate <= ceiling) return null;
+
+  const excess = round2(aggregate - ceiling);
+  recordAdjustment(req, res, {
+    field: `${label}_aggregate`,
+    claimed: aggregate,
+    allowed: round2(ceiling),
+    rule:
+      `Your ${label} add up to more than the tax they are set against, so `
+      + `${formatRs(excess)} of them cannot be used. Relief extinguishes tax; it is never paid `
+      + 'out, and these heads carry no relief forward to another year. Your figures were saved '
+      + 'as entered — the unusable portion is shown on your computation as refused.',
+    heads: contributions.map((c) => ({ field: c.field, amount: round2(c.amount) })),
+  });
+
+  logger.warn('Relief components exceed the tax in charge in aggregate', {
+    table,
+    userId: req.user?.id,
+    aggregate,
+    ceiling: round2(ceiling),
+    excess,
+    heads: contributions.length,
+  });
+
+  return null;
+}
+
+/**
+ * Total-shaped keys the browser forms post that are not columns on any
+ * environment. `CreditsForm`, `ReductionsForm` and `DeductionsForm` each compute
+ * a total client-side and send it; the real totals are GENERATED by the database.
+ * Kept as an explicit list because they cannot be derived from a schema they do
+ * not appear in.
+ */
+const CLIENT_TOTAL_ALIASES = [
+  'total_tax_credits',
+  'total_tax_reductions',
+  'total_deduction_from_income',
+];
+
+/** Rs formatting for a taxpayer-facing message. */
+const formatRs = (n) => `Rs ${Number(n).toLocaleString('en-PK', { maximumFractionDigits: 2 })}`;
+
+/**
+ * Every column on `table` whose name looks like a relief total, in either
+ * dialect. Derived from the live schema rather than listed, because listing them
+ * is what produced the phantom-column defect this whole function exists to fix.
+ */
+async function getTotalColumnNames(table) {
+  const cols = await getAllColumnNames(table);
+  return [...cols].filter((c) => /^(grand_)?(total|subtotal)_/.test(c));
+}
+
 /** Uniform failure for an enforcement middleware that cannot do its job. */
 function enforcementUnavailable(res, err, what) {
   logger.error(`Statutory limit enforcement failed for ${what}`, {
@@ -740,10 +856,16 @@ async function enforceDeductionLimits(req, res, next) {
       const feeSource = Object.prototype.hasOwnProperty.call(req.body, 'tuition_fee_amount')
         ? req.body.tuition_fee_amount
         : bases.deductionsRow.tuition_fee_amount;
-      const tuitionFee =
-        feeSource === undefined || feeSource === null || feeSource === '' || toAmount(feeSource) <= 0
-          ? undefined
-          : toAmount(feeSource);
+      //
+      // "Not stated" and "stated as zero" are DIFFERENT and were conflated. The
+      // condition used to include `toAmount(feeSource) <= 0`, so a taxpayer who
+      // entered a fee of 0 was treated as not having answered — limb (a) was
+      // skipped and the allowance fell to the per-child cap, allowing Rs 120,000
+      // against an entitlement of nil. Only genuine absence skips the limb; a
+      // stated zero is an answer and caps the allowance at zero.
+      const feeStated =
+        feeSource !== undefined && feeSource !== null && feeSource !== '';
+      const tuitionFee = feeStated ? Math.max(0, toAmount(feeSource)) : undefined;
 
       const cap = limits.capEducationU60D(ti, children, tuitionFee);
 
@@ -876,17 +998,29 @@ async function enforceDeductionLimits(req, res, next) {
         incomeKnown ? bases.totalIncome : Number.POSITIVE_INFINITY
       )
     );
+    // `total_deduction_from_income` DOES NOT EXIST as a column — not on
+    // production, not on staging, not in schema.sql. Assigning it (which this
+    // block used to do) wrote a key the save path silently dropped, so the check
+    // reported success and changed nothing. `deductions_forms.total_deductions`
+    // is GENERATED from the components, so clamping the components — which the
+    // code above does — is what makes the stored total right, and writing any
+    // total here would abort the UPDATE.
+    //
+    // What survives is the report: if the client asked for more in aggregate than
+    // the components allow, say so.
     const postedTotal = toAmount(req.body.total_deduction_from_income);
-    req.body.total_deduction_from_income = recomputedTotal;
-    if (
-      Object.prototype.hasOwnProperty.call(req.body, 'total_deduction_from_income') &&
-      postedTotal > recomputedTotal
-    ) {
+    const totalColumns = await getTotalColumnNames('deductions_forms');
+    for (const col of [...totalColumns, 'total_deduction_from_income']) {
+      if (Object.prototype.hasOwnProperty.call(req.body, col)) delete req.body[col];
+    }
+    if (postedTotal > recomputedTotal) {
       recordAdjustment(req, res, {
-        field: 'total_deduction_from_income',
-        claimed: postedTotal,
+        field: 'deductible_allowance_aggregate',
+        claimed: round2(postedTotal),
         allowed: recomputedTotal,
-        rule: 'Total deductible allowance is recomputed server-side from its components.',
+        rule:
+          'A deduction from income cannot exceed the income declared for the year. Your total '
+          + 'deductible allowance is the sum of its components, computed by the server.',
       });
     }
 
@@ -941,6 +1075,10 @@ async function enforceCreditLimits(req, res, next) {
     // credit is apportioned over the whole progressive base.
     const normalTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
     const avgRate = ti > 0 ? normalTax / ti : 0;
+
+    // The ceiling for every head, shared with the engine so the two gates cannot
+    // disagree — they used to, by 500x. See statutoryLimits.reliefCeiling().
+    const reliefCeiling = limits.reliefCeiling(ti, normalTax);
 
     /** (A/B) × min(amountGiven, statutory % of taxable income) */
     const creditOn = (amountField, eligibleCap) =>
@@ -1051,7 +1189,7 @@ async function enforceCreditLimits(req, res, next) {
       components,
       merged,
       handledHeads: new Set([...handled.keys(), 'surrender_tax_credit_reduction']),
-      ceiling: normalTax,
+      ceiling: reliefCeiling,
       rule:
         'A tax credit cannot exceed the tax it is set against. Relief extinguishes tax; only '
         + 'tax actually paid can be refunded.',
@@ -1070,37 +1208,13 @@ async function enforceCreditLimits(req, res, next) {
     // then neither fix nor abandon. Instead the excess is reported per-head, so
     // the response names what has to come down and by how much, and the total
     // written is the lawful one.
-    const rawTotal = components.reduce((sum, k) => sum + toAmount(merged[k]), 0);
-    if (rawTotal > normalTax) {
-      recordAdjustment(req, res, {
-        field: 'total_tax_credits',
-        claimed: round2(rawTotal),
-        allowed: round2(normalTax),
-        rule:
-          'Your credits add up to more than the tax in charge. Each one is individually within '
-          + 'the limit, but together they exceed the tax they are set against — only the tax in '
-          + 'charge can be extinguished.',
-      });
-    }
-
-    // Recompute the total the engine reads FIRST (`total_tax_credits`), from
-    // the same component set the generated column uses — so the plain column
-    // and the generated one cannot disagree. Bounded above by the tax in charge;
-    // NOT floored, because a net-negative total is a lawful add-back (a
-    // surrender reversal) and must survive.
-    const recomputedTotal = round2(Math.min(rawTotal, normalTax));
-    const postedTotal = toAmount(req.body.total_tax_credits);
-    if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_credits')) {
-      req.body.total_tax_credits = recomputedTotal;
-      if (postedTotal > recomputedTotal) {
-        recordAdjustment(req, res, {
-          field: 'total_tax_credits',
-          claimed: postedTotal,
-          allowed: recomputedTotal,
-          rule: 'Total tax credit is recomputed server-side from its components.',
-        });
-      }
-    }
+    await enforceAggregate(req, res, {
+      table: 'credits_forms',
+      components,
+      merged,
+      ceiling: reliefCeiling,
+      label: 'tax credits',
+    });
 
     return next();
   } catch (err) {
@@ -1147,6 +1261,8 @@ async function enforceReductionLimits(req, res, next) {
     // what the taxpayer earned. Both now derive from `ti`.
     const normalTax = CalculationService.calculateProgressiveTax(ti, rates.slabs);
     const avgRate = ti > 0 ? normalTax / ti : 0;
+    // Shared with the engine — see statutoryLimits.reliefCeiling().
+    const reliefCeiling = limits.reliefCeiling(ti, normalTax);
     const handledHeads = new Set();
 
     if (Object.prototype.hasOwnProperty.call(req.body, 'behbood_certificates_tax_reduction')) {
@@ -1188,7 +1304,7 @@ async function enforceReductionLimits(req, res, next) {
       // charged. behboodReliefCl6 already subtracts the ceiling from the tax on
       // the profit, so this only bites if the profit bound above is ever
       // widened — belt and braces on the head that produced the refund claim.
-      const cap = Math.min(limits.behboodReliefCl6(profit, taxOnProfitAtAvgRate), normalTax);
+      const cap = Math.min(limits.behboodReliefCl6(profit, taxOnProfitAtAvgRate), reliefCeiling);
       clampField(
         req,
         res,
@@ -1256,38 +1372,19 @@ async function enforceReductionLimits(req, res, next) {
       components,
       merged,
       handledHeads,
-      ceiling: normalTax,
+      ceiling: reliefCeiling,
       rule:
         'A tax reduction cannot exceed the tax it is set against. Relief extinguishes tax; only '
         + 'tax actually paid can be refunded.',
     });
 
-    // Same aggregate bound as the credits side: individually-lawful heads must
-    // not sum past the tax they offset.
-    const rawTotal = components.reduce((sum, k) => sum + toAmount(merged[k]), 0);
-    if (rawTotal > normalTax) {
-      recordAdjustment(req, res, {
-        field: 'total_tax_reductions',
-        claimed: round2(rawTotal),
-        allowed: round2(normalTax),
-        rule:
-          'Your reductions add up to more than the tax in charge. Each one is individually within '
-          + 'its limit, but together they exceed the tax they are set against.',
-      });
-    }
-    const recomputedTotal = round2(Math.min(rawTotal, normalTax));
-    const postedTotal = toAmount(req.body.total_tax_reductions);
-    if (Object.prototype.hasOwnProperty.call(req.body, 'total_tax_reductions')) {
-      req.body.total_tax_reductions = recomputedTotal;
-      if (postedTotal > recomputedTotal) {
-        recordAdjustment(req, res, {
-          field: 'total_tax_reductions',
-          claimed: postedTotal,
-          allowed: recomputedTotal,
-          rule: 'Total tax reduction is recomputed server-side from its components.',
-        });
-      }
-    }
+    await enforceAggregate(req, res, {
+      table: 'reductions_forms',
+      components,
+      merged,
+      ceiling: reliefCeiling,
+      label: 'tax reductions',
+    });
 
     return next();
   } catch (err) {

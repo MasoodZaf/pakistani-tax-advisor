@@ -178,6 +178,12 @@ async function buildTaxCalculationSummary(userId, taxYear) {
           exemptIncome,
           taxableIncome:        breakdown.income.taxableIncomeIncludingCG,
           capitalGain:          breakdown.income.incomeFromCapitalGains,
+          // The income SPLIT, not just the total. The PDF used to label the whole
+          // of gross income as "Income from Salary" (code 1000/1009) — so a filer
+          // with rental or profit-on-debt income filed a return stating it was all
+          // salary. That is a misdeclaration on the face of the document.
+          incomeFromSalary:     breakdown.income.incomeFromSalary,
+          incomeFromOtherSources: breakdown.income.incomeFromOtherSources,
           normalIncomeTax:      breakdown.tax.normalIncomeTax,
           surcharge:            breakdown.tax.surcharge,
           capitalGainsTax:      breakdown.tax.capitalGainsTax,
@@ -207,6 +213,7 @@ async function buildTaxCalculationSummary(userId, taxYear) {
       : {
           // Fallback — same shape, zeros throughout.
           grossIncome, exemptIncome, taxableIncome: 0, capitalGain: 0,
+          incomeFromSalary: 0, incomeFromOtherSources: 0,
           normalIncomeTax: 0, surcharge: 0, capitalGainsTax: 0,
           totalReductions: 0, totalCredits: 0, netTaxPayable: 0, superTax: 0,
           taxChargeable: 0, withholdingTax: summary.totalWithholdingTax,
@@ -644,6 +651,46 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
       registrationNo: t.fbr_registration_number || t.ntn || t.pi_cnic || t.account_cnic || null,
     };
 
+    // Per-head reduction and credit detail for the two relief tables. Read
+    // straight off the form rows: the engine reports the totals it ALLOWED, and
+    // the FBR form wants the claim line by line beside it.
+    const reliefRows = await Promise.all([
+      pool.query('SELECT * FROM reductions_forms WHERE user_id = $1 AND tax_year = $2', [userId, taxYear]),
+      pool.query('SELECT * FROM credits_forms WHERE user_id = $1 AND tax_year = $2', [userId, taxYear]),
+    ]).catch((err) => {
+      logger.warn('Could not load relief detail for PDF:', err.message);
+      return [{ rows: [] }, { rows: [] }];
+    });
+    const reductionsRow = reliefRows[0].rows[0] || {};
+    const creditsRow = reliefRows[1].rows[0] || {};
+    const amt = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const reliefHeads = {
+      behboodAmount: amt(reductionsRow.behbood_certificates_amount),
+      behboodReduction: amt(reductionsRow.behbood_certificates_tax_reduction),
+      teacherReduction: amt(reductionsRow.teacher_researcher_tax_reduction),
+      otherReductions:
+        amt(reductionsRow.capital_gain_immovable_50_reduction)
+        + amt(reductionsRow.capital_gain_immovable_75_reduction)
+        + amt(reductionsRow.export_income_reduction)
+        + amt(reductionsRow.industrial_undertaking_reduction)
+        + amt(reductionsRow.other_reductions),
+      donationAmount:
+        amt(creditsRow.charitable_donations_amount)
+        + amt(creditsRow.charitable_donations_associate_amount),
+      donationCredit:
+        amt(creditsRow.charitable_donations_tax_credit)
+        + amt(creditsRow.charitable_donations_associate_tax_credit),
+      pensionAmount:
+        amt(creditsRow.pension_fund_amount) + amt(creditsRow.pension_contribution_amount),
+      pensionCredit:
+        amt(creditsRow.pension_fund_tax_credit) + amt(creditsRow.pension_contribution_tax_credit),
+      surrenderReversal: amt(creditsRow.surrender_tax_credit_reduction),
+      otherCredits: amt(creditsRow.other_credits) + amt(creditsRow.investment_tax_credit),
+    };
+
     const taxReturnRow = taxReturnResult.rows[0];
 
     // Map the corrected API response to the format expected by the FBR HTML template
@@ -676,11 +723,23 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
       refundDue: apiResponse.calculations?.refundDue || 0,
       additionalTaxDue: apiResponse.calculations?.additionalTaxDue || 0,
 
+      superTax: apiResponse.calculations?.superTax || 0,
+
       // Map to template field names
       totalIncome: apiResponse.calculations?.grossIncome || 0,
-      incomeFromSalary: apiResponse.calculations?.grossIncome || 0,
+      // SALARY IS NOT THE WHOLE OF INCOME. This was `grossIncome`, so every
+      // rupee of rent, profit on debt and other income was printed against FBR
+      // code 1000 / 1009 ("Pay, Wages or Other Remuneration") — a misdeclaration
+      // of the composition of income on the filed document, even where the tax
+      // total happened to be right.
+      incomeFromSalary: apiResponse.calculations?.incomeFromSalary || 0,
+      incomeFromOtherSources: apiResponse.calculations?.incomeFromOtherSources || 0,
       withholdingIncomeTax: apiResponse.calculations?.withholdingTax || 0,
       refundableIncomeTax: apiResponse.calculations?.refundDue || 0,
+      // Per-head relief detail. The Tax Reductions table was HARDCODED to zeros
+      // — a taxpayer claiming Rs 25,000 of Behbood relief filed a return showing
+      // nil — and there was no Tax Credits table at all.
+      reliefHeads,
 
       // Structured data
       adjustableTax: {
@@ -896,6 +955,13 @@ function generateFBRHTML(taxData) {
       font-size: 11px;
     }
 
+    /* Total lines on the relief tables. The figure shown is what the engine
+       ALLOWED, which can be less than the sum of the claims above it — the
+       statutory caps bite there and the reader must be able to see both. */
+    .total-row {
+      background-color: #f3f4f6;
+    }
+
     .disclaimer {
       font-style: italic;
       font-size: 9px;
@@ -1096,6 +1162,20 @@ function generateFBRHTML(taxData) {
         <td class="text-right">0</td>
         <td class="text-right">${formatAmount(taxData.incomeFromSalary)}</td>
       </tr>
+      <tr>
+        <td>Income from Other Sources</td>
+        <td class="text-center">5000</td>
+        <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
+      </tr>
+      <tr>
+        <td>Capital Gains</td>
+        <td class="text-center">4000</td>
+        <td class="text-right">${formatAmount(taxData.capitalGain)}</td>
+        <td class="text-right">${formatAmount(taxData.capitalGain)}</td>
+        <td class="text-right">0</td>
+      </tr>
     </tbody>
   </table>
 
@@ -1114,9 +1194,74 @@ function generateFBRHTML(taxData) {
       <tr>
         <td>Tax Reduction on Tax Charged on Behbood Certificates / Pensioner's Benefit Account in excess of applicable rate</td>
         <td class="text-center">930101</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.behboodAmount)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.behboodReduction)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.behboodReduction)}</td>
+      </tr>
+      <tr>
+        <td>Tax Reduction for Full Time Teacher / Researcher</td>
+        <td class="text-center">930102</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.teacherReduction)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.teacherReduction)}</td>
+      </tr>
+      <tr>
+        <td>Other Tax Reductions</td>
+        <td class="text-center">930000</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.otherReductions)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.otherReductions)}</td>
+      </tr>
+      <tr class="total-row">
+        <td><strong>Total Tax Reductions ALLOWED</strong></td>
+        <td class="text-center">9309</td>
         <td class="text-right">0</td>
         <td class="text-right">0</td>
+        <td class="text-right"><strong>${formatAmount(taxData.taxReductions)}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="section-header">Tax Credits</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="text-center">Code</th>
+        <th class="text-right">Amount Given / Contributed</th>
+        <th class="text-right">Tax Credit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Charitable Donations u/s 61</td>
+        <td class="text-center">923101</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.donationAmount)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.donationCredit)}</td>
+      </tr>
+      <tr>
+        <td>Contribution to an Approved Pension Fund u/s 63</td>
+        <td class="text-center">923301</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.pensionAmount)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.pensionCredit)}</td>
+      </tr>
+      <tr>
+        <td>Surrender of Tax Credit (added back to tax payable)</td>
+        <td class="text-center">923999</td>
         <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.surrenderReversal)}</td>
+      </tr>
+      <tr>
+        <td>Other Tax Credits</td>
+        <td class="text-center">923000</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.otherCredits)}</td>
+      </tr>
+      <tr class="total-row">
+        <td><strong>Total Tax Credits ALLOWED</strong></td>
+        <td class="text-center">9329</td>
+        <td class="text-right">0</td>
+        <td class="text-right"><strong>${formatAmount(taxData.taxCredits)}</strong></td>
       </tr>
     </tbody>
   </table>
@@ -1219,6 +1364,13 @@ function generateFBRHTML(taxData) {
         <td class="text-right">${formatAmount(taxData.incomeFromSalary)}</td>
       </tr>
       <tr>
+        <td>Income from Other Sources</td>
+        <td class="text-center">5000</td>
+        <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
+      </tr>
+      <tr>
         <td>Total Income</td>
         <td class="text-center">9000</td>
         <td class="text-right">0</td>
@@ -1245,6 +1397,53 @@ function generateFBRHTML(taxData) {
         <td class="text-right">0</td>
         <td class="text-right">0</td>
         <td class="text-right">${formatAmount(taxData.normalIncomeTax)}</td>
+      </tr>
+      <!-- Every line below was MISSING. The Computations table showed the normal
+           tax and jumped straight to withholding, so a return carrying a 9%
+           surcharge, a capital-gains charge, super tax or any relief at all did
+           not show them anywhere — the reader could not reconcile Tax Chargeable
+           against the figures printed above it. -->
+      <tr>
+        <td>Surcharge u/s 4AB</td>
+        <td class="text-center">920800</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.surcharge)}</td>
+      </tr>
+      <tr>
+        <td>Capital Gains Tax</td>
+        <td class="text-center">920100</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.capitalGainTax)}</td>
+      </tr>
+      <tr>
+        <td>Tax Reductions</td>
+        <td class="text-center">9309</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">(${formatAmount(taxData.taxReductions)})</td>
+      </tr>
+      <tr>
+        <td>Tax Credits</td>
+        <td class="text-center">9329</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">(${formatAmount(taxData.taxCredits)})</td>
+      </tr>
+      <tr>
+        <td>Super Tax u/s 4C</td>
+        <td class="text-center">920900</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.superTax)}</td>
+      </tr>
+      <tr>
+        <td>Final / Fixed / Minimum Tax</td>
+        <td class="text-center">920200</td>
+        <td class="text-right">0</td>
+        <td class="text-right">0</td>
+        <td class="text-right">${formatAmount(taxData.finalTax)}</td>
       </tr>
       <tr>
         <td>Withholding Income Tax</td>

@@ -85,6 +85,38 @@ function filterToAllowedColumns(tableName, columnsSet, payload, options = {}) {
   return allowed;
 }
 
+const allColumnCache = new Map();
+
+/**
+ * EVERY column on the table, generated ones included.
+ *
+ * `getAllowedColumns` above deliberately filters to `is_generated = 'NEVER'`
+ * because that is the set a save may write. This is the set that EXISTS, which is
+ * a different question and the one you need when deciding whether a key the
+ * client sent is a real column, a generated column it must not write, or a name
+ * that was never there at all. Conflating the two is how three "recompute the
+ * total" blocks came to assign `total_tax_credits` — a column that does not
+ * exist on any environment — and report success.
+ */
+async function getAllColumnNames(tableName) {
+  if (!ALLOWED_TABLES.has(tableName)) {
+    throw new Error(`Table "${tableName}" is not in the save-form allow list`);
+  }
+  if (allColumnCache.has(tableName)) return allColumnCache.get(tableName);
+
+  const result = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  );
+  const cols = new Set(result.rows.map((r) => r.column_name));
+  if (cols.size === 0) {
+    throw new Error(`No columns found for table "${tableName}"`);
+  }
+  allColumnCache.set(tableName, cols);
+  return cols;
+}
+
 const componentCache = new Map();
 
 /**
@@ -171,11 +203,13 @@ async function getGeneratedTotalComponents(tableName, totalColumn) {
 function _resetColumnCaches() {
   cache.clear();
   componentCache.clear();
+  allColumnCache.clear();
 }
 
 module.exports = {
   ALLOWED_TABLES,
   getAllowedColumns,
+  getAllColumnNames,
   getGeneratedTotalComponents,
   filterToAllowedColumns,
   UnknownColumnsError,

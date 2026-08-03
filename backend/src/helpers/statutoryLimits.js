@@ -467,6 +467,50 @@ function superTaxU4C(income, rates) {
  * @param {string} taxYear e.g. '2025-26'
  * @returns {Promise<object>}
  */
+/**
+ * s.4AB surcharge on the Division I tax.
+ *
+ * Lifted out of the engine so the save-path gate and the computation cannot use
+ * different figures. They already did, and it cost real money: the engine bounded
+ * relief at the whole of `normalIncomeTax + surcharge + capitalGainsTax` while
+ * the middleware bounded it at `normalIncomeTax` alone. With a Rs 2,000 normal
+ * charge beside a Rs 1,000,000 CGT charge the two ceilings were 500× apart, so
+ * every credit the save path had already measured as unlawful was granted at
+ * computation anyway.
+ *
+ * @param {number} taxableIncomeExcludingCG the s.4AB base
+ * @param {number} normalIncomeTax          Division I tax before any relief
+ */
+function surchargeU4AB(taxableIncomeExcludingCG, normalIncomeTax, rates) {
+  const threshold = Number(rates?.surcharge?.threshold);
+  const rate = Number(rates?.surcharge?.rate);
+  if (!Number.isFinite(threshold) || !Number.isFinite(rate)) return 0;
+  if (!(toAmount(taxableIncomeExcludingCG) > threshold)) return 0;
+  return Math.round(toAmount(normalIncomeTax) * rate);
+}
+
+/**
+ * THE ONE CEILING every tax credit and tax reduction is measured against.
+ *
+ * The tax on the NORMAL-INCOME block, surcharge included. Deliberately excludes:
+ *
+ *  - capital gains tax — a separate block at its own Division VII/VIII rates,
+ *    with its own adjustable withholding. The reliefs this app implements
+ *    (s.61/s.63 credits, the Behbood cl.6 ceiling, the cl.(3A) teacher rebate)
+ *    all attach to the normal charge, and letting them spill into the CGT block
+ *    extinguished a charge they have nothing to do with;
+ *  - super tax u/s 4C and the final-tax streams, for the same reason.
+ *
+ * Used by `validation.js` on save and by `taxCalculationService` at computation.
+ * Neither may compute its own.
+ */
+function reliefCeiling(taxableIncomeExcludingCG, normalIncomeTax, rates) {
+  return (
+    toAmount(normalIncomeTax)
+    + surchargeU4AB(taxableIncomeExcludingCG, normalIncomeTax, rates)
+  );
+}
+
 async function forTaxYear(taxYear) {
   const rates = await TaxRateService.getAllRates(taxYear);
   return bindRates(rates);
@@ -489,6 +533,8 @@ function bindRates(rates) {
     behboodReliefCl6: (profit, taxOnProfitAtAvgRate) =>
       behboodReliefCl6(profit, taxOnProfitAtAvgRate, rates),
     superTaxU4C: (income) => superTaxU4C(income, rates),
+    surchargeU4AB: (ti, normalIncomeTax) => surchargeU4AB(ti, normalIncomeTax, rates),
+    reliefCeiling: (ti, normalIncomeTax) => reliefCeiling(ti, normalIncomeTax, rates),
   };
 }
 
@@ -503,6 +549,8 @@ module.exports = {
   housingLoanCreditConfigured,
   behboodReliefCl6,
   superTaxU4C,
+  surchargeU4AB,
+  reliefCeiling,
   // exported for the write-path middleware and its tests
   toAmount,
   round2,

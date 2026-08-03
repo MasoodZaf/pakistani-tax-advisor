@@ -60,6 +60,34 @@ const FA2025_RATES = {
   capitalGains: FA2025_CAPITAL_GAINS,
 };
 
+// The component columns of each GENERATED relief total, as Postgres reports them
+// on both environments. The engine sums THESE rather than subtracting a retired
+// head from a total that may not contain it — see NEW-B below for the Rs 671,422
+// over-charge that produced.
+//
+// Passing them here is what the two async entry points do via
+// resolveReliefComponents(); a test that omitted them would silently exercise
+// only the degraded fallback path, so both are covered explicitly.
+const RELIEF_COMPONENTS = {
+  credits: [
+    'charitable_donations_tax_credit',
+    'charitable_donations_associate_tax_credit',
+    'pension_fund_tax_credit',
+    'surrender_tax_credit_reduction',
+    'investment_tax_credit',
+    'other_credits',
+  ],
+  reductions: [
+    'teacher_researcher_tax_reduction',
+    'behbood_certificates_tax_reduction',
+    'capital_gain_immovable_50_reduction',
+    'capital_gain_immovable_75_reduction',
+    'export_income_reduction',
+    'industrial_undertaking_reduction',
+    'other_reductions',
+  ],
+};
+
 function compute(inputs = {}) {
   return TaxCalculationService._computeFromInputs({
     incomeData:       inputs.income       || {},
@@ -71,6 +99,8 @@ function compute(inputs = {}) {
     finalMinData:     inputs.final_min    || {},
     rates:            inputs.rates        || FA2025_RATES,
     taxYear:          '2025-26',
+    reliefComponents:
+      inputs.reliefComponents === undefined ? RELIEF_COMPONENTS : inputs.reliefComponents,
   });
 }
 
@@ -718,5 +748,212 @@ describe('D9 · final-tax withholding above the final-tax charge is not refundab
     });
     expect(r.payments.finalMinTaxDeducted).toBe(500000);
     expect(r.payments.finalMinTaxWithheldInExcess).toBe(0);
+  });
+});
+
+// =============================================================================
+// NEW-B — the retired-relief subtraction OVER-CHARGED by the full stale amount
+// =============================================================================
+// `claimedReductions = declaredTotal − stale` was subtracted unconditionally,
+// with nothing checking that the total contained the stale head. Where it did
+// not, the result went NEGATIVE, and because the bound on relief is deliberately
+// one-sided (D7 — a negative total is an add-back and must raise tax), the
+// negative was added to the liability.
+//
+// QA's payload, verbatim: preview with `reductions = { teacher_researcher_tax_
+// reduction: 671422 }` and no total key. Correct answer 7,767,340; the engine
+// returned 8,438,762 — an over-charge of exactly the stale figure, with no error
+// and no flag. Silent over-charge is the worst failure mode in this application:
+// nobody complains, so it never surfaces.
+describe('NEW-B · a retired head is DROPPED from the sum, never subtracted from it', () => {
+  const bigSalary = () => salary(22700000);
+  // 22,700,000 -> normal tax 7,126,000; surcharge 9% = 641,340; total 7,767,340.
+  const EXPECTED_NO_RELIEF = 7767340;
+
+  test('a component with no total present cannot push the liability up', () => {
+    const r = compute({
+      income: bigSalary(),
+      reductions: { teacher_researcher_tax_reduction: 671422 },
+    });
+
+    expect(r.tax.claimedReductions).toBe(0);
+    expect(r.tax.retiredReliefRemoved).toBe(671422);
+    expect(r.tax.netTaxPayable).toBe(EXPECTED_NO_RELIEF);
+  });
+
+  test('the stored path still removes it — the relief is refused, not granted', () => {
+    const r = compute({
+      income: bigSalary(),
+      reductions: {
+        teacher_researcher_tax_reduction: 671422,
+        total_reductions: 671422, // what the GENERATED column really holds
+      },
+    });
+
+    expect(r.tax.retiredReliefRemoved).toBe(671422);
+    expect(r.tax.netTaxPayable).toBe(EXPECTED_NO_RELIEF);
+  });
+
+  test('a lawful head beside the retired one survives in full', () => {
+    const r = compute({
+      income: bigSalary(),
+      reductions: {
+        teacher_researcher_tax_reduction: 671422,
+        other_reductions: 100000,
+        total_reductions: 771422,
+      },
+    });
+
+    // Only the lawful 100,000 is relieved.
+    expect(r.tax.totalReductions).toBe(100000);
+    expect(r.tax.netTaxPayable).toBe(EXPECTED_NO_RELIEF - 100000);
+  });
+
+  test('the degraded path (components unresolvable) still cannot over-charge', () => {
+    // Schema introspection failing must not turn into a bigger tax bill. With no
+    // component list the removal is bounded by the declared total, so the worst
+    // case is that relief is refused — never that tax is added.
+    const r = compute({
+      income: bigSalary(),
+      reductions: { teacher_researcher_tax_reduction: 671422 },
+      reliefComponents: null,
+    });
+
+    expect(r.tax.claimedReductions).toBe(0);
+    expect(r.tax.netTaxPayable).toBe(EXPECTED_NO_RELIEF);
+  });
+});
+
+// =============================================================================
+// NEW-F — the save gate and the engine used ceilings 500× apart
+// =============================================================================
+// The engine bounded relief at `normalIncomeTax + surcharge + capitalGainsTax`
+// while the save path bounded it at the normal-income tax. So relief the save
+// path had already measured as unlawful was granted at computation anyway, out of
+// a capital-gains charge it has nothing to do with. Both now call
+// statutoryLimits.reliefCeiling().
+describe('NEW-F · relief cannot reach into the capital-gains block', () => {
+  test('a credit is refused where the normal charge is exhausted, CGT notwithstanding', () => {
+    // Taxable salary 800,000 -> normal tax 2,000, no surcharge.
+    // Securities gains 6,666,667 at 15% -> CGT ~1,000,000.
+    const r = compute({
+      income: salary(800000),
+      capital_gain: { securities_15_percent_taxable: 6666667, total_capital_gain: 6666667 },
+      credits: { other_credits: 15700 },
+    });
+
+    expect(r.tax.normalIncomeTax).toBe(2000);
+    expect(r.tax.reliefCeiling).toBe(2000);
+    expect(r.tax.formCredits).toBe(2000);
+    expect(r.tax.refusedCredits).toBe(13700);
+    // The CGT charge survives the credit in full.
+    expect(r.tax.netTaxPayable).toBe(r.tax.capitalGainsTax);
+  });
+
+  test('surcharge IS inside the ceiling — it is tax on the same income', () => {
+    const r = compute({
+      income: salary(22700000),
+      credits: { other_credits: 99999999 },
+    });
+
+    expect(r.tax.reliefCeiling).toBe(7126000 + 641340);
+    expect(r.tax.netTaxPayable).toBe(0);
+  });
+});
+
+// =============================================================================
+// NEW-C — the final-tax cap DELETED capital-gains tax actually withheld
+// =============================================================================
+// `finalMinTaxChargeable` uses `subtotal_tax_chargeable`, which excludes capital
+// gains by design; `finalMinTaxWithheld` summed every `*_tax_deducted` INCLUDING
+// `capital_gain_tax_deducted`. The two sides of `Math.min` were measured on
+// different bases, so CGT withholding was classified as a non-refundable
+// final-tax excess and credited as nothing — while the CGT charge was still
+// levied. NCCPL collects this on every brokerage account.
+describe('NEW-C · capital-gains withholding is credited, not deleted', () => {
+  test('CGT withheld on the Gains form is credited against the charge', () => {
+    const r = compute({
+      income: salary(800000),
+      capital_gain: {
+        securities_15_percent_taxable: 2000000,
+        total_capital_gain: 2000000,
+        securities_tax_deducted: 300000,
+      },
+    });
+
+    expect(r.tax.capitalGainsTax).toBe(300000);
+    expect(r.payments.capitalGainsTaxWithheld).toBe(300000);
+    // Charge and withholding cancel: 2,000 of normal tax remains payable.
+    expect(r.payments.balancePayableRefundable).toBe(2000);
+  });
+
+  test('the mirrored Final/Min row is not treated as a final-tax excess', () => {
+    const r = compute({
+      income: salary(800000),
+      capital_gain: { securities_15_percent_taxable: 2000000, total_capital_gain: 2000000 },
+      final_min: { subtotal_tax_chargeable: 0, capital_gain_tax_deducted: 300000 },
+    });
+
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(0);
+    expect(r.payments.capitalGainsTaxWithheld).toBe(300000);
+    expect(r.payments.balancePayableRefundable).toBe(2000);
+  });
+
+  test('the same money on both surfaces is credited ONCE', () => {
+    const r = compute({
+      income: salary(800000),
+      capital_gain: {
+        securities_15_percent_taxable: 2000000,
+        total_capital_gain: 2000000,
+        securities_tax_deducted: 300000,
+      },
+      final_min: { capital_gain_tax_deducted: 300000 },
+    });
+
+    expect(r.payments.capitalGainsTaxWithheld).toBe(300000);
+  });
+
+  test('a genuine final-tax excess is still refused (D9 unaffected)', () => {
+    const r = compute({
+      income: salary(800000),
+      final_min: {
+        subtotal_tax_chargeable: 700000,
+        dividend_u_s_150_31pc_atl_tax_deducted: 1050000,
+      },
+    });
+
+    expect(r.payments.finalMinTaxDeducted).toBe(700000);
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(350000);
+  });
+});
+
+// =============================================================================
+// NEW-A — the add-back side had no ceiling at all
+// =============================================================================
+// One-sided is right; unbounded below is not a bound. A mistyped reversal of
+// −1e12 was added to the tax in full: `netTaxPayable` came back as
+// 1,000,007,767,340 with `refusedCredits: 0`. The write path refuses figures that
+// large, but the preview endpoint reaches the engine directly.
+describe('NEW-A · a reversal larger than the declared income is refused', () => {
+  test('an absurd negative total cannot manufacture a liability', () => {
+    const r = compute({
+      income: salary(22700000),
+      credits: { total_credits: -1e12 },
+      reliefComponents: null, // total-only payload, as QA posted it
+    });
+
+    // Bounded at the declared income; the excess is reported, not silent.
+    expect(r.tax.netTaxPayable).toBe(7767340 + 22700000);
+    expect(r.tax.refusedAddBack).toBeGreaterThan(0);
+  });
+
+  test('a credible reversal is untouched — D7 still holds', () => {
+    const r = compute({
+      income: salary(22700000),
+      credits: { surrender_tax_credit_reduction: -500000 },
+    });
+
+    expect(r.tax.refusedAddBack).toBe(0);
+    expect(r.tax.netTaxPayable).toBe(7767340 + 500000);
   });
 });
