@@ -212,6 +212,8 @@ async function buildTaxCalculationSummary(userId, taxYear) {
           // `taxReductions`, `taxCredits`, `capitalGainTax`, etc).
           taxReductions:        breakdown.tax.totalReductions,
           taxCredits:           breakdown.tax.totalCredits,
+          // Relief the stored return still claims but the law no longer grants.
+          retiredReliefRemoved: breakdown.tax.retiredReliefRemoved,
           capitalGainTax:       breakdown.tax.capitalGainsTax,
           adjustableTax:        breakdown.payments.withholdingTax,
           finalTax,
@@ -228,7 +230,7 @@ async function buildTaxCalculationSummary(userId, taxYear) {
           taxChargeable: 0, withholdingTax: summary.totalWithholdingTax,
           advanceTax: 0, totalTaxPaid: summary.totalWithholdingTax,
           balancePayable: 0, refundDue: 0, taxDemanded: 0, additionalTaxDue: 0,
-          taxReductions: 0, taxCredits: 0, capitalGainTax: 0,
+          taxReductions: 0, taxCredits: 0, capitalGainTax: 0, retiredReliefRemoved: 0,
           adjustableTax: summary.totalWithholdingTax, finalTax: 0,
           totalIncome: summary.totalIncome,
           totalWithholdingTax: summary.totalWithholdingTax,
@@ -680,6 +682,17 @@ router.post('/tax-return-pdf/:taxReturnId', auth, async (req, res) => {
       behboodAmount: amt(reductionsRow.behbood_certificates_amount),
       behboodReduction: amt(reductionsRow.behbood_certificates_tax_reduction),
       teacherReduction: amt(reductionsRow.teacher_researcher_tax_reduction),
+      // What the engine actually ALLOWED for this head. A relief the law no
+      // longer grants is still sitting in the stored row, and printing its
+      // figure in the "Tax Reducted" column read as if it had been granted —
+      // on the document the taxpayer files. The engine reports the removal, so
+      // the allowed figure is derivable and the claim stays visible beside it.
+      teacherAllowed: Math.max(
+        0,
+        amt(reductionsRow.teacher_researcher_tax_reduction)
+          - amt(apiResponse.calculations?.retiredReliefRemoved)
+      ),
+      retiredRemoved: amt(apiResponse.calculations?.retiredReliefRemoved),
       otherReductions:
         amt(reductionsRow.capital_gain_immovable_50_reduction)
         + amt(reductionsRow.capital_gain_immovable_75_reduction)
@@ -1208,11 +1221,16 @@ function generateFBRHTML(taxData) {
         <td class="text-right">${formatAmount(taxData.reliefHeads?.behboodReduction)}</td>
       </tr>
       <tr>
-        <td>Tax Reduction for Full Time Teacher / Researcher</td>
+        <td>Tax Reduction for Full Time Teacher / Researcher${
+          taxData.reliefHeads?.retiredRemoved > 0
+            ? ' <em>(claimed; not available for this tax year &mdash; 2nd Sched Pt III cl.(3A) ceased'
+              + ' to have effect after 30-Jun-2025)</em>'
+            : ''
+        }</td>
         <td class="text-center">930102</td>
         <td class="text-right">0</td>
         <td class="text-right">${formatAmount(taxData.reliefHeads?.teacherReduction)}</td>
-        <td class="text-right">${formatAmount(taxData.reliefHeads?.teacherReduction)}</td>
+        <td class="text-right">${formatAmount(taxData.reliefHeads?.teacherAllowed)}</td>
       </tr>
       <tr>
         <td>Other Tax Reductions</td>
@@ -1378,6 +1396,13 @@ function generateFBRHTML(taxData) {
         <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
         <td class="text-right">0</td>
         <td class="text-right">${formatAmount(taxData.incomeFromOtherSources)}</td>
+      </tr>
+      <tr>
+        <td>Capital Gains</td>
+        <td class="text-center">4000</td>
+        <td class="text-right">${formatAmount(taxData.capitalGain)}</td>
+        <td class="text-right">${formatAmount(taxData.capitalGain)}</td>
+        <td class="text-right">0</td>
       </tr>
       <tr>
         <td>Total Income</td>
