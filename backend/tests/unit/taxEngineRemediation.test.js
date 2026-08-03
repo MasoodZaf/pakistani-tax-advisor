@@ -957,3 +957,68 @@ describe('NEW-A · a reversal larger than the declared income is refused', () =>
     expect(r.tax.netTaxPayable).toBe(7767340 + 500000);
   });
 });
+
+// =============================================================================
+// WIRING — the s.7B rate was looked up under a name nothing ever seeds
+// =============================================================================
+// The engine asked for `final_tax/profit_debt_15_final`. No migration INSERTs
+// that category; `phase-j-final-tax-rate-seeds.sql` seeds the real row as
+// `profit_debt_151_up_to_5m`. So the lookup was undefined on every environment,
+// the fail-loud fallback fired on every return, and profit on debt was slab-taxed
+// — an over-charge of roughly Rs 330,000 on the one production return carrying
+// Rs 2,200,000 of bank profit at a 35% marginal rate.
+//
+// The existing D2 suite passes a fixture keyed `profit_debt_15_final`, so it
+// tested the arithmetic and never the wiring. These test the wiring.
+describe('s.7B rate wiring · the seeded category name resolves', () => {
+  const withCategory = (category) => ({
+    ...FA2025_RATES,
+    finalTax: { [category]: { rate: 0.20, minAmount: 0, maxAmount: 5000000 } },
+  });
+  const profitInputs = (rates) => ({
+    income: {
+      b16_annual_salary_wages_total: 3000000,
+      b28_other_income_min_tax_total: 1000000,
+    },
+    rates,
+  });
+
+  test('the name phase-j actually seeds is honoured', () => {
+    const r = compute(profitInputs(withCategory('profit_debt_151_up_to_5m')));
+
+    expect(r.income.profitOnDebtIsFinal).toBe(true);
+    expect(r.tax.profitOnDebtFinalTax).toBe(200000);
+    // Salary alone in the slab base: 3,000,000 -> 331,000.
+    expect(r.income.taxableIncomeExcludingCG).toBe(3000000);
+  });
+
+  test('the historical name still works, so either environment computes', () => {
+    const r = compute(profitInputs(withCategory('profit_debt_15_final')));
+
+    expect(r.income.profitOnDebtIsFinal).toBe(true);
+    expect(r.tax.profitOnDebtFinalTax).toBe(200000);
+  });
+
+  test('the s.7B limit comes off whichever row is present', () => {
+    // 6,000,000 is over the 5,000,000 bound, so the block is NOT final and the
+    // profit stays in the slab base. Proves the limit is read, not defaulted.
+    const r = compute({
+      income: {
+        b16_annual_salary_wages_total: 3000000,
+        b28_other_income_min_tax_total: 6000000,
+      },
+      rates: withCategory('profit_debt_151_up_to_5m'),
+    });
+
+    expect(r.income.profitOnDebtIsFinal).toBe(false);
+    expect(r.income.taxableIncomeExcludingCG).toBe(9000000);
+  });
+
+  test('with NEITHER name configured it still fails loud into the slab base', () => {
+    const r = compute(profitInputs({ ...FA2025_RATES, finalTax: {} }));
+
+    expect(r.income.profitOnDebtIsFinal).toBe(false);
+    expect(r.tax.profitOnDebtFinalTax).toBe(0);
+    expect(r.income.taxableIncomeExcludingCG).toBe(4000000);
+  });
+});

@@ -135,8 +135,37 @@ function reliefTotalFromComponents(data, components, declaredTotal, excludedFiel
   };
 }
 
+/**
+ * The configured s.7B / s.151 rate row for profit on debt.
+ *
+ * IT WAS LOOKED UP UNDER A NAME NOTHING EVER SEEDS. The engine asked for
+ * `final_tax/profit_debt_15_final`; the only migration that mentions that
+ * category (`phase-b`) UPDATEs it, and no migration anywhere INSERTs it. So the
+ * lookup returned undefined on every environment, the "fail loud and leave it in
+ * the slab base" fallback fired on every return, and the separate-block treatment
+ * this file implements — with its own tests — has never once been active in
+ * production.
+ *
+ * The consequence is a live OVER-CHARGE, and the fallback's own comment says so:
+ * a filer on a 35% marginal rate with Rs 2,200,000 of bank profit paid roughly
+ * Rs 770,000 of slab tax where the configured 20% final rate charges Rs 440,000.
+ * It was invisible because the fallback is by design the safe direction — it
+ * never under-states, so nobody complains.
+ *
+ * `phase-j-final-tax-rate-seeds.sql` seeds the real row as
+ * `profit_debt_151_up_to_5m` (0.20, maxAmount 5,000,000, cited to s.151), which
+ * is the same charge under its statutory name. Both names are tried, historical
+ * first, so an environment that has either one works and the fail-loud path is
+ * kept for an environment that genuinely has neither.
+ */
+const s7bRateRow = (finalTaxRates) =>
+  finalTaxRates?.profit_debt_15_final || finalTaxRates?.profit_debt_151_up_to_5m || null;
+
+/** Category names tried, for the error message when none is configured. */
+const S7B_RATE_CATEGORIES = 'profit_debt_15_final / profit_debt_151_up_to_5m';
+
 const resolveS7bLimit = (finalTaxRates) => {
-  const max = toNum(finalTaxRates?.profit_debt_15_final?.maxAmount);
+  const max = toNum(s7bRateRow(finalTaxRates)?.maxAmount);
   return max > 0 && max < SENTINEL_UNBOUNDED ? max : S7B_DEFAULT_LIMIT;
 };
 
@@ -353,7 +382,7 @@ class TaxCalculationService {
     const otherIncomeNormal = toNum(incomeData?.b33_other_income_no_min_tax_total);
 
     const s7bLimit = resolveS7bLimit(rates?.finalTax);
-    const s7bRateCfg = rates?.finalTax?.profit_debt_15_final;
+    const s7bRateCfg = s7bRateRow(rates?.finalTax);
     const s7bRate = toNum(s7bRateCfg?.rate);
 
     // Only treat the block as final-taxed when we actually have a configured
@@ -362,8 +391,9 @@ class TaxCalculationService {
     const s7bRateAvailable = s7bRate > 0;
     if (!s7bRateAvailable && profitOnDebtDeclared > 0) {
       logger.error(
-        'final_tax rate "profit_debt_15_final" is not configured — profit on debt ' +
-        'is being charged at slab rates as a fail-loud fallback',
+        `final_tax rate (${S7B_RATE_CATEGORIES}) is not configured — profit on debt ` +
+        'is being charged at slab rates as a fail-loud fallback, which OVER-charges. ' +
+        'Apply phase-j-final-tax-rate-seeds.sql.',
         { taxYear, profitOnDebtDeclared }
       );
     }
