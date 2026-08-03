@@ -146,6 +146,67 @@ async function getMoneyColumns(tableName) {
  *                      not fill this in", NOT an error. Callers store 0.
  *   valid=false     -> non-empty but unparseable. This is the F-09 case.
  */
+/**
+ * Normalise the ways a Pakistani filer actually writes an amount.
+ *
+ * The strict "parse in full or refuse" rule below is correct — silently turning
+ * "12,00x,000" into Rs 1,200 was a four-order-of-magnitude corruption reported
+ * as success. But strictness alone refused several forms that are perfectly
+ * ordinary here, and a guard that blocks lawful input is its own defect:
+ *
+ *   "Rs 1,200,000"    a figure pasted from a payslip or bank statement
+ *   "1,200,000/-"     idiomatic in Pakistani and Indian business writing
+ *   "1 200 000"       space grouping
+ *   "١٢٠٠٠٠٠"          Arabic-Indic digits; "۱۲۰۰۰۰۰" the Urdu/Persian forms
+ *   "(1,200)"         accounting negative
+ *
+ * Each of those has exactly ONE possible reading, which is what makes
+ * normalising them safe. Nothing ambiguous is guessed: a stray letter, a
+ * mis-grouped separator or a second decimal point still fails, and the space
+ * form is only accepted when the spaces group in threes — the same test the
+ * commas get, so "12 34" is still refused rather than becoming 1234.
+ *
+ * Returns the canonical ASCII string, or null when the input is not salvageable.
+ */
+function normaliseMoneyString(raw) {
+  let s = String(raw);
+
+  // Unicode spaces (NBSP, thin, narrow-NBSP) behave as ordinary separators.
+  s = s.replace(/[    ]/g, ' ').trim();
+
+  // Arabic-Indic (U+0660..) and Extended Arabic-Indic (U+06F0..) digits.
+  s = s.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+       .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
+  // Arabic decimal separator and thousands separator.
+  s = s.replace(/٫/g, '.').replace(/٬/g, ',');
+
+  // Currency prefix and the "/-" or "/=" suffix.
+  s = s.replace(/^(?:rs\.?|pkr|₨)\s*/i, '').replace(/\s*\/[-=]$/, '').trim();
+
+  // Accounting negative: (1,200) means -1200. Only when it wraps the WHOLE
+  // value, and it stays negative so a negative-amount guard still refuses it
+  // with the right reason instead of a confusing "not a number".
+  let negated = false;
+  const paren = s.match(/^\((.*)\)$/);
+  if (paren) {
+    negated = true;
+    s = paren[1].trim();
+  }
+
+  const sign = s.match(/^[+-]/) ? s[0] : '';
+  let body = sign ? s.slice(1).trim() : s;
+
+  // Space-grouped thousands — accepted only when the grouping is valid, exactly
+  // as for commas. Converted to commas so one grouping check covers both.
+  if (/\s/.test(body)) {
+    if (!/^\d{1,3}(?: \d{3})*(?:\.\d+)?$/.test(body)) return null;
+    body = body.replace(/ /g, ',');
+  }
+
+  const out = (negated ? '-' : sign) + body;
+  return out === '' || out === '-' || out === '+' ? null : out;
+}
+
 function parseMoneyInput(value) {
   if (value === null || value === undefined) {
     return { supplied: false, valid: true, value: null };
@@ -161,8 +222,11 @@ function parseMoneyInput(value) {
   }
 
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed === '') return { supplied: false, valid: true, value: null };
+    if (value.trim() === '') return { supplied: false, valid: true, value: null };
+
+    // Canonicalise the locally-idiomatic forms first — see normaliseMoneyString.
+    const trimmed = normaliseMoneyString(value);
+    if (trimmed === null) return { supplied: true, valid: false, value: null };
 
     // THOUSANDS SEPARATORS MUST ACTUALLY SEPARATE THOUSANDS.
     //
@@ -365,8 +429,21 @@ async function assertStorable(table, dbData) {
   return collectMoneyViolations(dbData, columnMeta, Object.keys(dbData));
 }
 
+/**
+ * Test seam. `moneyColumnCache` is keyed by table name and holds the precision
+ * read from information_schema, so a suite that mocked the schema differently
+ * leaves the WRONG ceiling behind for the next suite in the same Jest worker —
+ * which showed up as a boundary test that passed alone and failed in the full
+ * run. Cheaper to reset than to reason about worker scheduling.
+ */
+function _resetMoneyColumnCache() {
+  moneyColumnCache.clear();
+}
+
 module.exports = {
   guardMoneyFields,
+  _resetMoneyColumnCache,
+  normaliseMoneyString,
   assertStorable,
   parseMoneyInput,
   collectMoneyViolations,

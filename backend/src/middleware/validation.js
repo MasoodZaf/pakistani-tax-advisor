@@ -8,6 +8,10 @@ const {
   round2,
 } = require('../helpers/statutoryLimits');
 const { getGeneratedTotalComponents } = require('../helpers/tableColumns');
+// ONE money parser for the whole application. Two parsers that disagree about
+// what a number is are how a figure gets past one gate and through the other,
+// so `validateNumeric` below delegates rather than keeping its own grammar.
+const { parseMoneyInput } = require('./numericGuards');
 
 // Absolute sanity ceiling for any single money field. This is NOT a statutory
 // limit — the statutory limits live in helpers/statutoryLimits.js and are
@@ -66,38 +70,22 @@ class ValidationMiddleware {
 
     // Convert to number.
     //
-    // The commas and surrounding whitespace MUST be stripped first, exactly as
-    // the controllers' own cleaning loops do (`adjustableTaxController.js`,
-    // `finalMinController.js`, `routes/incomeForm.js`). Bare
-    // `parseFloat('1,200,000')` is **1** — it stops at the first comma — and 1
-    // sails through both the `min` and the `max` check. The stored figure was
-    // never wrong (nothing consumes `req.sanitizedData`; the controllers
-    // re-parse the raw body correctly), but every range check in this class was
-    // being evaluated against a number two orders of magnitude too small, so a
-    // comma-formatted amount could not be caught by the ceiling it was supposed
-    // to be tested against.
+    // This used to be bare `parseFloat(value)`, which is **1** for "1,200,000" —
+    // it stops at the first comma. No stored figure was ever wrong (nothing
+    // consumes `req.sanitizedData`; the controllers re-parse the raw body), but
+    // every range check in this class was evaluated against a number two orders
+    // of magnitude too small, so the ceilings were not testing what they claimed.
+    //
     // A partially-parseable string must be REFUSED, not truncated. `parseFloat`
-    // stops at the first unusable character and returns what it has, so
+    // stops at the first unusable character and keeps what it has, so
     // "12,00x,000" became 1200 — Rs 12,000,000 read as Rs 1,200, passing both
-    // the min and the max check. Same grammar as `numericGuards.parseMoneyInput`,
-    // deliberately: two parsers that disagree about what a number is are how a
-    // figure gets past one gate and through the other.
-    let numericValue;
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      // Thousands separators must actually group thousands — "1,2,3" would
-      // otherwise strip to a perfectly acceptable 123.
-      const grouped =
-        !trimmed.includes(',') ||
-        /^\d{1,3}(?:,\d{3})*$/.test(trimmed.replace(/^[+-]/, '').split('.')[0]);
-      const stripped = trimmed.replace(/,/g, '');
-      numericValue =
-        grouped && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(stripped)
-          ? Number(stripped)
-          : NaN;
-    } else {
-      numericValue = typeof value === 'number' ? value : NaN;
-    }
+    // the min and the max check.
+    //
+    // Delegated to the shared parser so this class and the income-form guard
+    // cannot disagree about what a number is, and so both accept the same
+    // locally-idiomatic forms ("Rs 1,200,000", "1,200,000/-", Urdu digits).
+    const parsed = parseMoneyInput(value);
+    const numericValue = parsed.valid && parsed.value !== null ? parsed.value : NaN;
 
     // Check if conversion was successful
     if (!Number.isFinite(numericValue)) {

@@ -98,6 +98,11 @@ app.use('/api/income-form', incomeFormRouter);
 const post = (body) => request(app).post('/api/income-form/2025-26').send(body);
 
 beforeEach(() => {
+  // Process-lifetime caches must not leak between suites — see
+  // numericGuards._resetMoneyColumnCache.
+  require('../../src/middleware/numericGuards')._resetMoneyColumnCache();
+  require('../../src/helpers/tableColumns')._resetColumnCaches();
+
   captured = undefined;
   overflowOnInsert = false;
   mockQuery.mockClear();
@@ -321,5 +326,48 @@ describe('F-09 (second door) — a string must parse in FULL or be refused', () 
     const res = await post({ annual_basic_salary: value });
     expect(res.status).toBe(200);
     expect(Number(captured.values.annual_basic_salary)).toBe(expected);
+  });
+});
+
+// =============================================================================
+// LOCALLY-IDIOMATIC FORMATS — a guard that blocks lawful input is its own defect
+// =============================================================================
+// The strict "parse in full or refuse" rule is right, but on its own it refused
+// several forms that are perfectly ordinary in Pakistan. Each of these has
+// exactly ONE possible reading, which is what makes normalising them safe.
+describe('money formats a Pakistani filer actually types', () => {
+  const ACCEPTED = [
+    ['Rs 1,200,000', 1200000, 'pasted from a payslip'],
+    ['Rs. 1,200,000', 1200000, 'with the full stop'],
+    ['PKR 1,200,000', 1200000, 'ISO code'],
+    ['1,200,000/-', 1200000, 'idiomatic Pakistani business notation'],
+    ['1,200,000/=', 1200000, 'the other suffix'],
+    ['1 200 000', 1200000, 'space-grouped thousands'],
+    ['\u0661\u0662\u0660\u0660\u0660\u0660\u0660', 1200000, 'Arabic-Indic digits'],
+    ['\u06f1\u06f2\u06f0\u06f0\u06f0\u06f0\u06f0', 1200000, 'Urdu/Persian digits'],
+    ['Rs\u00a01,200,000', 1200000, 'non-breaking space after the currency'],
+  ];
+
+  test.each(ACCEPTED)('%s parses to %s (%s)', async (value, expected) => {
+    const res = await post({ annual_basic_salary: value });
+    expect(res.status).toBe(200);
+    expect(Number(captured.values.annual_basic_salary)).toBe(expected);
+  });
+
+  test('an accounting negative is read as negative, and refused as such', async () => {
+    // "(1,200)" means -1200. Translating it means the user gets the RIGHT error
+    // (negative amounts are not allowed) instead of a confusing "not a number".
+    const res = await post({ annual_basic_salary: '(1,200)' });
+    expect(res.status).toBe(400);
+    expect(res.body.errors[0].code).toBe('NEGATIVE_AMOUNT');
+  });
+
+  test('tolerance does not extend to anything ambiguous', async () => {
+    // Space grouping is accepted only when it groups in threes, exactly as for
+    // commas — otherwise "12 34" would silently become 1234.
+    for (const bad of ['12 34', '1 2 3', 'Rs abc', '1,200,000/x', 'Rs']) {
+      const res = await post({ annual_basic_salary: bad });
+      expect(res.status).toBe(400);
+    }
   });
 });
