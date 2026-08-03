@@ -132,14 +132,20 @@ test.describe('Excel round-trip — Salaried Individuals 2025 fixture', () => {
         (inc.taxableIncomeIncludingCG || 0) >= (inc.taxableIncomeExcludingCG || 0)
       );
 
-      // Total chargeable = netTax + superTax + final/min-tax chargeable.
-      // (taxCalculationService composes totalTaxChargeable from all three; a
-      // salaried fixture with final/min-tax items has a non-zero third term.)
+      // Total chargeable = netTax + superTax + final/min-tax chargeable
+      //                    + the s.7B profit-on-debt final tax.
+      //
+      // The fourth term was missing from this invariant and the invariant still
+      // held — because the s.7B rate was being looked up under a category name
+      // no migration ever seeds, so `profitOnDebtFinalTax` was always 0 and the
+      // separate-block treatment never ran. Fixing that wiring made this
+      // assertion fail, which is the correct signal: the term belongs here.
       assertOK(
-        'totalTaxChargeable === netTaxPayable + superTax + finalMinTaxChargeable',
+        'totalTaxChargeable === netTaxPayable + superTax + finalMinTaxChargeable + profitOnDebtFinalTax',
         Math.abs(
           (tax.totalTaxChargeable || 0) -
-            ((tax.netTaxPayable || 0) + (tax.superTax || 0) + (tax.finalMinTaxChargeable || 0))
+            ((tax.netTaxPayable || 0) + (tax.superTax || 0) + (tax.finalMinTaxChargeable || 0)
+              + (tax.profitOnDebtFinalTax || 0))
         ) < 1
       );
 

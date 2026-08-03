@@ -296,13 +296,18 @@ test.describe('Form save/read round-trip', () => {
     });
   });
 
-  test('tax_computation (saveFormData path)', async () => {
+  test('tax_computation REFUSES client-supplied figures', async () => {
+    // This test used to POST `normal_income_tax: 931000` and assert it was
+    // STORED. That is the behaviour the server now deliberately refuses, and
+    // asserting it meant the suite was defending a hole.
+    //
+    // Every substantive column on tax_computation_forms is a figure the server
+    // derives, and the headline columns (net_tax_payable, total_tax_liability,
+    // balance_payable) are GENERATED from them — so a client-supplied value
+    // became the taxpayer's stored liability. `stripServerComputedFields` now
+    // discards the lot and reports what it dropped.
     const api = await request.newContext({ baseURL: process.env.E2E_API_URL });
     const { token } = await signup(api);
-    // tax_computation GET at /api/tax-forms/tax-computation is an AGGREGATE
-    // endpoint that auto-links values from income / adjustable / capital-gain
-    // forms — not a simple echo of what we POSTed. We verify the direct save
-    // landed in DB by reading back the raw /current-return snapshot.
     const headers = { Authorization: `Bearer ${token}` };
     const payload = {
       income_from_salary: 5000000,
@@ -314,11 +319,21 @@ test.describe('Form save/read round-trip', () => {
     const postBody = await post.json();
     expect(postBody.success).toBe(true);
 
+    // The refusal is reported, not silent.
+    const adjustments = postBody.statutory_adjustments || [];
+    const refusal = adjustments.find((a) => a.field === 'tax_computation');
+    expect(refusal, 'the discarded figures must be reported to the caller').toBeTruthy();
+    expect(refusal.allowed).toBe(0);
+    expect(refusal.dropped_fields).toEqual(
+      expect.arrayContaining(['income_from_salary', 'normal_income_tax'])
+    );
+
+    // And nothing the client sent reached the row.
     const get = await api.get('/api/tax-forms/current-return', { headers });
     expect(get.status()).toBe(200);
     const snap = await get.json();
     const tc = snap?.formData?.tax_computation || {};
-    expect(Number(tc.income_from_salary)).toBeCloseTo(5000000, 0);
-    expect(Number(tc.normal_income_tax)).toBeCloseTo(931000, 0);
+    expect(Number(tc.income_from_salary) || 0).toBe(0);
+    expect(Number(tc.normal_income_tax) || 0).toBe(0);
   });
 });

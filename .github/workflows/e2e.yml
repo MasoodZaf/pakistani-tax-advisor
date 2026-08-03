@@ -14,6 +14,20 @@ on:
       - 'backend/**'
       - '.github/workflows/e2e.yml'
 
+# Supersede in-flight runs for the same ref instead of running every one to
+# completion. Pushing a short series of commits (or amending a PR) used to start
+# a full matrix per push and finish all of them, so a five-commit series cost
+# five complete runs and only the last result was ever looked at. On a public
+# repo the minutes are free, but the queue is not and neither is the reviewer's
+# attention — and on any private repo this is the single largest source of
+# wasted Actions minutes.
+#
+# `main` is deliberately EXCLUDED from cancellation: a push to main is a release
+# signal and its run must complete even if another push follows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   e2e:
     name: Playwright smoke

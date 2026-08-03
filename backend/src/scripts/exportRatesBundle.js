@@ -41,11 +41,17 @@ async function exportBundle(outPath) {
         ORDER BY slab_type, slab_order`,
       [y.id]
     );
+    // EXPORT DEACTIVATED ROWS TOO, carrying the flag.
+    //
+    // Filtering them out is what let the bundle resurrect a retired relief: a
+    // row switched off on purpose simply vanished from the export, so the next
+    // operator's diff saw it as "missing from the database" and apply put it back
+    // — switched ON. A retirement has to travel with the bundle as a retirement.
     const rates = await pool.query(
       `SELECT rate_type, rate_category, tax_rate, min_amount, max_amount,
-              fixed_amount, description, fbr_reference
+              fixed_amount, description, fbr_reference, is_active
          FROM tax_rates_config
-        WHERE tax_year = $1 AND is_active = true
+        WHERE tax_year = $1
         ORDER BY rate_type, rate_category`,
       [y.tax_year]
     );
@@ -70,6 +76,7 @@ async function exportBundle(outPath) {
         fixed_amount: Number(r.fixed_amount),
         description: r.description,
         fbr_reference: r.fbr_reference,
+        is_active: r.is_active === false ? false : true,
       })),
     });
   }

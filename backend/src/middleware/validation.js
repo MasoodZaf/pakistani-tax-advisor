@@ -578,11 +578,26 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
   );
   const i = inc.rows[0] || {};
   // Whether ANY income has been declared yet. Load-bearing for R-01: with no
-  // income row every cap evaluates to zero, so clamping would write zeros over
-  // a taxpayer's credits and — because the clamp only ever runs on save — never
-  // restore them when the income form is filled in afterwards. QA lost a whole
-  // Credits form this way by entering the forms out of order, which is not a
-  // misuse: nothing in the UI requires income first.
+  // measurable income every cap evaluates to zero, so clamping would write zeros
+  // over a taxpayer's figures and — because the clamp only ever runs on save —
+  // never restore them when the income form is filled in afterwards. QA lost a
+  // whole Credits form this way by entering the forms out of order, which is not
+  // a misuse: nothing in the UI requires income first.
+  //
+  // ROW EXISTENCE IS THE WRONG TEST, AND USING IT REOPENED THE BUG IT WAS ADDED
+  // TO CLOSE. `/api/register` pre-creates a form row for every table with zeros
+  // in it, so `inc.rows.length > 0` is true for a brand-new account that has
+  // declared nothing. Total income was therefore 0, "a deduction cannot exceed
+  // the income declared for the year" clamped every head to 0, and a taxpayer
+  // filling the Deductions form before the Income form — the common order, since
+  // nothing requires otherwise — had all of it silently wiped. Caught by the E2E
+  // round-trip suite, which posted four lawful deduction heads and read back
+  // four zeros.
+  //
+  // So the question is whether income has been DECLARED, not whether a row was
+  // pre-created. Deferring costs nothing: the engine bounds every relief again at
+  // computation time against the income that exists then, so nothing unlawful can
+  // reach a filed return through this door.
   const hasIncomeRow = inc.rows.length > 0;
   const totalIncome =
     toAmount(i.annual_salary_wages_total) +
@@ -625,6 +640,8 @@ async function loadIncomeBases(userId, taxYear, postedDeductions) {
     totalIncome,
     nonSalaryIncome,
     hasIncomeRow,
+    // The gate every clamp must use. See the note on hasIncomeRow above.
+    incomeDeclared: totalIncome > 0,
     preAllowanceTaxableIncome,
     taxableIncome: Math.max(0, totalIncome - allowances),
     deductionsRow: d,
@@ -838,7 +855,7 @@ async function enforceDeductionLimits(req, res, next) {
     // is zero, so clamping here would wipe the form. The refusal of a relief
     // that DOES NOT EXIST is a separate matter and still applies below: it
     // needs no income base to decide.
-    const incomeKnown = bases.hasIncomeRow;
+    const incomeKnown = bases.incomeDeclared;
     if (!incomeKnown) recordDeferral(req, res, 'deductible_allowances');
 
     // ── s.60D — education ──
@@ -1060,7 +1077,7 @@ async function enforceCreditLimits(req, res, next) {
     const ti = bases.taxableIncome;
 
     // R-01 — see recordDeferral(). Never clamp against an unmeasurable base.
-    if (!bases.hasIncomeRow) {
+    if (!bases.incomeDeclared) {
       recordDeferral(req, res, 'tax_credits');
       return next();
     }
@@ -1274,7 +1291,7 @@ async function enforceReductionLimits(req, res, next) {
     const ti = bases.taxableIncome;
 
     // R-01 — see recordDeferral(). Never clamp against an unmeasurable base.
-    if (!bases.hasIncomeRow) {
+    if (!bases.incomeDeclared) {
       recordDeferral(req, res, 'tax_reductions');
       return next();
     }

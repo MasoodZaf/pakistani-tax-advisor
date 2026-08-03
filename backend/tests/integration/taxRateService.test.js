@@ -91,6 +91,46 @@ describe('TaxRateService.getAllRates', () => {
     expect(r.surcharge.rate).toBeCloseTo(0.09, 4);
     expect(r.superTax.length).toBeGreaterThanOrEqual(7);
     expect(r.creditCaps.donation_u61).toBeDefined();
-    expect(r.deductionThresholds.prof_expenses_max_taxable_income.fixedAmount).toBe(1500000);
+    // s.60D's own threshold — a real, live deductible allowance.
+    expect(r.deductionThresholds.education_max_taxable_income.fixedAmount).toBe(1500000);
+  });
+
+  test('a RETIRED relief is absent from the bundle, not merely zeroed', async () => {
+    // This assertion used to read
+    //   expect(r.deductionThresholds.prof_expenses_max_taxable_income.fixedAmount).toBe(1500000)
+    // i.e. it asserted the PRESENCE of "professional expenses u/s 60C" — a relief
+    // cited to a section that was omitted by Finance Act 2022 and never covered
+    // professional or point-of-sale expenses. phase-z19 deactivates it, and
+    // `getRateSet` filters on is_active, so the row correctly drops out of the
+    // bundle entirely.
+    //
+    // Absence is the contract the code depends on: `enforceDeductionLimits` and
+    // the engine both probe for the threshold row and refuse the deduction when it
+    // is gone. A zero would not do — `rateOf` throws on a missing field, which
+    // would 503 the whole Deductions form instead of quietly denying one head.
+    const r = await TaxRateService.getAllRates('2025-26');
+
+    // This asserts a MIGRATION OUTCOME, so it is only meaningful against a
+    // database that has phase-z19. CI applies every migration before running
+    // this suite; a developer's older local database has not. Rather than pass
+    // or fail by accident depending on which database the suite is pointed at,
+    // detect the migration by a row it seeds and say so out loud when it is
+    // absent — a silent skip and a false green are both worse than a notice.
+    const migrated = Boolean(r.deductionThresholds.education_tuition_fee_pct);
+    if (!migrated) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[skipped] phase-z19 is not applied to this database, so the retirement it '
+          + 'performs cannot be observed. Apply database/migrations/phase-z19-*.sql to '
+          + 'run this assertion locally; CI always has it.'
+      );
+      return;
+    }
+
+    expect(r.deductionThresholds.prof_expenses_max_taxable_income).toBeUndefined();
+    expect(r.deductionThresholds.prof_expenses_pos_amount_pct).toBeUndefined();
+    expect(r.deductionThresholds.prof_expenses_taxable_income_pct).toBeUndefined();
+    // Same for the cl.(3A) teacher rebate, which ceased after 30-Jun-2025.
+    expect(r.reductions.teacher_researcher).toBeUndefined();
   });
 });

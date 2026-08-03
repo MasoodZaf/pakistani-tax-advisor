@@ -12,6 +12,20 @@ on:
       - 'backend/**'
       - '.github/workflows/backend.yml'
 
+# Supersede in-flight runs for the same ref instead of running every one to
+# completion. Pushing a short series of commits (or amending a PR) used to start
+# a full matrix per push and finish all of them, so a five-commit series cost
+# five complete runs and only the last result was ever looked at. On a public
+# repo the minutes are free, but the queue is not and neither is the reviewer's
+# attention — and on any private repo this is the single largest source of
+# wasted Actions minutes.
+#
+# `main` is deliberately EXCLUDED from cancellation: a push to main is a release
+# signal and its run must complete even if another push follows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   unit-tests:
     name: Unit tests (no DB)
@@ -31,19 +45,43 @@ jobs:
           cd backend
           npm ci
 
-      # INFRA-05: fail the build on a HIGH/critical vuln in PRODUCTION deps.
-      # Scoped to --omit=dev so the build/test toolchain's transitive advisories
-      # (not shipped to users) don't block; prod runtime currently has only
-      # 2 moderate (exceljs→uuid), so this gate is green today.
-      - name: Audit production dependencies
-        run: |
-          cd backend
-          npm audit --omit=dev --audit-level=high
-
       - name: Run unit tests
         run: |
           cd backend
           npx jest tests/unit --ci --reporters=default
+
+  # INFRA-05: fail on a HIGH/critical vuln in PRODUCTION deps (--omit=dev, so the
+  # build/test toolchain's transitive advisories don't gate a release).
+  #
+  # THIS IS ITS OWN JOB ON PURPOSE. It used to be a step in `unit-tests`, ahead of
+  # the tests — so when three new advisories were published against transitive
+  # dependencies (no code change of ours involved), the audit failed and the unit
+  # tests were SKIPPED. Backend CI went red with no test result at all, five
+  # pushes in a row. A red build nobody caused is how a team learns to ignore red,
+  # and a security gate that can hide the test signal is worse than one that
+  # cannot. Separated, both answers are always visible.
+  audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: npm audit (production dependencies, high and above)
+        run: |
+          cd backend
+          npm audit --omit=dev --audit-level=high
 
   integration-tests:
     name: Integration tests (DB-backed)

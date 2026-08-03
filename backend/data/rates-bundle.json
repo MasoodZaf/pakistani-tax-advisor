@@ -1,6 +1,6 @@
 {
-  "version": "2026-04-24T18:56:02Z",
-  "generated_at": "2026-04-24T18:56:02.440Z",
+  "version": "2026-08-03T18:15:37Z",
+  "generated_at": "2026-08-03T18:15:37.258Z",
   "generator": "exportRatesBundle.js on node",
   "tax_years": [
     {
@@ -70,7 +70,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Charitable donation cap u/s 61: 30% of taxable income",
-          "fbr_reference": "ITO 2001 s.61"
+          "fbr_reference": "ITO 2001 s.61",
+          "is_active": true
         },
         {
           "rate_type": "credit_cap",
@@ -80,7 +81,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Donation to associate u/s 61: 15% of taxable income",
-          "fbr_reference": "ITO 2001 s.61 proviso"
+          "fbr_reference": "ITO 2001 s.61 proviso",
+          "is_active": true
         },
         {
           "rate_type": "credit_cap",
@@ -90,7 +92,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Voluntary pension contribution u/s 63: 20% of taxable income",
-          "fbr_reference": "ITO 2001 s.63"
+          "fbr_reference": "ITO 2001 s.63",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -100,7 +103,8 @@
           "max_amount": 0,
           "fixed_amount": 2,
           "description": "Education expense deduction: maximum 2 children",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -110,7 +114,8 @@
           "max_amount": 0,
           "fixed_amount": 1500000,
           "description": "Education expense deduction requires taxable income up to Rs 1.5M",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -120,7 +125,41 @@
           "max_amount": 0,
           "fixed_amount": 60000,
           "description": "Education expense: Rs 60,000 per child (max 2 children)",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_taxable_income_pct",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "s.60D limb (b): allowance capped at 25% of the individual's taxable income. Applied as the LEAST of limbs (a), (b) and (c).",
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_threshold_inclusive",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "How to read the s.60D(2) income threshold. 0 = \"less than\" Rs 1,500,000 (strict: a taxpayer AT the threshold is NOT eligible). 1 = \"does not exceed\" (inclusive: a taxpayer AT the threshold IS eligible). Sources disagree on the wording; the strict reading ships because it declines a relief at the boundary rather than granting one that may not exist. Editable at Admin -> Statutory Reliefs — record the authority in the note when changing it.",
+          "fbr_reference": "ITO 2001 s.60D(2) — wording unsettled, see description",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_tuition_fee_pct",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "s.60D limb (a): allowance capped at 5% of the total tuition fee paid. Applied as the LEAST of (a) 5% of tuition fee, (b) 25% of taxable income, (c) Rs 60,000 x children.",
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -129,8 +168,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 1500000,
-          "description": "Prof. expenses (POS) deduction requires taxable income up to Rs 1.5M",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "deduction_threshold",
@@ -139,8 +179,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "deduction_threshold",
@@ -149,8 +190,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "reduction",
@@ -160,7 +202,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Behbood certificate profit: tax not to exceed 5% of profit",
-          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6"
+          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -170,7 +213,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Capital gain on immovable property: 50% reduction (ex-serviceman, War wounded)",
-          "fbr_reference": "2nd Sched Pt III cl.9A"
+          "fbr_reference": "2nd Sched Pt III cl.9A",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -180,7 +224,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Capital gain on immovable property: 75% reduction (ex-serviceman, War wounded)",
-          "fbr_reference": "2nd Sched Pt III cl.9A"
+          "fbr_reference": "2nd Sched Pt III cl.9A",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -189,8 +234,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Full-time teacher/researcher: 25% tax reduction on salary tax",
-          "fbr_reference": "ITO 2001 s.100C"
+          "description": "Full-time teacher/researcher at an HEC/Board-recognised non-profit education or research institution: 25% reduction in tax payable on salary income. Lawful for tax years 2023, 2024 and 2025 only.",
+          "fbr_reference": "2nd Sched Pt III cl.(3A) (FA 2025, retrospective from 1-Jul-2022)",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -200,7 +246,8 @@
           "max_amount": 200000000,
           "fixed_amount": 0,
           "description": "1% on income 150M-200M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -210,7 +257,8 @@
           "max_amount": 250000000,
           "fixed_amount": 0,
           "description": "2% on income 200M-250M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -220,7 +268,8 @@
           "max_amount": 300000000,
           "fixed_amount": 0,
           "description": "3% on income 250M-300M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -230,7 +279,8 @@
           "max_amount": 350000000,
           "fixed_amount": 0,
           "description": "4% on income 300M-350M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -240,7 +290,8 @@
           "max_amount": 400000000,
           "fixed_amount": 0,
           "description": "6% on income 350M-400M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -250,7 +301,8 @@
           "max_amount": 500000000,
           "fixed_amount": 0,
           "description": "8% on income 400M-500M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -260,7 +312,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "10% on income > 500M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "surcharge",
@@ -270,7 +323,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Surcharge 10% for salaried above Rs 10M (pre-FA-2025)",
-          "fbr_reference": "Finance Act 2024"
+          "fbr_reference": "Finance Act 2024",
+          "is_active": true
         }
       ]
     },
@@ -341,7 +395,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property u/s 37(1A) — holding ≤ 1 year",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -351,7 +406,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding 1-2 years",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -361,7 +417,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding 2-3 years",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -371,7 +428,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding 3-4 years",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -381,7 +439,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding 4-5 years",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -391,7 +450,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding 5-6 years",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -401,7 +461,19 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Immovable property — holding > 6 years (exempt)",
-          "fbr_reference": "ITO 2001 s.37(1A)"
+          "fbr_reference": "ITO 2001 s.37(1A)",
+          "is_active": true
+        },
+        {
+          "rate_type": "capital_gains",
+          "rate_category": "immovable_property_post_fa2024_atl",
+          "tax_rate": 0.15,
+          "min_amount": 0,
+          "max_amount": 999999999999,
+          "fixed_amount": 0,
+          "description": "Immovable property ACQUIRED on/after 1-Jul-2024 — flat 15% for ATL persons, irrespective of holding period",
+          "fbr_reference": "ITO 2001 s.37(1A) as amended by Finance Act 2024; First Schedule Part I Division VIII",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -411,7 +483,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "ATL Filer property gains post July 1, 2024",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -421,7 +494,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Non-ATL Filer property gains post July 1, 2024",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -431,7 +505,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Securities acquired before 1-Jul-2022 @ 12.5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -441,7 +516,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Securities u/s 37A @ 15%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -451,7 +527,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Securities u/s 37A @ 7.5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -461,7 +538,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Securities acquired before 1-Jul-2013 @ 5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -471,7 +549,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Mutual Funds/REIT 10%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -481,7 +560,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Securities / mutual funds / REIT @ 10%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -491,7 +571,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Stock Funds 12.5%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -501,7 +582,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Stock-fund mutual funds / REIT @ 12.5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -511,7 +593,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Non-stock-fund mutual funds / REIT @ 25%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -521,7 +604,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "PMEX/Cash Settled Securities",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -531,7 +615,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "PMEX / cash-settled securities @ 5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -541,7 +626,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Securities acquired before July 1, 2013",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A",
+          "is_active": true
         },
         {
           "rate_type": "capital_gains",
@@ -551,7 +637,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Standard Securities 7.5%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 37A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 37A",
+          "is_active": true
         },
         {
           "rate_type": "credit_cap",
@@ -561,7 +648,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Charitable donation cap u/s 61: 30% of taxable income",
-          "fbr_reference": "ITO 2001 s.61"
+          "fbr_reference": "ITO 2001 s.61",
+          "is_active": true
         },
         {
           "rate_type": "credit_cap",
@@ -571,7 +659,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Donation to associate u/s 61: 15% of taxable income",
-          "fbr_reference": "ITO 2001 s.61 proviso"
+          "fbr_reference": "ITO 2001 s.61 proviso",
+          "is_active": true
         },
         {
           "rate_type": "credit_cap",
@@ -581,7 +670,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Voluntary pension contribution u/s 63: 20% of taxable income",
-          "fbr_reference": "ITO 2001 s.63"
+          "fbr_reference": "ITO 2001 s.63",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -591,7 +681,8 @@
           "max_amount": 0,
           "fixed_amount": 2,
           "description": "Education expense deduction: maximum 2 children",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -601,7 +692,8 @@
           "max_amount": 0,
           "fixed_amount": 1500000,
           "description": "Education expense deduction requires taxable income up to Rs 1.5M",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -611,7 +703,41 @@
           "max_amount": 0,
           "fixed_amount": 60000,
           "description": "Education expense: Rs 60,000 per child (max 2 children)",
-          "fbr_reference": "ITO 2001 s.60D"
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_taxable_income_pct",
+          "tax_rate": 0.25,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "s.60D limb (b): allowance capped at 25% of the individual's taxable income. Applied as the LEAST of limbs (a), (b) and (c).",
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_threshold_inclusive",
+          "tax_rate": 0,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "How to read the s.60D(2) income threshold. 0 = \"less than\" Rs 1,500,000 (strict: a taxpayer AT the threshold is NOT eligible). 1 = \"does not exceed\" (inclusive: a taxpayer AT the threshold IS eligible). Sources disagree on the wording; the strict reading ships because it declines a relief at the boundary rather than granting one that may not exist. Editable at Admin -> Statutory Reliefs — record the authority in the note when changing it.",
+          "fbr_reference": "ITO 2001 s.60D(2) — wording unsettled, see description",
+          "is_active": true
+        },
+        {
+          "rate_type": "deduction_threshold",
+          "rate_category": "education_tuition_fee_pct",
+          "tax_rate": 0.05,
+          "min_amount": 0,
+          "max_amount": 0,
+          "fixed_amount": 0,
+          "description": "s.60D limb (a): allowance capped at 5% of the total tuition fee paid. Applied as the LEAST of (a) 5% of tuition fee, (b) 25% of taxable income, (c) Rs 60,000 x children.",
+          "fbr_reference": "ITO 2001 s.60D",
+          "is_active": true
         },
         {
           "rate_type": "deduction_threshold",
@@ -620,8 +746,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 1500000,
-          "description": "Prof. expenses (POS) deduction requires taxable income up to Rs 1.5M",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "deduction_threshold",
@@ -630,8 +757,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "deduction_threshold",
@@ -640,8 +768,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Prof. expenses deduction: min(5% POS amount, 25% taxable income)",
-          "fbr_reference": "ITO 2001 s.60C"
+          "description": "DISABLED — no statutory basis. Cited s.60C, which was the deductible allowance for PROFIT ON DEBT (house construction/acquisition, capped at the lower of 50% of taxable income or Rs 2,000,000) and was OMITTED by Finance Act 2022. s.60C never covered professional or point-of-sale expenses. The 5%/25%/Rs1.5M values here are s.60D's own limbs, mis-transcribed onto a deduction that does not exist. Effect was to understate tax. See phase-z19 header.",
+          "fbr_reference": "NO BASIS — s.60C omitted by FA 2022; never covered these expenses",
+          "is_active": false
         },
         {
           "rate_type": "final_tax",
@@ -651,7 +780,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Bonus shares",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 236Z"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 236Z",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -661,7 +791,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "CGT on securities held < 12 months u/s 37A — 15%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -671,7 +802,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "CGT on securities held ≥ 12 months u/s 37A — 12.5%",
-          "fbr_reference": "ITO 2001 s.37A"
+          "fbr_reference": "ITO 2001 s.37A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -681,7 +813,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Commission to stock-exchange members / agents u/s 233 — 12%",
-          "fbr_reference": "ITO 2001 s.233"
+          "fbr_reference": "ITO 2001 s.233",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -691,7 +824,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend from IPP shares — 7.5%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -701,7 +835,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Dividend IPP Shares",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -711,7 +846,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend from listed companies u/s 150 — 15% final tax",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -721,7 +857,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Mutual Funds with 50%+ debt",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -731,7 +868,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend from unlisted / other companies u/s 150 — 25% final tax",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -741,7 +879,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Dividend from other SPV",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -751,7 +890,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend from other SPV (biomass/bagasse IPP) — 35%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -761,7 +901,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Regular dividend (< 50% income from profit on debt) — 15%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -771,7 +912,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Mutual funds / REITs with ≥ 50% income from profit on debt — 25%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -781,7 +923,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Dividend from REIT SPV",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -791,7 +934,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend from REIT/SPV (pass-through to CPPAG) — 0%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -801,7 +945,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Dividend in specie — 15%",
-          "fbr_reference": "ITO 2001 s.150"
+          "fbr_reference": "ITO 2001 s.150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -811,7 +956,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Standard Dividend Rate",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 150"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 150",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -821,7 +967,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Lottery/raffle/quiz u/s 156A — 20% final tax",
-          "fbr_reference": "ITO 2001 s.156A"
+          "fbr_reference": "ITO 2001 s.156A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -831,7 +978,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Prize on Bond/Puzzle",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 156"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 156",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -841,7 +989,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Prize bonds u/s 156 — 15% final tax",
-          "fbr_reference": "ITO 2001 s.156"
+          "fbr_reference": "ITO 2001 s.156",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -851,7 +1000,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Prize Lottery/Raffle",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 156"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 156",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -861,7 +1011,8 @@
           "max_amount": 5000000,
           "fixed_amount": 0,
           "description": "Profit on debt u/s 151 (individual, up to Rs 5M) — 20% FA 2025",
-          "fbr_reference": "ITO 2001 s.151"
+          "fbr_reference": "ITO 2001 s.151",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -871,7 +1022,8 @@
           "max_amount": 5000000,
           "fixed_amount": 0,
           "description": "Profit on debt u/s 151, final tax (individual) — FA 2025: 20%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 7B"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 7B",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -881,7 +1033,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Defence Savings Certificates u/s 151(1)(b) — 10% final WHT",
-          "fbr_reference": "ITO 2001 s.151"
+          "fbr_reference": "ITO 2001 s.151",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -891,7 +1044,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "NSS / Post Office profit u/s 151(1)(a) — 10% final WHT",
-          "fbr_reference": "ITO 2001 s.151"
+          "fbr_reference": "ITO 2001 s.151",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -901,7 +1055,8 @@
           "max_amount": 5000000,
           "fixed_amount": 0,
           "description": "Sukook Rs 1M to 5M",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -911,7 +1066,8 @@
           "max_amount": 5000000,
           "fixed_amount": 0,
           "description": "Sukook returns (individual, Rs 1-5M) — 12.5%",
-          "fbr_reference": "ITO 2001 s.151A"
+          "fbr_reference": "ITO 2001 s.151A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -921,7 +1077,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Sukook returns (individual, > Rs 5M) — 25% minimum tax",
-          "fbr_reference": "ITO 2001 s.151A"
+          "fbr_reference": "ITO 2001 s.151A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -931,7 +1088,8 @@
           "max_amount": 1000000,
           "fixed_amount": 0,
           "description": "Sukook returns (individual, up to Rs 1M) — 10%",
-          "fbr_reference": "ITO 2001 s.151A"
+          "fbr_reference": "ITO 2001 s.151A",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -941,7 +1099,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Return on Sukook 25%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151",
+          "is_active": true
         },
         {
           "rate_type": "final_tax",
@@ -951,7 +1110,8 @@
           "max_amount": 1000000,
           "fixed_amount": 0,
           "description": "Sukook up to Rs 1M",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -961,7 +1121,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Behbood certificate profit: tax not to exceed 5% of profit",
-          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6"
+          "fbr_reference": "ITO 2001 2nd Sched Pt III cl.6",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -971,7 +1132,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Capital gain on immovable property: 50% reduction (ex-serviceman, War wounded)",
-          "fbr_reference": "2nd Sched Pt III cl.9A"
+          "fbr_reference": "2nd Sched Pt III cl.9A",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -981,7 +1143,8 @@
           "max_amount": 0,
           "fixed_amount": 0,
           "description": "Capital gain on immovable property: 75% reduction (ex-serviceman, War wounded)",
-          "fbr_reference": "2nd Sched Pt III cl.9A"
+          "fbr_reference": "2nd Sched Pt III cl.9A",
+          "is_active": true
         },
         {
           "rate_type": "reduction",
@@ -990,8 +1153,9 @@
           "min_amount": 0,
           "max_amount": 0,
           "fixed_amount": 0,
-          "description": "Full-time teacher/researcher: 25% tax reduction on salary tax",
-          "fbr_reference": "ITO 2001 s.100C"
+          "description": "EXPIRED for tax year 2026 onwards. Clause (3A), Part III, Second Schedule (inserted by Finance Act 2025) restored the 25% rebate retrospectively from 1-Jul-2022 but it ceases to have effect after 30-Jun-2025. Tax year 2026 = 1-Jul-2025 to 30-Jun-2026 = this row's 2025-26. Do NOT reactivate without a Finance Act that extends it.",
+          "fbr_reference": "2nd Sched Pt III cl.(3A) — ceased after 30-Jun-2025 (FA 2025)",
+          "is_active": false
         },
         {
           "rate_type": "super_tax",
@@ -1001,7 +1165,8 @@
           "max_amount": 200000000,
           "fixed_amount": 0,
           "description": "1% on income 150M-200M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1011,7 +1176,8 @@
           "max_amount": 250000000,
           "fixed_amount": 0,
           "description": "2% on income 200M-250M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1021,7 +1187,8 @@
           "max_amount": 300000000,
           "fixed_amount": 0,
           "description": "3% on income 250M-300M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1031,7 +1198,8 @@
           "max_amount": 350000000,
           "fixed_amount": 0,
           "description": "4% on income 300M-350M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1041,7 +1209,8 @@
           "max_amount": 400000000,
           "fixed_amount": 0,
           "description": "6% on income 350M-400M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1051,7 +1220,8 @@
           "max_amount": 500000000,
           "fixed_amount": 0,
           "description": "8% on income 400M-500M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "super_tax",
@@ -1061,7 +1231,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "10% on income > 500M",
-          "fbr_reference": "ITO 2001 s.4C, Division IIA"
+          "fbr_reference": "ITO 2001 s.4C, Division IIA",
+          "is_active": true
         },
         {
           "rate_type": "surcharge",
@@ -1071,7 +1242,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Surcharge for salaried individuals with income > 10M",
-          "fbr_reference": "Finance Act 2024, Section 4B"
+          "fbr_reference": "Finance Act 2024, Section 4B",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1081,7 +1253,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Cellphone Bill",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 236"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 236",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1091,7 +1264,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Directorship Fee u/s 149(3)",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 149"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 149",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1101,7 +1275,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Electricity bill (domestic) u/s 235 — 7.5%",
-          "fbr_reference": "ITO 2001 s.235"
+          "fbr_reference": "ITO 2001 s.235",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1111,7 +1286,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Electricity Bill Domestic Consumer",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 235"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 235",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1121,7 +1297,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Functions/gatherings u/s 236CB — filer 10%",
-          "fbr_reference": "ITO 2001 s.236CB"
+          "fbr_reference": "ITO 2001 s.236CB",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1131,7 +1308,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Functions/gatherings u/s 236CB — non-filer 20%",
-          "fbr_reference": "ITO 2001 s.236CB"
+          "fbr_reference": "ITO 2001 s.236CB",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1141,7 +1319,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Internet bill u/s 236(1)(d) — 15%",
-          "fbr_reference": "ITO 2001 s.236"
+          "fbr_reference": "ITO 2001 s.236",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1151,7 +1330,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Leasing of motor vehicle u/s 231B(1A) — 4%",
-          "fbr_reference": "ITO 2001 s.231B(1A)"
+          "fbr_reference": "ITO 2001 s.231B(1A)",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1161,7 +1341,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Motor Vehicle Transfer Fee",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 231B"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 231B",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1171,7 +1352,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Motor vehicle transfer fee u/s 231B(2) — 3%",
-          "fbr_reference": "ITO 2001 s.231B(2)"
+          "fbr_reference": "ITO 2001 s.231B(2)",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1181,7 +1363,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Phone unit u/s 236(1)(c) — 15%",
-          "fbr_reference": "ITO 2001 s.236"
+          "fbr_reference": "ITO 2001 s.236",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1191,7 +1374,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Prepaid internet card u/s 236(1)(e) — 15%",
-          "fbr_reference": "ITO 2001 s.236"
+          "fbr_reference": "ITO 2001 s.236",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1201,7 +1385,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Prepaid telephone card u/s 236(1)(b) — 15%",
-          "fbr_reference": "ITO 2001 s.236"
+          "fbr_reference": "ITO 2001 s.236",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1211,7 +1396,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Profit on Debt u/s 151 @15%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 151"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1221,7 +1407,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Profit on debt u/s 151 — FA 2025 raised from 15% to 20%",
-          "fbr_reference": "ITO 2001 s.151"
+          "fbr_reference": "ITO 2001 s.151",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1231,7 +1418,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Rent received Section 155",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 155"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 155",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1241,7 +1429,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Rent deduction u/s 155 (individual) — 15%",
-          "fbr_reference": "ITO 2001 s.155"
+          "fbr_reference": "ITO 2001 s.155",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1251,7 +1440,8 @@
           "max_amount": 999999999999.99,
           "fixed_amount": 0,
           "description": "Sukook u/s 151A @12.5%",
-          "fbr_reference": "Income Tax Ordinance 2001, Section 151A"
+          "fbr_reference": "Income Tax Ordinance 2001, Section 151A",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1261,7 +1451,8 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Sukook profit u/s 151A — 12.5%",
-          "fbr_reference": "ITO 2001 s.151A"
+          "fbr_reference": "ITO 2001 s.151A",
+          "is_active": true
         },
         {
           "rate_type": "withholding",
@@ -1271,10 +1462,11 @@
           "max_amount": 999999999999,
           "fixed_amount": 0,
           "description": "Telephone bill u/s 236(1)(e) — 15%",
-          "fbr_reference": "ITO 2001 s.236"
+          "fbr_reference": "ITO 2001 s.236",
+          "is_active": true
         }
       ]
     }
   ],
-  "checksum": "fb7d2f1c2953b5f7a3ff925c737d9bb4f5a0936396216e7a962d716b4e15824d"
+  "checksum": "7a4de4f300a2f2f59160c8a2040f475670a6cf4e41db6051e01d166e78c409de"
 }

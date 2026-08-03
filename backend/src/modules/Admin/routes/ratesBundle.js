@@ -68,10 +68,17 @@ async function readDbState(taxYear) {
        FROM tax_slabs WHERE tax_year_id = $1 ORDER BY slab_type, slab_order`,
     [taxYearId]
   );
+  // `AND is_active = true` USED TO BE HERE AND IT MADE THE DIFF LIE.
+  //
+  // A DEACTIVATED rate row was invisible to the comparison, so a relief the app
+  // had deliberately retired looked to the preview like a row the database was
+  // simply MISSING — and apply then "restored" it. Deactivation is a decision,
+  // not an absence, and a diff that cannot see it cannot be trusted to describe
+  // what apply will do.
   const rates = await pool.query(
     `SELECT rate_type, rate_category, tax_rate, min_amount, max_amount,
-            fixed_amount, description, fbr_reference
-       FROM tax_rates_config WHERE tax_year = $1 AND is_active = true
+            fixed_amount, description, fbr_reference, is_active
+       FROM tax_rates_config WHERE tax_year = $1
        ORDER BY rate_type, rate_category`,
     [taxYear]
   );
@@ -94,6 +101,7 @@ async function readDbState(taxYear) {
       fixed_amount: Number(r.fixed_amount),
       description: r.description,
       fbr_reference: r.fbr_reference,
+      is_active: r.is_active === false ? false : true,
     })),
   };
 }
@@ -132,7 +140,11 @@ function computeDiff(bundleYear, dbState) {
   );
   const rateDiff = diffLists(
     bundleYear.rates, dbState.rates, rateKey,
-    ['tax_rate', 'min_amount', 'max_amount', 'fixed_amount', 'description', 'fbr_reference'],
+    // `is_active` is a compared field, so switching a relief off shows up as a
+    // real difference the operator can see — rather than as a phantom "missing
+    // row" that apply then silently switches back on.
+    ['tax_rate', 'min_amount', 'max_amount', 'fixed_amount', 'description', 'fbr_reference',
+      'is_active'],
   );
   return { slabs: slabDiff, rates: rateDiff };
 }
@@ -263,7 +275,7 @@ router.post('/apply', jwtAuth, requireSuperAdmin, async (req, res) => {
           `INSERT INTO tax_rates_config (tax_year, rate_type, rate_category,
              tax_rate, min_amount, max_amount, fixed_amount,
              description, fbr_reference, is_active)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
            ON CONFLICT (tax_year, rate_type, rate_category)
            DO UPDATE SET tax_rate = EXCLUDED.tax_rate,
                          min_amount = EXCLUDED.min_amount,
@@ -271,11 +283,24 @@ router.post('/apply', jwtAuth, requireSuperAdmin, async (req, res) => {
                          fixed_amount = EXCLUDED.fixed_amount,
                          description = EXCLUDED.description,
                          fbr_reference = EXCLUDED.fbr_reference,
-                         is_active = true,
+                         -- is_active = true USED TO BE HARDCODED HERE, AND IT
+                         -- RESURRECTED RETIRED RELIEFS. The bundle still carries
+                         -- rows for the expired teacher/researcher rebate and the
+                         -- misattributed "professional expenses u/s 60C"
+                         -- allowance, both deactivated on purpose by phase-z19.
+                         -- One click of Apply in Admin -> Rates silently switched
+                         -- both back on for every taxpayer, and because the
+                         -- engine reads this table on every computation the
+                         -- unlawful relief would have started applying to stored
+                         -- returns immediately, with nothing in the UI saying so.
+                         -- The bundle's own flag decides now; absent means active,
+                         -- so ordinary rate rows behave exactly as before.
+                         is_active = EXCLUDED.is_active,
                          updated_at = NOW()`,
           [y.tax_year, r.rate_type, r.rate_category, r.tax_rate,
            r.min_amount, r.max_amount, r.fixed_amount,
-           r.description, r.fbr_reference]
+           r.description, r.fbr_reference,
+           r.is_active === false ? false : true]
         );
       }
       applied.push({

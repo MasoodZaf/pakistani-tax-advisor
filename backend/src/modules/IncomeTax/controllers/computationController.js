@@ -262,9 +262,21 @@ const getTaxComputation = async (req, res) => {
       'minimum_tax_on_other_income', 'total_tax_liability', 'advance_tax_paid',
       'balance_payable',
     ]) {
-      if (existingTaxComputation && existingTaxComputation[col] !== undefined) {
-        taxComputation[col] = toNum(existingTaxComputation[col]);
-      }
+      if (!existingTaxComputation) continue;
+      // ZERO IS NOT AN ENGINE ANSWER — IT IS AN UNPOPULATED ROW.
+      //
+      // `/api/register` pre-creates a tax_computation_forms row full of zeros,
+      // and the engine only writes it on save. Overriding whenever the column was
+      // merely `!== undefined` therefore let that pre-created 0 CLOBBER the live
+      // auto-linked value: a user who saved a Rs 500,000 capital gain and then
+      // read the computation back saw `capital_gains_loss: 0`, because the empty
+      // row won. Caught by the E2E inter-form linking spec.
+      //
+      // A genuine engine zero is indistinguishable from an unpopulated one on
+      // this row, and falling through costs nothing when it is genuine — the
+      // auto-linked value is 0 in that case too.
+      const stored = toNum(existingTaxComputation[col]);
+      if (stored !== 0) taxComputation[col] = stored;
     }
 
     // Log the auto-linked values
