@@ -390,8 +390,36 @@ export default function StatutoryReliefsManager() {
                 </div>
               )}
 
+              {item.control === 'params' && item.canDisable && (
+                // Without this the only way back from a configured relief was
+                // raw SQL, which is the situation this screen exists to remove.
+                <label className={`srm-option mb-4 ${d.value === 'not_configured' ? 'srm-option-on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={d.value === 'not_configured'}
+                    disabled={!isSuperAdmin}
+                    onChange={(e) =>
+                      setField(item.key, { value: e.target.checked ? 'not_configured' : 'configured' })
+                    }
+                  />
+                  <span>
+                    <span className="block text-sm font-800 text-gray-900 dark:text-white">
+                      Do not offer this relief
+                    </span>
+                    <span className="srm-prose">
+                      The app will not grant it and its input stays hidden on the Credits form. Your
+                      note and any figures below are kept, so switching it back on later is one save.
+                    </span>
+                  </span>
+                </label>
+              )}
+
               {item.control === 'params' && (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div
+                  className="grid gap-4 sm:grid-cols-2"
+                  style={d.value === 'not_configured' ? { opacity: 0.45 } : undefined}
+                >
                   {item.fields.map((f) => (
                     <div key={f.name}>
                       <label className="srm-label" htmlFor={`srm-${item.key}-${f.name}`}>
@@ -401,7 +429,7 @@ export default function StatutoryReliefsManager() {
                         id={`srm-${item.key}-${f.name}`}
                         className="srm-input"
                         inputMode="decimal"
-                        disabled={!isSuperAdmin}
+                        disabled={!isSuperAdmin || d.value === 'not_configured'}
                         value={d.params?.[f.name] ?? ''}
                         placeholder="0"
                         onChange={(e) =>

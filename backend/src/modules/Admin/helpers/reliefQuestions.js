@@ -144,6 +144,11 @@ const RELIEF_QUESTIONS = [
       },
     ],
     readValue: (rows) => (rows[0]?.is_active ? 'configured' : 'not_configured'),
+    // A `params` control can also be switched OFF entirely, by sending
+    // `value: 'not_configured'`. Declared here so the UI can render the control
+    // rather than the operator discovering the message and having no way to act
+    // on it.
+    canDisable: true,
   },
 ];
 

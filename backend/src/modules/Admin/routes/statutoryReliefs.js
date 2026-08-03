@@ -100,6 +100,7 @@ router.get('/', jwtAuth, async (req, res) => {
         background: q.background,
         ifYouChangeIt: q.ifYouChangeIt,
         control: q.control,
+        canDisable: Boolean(q.canDisable),
         options: q.options || null,
         fields: q.fields || null,
         currentValue: q.readValue(rows),
@@ -192,6 +193,45 @@ router.put('/:key', jwtAuth, requireSuperAdmin, async (req, res) => {
         });
       }
     } else if (q.control === 'params') {
+      // Switching a configured relief back OFF. The refusal message for
+      // all-limbs-zero tells the operator to "set it to not configured", and
+      // until this existed there was no way to do that — the only route back was
+      // raw SQL, which is precisely the situation this whole screen exists to
+      // remove. Deactivating rather than deleting keeps the note and the history.
+      if (value === 'not_configured') {
+        applied = { is_active: false };
+        for (const spec of q.rows) {
+          await upsertRow(client, taxYear, spec, {
+            is_active: false,
+            description: String(counselNote).trim(),
+            fbr_reference: authority || q.citation,
+          });
+        }
+        await client.query('COMMIT');
+        TaxRateService.purgeCache(taxYear);
+        await insertAudit(pool, {
+          userId: req.user.id,
+          userEmail: req.user.email,
+          action: 'update',
+          tableName: 'tax_rates_config',
+          recordId: q.key,
+          oldValue: before.map((r) => ({ is_active: r?.is_active ?? null })),
+          newValue: { key: q.key, taxYear, applied, counselNote },
+          category: 'statutory_relief_decision',
+          severity: 'critical',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          mandatory: true,
+        });
+        return res.json({
+          success: true,
+          key: q.key,
+          taxYear,
+          currentValue: q.readValue(await loadRows(taxYear, q)),
+          message: 'Switched off. The app will no longer offer this relief, and its input is hidden.',
+        });
+      }
+
       const write = {};
       for (const f of q.fields) {
         const n = toNum(params?.[f.name]);
