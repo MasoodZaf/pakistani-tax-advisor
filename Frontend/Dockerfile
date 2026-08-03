@@ -14,7 +14,13 @@ RUN npm ci && npm cache clean --force
 COPY . .
 
 # Build the application
-ARG REACT_APP_API_URL=http://localhost:3001
+# NO DEFAULT. This used to default to http://localhost:3001, which is
+# PRODUCTION's backend port on the shared host — so any image built without the
+# variable set baked prod's API origin into the bundle, on every environment.
+# A staging browser session was then one working tunnel away from writing to
+# production. Empty means "same origin", which is correct behind Caddy and is
+# the only default that cannot point at the wrong environment.
+ARG REACT_APP_API_URL=
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 # REACT_APP_API_BASE_URL is the name the app code reads (lane D). It exists
 # because the API origin was previously HARDCODED in the bundle to the retired

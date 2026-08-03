@@ -120,7 +120,10 @@ services:
       context: ./Frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
+        # NO localhost default — see Frontend/Dockerfile. On this host 3001 is
+        # PROD's backend, so the old default aimed every unconfigured build at
+        # production regardless of which environment it was built for.
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-}
         # The origin the app actually calls. Empty => the Dockerfile falls back
         # to REACT_APP_API_URL, so leaving it unset changes nothing. Baked into
         # the bundle at BUILD time — changing it needs `up -d --build frontend`,
