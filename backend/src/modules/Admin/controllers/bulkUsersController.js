@@ -46,8 +46,19 @@ const bulkImportTemplate = async (req, res) => {
     const ws = wb.addWorksheet('Users');
     ws.addRow(TEMPLATE_COLUMNS);
     ws.getRow(1).font = { bold: true };
-    // One example row to show the expected shape (consultant deletes it).
-    ws.addRow(['Ali Khan', 'ali.khan@example.com', '03001234567', '3520112345671', 'individual']);
+    // One example row to show the expected shape.
+    //
+    // The CNIC here must stay an obvious placeholder, NOT a well-formed number.
+    // users.cnic is UNIQUE, so the first consultant who imports the template
+    // without deleting this row consumes that CNIC permanently — and every
+    // later import of the same untouched template then collides with it.
+    ws.addRow([
+      'EXAMPLE — delete this row',
+      'example.delete.me@example.com',
+      '03001234567',
+      'CNIC-WITHOUT-DASHES',
+      'individual',
+    ]);
     ws.columns.forEach((c) => {
       c.width = 24;
     });
@@ -128,6 +139,7 @@ const bulkImportUsers = async (req, res) => {
   const results = [];
   const seenEmails = new Set();
   const seenNames = new Set();
+  const seenCnics = new Set();
   let created = 0;
   let skipped = 0;
   let failed = 0;
@@ -172,8 +184,14 @@ const bulkImportUsers = async (req, res) => {
         results.push({ ...record, status: 'skipped', message: 'Duplicate name within the file' });
         continue;
       }
+      if (cnic && seenCnics.has(cnic)) {
+        skipped++;
+        results.push({ ...record, status: 'skipped', message: 'Duplicate CNIC within the file' });
+        continue;
+      }
       seenEmails.add(email);
       seenNames.add(name.toLowerCase());
+      if (cnic) seenCnics.add(cnic);
 
       // --- DB work, isolated per-row via a SAVEPOINT so one bad row can't abort
       //     the whole batch -----------------------------------------------------
@@ -196,6 +214,31 @@ const bulkImportUsers = async (req, res) => {
           skipped++;
           results.push({ ...record, status: 'skipped', message: 'Name already in use' });
           continue;
+        }
+
+        // users.cnic is VARCHAR(15) UNIQUE. Without this check a taken CNIC
+        // surfaced as the generic "Could not create user" from the catch below,
+        // because the row is created first and the UNIQUE violation only fires
+        // on the follow-up UPDATE that writes phone/cnic — which then rolls the
+        // whole row back to its savepoint.
+        //
+        // A clashing CNIC is the single most likely real conflict when a
+        // consultant imports a client list: the person is already in the system,
+        // or the same sheet is being re-imported. Telling them "Could not create
+        // user" for the one error they will actually hit is no help, when
+        // duplicate email and duplicate name both say exactly what is wrong.
+        if (cnic) {
+          const dupCnic = await client.query('SELECT 1 FROM users WHERE cnic = $1', [cnic]);
+          if (dupCnic.rows.length > 0) {
+            await client.query('RELEASE SAVEPOINT bulk_row');
+            skipped++;
+            results.push({
+              ...record,
+              status: 'skipped',
+              message: `CNIC ${cnic} already belongs to another user`,
+            });
+            continue;
+          }
         }
 
         const tempPassword = generateTempPassword();
