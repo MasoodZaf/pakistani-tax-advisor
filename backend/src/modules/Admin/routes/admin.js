@@ -62,7 +62,28 @@ const requireAdmin = requireStaff;
 
 // In-memory upload for the bulk-import .xlsx (10 MB cap, matches the other
 // admin upload surfaces).
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+//
+// fileFilter mirrors routes/excel.js. Without it any 10 MB file reached
+// ExcelJS's loader, and .xlsx is a zip archive — a decompression bomb expands
+// far past the upload cap while being parsed in memory. Reaching this route
+// needs an authenticated elevated account, so this is defence in depth against
+// a compromised consultant login rather than an open door, but rejecting the
+// wrong content type before the parser sees it costs nothing.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+    ];
+    if (allowedTypes.includes(file.mimetype) || /\.xlsx$/i.test(file.originalname || '')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel (.xlsx) files are allowed'), false);
+    }
+  },
+});
 
 // --- Bulk user operations (super_admin + tax_consultant) ----------------------
 // Registered BEFORE `/users/:id` so the literal paths aren't captured by the
