@@ -318,4 +318,50 @@ describe('TaxCalculationService._computeFromInputs', () => {
     expect(r.income.incomeFromOtherSources).toBe(300000);
     expect(r.income.totalIncome).toBe(5700000);
   });
+
+  // ── M. Final/Min withholding must count each line ONCE ──────────────────────
+  //
+  // `final_min_income_forms` carries two STORED GENERATED aggregates that also
+  // end in `_tax_deducted` — `subtotal_tax_deducted` and
+  // `grand_total_tax_deducted` — and the row reaches the engine via `SELECT *`.
+  // The reducer that sums the per-line withholding was matching them too, so
+  // every figure was counted three times.
+  //
+  // The Math.min() cap against the charge hides the inflation whenever a line
+  // is withheld in full, which is why it went unnoticed. It does not hide it
+  // when a line is UNDER-withheld — and there it credits tax that was never
+  // paid, understating the return.
+  test('final/min withholding counts each line once, not once per generated total', () => {
+    // Dividend chargeable 150,000 (s.150 ATL 15% on 1,000,000) with only
+    // 60,000 actually withheld. Both generated aggregates mirror the 60,000.
+    const r = compute({
+      final_min: {
+        subtotal: 1000000, // gross dividend — bounds creditablePayments
+        subtotal_tax_chargeable: 150000,
+        dividend_u_s_150_31pc_atl_tax_deducted: 60000,
+        subtotal_tax_deducted: 60000,
+        grand_total_tax_deducted: 60000,
+      },
+    });
+    expect(r.payments.finalMinTaxWithheld).toBe(60000);   // not 180,000
+    expect(r.payments.finalMinTaxDeducted).toBe(60000);   // not capped-to-150,000
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(0);
+    // 150,000 charged less the 60,000 genuinely withheld.
+    expect(r.payments.balancePayableRefundable).toBe(90000);
+  });
+
+  test('a fully withheld final/min line still nets to zero', () => {
+    const r = compute({
+      final_min: {
+        subtotal: 1000000, // gross dividend — bounds creditablePayments
+        subtotal_tax_chargeable: 150000,
+        dividend_u_s_150_31pc_atl_tax_deducted: 150000,
+        subtotal_tax_deducted: 150000,
+        grand_total_tax_deducted: 150000,
+      },
+    });
+    expect(r.payments.finalMinTaxWithheld).toBe(150000);
+    expect(r.payments.finalMinTaxWithheldInExcess).toBe(0); // was a fabricated 300,000
+    expect(r.payments.balancePayableRefundable).toBe(0);
+  });
 });

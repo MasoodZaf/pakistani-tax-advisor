@@ -795,6 +795,35 @@ class TaxCalculationService {
     const FINAL_MIN_WITHHELD_EXCLUDED = new Set([
       'salary_u_s_12_7_tax_deducted', // already inside adjustableData.total_tax_collected
       'capital_gain_tax_deducted', // adjustable against the CGT charge, credited below
+      // ── THE GENERATED AGGREGATES ARE NOT LINES, AND COUNTING THEM
+      //    CREDITED TAX THE TAXPAYER NEVER PAID ──
+      //
+      // `subtotal_tax_deducted` and `grand_total_tax_deducted` are STORED
+      // GENERATED columns that sum the very per-line `*_tax_deducted` figures
+      // this reducer already walks. `SELECT *` returns them like any other
+      // column and both end in `_tax_deducted`, so every withholding was
+      // counted three times: once as its own line, once in the subtotal, once
+      // in the grand total.
+      //
+      // The Math.min() cap below hides this whenever withholding meets the
+      // charge, which is why it survived. It does NOT hide it when a line is
+      // UNDER-withheld, and there the inflation is the difference between a
+      // correct return and an understated one:
+      //
+      //   dividend 1,000,000, chargeable 150,000 (s.150 ATL 15%),
+      //   actually withheld 60,000
+      //     -> 60,000 x 3 = 180,000 "withheld"
+      //     -> min(180,000, 150,000) = 150,000 credited
+      //     -> balance payable Rs 0, where the law says Rs 90,000.
+      //
+      // Under-withholding is ordinary (a withholding agent applying a filer
+      // rate to a part-year holding, a mid-year ATL change), so this was not an
+      // edge case, and it fails in the one direction that reaches FBR as an
+      // under-payment. It also fabricated the `finalMinTaxWithheldInExcess`
+      // figure shown on the return — 300,000 of "non-refundable excess" on a
+      // line that was withheld exactly right.
+      'subtotal_tax_deducted',
+      'grand_total_tax_deducted',
     ]);
     const finalMinTaxWithheld = Object.entries(finalMinData || {})
       .filter(([k]) => k.endsWith('_tax_deducted') && !FINAL_MIN_WITHHELD_EXCLUDED.has(k))
