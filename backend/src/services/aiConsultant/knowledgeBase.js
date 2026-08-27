@@ -32,20 +32,34 @@ const KB_DIR = process.env.AI_KB_DIR
 // otherwise SHADOW these bundled docs — so we always scan this dir too.
 const BUNDLED_KB_DIR = path.join(BACKEND_DIR, 'data', 'knowledge-base');
 
-// MD files at repo root that ship as default knowledge — these are the
-// FBR / compliance / roadmap docs already in the repo. Only loaded when
-// running from a dev checkout (the Docker image doesn't include them).
-const DEFAULT_REPO_DOCS = [
-  'TAX_CONSULTANT_GUIDE.md',
-  'TAX_APP_CORRECTIONS_AND_ROADMAP.md',
-  'FBR_COMPLIANCE_AUDIT_REPORT.md',
-  'FBR_COMPLIANCE_VERIFICATION_REPORT.md',
-  'FBR_EXCEL_RECONCILIATION_REPORT.md',
-  'FINAL_MIN_INCOME_IMPLEMENTATION_PROGRESS.md',
-  'CROSS_FORM_DATA_FLOW.md',
-  'AUDIT_REPORT_2026-05-17.md',
-  'APP-SNAPSHOT.md',
-];
+// Repo-root MD files to ingest as default knowledge.
+//
+// DELIBERATELY EMPTY. This list used to carry the repo's own engineering
+// documents, and they were also copied into the production KB volume, so the
+// tax consultant was grounding answers on them. They are not tax law — they
+// are the app's defect log and design spec:
+//
+//   TAX_APP_CORRECTIONS_AND_ROADMAP.md  headings like "Wrong Tax Slabs
+//       Throughout", spelling out SUPERSEDED TY2024-25 rates (5/15/25/30/35%)
+//       in prose. Retrieval is keyword-scored, so a question about slab rates
+//       could surface obsolete rates described as what the app used to do.
+//   AUDIT_REPORT_2026-05-17.md          security findings, e.g. "Hardcoded
+//       super-admin credentials in committed setup script".
+//   TAX_CONSULTANT_GUIDE.md             despite the name, 3,425 lines of
+//       software spec including Python source for encryption.py, auth.py and
+//       rate_limiting.py.
+//   FBR_COMPLIANCE_*, CROSS_FORM_DATA_FLOW, APP-SNAPSHOT, FINAL_MIN_*
+//       internal audits and data-flow notes.
+//
+// The consultant returns `sources` to the user, so these were also being
+// CITED by filename to practising tax consultants. Ground the model on tax
+// authority sources (the Ordinance, the Rules, FBR circulars) plus the
+// admin-curated playbook — nothing else.
+//
+// If you want a document in the consultant's knowledge, upload it through the
+// admin KB screen so it is a deliberate act with a named owner, rather than
+// whatever happens to sit in the repo root.
+const DEFAULT_REPO_DOCS = [];
 
 const CHUNK_TARGET = 1500;   // chars — small enough to fit many in context
 const CHUNK_OVERLAP = 200;
@@ -335,4 +349,7 @@ module.exports = {
   status,
   KB_DIR,
   BUNDLED_KB_DIR,
+  // Exported so a test can assert the app's own engineering documents never
+  // reappear as consultant-facing knowledge. See the comment on the constant.
+  DEFAULT_REPO_DOCS,
 };
