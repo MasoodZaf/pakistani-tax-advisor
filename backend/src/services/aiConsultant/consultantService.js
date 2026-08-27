@@ -23,7 +23,13 @@ const {
 } = require('./safetyGuards');
 
 const MAX_HISTORY_TURNS = 12;        // last N (user, assistant) pairs
-const MAX_KB_CHUNKS = 5;
+// Raised from 5. The corpus went from 3 usable documents to 7 (both Ordinance
+// editions, both Finance Acts, the Rules, the FBR circular, the playbook), and
+// 5 slots with 2 reserved for the playbook left only 3 for everything else —
+// so most of the corpus could never appear in one answer. Paired with
+// PER_SOURCE_CAP in knowledgeBase.retrieve(), which spreads these across
+// documents instead of letting the longest one take them all.
+const MAX_KB_CHUNKS = 8;
 
 const SYSTEM_PERSONA = `You are the AI Tax Consultant inside MeraTax, a Pakistan income tax filing app. You help users file their income tax return with the Federal Board of Revenue (FBR) via the IRIS portal, in line with the Income Tax Ordinance 2001 and the latest Finance Act (currently Finance Act 2025, tax year 2025-26).
 

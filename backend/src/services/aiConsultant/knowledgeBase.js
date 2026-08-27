@@ -61,6 +61,10 @@ const BUNDLED_KB_DIR = path.join(BACKEND_DIR, 'data', 'knowledge-base');
 // whatever happens to sit in the repo root.
 const DEFAULT_REPO_DOCS = [];
 
+// At most this many chunks from any single source per query. Stops the
+// longest document monopolising the answer — see the note in retrieve().
+const PER_SOURCE_CAP = 2;
+
 const CHUNK_TARGET = 1500;   // chars — small enough to fit many in context
 const CHUNK_OVERLAP = 200;
 
@@ -326,7 +330,33 @@ function retrieve(query, k = 5) {
   // 2700-chunk Ordinance PDF would otherwise crowd the concise playbook out.
   const isPlaybook = (s) => /playbook/i.test(s.c.source || '');
   const reserved = matches.filter(isPlaybook).slice(0, 2);
-  const rest = matches.filter((s) => !reserved.includes(s)).slice(0, Math.max(0, k - reserved.length));
+
+  // Cap chunks per source so one document cannot take every remaining slot.
+  //
+  // Without this, the top slots go to whichever document is longest, because a
+  // long statute simply has more chances to contain the query terms. The
+  // corpus now holds TWO editions of the Ordinance on purpose — one amended to
+  // 30.06.2026 (current law) and one to 31.07.2025 (the Finance Act 2025 state
+  // that governs the TY2025-26 returns being filed) — and they are near
+  // identical. Uncapped, those two alone would fill every non-playbook slot
+  // with the same passage twice and the Rules, the Finance Acts and the FBR
+  // circular would never be seen.
+  //
+  // The consultant is shown the source name for each chunk, so it can tell the
+  // two editions apart and say which year a rule applies to; that only works
+  // if it is given more than one document to compare.
+  const perSource = new Map();
+  const rest = [];
+  for (const s of matches) {
+    if (reserved.includes(s)) continue;
+    const src = s.c.source || '';
+    const used = perSource.get(src) || 0;
+    if (used >= PER_SOURCE_CAP) continue;
+    perSource.set(src, used + 1);
+    rest.push(s);
+    if (rest.length >= k - reserved.length) break;
+  }
+
   return [...reserved, ...rest].slice(0, k).map((s) => ({
     source: s.c.source,
     title: s.c.title,
