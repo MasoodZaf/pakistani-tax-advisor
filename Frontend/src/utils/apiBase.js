@@ -68,6 +68,43 @@ const pointsAtLoopback = (absoluteUrl) => {
   }
 };
 
+// Opt-in escape hatch for a deliberately cross-SITE API (a different
+// registrable domain from the page). Off by default: see sameSiteAsPage.
+const allowsCrossSiteApi =
+  (process.env.REACT_APP_API_ALLOW_CROSS_SITE || '').trim().toLowerCase() === 'true';
+
+// Last two labels. Deliberately NOT a Public Suffix List lookup — shipping the
+// PSL to every browser to harden one env var is not a trade worth making, and
+// the failure mode is conservative: on a multi-part TLD (foo.co.uk) this reads
+// "co.uk", so two unrelated .co.uk hosts would be treated as same-site and
+// allowed through. That is no worse than the old behaviour, which allowed every
+// host on earth. If this app ever ships on such a TLD, tighten this or set
+// REACT_APP_API_ALLOW_CROSS_SITE and state the origin explicitly.
+const registrableDomain = (hostname) =>
+  hostname.toLowerCase().split('.').slice(-2).join('.');
+
+// Is the configured API base on the same site as the page being served?
+//
+// This is the guard that was missing when a prod bundle shipped pointing at
+// `api.tax.aurmak.com` while being served from `mera-tax.com`. That hostname
+// was public and resolvable, so the loopback backstop below never fired; it had
+// simply been repointed at an unrelated server, and every browser request died
+// in the TLS handshake as "Network Error". Nothing was unhealthy: containers
+// were green, /api/health returned 200, and the app was totally unusable.
+//
+// Same-SITE rather than same-ORIGIN because `api.mera-tax.com` serving
+// `mera-tax.com` is a legitimate split-domain deployment. A different
+// registrable domain is not a deployment topology, it is a stale value.
+const sameSiteAsPage = (absoluteUrl, pageHostname) => {
+  try {
+    const target = new URL(absoluteUrl).hostname;
+    if (target.toLowerCase() === pageHostname.toLowerCase()) return true;
+    return registrableDomain(target) === registrableDomain(pageHostname);
+  } catch {
+    return false;
+  }
+};
+
 const resolveApiBase = () => {
   const explicit = (process.env.REACT_APP_API_BASE_URL || '').trim();
   if (explicit) {
@@ -91,6 +128,19 @@ const resolveApiBase = () => {
       // eslint-disable-next-line no-console
       console.error(
         `[apiBase] Ignoring REACT_APP_API_BASE_URL "${explicit}": a loopback API base cannot be correct for a page served from ${window.location.hostname}. Falling back to same-origin.`
+      );
+    } else if (
+      !isLocalHost &&
+      !allowsCrossSiteApi &&
+      !sameSiteAsPage(explicit, window.location.hostname)
+    ) {
+      // The stale-value backstop. Falling back to same-origin is the recovery
+      // that matters: behind Caddy (and on any preview host) same-origin is
+      // already correct, so a build carrying a dead API host still serves a
+      // working app instead of a dead one.
+      // eslint-disable-next-line no-console
+      console.error(
+        `[apiBase] Ignoring REACT_APP_API_BASE_URL "${explicit}": it is on a different site than the page served from ${window.location.hostname}, which is how a stale value from a retired domain reaches production. Falling back to same-origin. If this cross-site API is deliberate, set REACT_APP_API_ALLOW_CROSS_SITE=true.`
       );
     } else {
       return trimTrailingSlash(explicit);

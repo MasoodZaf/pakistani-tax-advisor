@@ -123,3 +123,92 @@ describe('R-04 — no inferred backend port', () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * Same-site guard.
+ *
+ * These pin the 2026-08 production outage: the shipped bundle carried
+ * `REACT_APP_API_BASE_URL=https://api.tax.aurmak.com` while being served from
+ * mera-tax.com. That host was public and resolvable, so the loopback backstop
+ * never fired — it had merely been repointed at an unrelated server. Login and
+ * signup were dead for days while every health signal stayed green.
+ */
+describe('a cross-site API base cannot steer a deployed build', () => {
+  const errorSpy = () => jest.spyOn(console, 'error').mockImplementation(() => {});
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('the exact outage: a retired domain falls back to same-origin', () => {
+    const spy = errorSpy();
+    expect(
+      loadApiBase({
+        hostname: 'mera-tax.com',
+        env: { REACT_APP_API_BASE_URL: 'https://api.tax.aurmak.com' },
+      })
+    ).toBe('');
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('different site'));
+  });
+
+  test('a same-site API subdomain is still honoured (split-domain deploys)', () => {
+    expect(
+      loadApiBase({
+        hostname: 'mera-tax.com',
+        env: { REACT_APP_API_BASE_URL: 'https://api.mera-tax.com' },
+      })
+    ).toBe('https://api.mera-tax.com');
+  });
+
+  test('a same-site base is honoured from a subdomain page too', () => {
+    expect(
+      loadApiBase({
+        hostname: 'staging.mera-tax.com',
+        env: { REACT_APP_API_BASE_URL: 'https://api.mera-tax.com' },
+      })
+    ).toBe('https://api.mera-tax.com');
+  });
+
+  test('an exact hostname match is honoured', () => {
+    expect(
+      loadApiBase({
+        hostname: 'mera-tax.com',
+        env: { REACT_APP_API_BASE_URL: 'https://mera-tax.com' },
+      })
+    ).toBe('https://mera-tax.com');
+  });
+
+  test('a deliberate cross-site API is allowed only when opted in', () => {
+    expect(
+      loadApiBase({
+        hostname: 'mera-tax.com',
+        env: {
+          REACT_APP_API_BASE_URL: 'https://api.example.net',
+          REACT_APP_API_ALLOW_CROSS_SITE: 'true',
+        },
+      })
+    ).toBe('https://api.example.net');
+  });
+
+  test('the opt-in must be exactly "true", not any truthy string', () => {
+    errorSpy();
+    expect(
+      loadApiBase({
+        hostname: 'mera-tax.com',
+        env: {
+          REACT_APP_API_BASE_URL: 'https://api.example.net',
+          REACT_APP_API_ALLOW_CROSS_SITE: '1',
+        },
+      })
+    ).toBe('');
+  });
+
+  test('localhost dev is unaffected — a cross-site base still works there', () => {
+    expect(
+      loadApiBase({
+        hostname: 'localhost',
+        env: { REACT_APP_API_BASE_URL: 'https://api.example.net' },
+      })
+    ).toBe('https://api.example.net');
+  });
+});
