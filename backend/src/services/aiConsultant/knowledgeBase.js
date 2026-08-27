@@ -64,8 +64,11 @@ const DEFAULT_REPO_DOCS = [];
 const CHUNK_TARGET = 1500;   // chars — small enough to fit many in context
 const CHUNK_OVERLAP = 200;
 
-let chunks = [];             // [{ id, source, title, text, terms }]
+let chunks = [];             // [{ id, source, title, text, terms, termCount }]
 let lastLoadedAt = null;
+// term -> number of chunks containing it. Rebuilt by buildIndex() after every
+// load; retrieve() needs it for IDF, and a stale map silently skews ranking.
+let docFreq = new Map();
 
 function tokenize(text) {
   return (text || '')
@@ -168,6 +171,7 @@ async function ingestFile(absPath, label) {
         title: p.title,
         text: p.text,
         terms: termFreq(p.text),
+        termCount: 0,   // filled by buildIndex()
       });
       added++;
     }
@@ -203,6 +207,7 @@ async function ingestApprovedStrategies() {
         title: s.title,
         text,
         terms: termFreq(text),
+        termCount: 0,   // filled by buildIndex()
       });
       added++;
     }
@@ -210,6 +215,21 @@ async function ingestApprovedStrategies() {
   } catch (e) {
     logger.warn(`AI KB: approved-strategy ingest skipped: ${e.message}`);
     return 0;
+  }
+}
+
+// Builds the IDF index and per-chunk term totals. Must run after every load,
+// including the admin-triggered reload — otherwise docFreq describes the
+// previous corpus and ranking is quietly wrong rather than obviously broken.
+function buildIndex() {
+  docFreq = new Map();
+  for (const c of chunks) {
+    let total = 0;
+    for (const [term, f] of c.terms) {
+      total += f;
+      docFreq.set(term, (docFreq.get(term) || 0) + 1);
+    }
+    c.termCount = total;
   }
 }
 
@@ -251,6 +271,7 @@ async function loadAll() {
   //    the master file — added via the admin Playbook screen, no code deploy.
   total += await ingestApprovedStrategies();
 
+  buildIndex();
   lastLoadedAt = new Date();
   logger.info(`AI KB: loaded ${total} chunks from ${chunks.reduce(
     (s, c) => s.add(c.source) && s, new Set()
@@ -258,18 +279,42 @@ async function loadAll() {
   return total;
 }
 
-// Cheap keyword retrieval: rank chunks by overlap with query terms (TF, no IDF).
-// Good enough for the document volume we're dealing with — replace with
-// embeddings later if recall becomes a problem.
+// Keyword retrieval, scored TF-IDF with length normalisation.
+//
+// This was raw TF, and that structurally hid every small document. Scoring by
+// summed term frequency means a term like "tax" — which appears in essentially
+// every chunk of a tax corpus — contributes as much as a rare, discriminating
+// term, and the 821-page Ordinance contributes ~2,000 of the ~2,400 chunks. It
+// therefore won practically every slot no matter what was asked.
+//
+// Measured on the live corpus: FBR's own Circular 01 of 2025-26, the official
+// explanation of the Finance Act 2025 amendments, is 22 chunks. It did not
+// surface for "Finance Act 2025 amendments explained" — the document literally
+// written to answer that. Nor did the rate card. The consultant was effectively
+// grounded on raw statute alone.
+//
+// The existing 2-slot playbook reservation below was a workaround for the same
+// bug, discovered from the other end. Two corrections:
+//
+//   IDF   — log(N / df) discounts terms that are everywhere ("tax", "income")
+//           and rewards discriminating ones ("surcharge", "e-commerce").
+//   /len  — dividing by chunk length stops a long chunk outscoring a precise
+//           short one merely by containing more words.
 function retrieve(query, k = 5) {
   if (!chunks.length) return [];
   const qTerms = new Set(tokenize(query));
   if (!qTerms.size) return [];
+  const N = chunks.length;
   const scored = chunks.map((c) => {
     let score = 0;
     for (const t of qTerms) {
       const f = c.terms.get(t);
-      if (f) score += f;
+      if (!f) continue;
+      const df = docFreq.get(t) || 1;
+      // +1 inside the log keeps the weight positive for a term present in
+      // every chunk, rather than zeroing the chunk out entirely.
+      const idf = Math.log(1 + N / df);
+      score += (f / (c.termCount || 1)) * idf;
     }
     // Slight boost for short, header-rich chunks (more likely to be definitions).
     if (c.title && c.title.length < 80) score *= 1.1;
